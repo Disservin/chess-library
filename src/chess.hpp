@@ -322,8 +322,6 @@ public:
 typedef std::vector<Move> Moves;
 
 
-
-
 /**********************************\
  ==================================
 
@@ -452,7 +450,9 @@ void Board::parseFEN(std::string FEN) {
 
     // set the enpassant square for the position
     if (ep != "-") {
-        enpassantSquare = Square((ep[0] - '0') * 8 + (ep[1] - '0'));
+        int rank = ((int)ep[1]) - 49;
+        int file = ((int)ep[0]) - 97;
+        enpassantSquare = Square(rank * 8 + file);
     }
 
     // set castling rights for the position
@@ -498,6 +498,7 @@ void Board::print() {
     std::cout << "\n    a b c d e f g h\n\n";
     std::cout << "   Side:    " << ((sideToMove == White) ? "White\n" : "Black\n");
     std::cout << "   Enpass:    " << ((enpassantSquare == NO_SQ) ? "NO_SQ" : squareToString[enpassantSquare]);
+    std::cout << "\n";
 }
 
 
