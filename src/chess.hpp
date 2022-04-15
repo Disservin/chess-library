@@ -360,6 +360,9 @@ private:
     // store previous states
     State storeInfo;
 
+    // store hash key of previous states
+    uint64_t gameHistory[1024];
+
 public:
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
@@ -370,6 +373,28 @@ public:
 
     // prints the board 
     void print();
+
+    // square rank 0 is the bottom rank, square rank 7 is the top rank
+
+    uint8_t square_rank(Square sq);
+
+    uint8_t square_file(Square sq);
+
+    uint8_t piece_type(Piece p);
+
+    uint8_t piece_color(Piece p);
+
+    uint64_t Pawns(Color c);
+    
+    uint64_t Knights(Color c);
+
+    uint64_t Bishops(Color c);
+
+    uint64_t Rooks(Color c);
+
+    uint64_t Queens(Color c);
+
+    uint64_t Kings(Color c);
 
 private:
     // sets the internal board representation to the 
@@ -501,8 +526,45 @@ void Board::print() {
     std::cout << "\n";
 }
 
+uint8_t Board::square_rank(Square sq) {
+    return sq >> 3;
+}
 
+uint8_t Board::square_file(Square sq){
+    return sq & 7;
+}
 
+uint8_t Board::piece_type(Piece p){
+    return p % 6;
+}
+
+uint8_t Board::piece_color(Piece p){
+    if (p < 6) return White;
+    else return Black;
+}
+
+uint64_t Board::Pawns(Color c){
+    return PiecesBB[c * 6];
+}
+
+uint64_t Board::Knights(Color c){
+    return PiecesBB[c * 6 + 1];
+}
+
+uint64_t Board::Bishops(Color c){
+    return PiecesBB[c * 6 + 2];
+}
+uint64_t Board::Rooks(Color c){
+    return PiecesBB[c * 6 + 3];
+}
+
+uint64_t Board::Queens(Color c){
+    return PiecesBB[c * 6 + 4];
+}
+
+uint64_t Board::Kings(Color c){
+    return PiecesBB[c * 6 + 5];
+}
 
 /**********************************\
  ==================================
