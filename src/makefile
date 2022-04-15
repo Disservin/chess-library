@@ -2,7 +2,7 @@ out: main.o
 	g++ main.o -o out 
 
 main.o: main.cpp chess.hpp
-	g++ -c main.cpp 
+	g++ -c -flto -O3 -march=native -std=c++20 -static-libgcc -static-libstdc++ main.cpp 
 
 clean:
 	del *.o *.exe
