@@ -5,6 +5,8 @@
 using namespace Chess;
 
 int main() {
-    Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq e4 0 1 ");
+    Board board = Board();
     board.print();
+
+    printBitboard(GetBishopAttacks(SQ_E4, SQUARE_BB[SQ_C2]));
 }

@@ -40,6 +40,10 @@ enum Piece : uint8_t {
     None
 };
 
+enum PieceType : uint8_t {
+    Pawn, Knight, Bishop, Rook, Queen, King
+};
+
 // enum type for mapping a square to int
 enum Square : uint8_t {
     SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
@@ -78,6 +82,7 @@ const uint8_t blackQueenSideCastling = 8;
 // default FEN string (start position)
 const std::string defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
 
+// map a piece to its corresponding character
 std::unordered_map<Piece, char> pieceToChar({
     { WhitePawn, 'P' },
     { WhiteKnight, 'N' },
@@ -93,6 +98,7 @@ std::unordered_map<Piece, char> pieceToChar({
     { BlackKing, 'k' }
 });
 
+// map a character to its corresponding piece
 std::unordered_map<char, Piece> charToPiece({
     { 'P', WhitePawn },
     { 'N', WhiteKnight },
@@ -108,6 +114,7 @@ std::unordered_map<char, Piece> charToPiece({
     { 'k', BlackKing }
 });
 
+// map a square to its string representation
 const std::string squareToString[64] = {
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
     "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
@@ -118,8 +125,6 @@ const std::string squareToString[64] = {
     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 };
-
-
 
 
 
@@ -134,42 +139,6 @@ const std::string squareToString[64] = {
 
 // define Bitboard as unsigned 64-bit integer
 typedef uint64_t Bitboard;
-
-//returns reversed bitboard (rotate 180 degrees)
-Bitboard reverse(Bitboard bb) {
-    bb = (bb & 0x5555555555555555) << 1 | ((bb >> 1) & 0x5555555555555555);
-    bb = (bb & 0x3333333333333333) << 2 | ((bb >> 2) & 0x3333333333333333);
-    bb = (bb & 0x0f0f0f0f0f0f0f0f) << 4 | ((bb >> 4) & 0x0f0f0f0f0f0f0f0f);
-    bb = (bb & 0x00ff00ff00ff00ff) << 8 | ((bb >> 8) & 0x00ff00ff00ff00ff);
-
-    return (bb << 48) | ((bb & 0xffff0000) << 16) | ((bb >> 16) & 0xffff0000) | (bb >> 48);
-}
-
-
-// Bit hack for getting the index of the least significant bit
-// http://graphics.stanford.edu/~seander/bithacks.html
-const int DEBRUIJN64[64] = {
-    0, 47,  1, 56, 48, 27,  2, 60,
-    57, 49, 41, 37, 28, 16,  3, 61,
-    54, 58, 35, 52, 50, 42, 21, 44,
-    38, 32, 29, 23, 17, 11,  4, 62,
-    46, 55, 26, 59, 40, 36, 15, 53,
-    34, 51, 20, 43, 31, 22, 10, 45,
-    25, 39, 14, 33, 19, 30,  9, 24,
-    13, 18,  8, 12,  7,  6,  5, 63
-};
-
-// returns index of least significant bit of given Bitboard
-Square bsf(Bitboard bb) {
-    return Square(DEBRUIJN64[0x03f79d71b4cb0a89 * (bb ^ (bb - 1)) >> 58]);
-}
-
-// returns index of LSB and removes that bit from given Bitboard
-Square poplsb(Bitboard &bb) {
-    Square lsb = bsf(bb);
-    bb &= bb - 1;
-    return lsb;
-}
 
 //Array containing bitboard for each square (1 << sq)
 const Bitboard SQUARE_BB[64] = {
@@ -221,10 +190,55 @@ const Bitboard MASK_ANTI_DIAGONAL[15] = {
     0x2040800000000000, 0x4080000000000000, 0x8000000000000000
 };
 
+// returns index of most significant bit
+inline int bsr(Bitboard bb) {
+    unsigned long index;
+    _BitScanReverse64(&index, bb);
+    return (int) index;
+}
+
+//returns reversed bitboard (rotate 180 degrees)
+inline Bitboard reverse(Bitboard bb) {
+    bb = (bb & 0x5555555555555555) << 1 | ((bb >> 1) & 0x5555555555555555);
+    bb = (bb & 0x3333333333333333) << 2 | ((bb >> 2) & 0x3333333333333333);
+    bb = (bb & 0x0f0f0f0f0f0f0f0f) << 4 | ((bb >> 4) & 0x0f0f0f0f0f0f0f0f);
+    bb = (bb & 0x00ff00ff00ff00ff) << 8 | ((bb >> 8) & 0x00ff00ff00ff00ff);
+
+    return (bb << 48) | ((bb & 0xffff0000) << 16) | ((bb >> 16) & 0xffff0000) | (bb >> 48);
+}
+
+
+// returns index of least significant bit of given Bitboard
+inline Square bsf(Bitboard bb) {
+    unsigned long index;
+    _BitScanForward64(&index, bb);
+    return Square(index);
+}
+
+// returns index of LSB and removes that bit from given Bitboard
+Square poplsb(Bitboard &bb) {
+    Square lsb = bsf(bb);
+    bb &= bb - 1;
+    return lsb;
+}
+
 
 // sets bit at given square to 1
-void setBit(Bitboard& bb, Square sq) {
+inline void setBit(Bitboard& bb, Square sq) {
     bb |= SQUARE_BB[sq];
+}
+
+inline bool isBitSet(Bitboard bb, Square sq) {
+    return (bb & SQUARE_BB[sq]) ? true : false;
+}
+
+//Returns number of set bits in the bitboard
+inline int popCount(Bitboard x) {
+	x = x - ((x >> 1) & 0x5555555555555555);
+	x = (x & 0x3333333333333333) + ((x >> 2) & 0x3333333333333333);
+	x = (x + (x >> 4)) & 0x0f0f0f0f0f0f0f0f;
+	x = (x * 0x0101010101010101) >> 56;
+	return int(x);
 }
 
 // print given bitboard (for debugging purposes)
@@ -242,6 +256,46 @@ void printBitboard(Bitboard bb) {
 }
 
 
+/**********************************\
+ ==================================
+
+         Helper Functions
+
+ ==================================
+\**********************************/
+
+// returns the rank of a given square
+uint8_t rank_of(Square sq) {
+    return sq >> 3;
+}
+
+// returns the file of a given square
+uint8_t file_of(Square sq) {
+    return sq & 7;
+}
+
+// returns diagonal of given square
+uint8_t diagonal_of(Square sq) {
+    return 7 + rank_of(sq) - file_of(sq);
+}
+
+// returns anti diagonal of given square
+uint8_t anti_diagonal_of(Square sq) {
+    return rank_of(sq) + file_of(sq);
+}
+
+// returns the piece type
+PieceType piece_type(Piece p){
+    return PieceType(p % 6);
+}
+
+Color piece_color(Piece p){
+    return Color(p / 6);
+}
+
+inline int squareDistance(Square a, Square b) {
+    return std::max(std::abs(file_of(a) - file_of(b)), std::abs(rank_of(a) - rank_of(b)));
+}
 
 
 /**********************************\
@@ -374,28 +428,18 @@ public:
     // returns a list of legal moves for current board state
     Moves generateLegalMoves();
 
-    // prints the board 
+    // prints the entire board 
     void print();
 
-    // square rank 0 is the bottom rank, square rank 7 is the top rank
-
+    // functions for getting individual
+    // piece bitboards
     Bitboard Pawns(Color c);
-    
     Bitboard Knights(Color c);
-
     Bitboard Bishops(Color c);
-
     Bitboard Rooks(Color c);
-
     Bitboard Queens(Color c);
-
     Bitboard Kings(Color c);
-
-    Bitboard OwnColor(Color c);
-
-    Bitboard Empty();
-
-    Bitboard Enemy(Color c);
+    Bitboard allPieces(Color c);
 
 private:
     // sets the internal board representation to the 
@@ -421,7 +465,11 @@ Board::Board(std::string FEN) {
     memset(PiecesBB, 0ULL, sizeof(PiecesBB));
     memset(board, None, sizeof(board));
 
+    // reset enpassant square
     enpassantSquare = NO_SQ;
+
+    // reset castling rights
+    castlingRights = 0;
     
     // parse FEN string
     parseFEN(FEN);
@@ -481,17 +529,22 @@ void Board::parseFEN(std::string FEN) {
         enpassantSquare = Square(rank * 8 + file);
     }
 
+
     // set castling rights for the position
     for (int i = 0; i < castling.size(); i++) {
         switch (castling[i]) {
         case 'K':
             castlingRights |= whiteKingSideCastling;
+            break;
         case 'Q':
             castlingRights |= whiteQueenSideCastling;
+            break;
         case 'k':
             castlingRights |= blackKingSideCastling;
+            break;
         case 'q':
             castlingRights |= blackQueenSideCastling;
+            break;
         }
     }
 }
@@ -506,6 +559,35 @@ void Board::placePiece(Piece piece, Square sq) {
 void Board::removePiece(Piece piece, Square sq) {
     PiecesBB[piece] &= ~SQUARE_BB[sq];
     board[sq] = None;
+}
+
+
+Bitboard Board::Pawns(Color c){
+    return PiecesBB[c * 6];
+}
+
+Bitboard Board::Knights(Color c){
+    return PiecesBB[c * 6 + Knight];
+}
+
+Bitboard Board::Bishops(Color c){
+    return PiecesBB[c * 6 + Bishop];
+}
+
+Bitboard Board::Rooks(Color c){
+    return PiecesBB[c * 6 + Rook];
+}
+
+Bitboard Board::Queens(Color c){
+    return PiecesBB[c * 6 + Queen];
+}
+
+Bitboard Board::Kings(Color c){
+    return PiecesBB[c * 6 + King];
+}
+
+Bitboard Board::allPieces(Color c){
+    return Pawns(c) | Knights(c) | Bishops(c) | Rooks(c) | Queens(c) | Kings(c);
 }
 
 // print the current board state
@@ -523,136 +605,15 @@ void Board::print() {
     }
     std::cout << "\n    a b c d e f g h\n\n";
     std::cout << "   Side:    " << ((sideToMove == White) ? "White\n" : "Black\n");
-    std::cout << "   Enpass:    " << ((enpassantSquare == NO_SQ) ? "NO_SQ" : squareToString[enpassantSquare]);
+
+    std::cout << "   Castling:  ";
+    std::cout << ((castlingRights & whiteKingSideCastling) ? "K" : "-");
+    std::cout << ((castlingRights & whiteQueenSideCastling) ? "Q" : "-");
+    std::cout << ((castlingRights & blackKingSideCastling) ? "k" : "-");
+    std::cout << ((castlingRights & blackQueenSideCastling) ? "q" : "-");
+
+    std::cout << "\n   Enpass:    " << ((enpassantSquare == NO_SQ) ? "NO_SQ" : squareToString[enpassantSquare]);
     std::cout << "\n";
-}
-
-Bitboard Board::Pawns(Color c){
-    return PiecesBB[c * 6];
-}
-
-Bitboard Board::Knights(Color c){
-    return PiecesBB[c * 6 + 1];
-}
-
-Bitboard Board::Bishops(Color c){
-    return PiecesBB[c * 6 + 2];
-}
-Bitboard Board::Rooks(Color c){
-    return PiecesBB[c * 6 + 3];
-}
-
-Bitboard Board::Queens(Color c){
-    return PiecesBB[c * 6 + 4];
-}
-
-Bitboard Board::Kings(Color c){
-    return PiecesBB[c * 6 + 5];
-}
-
-Bitboard Board::OwnColor(Color c){
-    return PiecesBB[c * 6] | PiecesBB[c * 6 + 1] | PiecesBB[c * 6 + 2] | PiecesBB[c * 6 + 3] | PiecesBB[c * 6 + 4] | PiecesBB[c * 6 + 5];
-}
-
-Bitboard Board::Empty(){
-    return ~(PiecesBB[White * 6] | PiecesBB[White * 6 + 1] | PiecesBB[White * 6 + 2] | PiecesBB[White * 6 + 3] | PiecesBB[White * 6 + 4] | PiecesBB[White * 6 + 5] |
-             PiecesBB[Black * 6] | PiecesBB[Black * 6 + 1] | PiecesBB[Black * 6 + 2] | PiecesBB[Black * 6 + 3] | PiecesBB[Black * 6 + 4] | PiecesBB[Black * 6 + 5]);
-}
-
-Bitboard Board::Enemy(Color c){
-    return ~OwnColor(c) & ~Empty();
-}
-
-/**********************************\
- ==================================
-
-         Helper Functions
-
- ==================================
-\**********************************/
-
-uint8_t rank_of(Square sq) {
-    return sq >> 3;
-}
-
-uint8_t file_of(Square sq){
-    return sq & 7;
-}
-
-uint8_t piece_type(Piece p){
-    return p % 6;
-}
-
-uint8_t piece_color(Piece p){
-    if (p < 6) return White;
-    else return Black;
-}
-
-inline int square_distance(Square a, Square b) {
-    return std::max(std::abs(file_of(a) - file_of(b)), std::abs(rank_of(a) - rank_of(b)));
-}
-
-inline bool get_square_color(Square square) {
-    if ((square % 8) % 2 == (square / 8) % 2) return false;
-    return true;
-}
-
-inline bool is_bit_set(Bitboard bit, Square sq) {
-    return std::bitset<64>(bit).test(sq);
-}
-
-#if defined(__GNUC__)  // GCC, Clang, ICC
-inline int _bitscanreverse(Bitboard b) {
-    return 63 ^ __builtin_clzll(b);
-}
-
-
-inline int _bitscanforward(Bitboard b) {
-    return __builtin_ctzll(b);
-}
-
-#else
-inline uint8_t _bitscanforward(Bitboard mask) {
-    unsigned long index;
-    _BitScanForward64(&index, mask);
-    return (uint8_t) index;
-}
-
-inline uint8_t _bitscanreverse(Bitboard mask) {
-    unsigned long index;
-    _BitScanReverse64(&index, mask);
-    return (uint8_t) index;
-}
-#endif
-
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
-inline uint8_t popcount(Bitboard mask) {
-
-    return (uint8_t)_mm_popcnt_Bitboard(mask);
-}
-#else
-inline uint8_t popcount(Bitboard mask) {
-    return (uint8_t)__builtin_popcountll(mask);
-};
-#endif
-
-
-inline int8_t pop_lsb(Bitboard& mask) {
-    int8_t s = _bitscanforward(mask);
-    mask = _blsr_u64(mask);
-    return s;
-}
-
-void print_bitboard(Bitboard bits) {
-    std::bitset<64> b (bits);
-    std::string str_bitset = b.to_string();
-    for (int i = 0; i < 64; i += 8)
-    {
-        std::string x = str_bitset.substr(i, 8);
-        reverse(x.begin(), x.end());
-        std::cout << x << std::endl;
-    }
-    std::cout << '\n' << std::endl;
 }
 
 /**********************************\
@@ -663,59 +624,118 @@ void print_bitboard(Bitboard bits) {
  ==================================
 \**********************************/
 
-static constexpr Bitboard NOT_A_FILE = 18374403900871474942ULL; 
-static constexpr Bitboard NOT_H_FILE = 9187201950435737471ULL; 
-static constexpr Bitboard RANK_1_MASK = 255ULL;
-static constexpr Bitboard RANK_8_MASK = 18374686479671623680ULL;
-static constexpr Bitboard KNIGHTATTACKS[64] = { 132096ULL, 329728ULL, 659712ULL, 1319424ULL, 2638848ULL, 5277696ULL, 10489856ULL, 4202496ULL,
-                                                33816580ULL, 84410376ULL, 168886289ULL, 337772578ULL, 675545156ULL, 1351090312ULL, 2685403152ULL, 1075839008ULL,
-                                                8657044482ULL, 21609056261ULL, 43234889994ULL, 86469779988ULL, 172939559976ULL, 345879119952ULL, 687463207072ULL, 275414786112ULL,
-                                                2216203387392ULL, 5531918402816ULL, 11068131838464ULL, 22136263676928ULL, 44272527353856ULL, 88545054707712ULL, 175990581010432ULL, 70506185244672ULL,
-                                                567348067172352ULL, 1416171111120896ULL, 2833441750646784ULL, 5666883501293568ULL, 11333767002587136ULL, 22667534005174272ULL, 45053588738670592ULL, 18049583422636032ULL,
-                                                145241105196122112ULL, 362539804446949376ULL, 725361088165576704ULL, 1450722176331153408ULL, 2901444352662306816ULL, 5802888705324613632ULL, 11533718717099671552ULL, 4620693356194824192ULL,
-                                                288234782788157440ULL, 576469569871282176ULL, 1224997833292120064ULL, 2449995666584240128ULL, 4899991333168480256ULL, 9799982666336960512ULL, 1152939783987658752ULL, 2305878468463689728ULL,
-                                                1128098930098176ULL, 2257297371824128ULL, 4796069720358912ULL, 9592139440717824ULL, 19184278881435648ULL, 38368557762871296ULL, 4679521487814656ULL, 9077567998918656ULL };
 
+// pre calculated lookup table for knight attacks
+static constexpr Bitboard KNIGHT_ATTACKS_TABLE[64] = {
+    0x0000000000020400, 0x0000000000050800, 0x00000000000A1100, 0x0000000000142200,
+    0x0000000000284400, 0x0000000000508800, 0x0000000000A01000, 0x0000000000402000,
+    0x0000000002040004, 0x0000000005080008, 0x000000000A110011, 0x0000000014220022,
+    0x0000000028440044, 0x0000000050880088, 0x00000000A0100010, 0x0000000040200020,
+    0x0000000204000402, 0x0000000508000805, 0x0000000A1100110A, 0x0000001422002214,
+    0x0000002844004428, 0x0000005088008850, 0x000000A0100010A0, 0x0000004020002040,
+    0x0000020400040200, 0x0000050800080500, 0x00000A1100110A00, 0x0000142200221400,
+    0x0000284400442800, 0x0000508800885000, 0x0000A0100010A000, 0x0000402000204000,
+    0x0002040004020000, 0x0005080008050000, 0x000A1100110A0000, 0x0014220022140000,
+    0x0028440044280000, 0x0050880088500000, 0x00A0100010A00000, 0x0040200020400000,
+    0x0204000402000000, 0x0508000805000000, 0x0A1100110A000000, 0x1422002214000000,
+    0x2844004428000000, 0x5088008850000000, 0xA0100010A0000000, 0x4020002040000000,
+    0x0400040200000000, 0x0800080500000000, 0x1100110A00000000, 0x2200221400000000,
+    0x4400442800000000, 0x8800885000000000, 0x100010A000000000, 0x2000204000000000,
+    0x0004020000000000, 0x0008050000000000, 0x00110A0000000000, 0x0022140000000000,
+    0x0044280000000000, 0x0088500000000000, 0x0010A00000000000, 0x0020400000000000
+};
+
+// pre calculated lookup table for king attacks
+static constexpr Bitboard KING_ATTACKS_TABLE[64] = {
+    0x0000000000000302, 0x0000000000000705, 0x0000000000000E0A, 0x0000000000001C14,
+    0x0000000000003828, 0x0000000000007050, 0x000000000000E0A0, 0x000000000000C040,
+    0x0000000000030203, 0x0000000000070507, 0x00000000000E0A0E, 0x00000000001C141C,
+    0x0000000000382838, 0x0000000000705070, 0x0000000000E0A0E0, 0x0000000000C040C0,
+    0x0000000003020300, 0x0000000007050700, 0x000000000E0A0E00, 0x000000001C141C00,
+    0x0000000038283800, 0x0000000070507000, 0x00000000E0A0E000, 0x00000000C040C000,
+    0x0000000302030000, 0x0000000705070000, 0x0000000E0A0E0000, 0x0000001C141C0000,
+    0x0000003828380000, 0x0000007050700000, 0x000000E0A0E00000, 0x000000C040C00000,
+    0x0000030203000000, 0x0000070507000000, 0x00000E0A0E000000, 0x00001C141C000000,
+    0x0000382838000000, 0x0000705070000000, 0x0000E0A0E0000000, 0x0000C040C0000000,
+    0x0003020300000000, 0x0007050700000000, 0x000E0A0E00000000, 0x001C141C00000000,
+    0x0038283800000000, 0x0070507000000000, 0x00E0A0E000000000, 0x00C040C000000000,
+    0x0302030000000000, 0x0705070000000000, 0x0E0A0E0000000000, 0x1C141C0000000000,
+    0x3828380000000000, 0x7050700000000000, 0xE0A0E00000000000, 0xC040C00000000000,
+    0x0203000000000000, 0x0507000000000000, 0x0A0E000000000000, 0x141C000000000000,
+    0x2838000000000000, 0x5070000000000000, 0xA0E0000000000000, 0x40C0000000000000
+};
+
+// pre calculated lookup table for pawn attacks
+static constexpr Bitboard PAWN_ATTACKS_TABLE[2][64] = {
+    
+    // white pawn attacks
+    { 0x200, 0x500, 0xa00, 0x1400,
+      0x2800, 0x5000, 0xa000, 0x4000,
+      0x20000, 0x50000, 0xa0000, 0x140000,
+      0x280000, 0x500000, 0xa00000, 0x400000,
+      0x2000000, 0x5000000, 0xa000000, 0x14000000,
+      0x28000000, 0x50000000, 0xa0000000, 0x40000000,
+      0x200000000, 0x500000000, 0xa00000000, 0x1400000000,
+      0x2800000000, 0x5000000000, 0xa000000000, 0x4000000000,
+      0x20000000000, 0x50000000000, 0xa0000000000, 0x140000000000,
+      0x280000000000, 0x500000000000, 0xa00000000000, 0x400000000000,
+      0x2000000000000, 0x5000000000000, 0xa000000000000, 0x14000000000000,
+      0x28000000000000, 0x50000000000000, 0xa0000000000000, 0x40000000000000,
+      0x200000000000000, 0x500000000000000, 0xa00000000000000, 0x1400000000000000,
+      0x2800000000000000, 0x5000000000000000, 0xa000000000000000, 0x4000000000000000,
+      0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0 }, 
+    
+    // black pawn attacks
+    { 0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0,
+      0x2, 0x5, 0xa, 0x14,
+      0x28, 0x50, 0xa0, 0x40,
+      0x200, 0x500, 0xa00, 0x1400,
+      0x2800, 0x5000, 0xa000, 0x4000,
+      0x20000, 0x50000, 0xa0000, 0x140000,
+      0x280000, 0x500000, 0xa00000, 0x400000,
+      0x2000000, 0x5000000, 0xa000000, 0x14000000,
+      0x28000000, 0x50000000, 0xa0000000, 0x40000000,
+      0x200000000, 0x500000000, 0xa00000000, 0x1400000000,
+      0x2800000000, 0x5000000000, 0xa000000000, 0x4000000000,
+      0x20000000000, 0x50000000000, 0xa0000000000, 0x140000000000,
+      0x280000000000, 0x500000000000, 0xa00000000000, 0x400000000000,
+      0x2000000000000, 0x5000000000000, 0xa000000000000, 0x14000000000000,
+      0x28000000000000, 0x50000000000000, 0xa0000000000000, 0x40000000000000
+    }
+};
+
+// Hyperbola Quintessence algorithm
 inline Bitboard hyp_quint(Square square, Bitboard occ, Bitboard mask) {
     return (((mask & occ) - SQUARE_BB[square] * 2) ^
         reverse(reverse(mask & occ) - reverse(SQUARE_BB[square]) * 2)) & mask;
 }
 
-inline Bitboard GetPawnAttacks(Square sq, Color c) {
-    return (c == White) ? ((SQUARE_BB[sq + 7] & NOT_H_FILE) | (SQUARE_BB[sq + 9] & NOT_A_FILE)) :
-                          ((SQUARE_BB[sq - 7] & NOT_H_FILE) | (SQUARE_BB[sq - 9] & NOT_A_FILE));
+inline Bitboard GetPawnAttacks(Square square, Color c) {
+    return PAWN_ATTACKS_TABLE[c][square];
 }
 
 inline Bitboard GetKnightAttacks(Square square) {
-    return KNIGHTATTACKS[square];
+    return KNIGHT_ATTACKS_TABLE[square];
+}
+
+inline Bitboard GetKingAttacks(Square square) {
+    return KING_ATTACKS_TABLE[square];
 }
 
 inline Bitboard GetBishopAttacks(Square square, Bitboard occ) {
-    return hyp_quint(square, occ, MASK_DIAGONAL[file_of(square)]) |
-           hyp_quint(square, occ, MASK_ANTI_DIAGONAL[rank_of(square)]);
+    return hyp_quint(square, occ, MASK_DIAGONAL[diagonal_of(square)]) |
+           hyp_quint(square, occ, MASK_ANTI_DIAGONAL[anti_diagonal_of(square)]);
 }
 
 inline Bitboard GetRookAttacks(Square square, Bitboard occ) {
-    return hyp_quint(square, occ, MASK_FILE[file_of(square)]) |
-           hyp_quint(square, occ, MASK_RANK[rank_of(square)]);
+    return hyp_quint(square, occ, MASK_FILE[diagonal_of(square)]) |
+           hyp_quint(square, occ, MASK_RANK[anti_diagonal_of(square)]);
 }
 
 inline Bitboard GetQueenAttacks(Square square, Bitboard occ) {
     return GetBishopAttacks(square, occ) | GetRookAttacks(square, occ);
-}
-
-inline Bitboard GetKingAttacks(Square sq, Bitboard occ) {
-    Bitboard king_move = (1ULL << sq);
-    Bitboard king_up = king_move << 8 & ~RANK_1_MASK;
-    Bitboard king_down = king_move >> 8 & ~RANK_8_MASK;
-    Bitboard king_right = king_move << 1 & NOT_A_FILE;
-    Bitboard king_left = king_move >> 1 & NOT_H_FILE;
-    Bitboard king_up_right = king_move << 9 & NOT_A_FILE;
-    Bitboard king_up_left = king_move << 7 & NOT_H_FILE;
-    Bitboard king_down_right = king_move >> 7 & NOT_A_FILE;
-    Bitboard king_down_left = (king_move >> 9) & NOT_H_FILE;
-
-    return (king_up | king_down | king_right | king_left | king_up_right | king_up_left | king_down_right | king_down_left);
 }
 
 inline Bitboard PawnPush(Square sq, Color c) {
