@@ -6,7 +6,10 @@
 #include <string>
 #include <cstring>
 #include <unordered_map>
-
+#include <bitset>
+#include <intrin.h>
+#include <cmath>
+#include <algorithm>
 
 namespace Chess {
 
@@ -360,6 +363,9 @@ private:
     // store previous states
     State storeInfo;
 
+    // store hash key of previous states
+    uint64_t gameHistory[1024];
+
 public:
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
@@ -370,6 +376,26 @@ public:
 
     // prints the board 
     void print();
+
+    // square rank 0 is the bottom rank, square rank 7 is the top rank
+
+    Bitboard Pawns(Color c);
+    
+    Bitboard Knights(Color c);
+
+    Bitboard Bishops(Color c);
+
+    Bitboard Rooks(Color c);
+
+    Bitboard Queens(Color c);
+
+    Bitboard Kings(Color c);
+
+    Bitboard OwnColor(Color c);
+
+    Bitboard Empty();
+
+    Bitboard Enemy(Color c);
 
 private:
     // sets the internal board representation to the 
@@ -501,8 +527,133 @@ void Board::print() {
     std::cout << "\n";
 }
 
+Bitboard Board::Pawns(Color c){
+    return PiecesBB[c * 6];
+}
+
+Bitboard Board::Knights(Color c){
+    return PiecesBB[c * 6 + 1];
+}
+
+Bitboard Board::Bishops(Color c){
+    return PiecesBB[c * 6 + 2];
+}
+Bitboard Board::Rooks(Color c){
+    return PiecesBB[c * 6 + 3];
+}
+
+Bitboard Board::Queens(Color c){
+    return PiecesBB[c * 6 + 4];
+}
+
+Bitboard Board::Kings(Color c){
+    return PiecesBB[c * 6 + 5];
+}
+
+Bitboard Board::OwnColor(Color c){
+    return PiecesBB[c * 6] | PiecesBB[c * 6 + 1] | PiecesBB[c * 6 + 2] | PiecesBB[c * 6 + 3] | PiecesBB[c * 6 + 4] | PiecesBB[c * 6 + 5];
+}
+
+Bitboard Board::Empty(){
+    return ~(PiecesBB[White * 6] | PiecesBB[White * 6 + 1] | PiecesBB[White * 6 + 2] | PiecesBB[White * 6 + 3] | PiecesBB[White * 6 + 4] | PiecesBB[White * 6 + 5] |
+             PiecesBB[Black * 6] | PiecesBB[Black * 6 + 1] | PiecesBB[Black * 6 + 2] | PiecesBB[Black * 6 + 3] | PiecesBB[Black * 6 + 4] | PiecesBB[Black * 6 + 5]);
+}
+
+Bitboard Board::Enemy(Color c){
+    return ~OwnColor(c) & ~Empty();
+}
+
+/**********************************\
+ ==================================
+
+         Helper Functions
+
+ ==================================
+\**********************************/
+
+uint8_t rank_of(Square sq) {
+    return sq >> 3;
+}
+
+uint8_t file_of(Square sq){
+    return sq & 7;
+}
+
+uint8_t piece_type(Piece p){
+    return p % 6;
+}
+
+uint8_t piece_color(Piece p){
+    if (p < 6) return White;
+    else return Black;
+}
+
+inline int square_distance(Square a, Square b) {
+    return std::max(std::abs(file_of(a) - file_of(b)), std::abs(rank_of(a) - rank_of(b)));
+}
+
+inline bool get_square_color(Square square) {
+    if ((square % 8) % 2 == (square / 8) % 2) return false;
+    return true;
+}
+
+inline bool is_bit_set(Bitboard bit, Square sq) {
+    return std::bitset<64>(bit).test(sq);
+}
+
+#if defined(__GNUC__)  // GCC, Clang, ICC
+inline int _bitscanreverse(Bitboard b) {
+    return 63 ^ __builtin_clzll(b);
+}
 
 
+inline int _bitscanforward(Bitboard b) {
+    return __builtin_ctzll(b);
+}
+
+#else
+inline uint8_t _bitscanforward(Bitboard mask) {
+    unsigned long index;
+    _BitScanForward64(&index, mask);
+    return (uint8_t) index;
+}
+
+inline uint8_t _bitscanreverse(Bitboard mask) {
+    unsigned long index;
+    _BitScanReverse64(&index, mask);
+    return (uint8_t) index;
+}
+#endif
+
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+inline uint8_t popcount(Bitboard mask) {
+
+    return (uint8_t)_mm_popcnt_Bitboard(mask);
+}
+#else
+inline uint8_t popcount(Bitboard mask) {
+    return (uint8_t)__builtin_popcountll(mask);
+};
+#endif
+
+
+inline int8_t pop_lsb(Bitboard& mask) {
+    int8_t s = _bitscanforward(mask);
+    mask = _blsr_u64(mask);
+    return s;
+}
+
+void print_bitboard(Bitboard bits) {
+    std::bitset<64> b (bits);
+    std::string str_bitset = b.to_string();
+    for (int i = 0; i < 64; i += 8)
+    {
+        std::string x = str_bitset.substr(i, 8);
+        reverse(x.begin(), x.end());
+        std::cout << x << std::endl;
+    }
+    std::cout << '\n' << std::endl;
+}
 
 /**********************************\
  ==================================
@@ -512,7 +663,69 @@ void Board::print() {
  ==================================
 \**********************************/
 
+static constexpr Bitboard NOT_A_FILE = 18374403900871474942ULL; 
+static constexpr Bitboard NOT_H_FILE = 9187201950435737471ULL; 
+static constexpr Bitboard RANK_1_MASK = 255ULL;
+static constexpr Bitboard RANK_8_MASK = 18374686479671623680ULL;
+static constexpr Bitboard KNIGHTATTACKS[64] = { 132096ULL, 329728ULL, 659712ULL, 1319424ULL, 2638848ULL, 5277696ULL, 10489856ULL, 4202496ULL,
+                                                33816580ULL, 84410376ULL, 168886289ULL, 337772578ULL, 675545156ULL, 1351090312ULL, 2685403152ULL, 1075839008ULL,
+                                                8657044482ULL, 21609056261ULL, 43234889994ULL, 86469779988ULL, 172939559976ULL, 345879119952ULL, 687463207072ULL, 275414786112ULL,
+                                                2216203387392ULL, 5531918402816ULL, 11068131838464ULL, 22136263676928ULL, 44272527353856ULL, 88545054707712ULL, 175990581010432ULL, 70506185244672ULL,
+                                                567348067172352ULL, 1416171111120896ULL, 2833441750646784ULL, 5666883501293568ULL, 11333767002587136ULL, 22667534005174272ULL, 45053588738670592ULL, 18049583422636032ULL,
+                                                145241105196122112ULL, 362539804446949376ULL, 725361088165576704ULL, 1450722176331153408ULL, 2901444352662306816ULL, 5802888705324613632ULL, 11533718717099671552ULL, 4620693356194824192ULL,
+                                                288234782788157440ULL, 576469569871282176ULL, 1224997833292120064ULL, 2449995666584240128ULL, 4899991333168480256ULL, 9799982666336960512ULL, 1152939783987658752ULL, 2305878468463689728ULL,
+                                                1128098930098176ULL, 2257297371824128ULL, 4796069720358912ULL, 9592139440717824ULL, 19184278881435648ULL, 38368557762871296ULL, 4679521487814656ULL, 9077567998918656ULL };
 
+inline Bitboard hyp_quint(Square square, Bitboard occ, Bitboard mask) {
+    return (((mask & occ) - SQUARE_BB[square] * 2) ^
+        reverse(reverse(mask & occ) - reverse(SQUARE_BB[square]) * 2)) & mask;
+}
+
+inline Bitboard GetPawnAttacks(Square sq, Color c) {
+    return (c == White) ? ((SQUARE_BB[sq + 7] & NOT_H_FILE) | (SQUARE_BB[sq + 9] & NOT_A_FILE)) :
+                          ((SQUARE_BB[sq - 7] & NOT_H_FILE) | (SQUARE_BB[sq - 9] & NOT_A_FILE));
+}
+
+inline Bitboard GetKnightAttacks(Square square) {
+    return KNIGHTATTACKS[square];
+}
+
+inline Bitboard GetBishopAttacks(Square square, Bitboard occ) {
+    return hyp_quint(square, occ, MASK_DIAGONAL[file_of(square)]) |
+           hyp_quint(square, occ, MASK_ANTI_DIAGONAL[rank_of(square)]);
+}
+
+inline Bitboard GetRookAttacks(Square square, Bitboard occ) {
+    return hyp_quint(square, occ, MASK_FILE[file_of(square)]) |
+           hyp_quint(square, occ, MASK_RANK[rank_of(square)]);
+}
+
+inline Bitboard GetQueenAttacks(Square square, Bitboard occ) {
+    return GetBishopAttacks(square, occ) | GetRookAttacks(square, occ);
+}
+
+inline Bitboard GetKingAttacks(Square sq, Bitboard occ) {
+    Bitboard king_move = (1ULL << sq);
+    Bitboard king_up = king_move << 8 & ~RANK_1_MASK;
+    Bitboard king_down = king_move >> 8 & ~RANK_8_MASK;
+    Bitboard king_right = king_move << 1 & NOT_A_FILE;
+    Bitboard king_left = king_move >> 1 & NOT_H_FILE;
+    Bitboard king_up_right = king_move << 9 & NOT_A_FILE;
+    Bitboard king_up_left = king_move << 7 & NOT_H_FILE;
+    Bitboard king_down_right = king_move >> 7 & NOT_A_FILE;
+    Bitboard king_down_left = (king_move >> 9) & NOT_H_FILE;
+
+    return (king_up | king_down | king_right | king_left | king_up_right | king_up_left | king_down_right | king_down_left);
+}
+
+inline Bitboard PawnPush(Square sq, Color c) {
+    return (c == White) ? (SQUARE_BB[sq + 8]) : (SQUARE_BB[sq - 8]);
+}
+
+inline Bitboard PseudoLegalPawnMoves(Square sq, Square ep, Color c, Bitboard enemy, Bitboard occupied) {
+    if (c == White) return (PawnPush(sq, c) & ~occupied) | ((PawnPush(sq, c) & ~occupied) << 8)| (GetPawnAttacks(sq, c) & enemy & SQUARE_BB[ep]);
+    else return (PawnPush(sq, c) & ~occupied) | ((PawnPush(sq, c) & ~occupied) >> 8)| (GetPawnAttacks(sq, c) & enemy);
+}
 
 // funtion that returns a list of pseudo-legal moves
 Moves Board::generatePseudoLegalMoves() {
@@ -530,12 +743,4 @@ Moves Board::generateLegalMoves() {
     return moveList;
 }
 
-
-
-
-
-
 }
-
-
-
