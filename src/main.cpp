@@ -5,7 +5,7 @@
 using namespace Chess;
 
 int main() {
-    Board board = Board(pawnsPosition);
+    Board board = Board(trickyPosition);
     board.print();
 
     Moves moveList = board.generatePseudoLegalMoves();
