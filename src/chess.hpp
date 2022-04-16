@@ -191,10 +191,10 @@ const Bitboard MASK_ANTI_DIAGONAL[15] = {
 };
 
 // returns index of most significant bit
-inline int bsr(Bitboard bb) {
+inline Square bsr(Bitboard bb) {
     unsigned long index;
     _BitScanReverse64(&index, bb);
-    return (int) index;
+    return Square(index);
 }
 
 //returns reversed bitboard (rotate 180 degrees)
@@ -420,6 +420,11 @@ private:
     // store hash key of previous states
     uint64_t gameHistory[1024];
 
+    // Checkmask
+    Bitboard checkMask = 18446744073709551615ULL;
+
+    Bitboard pinMask{};
+
 public:
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
@@ -441,6 +446,12 @@ public:
     Bitboard Kings(Color c);
     Bitboard allPieces(Color c);
 
+    Bitboard doCheckmask(Color c, Square sq);
+
+    Bitboard create_pins(Color c, Square sq);
+
+    void init(Color c, Square sq);
+    
 private:
     // sets the internal board representation to the 
     // FEN (Forsyth-Edwards Notation) string given
@@ -484,7 +495,7 @@ void Board::parseFEN(std::string FEN) {
     std::string token;
 
     // split tokens by spaces
-    for (int i = 0; i < FEN.size(); i++) {
+    for (int i = 0; i < (int)FEN.size(); i++) {
         if (FEN[i] == ' ') {
             if (token.size() != 0) {
                 tokens.push_back(token);
@@ -508,7 +519,7 @@ void Board::parseFEN(std::string FEN) {
 
     // load pieces from FEN into internal board
     Square square = Square(56);
-    for (int index = 0; index < pieces.size(); index++) {
+    for (int index = 0; index < (int)pieces.size(); index++) {
         char curr = pieces[index];
         if (charToPiece.find(curr) != charToPiece.end()) {
             Piece piece = charToPiece[curr];
@@ -531,7 +542,7 @@ void Board::parseFEN(std::string FEN) {
 
 
     // set castling rights for the position
-    for (int i = 0; i < castling.size(); i++) {
+    for (int i = 0; i < (int)castling.size(); i++) {
         switch (castling[i]) {
         case 'K':
             castlingRights |= whiteKingSideCastling;
@@ -706,6 +717,8 @@ static constexpr Bitboard PAWN_ATTACKS_TABLE[2][64] = {
     }
 };
 
+Bitboard SQUARES_BETWEEN_BB[64][64]{};
+
 // Hyperbola Quintessence algorithm
 inline Bitboard hyp_quint(Square square, Bitboard occ, Bitboard mask) {
     return (((mask & occ) - SQUARE_BB[square] * 2) ^
@@ -720,22 +733,21 @@ inline Bitboard GetKnightAttacks(Square square) {
     return KNIGHT_ATTACKS_TABLE[square];
 }
 
-inline Bitboard GetKingAttacks(Square square) {
-    return KING_ATTACKS_TABLE[square];
-}
-
 inline Bitboard GetBishopAttacks(Square square, Bitboard occ) {
     return hyp_quint(square, occ, MASK_DIAGONAL[diagonal_of(square)]) |
            hyp_quint(square, occ, MASK_ANTI_DIAGONAL[anti_diagonal_of(square)]);
 }
 
 inline Bitboard GetRookAttacks(Square square, Bitboard occ) {
-    return hyp_quint(square, occ, MASK_FILE[diagonal_of(square)]) |
-           hyp_quint(square, occ, MASK_RANK[anti_diagonal_of(square)]);
+    return hyp_quint(square, occ, MASK_FILE[file_of(square)]) |
+           hyp_quint(square, occ, MASK_RANK[rank_of(square)]);
 }
 
 inline Bitboard GetQueenAttacks(Square square, Bitboard occ) {
     return GetBishopAttacks(square, occ) | GetRookAttacks(square, occ);
+}
+inline Bitboard GetKingAttacks(Square square) {
+    return KING_ATTACKS_TABLE[square];
 }
 
 inline Bitboard PawnPush(Square sq, Color c) {
@@ -745,6 +757,61 @@ inline Bitboard PawnPush(Square sq, Color c) {
 inline Bitboard PseudoLegalPawnMoves(Square sq, Square ep, Color c, Bitboard enemy, Bitboard occupied) {
     if (c == White) return (PawnPush(sq, c) & ~occupied) | ((PawnPush(sq, c) & ~occupied) << 8)| (GetPawnAttacks(sq, c) & enemy & SQUARE_BB[ep]);
     else return (PawnPush(sq, c) & ~occupied) | ((PawnPush(sq, c) & ~occupied) >> 8)| (GetPawnAttacks(sq, c) & enemy);
+}
+
+inline Bitboard Board::doCheckmask(Color c, Square sq){
+    Bitboard checks = 0ULL;
+    Bitboard pawn_attack    = GetPawnAttacks(sq, c);
+    Bitboard knight_attack  = GetKnightAttacks(sq);
+    Bitboard bishop_attack  = GetBishopAttacks(sq, allPieces(c));
+    Bitboard rook_attack    = GetRookAttacks(sq, allPieces(c));
+    Bitboard queen_attack   = GetQueenAttacks(sq, allPieces(c));
+
+    Bitboard pawn_mask      = pawn_attack & Pawns(~c);
+    Bitboard knight_mask    = knight_attack & Knights(~c);
+    Bitboard bishop_mask    = bishop_attack & Bishops(~c);
+    Bitboard rook_mask      = rook_attack & Rooks(~c);
+    Bitboard queen_mask     = queen_attack & Queens(~c);
+    if (pawn_mask) checks   |= pawn_mask;
+    if (knight_mask) checks |= knight_mask;
+    if (bishop_mask) checks |= (bishop_attack & GetBishopAttacks(bsf(bishop_mask), allPieces(c)))  | (1ULL << bsf(bishop_mask));
+    if (rook_mask) checks   |= (rook_attack & GetRookAttacks(bsf(rook_mask), allPieces(c)))  | (1ULL << bsf(rook_mask));
+    if (queen_mask) checks  |= (queen_attack & GetQueenAttacks(bsf(queen_mask), allPieces(c)))  | (1ULL << bsf(queen_mask));
+    return checks;
+}
+
+inline Bitboard Board::create_pins(Color c, Square sq){
+    Bitboard rook_attack   = GetRookAttacks(sq, allPieces(~c));
+    Bitboard bishop_attack = GetBishopAttacks(sq, allPieces(~c));
+    Bitboard rook_mask     = rook_attack & (Rooks(~c) | Queens(~c));
+    Bitboard bishop_mask   = bishop_attack & (Bishops(~c) | Queens(~c));
+    Bitboard rook_pin      = 0ULL;
+    Bitboard bishop_pin    = 0ULL;
+
+    if (rook_mask) {
+        while (rook_mask){
+            Square index = poplsb(rook_mask);
+            Bitboard possible_pin = ((rook_attack) & GetRookAttacks(index, Kings(c))) | (1ULL << index);
+            if (popCount(possible_pin & allPieces(c)) == 1)
+                rook_pin |= possible_pin;
+            poplsb(rook_mask);
+        }
+    }
+    if (bishop_mask) {
+        while (bishop_mask){
+            Square index = poplsb(bishop_mask);
+            Bitboard possible_pin = ((bishop_attack) & GetBishopAttacks(index, Kings(c))) | (1ULL << index);
+            if (popCount(possible_pin & allPieces(c)) == 1)
+                bishop_pin |= possible_pin;
+        }
+    }
+    return rook_pin | bishop_pin;
+}
+
+inline void Board::init(Color c, Square sq){
+    Bitboard mask = doCheckmask(c, sq);
+    checkMask = mask ? mask : 18446744073709551615ULL;
+    pinMask = create_pins(c, sq);
 }
 
 // funtion that returns a list of pseudo-legal moves
