@@ -5,8 +5,12 @@
 using namespace Chess;
 
 int main() {
-    Board board = Board();
+    Board board = Board(pawnsPosition);
     board.print();
 
-    printBitboard(GetBishopAttacks(SQ_E4, SQUARE_BB[SQ_C2]));
+    Moves moveList = board.generatePseudoLegalMoves();
+    for (int i = 0; i < moveList.size(); i++) {
+        printMove(moveList[i]);
+    }
+    std::cout << "Number of moves: " << moveList.size() << std::endl;
 }
