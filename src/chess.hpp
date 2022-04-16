@@ -818,6 +818,7 @@ inline void Board::init(Color c, Square sq){
 Moves Board::generatePseudoLegalMoves() {
     // init move list
     Moves moveList;
+    init(sideToMove, bsf(Kings(sideToMove)));
 
     return moveList;
 }
