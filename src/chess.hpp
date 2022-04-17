@@ -1,3 +1,12 @@
+// This file contains the core source code for this C++ Chess library.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the MIT License.
+//
+// The purpose of this library is to provide common functionalities used
+// in chess applications/software such as move generation/validation and
+// an overall pleasant interface to deal with when writing such software.
+
 #pragma once
 
 #include <iostream>
@@ -128,6 +137,18 @@ const std::string squareToString[64] = {
     "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+};
+
+// castling rights update constants
+const int squareToCastlingRights[64] = {
+   13, 15, 15, 15, 12, 15, 15, 14,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+   15, 15, 15, 15, 15, 15, 15, 15,
+    7, 15, 15, 15,  3, 15, 15, 11
 };
 
 
@@ -381,11 +402,17 @@ public:
     inline bool castling() {
         return (move & 0x800000) >> 23;
     }
+
+    // returns the UCI representation of a move (e.g e2e4)
+    inline std::string to_uci() {
+        return squareToString[this->source()] + squareToString[this->target()];
+    }
 };
 
 // define move list as a vector of moves
 typedef std::vector<Move> Moves;
 
+// function for printing a move (for debugging purposes)
 void printMove(Move move) {
     std::cout << "Move: " << squareToString[move.source()] << squareToString[move.target()] << " |";
     std::cout << " Piece: " << pieceToChar[move.piece()] << " |";
@@ -417,7 +444,7 @@ struct State {
 
 
 class Board {
-private:
+public:
     // array of piece bitboards
     Bitboard PiecesBB[12];
 
@@ -447,7 +474,7 @@ private:
 public:
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
-    Board(std::string FEN=defaultFEN);
+    Board(std::string FEN = defaultFEN);
 
     // returns a list of legal moves for current board state
     Moves generateLegalMoves();
@@ -471,11 +498,10 @@ public:
     Bitboard create_pins(Color c, Square sq);
 
     void init(Color c, Square sq);
-    
-private:
     // sets the internal board representation to the 
     // FEN (Forsyth-Edwards Notation) string given
     void parseFEN(std::string FEN);
+private:
 
     // places a piece on a particular square
     void placePiece(Piece piece, Square sq);
@@ -495,29 +521,39 @@ private:
     inline Bitboard GetQueenAttacks(Square square, Bitboard occ); 
     inline Bitboard GetPawnPush(Square sq, Color c); 
 
-    // functions for generating pseudo legal moves, and adding them to the move list
-    inline void GenPseudoLegalPawnQuiets(Moves &moveList, Square source, Square target, Color color);
-    inline void GenPseudoLegalPawnAttacks(Moves &moveList, Square source, Square target, Color color);
-    inline void GenPseudoLegalPawnMoves(Moves &moveList, Square source, Square target, Color color);
-    inline void GenPseudoLegalKnightMoves(Moves &moveList, Square source, Square target, Color color);
-    inline void GenPseudoLegalBishopMoves(Moves &moveList, Square source, Square target, Color color);
-    inline void GenPseudoLegalRookMoves(Moves &moveList, Square source, Square target, Color color);
-    inline void GenPseudoLegalQueenMoves(Moves &moveList, Square source, Square target, Color color);
-    inline void GenPseudoLegalKingMoves(Moves &moveList, Square source, Square target, Color color);
-
-    // calls the corresponding function for generating pseudo legal moves for the given piece
-    inline void GenPseudoLegalPieceMoves(Moves &moveList, Square source, Square target, PieceType type, Color color);
-
+    // checks if a square is being attacked by the given side
+    bool isSquareAttacked(Square sq, Color c);
 
 public:
     // returns a list of pseudo legal moves. Only used
     // in order to generate legal moves afterwards
     Moves generatePseudoLegalMoves();
 
-public:
-    // checks if a square is being attacked by the given side
-    bool isSquareAttacked(Square sq, Color c);
+    // If the pseudo flag is passed in as false, then this
+    // function will simply make the given move on the board.
+    // If not, it will make the move and verify its legality.
+    // In this case, if the move is ilegal, false is returned
+    // and the move isn't made. The pseudo flag should be set 
+    // to true when generating moves from the generate pseudo
+    // legal moves function.
+    bool makeMove(Move move, bool pseudo=false);
+
+    // unmake the last move made
+    void unmakeMove();
+
+    // store the current board state 
+    void storeBoard();
+
+    // move a particular piece from one square to another
+    void movePiece(Piece piece, Square source, Square target);
 };
+
+// move a piece from one square to another
+void Board::movePiece(Piece piece, Square source, Square target) {
+	PiecesBB[board[source]] ^= (SQUARE_BB[source] | SQUARE_BB[target]);
+    board[target] = board[source];
+	board[source] = None;
+}
 
 // place a piece on a particular square
 void Board::placePiece(Piece piece, Square sq) {
@@ -567,13 +603,40 @@ Bitboard Board::allPieces(Color c){
     return Pawns(c) | Knights(c) | Bishops(c) | Rooks(c) | Queens(c) | Kings(c);
 }
 
+// returns the bitboard of given piece type and color
 Bitboard Board::PieceBB(PieceType type, Color c) {
     return PiecesBB[c * 6 + type];
+}
+
+// store current board state
+void Board::storeBoard() {
+    memcpy(storeInfo.PiecesCopyBB, PiecesBB, sizeof(PiecesBB));
+    memcpy(storeInfo.boardCopy, board, sizeof(board));
+
+    storeInfo.sideToMoveCopy     = sideToMove;
+    storeInfo.enpassantCopy      = enpassantSquare;
+    storeInfo.castlingRightsCopy = castlingRights;
+}
+
+// return to previous board state
+void Board::unmakeMove() {
+    memcpy(PiecesBB, storeInfo.PiecesCopyBB, sizeof(PiecesBB));
+    memcpy(board, storeInfo.boardCopy, sizeof(board));
+
+    sideToMove      = storeInfo.sideToMoveCopy;
+    enpassantSquare = storeInfo.enpassantCopy;
+    castlingRights  = storeInfo.castlingRightsCopy;
 }
 
 // Board constructor that takes in FEN string.
 // if no parameter given, set to default position
 Board::Board(std::string FEN) {
+    // parse FEN string
+    parseFEN(FEN);
+}
+
+// parse FEN (Forsyth-Edwards Notation) string
+void Board::parseFEN(std::string FEN) {
     // reset board info
     memset(PiecesBB, 0ULL, sizeof(PiecesBB));
     memset(board, None, sizeof(board));
@@ -583,13 +646,7 @@ Board::Board(std::string FEN) {
 
     // reset castling rights
     castlingRights = 0;
-    
-    // parse FEN string
-    parseFEN(FEN);
-}
 
-// parse FEN (Forsyth-Edwards Notation) string
-void Board::parseFEN(std::string FEN) {
     // vector containing each section of FEN string
     std::vector<std::string> tokens;
 
@@ -784,10 +841,6 @@ inline Bitboard Board::hyp_quint(Square square, Bitboard occ, Bitboard mask) {
     return (((mask & occ) - SQUARE_BB[square] * 2) ^
         reverse(reverse(mask & occ) - reverse(SQUARE_BB[square]) * 2)) & mask;
 }
-// get Pawn push bitboard
-inline Bitboard Board::GetPawnPush(Square sq, Color c) {
-    return (c == White) ? (SQUARE_BB[sq + 8]) : (SQUARE_BB[sq - 8]);
-}
 
 // get absolute pawn attacks from lookup table
 inline Bitboard Board::GetPawnAttacks(Square square, Color c) {
@@ -821,214 +874,6 @@ inline Bitboard Board::GetKingAttacks(Square square) {
     return KING_ATTACKS_TABLE[square];
 }
 
-inline void Board::GenPseudoLegalPieceMoves(Moves &moveList, Square source, Square target, PieceType type, Color color) {
-    switch (type) {
-    case Pawn: GenPseudoLegalPawnMoves(moveList, source, target, color); break;
-    case Knight: GenPseudoLegalKnightMoves(moveList, source, target, color); break;
-    case Bishop: GenPseudoLegalBishopMoves(moveList, source, target, color); break;
-    case Rook: GenPseudoLegalRookMoves(moveList, source, target, color); break;
-    case Queen: GenPseudoLegalQueenMoves(moveList, source, target, color); break;
-    case King: GenPseudoLegalKingMoves(moveList, source, target, color); break;
-    }
-}
-
-inline void Board::GenPseudoLegalKnightMoves(Moves &moveList, Square source, Square target, Color color) {
-    // initialize knight attacks bitboard
-    Bitboard attacks = GetKnightAttacks(source) & ~allPieces(color);
-
-    // loop over each attacking square
-    while (attacks) {
-        // initialize target square
-        target = poplsb(attacks);
-
-        // check if move is quiet
-        if (!(allPieces(~color) & SQUARE_BB[target])) 
-            moveList.push_back(Move(source, target, makePiece(Knight, color)));
-        
-        // capture move
-        else moveList.push_back(Move(source, target, makePiece(Knight, color), None, 1));
-    }
-}
-
-inline void Board::GenPseudoLegalBishopMoves(Moves &moveList, Square source, Square target, Color color) {
-    // Bitboard containing all occupancies
-    const Bitboard allBB = allPieces(White) | allPieces(Black);
-
-    // initialize knight attacks bitboard
-    Bitboard attacks = GetBishopAttacks(source, allBB) & ~allPieces(color);
-
-    // loop over each attacking square
-    while (attacks) {
-        // initialize target square
-        target = poplsb(attacks);
-
-        // check if move is quiet
-        if (!(allPieces(~color) & SQUARE_BB[target])) 
-            moveList.push_back(Move(source, target, makePiece(Bishop, color)));
-        
-        // capture move
-        else moveList.push_back(Move(source, target, makePiece(Bishop, color), None, 1));
-    }
-}
-
-inline void Board::GenPseudoLegalRookMoves(Moves &moveList, Square source, Square target, Color color) {
-    // Bitboard containing all occupancies
-    const Bitboard allBB = allPieces(White) | allPieces(Black);
-
-    // initialize knight attacks bitboard
-    Bitboard attacks = GetRookAttacks(source, allBB) & ~allPieces(color);
-
-    // loop over each attacking square
-    while (attacks) {
-        // initialize target square
-        target = poplsb(attacks);
-
-        // check if move is quiet
-        if (!(allPieces(~color) & SQUARE_BB[target])) 
-            moveList.push_back(Move(source, target, makePiece(Rook, color)));
-        
-        // capture move
-        else moveList.push_back(Move(source, target, makePiece(Rook, color), None, 1));
-    }
-}
-
-inline void Board::GenPseudoLegalQueenMoves(Moves &moveList, Square source, Square target, Color color) {
-    // Bitboard containing all occupancies
-    const Bitboard allBB = allPieces(White) | allPieces(Black);
-
-    // initialize knight attacks bitboard
-    Bitboard attacks = (GetRookAttacks(source, allBB) | GetBishopAttacks(source, allBB)) & ~allPieces(color);
-
-    // loop over each attacking square
-    while (attacks) {
-        // initialize target square
-        target = poplsb(attacks);
-
-        // check if move is quiet
-        if (!(allPieces(~color) & SQUARE_BB[target])) 
-            moveList.push_back(Move(source, target, makePiece(Queen, color)));
-        
-        // capture move
-        else moveList.push_back(Move(source, target, makePiece(Queen, color), None, 1));
-    }
-}
-
-inline void Board::GenPseudoLegalKingMoves(Moves &moveList, Square source, Square target, Color color) {
-    // Bitboard containing all occupancies
-    const Bitboard allBB = allPieces(White) | allPieces(Black);
-
-    // initialize knight attacks bitboard
-    Bitboard attacks = GetKingAttacks(source) & ~allPieces(color);
-
-    // loop over each attacking square
-    while (attacks) {
-        // initialize target square
-        target = poplsb(attacks);
-
-        // check if move is quiet
-        if (!(allPieces(~color) & SQUARE_BB[target])) 
-            moveList.push_back(Move(source, target, makePiece(King, color)));
-        
-        // capture move
-        else moveList.push_back(Move(source, target, makePiece(King, color), None, 1));
-    }
-
-    // generate white kingside castling moves
-    if (
-        color == White && (castlingRights & whiteKingSideCastling) && !(allBB & SQUARE_BB[SQ_F1])
-        && !(allBB & SQUARE_BB[SQ_G1]) && !isSquareAttacked(SQ_E1, Black) && !isSquareAttacked(SQ_F1, Black)
-    ) moveList.push_back(Move(SQ_E1, SQ_G1, makePiece(King, White), None, 0, 0, 0, 1));
-
-    // generate white queenside castling moves
-    if (
-        color == White && (castlingRights & whiteKingSideCastling) && !(allBB & SQUARE_BB[SQ_D1]) && !(allBB & SQUARE_BB[SQ_C1])
-        && !(allBB & SQUARE_BB[SQ_B1]) && !isSquareAttacked(SQ_E1, Black) && !isSquareAttacked(SQ_D1, Black)
-    ) moveList.push_back(Move(SQ_E1, SQ_C1, makePiece(King, White), None, 0, 0, 0, 1));
-
-    // generate black kingside castling moves
-    if (
-        color == Black && (castlingRights & blackKingSideCastling) && !(allBB & SQUARE_BB[SQ_F8])
-        && !(allBB & SQUARE_BB[SQ_G8]) && !isSquareAttacked(SQ_E8, White) && !isSquareAttacked(SQ_F8, White)
-    ) moveList.push_back(Move(SQ_E8, SQ_G8, makePiece(King, Black), None, 0, 0, 0, 1));
-
-    // generate black queenside castling moves
-    if (
-        color == Black && (castlingRights & blackKingSideCastling) && !(allBB & SQUARE_BB[SQ_D8]) && !(allBB & SQUARE_BB[SQ_C8])
-        && !(allBB & SQUARE_BB[SQ_B8]) && !isSquareAttacked(SQ_E8, Black) && !isSquareAttacked(SQ_D8, Black)
-    ) moveList.push_back(Move(SQ_E8, SQ_C8, makePiece(King, Black), None, 0, 0, 0, 1));
-}
-
-
-inline void Board::GenPseudoLegalPawnMoves(Moves &moveList, Square source, Square target, Color color) {
-    GenPseudoLegalPawnQuiets(moveList, source, target, color);
-    GenPseudoLegalPawnAttacks(moveList, source, target, color);
-}
-
-// generate pseudo legal quiet pawn moves
-inline void Board::GenPseudoLegalPawnQuiets(Moves &moveList, Square source, Square target, Color color) {
-    // Bitboard containing all occupancies
-    const Bitboard allBB = allPieces(White) | allPieces(Black);
-
-    // initialize target square to single pawn push
-    target = bsf(GetPawnPush(source, color));
-
-    // if the target square does not contain any piece
-    if (!(allBB & SQUARE_BB[target])) {
-        // check for pawn promotion
-        if ((source>=SQ_A7) && (source <= SQ_H7)) {
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), makePiece(Queen, color)));
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), makePiece(Rook, color)));
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), makePiece(Bishop, color)));
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), makePiece(Knight, color)));
-        } else {
-            // add single pawn push
-            moveList.push_back(Move(source, target, makePiece(Pawn, color)));
-
-            // check for double pawn push
-            if ((source>=SQ_A2) && (source<=SQ_H2) && !(SQUARE_BB[target + 8] & allBB)) {
-                moveList.push_back(Move(source, Square(target + 8), makePiece(Pawn, color), None, 0, 1));
-            }
-        }
-    }
-}
-
-// generate pseudo legal pawn captures 
-inline void Board::GenPseudoLegalPawnAttacks(Moves &moveList, Square source, Square target, Color color) {
-    // initialize pawn attacks bitboard
-    Bitboard attacks = GetPawnAttacks(source, color) & allPieces(~color);
-
-    // Bitboard containing all occupancies
-    const Bitboard allBB = allPieces(White) | allPieces(Black);
-
-     // generate pawn captures
-    while (attacks) {
-        // initialize target square
-        target = poplsb(attacks);
-
-        // check for pawn promotion
-        if ((source>=SQ_A7) && (source <= SQ_H7)) {
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), makePiece(Queen, color), 1));
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), makePiece(Rook, color), 1));
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), makePiece(Bishop, color), 1));
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), makePiece(Knight, color), 1));
-        } else {
-            // normal capture
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), None, 1));
-        }
-    }
-
-    // generate enpassant captures
-    if (enpassantSquare != NO_SQ) {
-        Bitboard enpassantCapture = GetPawnAttacks(source, color) & SQUARE_BB[enpassantSquare];
-
-        // check if enpassant capture is available. If it is,
-        // initialize enpassant target square and add move
-        if (enpassantCapture) {
-            target = bsf(enpassantCapture);
-            moveList.push_back(Move(source, target, makePiece(Pawn, color), None, 1, 0, 1));
-        }
-    }
-}
 
 // checks if the given side attacks a particular square
 bool Board::isSquareAttacked(Square sq, Color color) {
@@ -1041,6 +886,7 @@ bool Board::isSquareAttacked(Square sq, Color color) {
     }
     return false;
 }
+
 
 inline Bitboard Board::doCheckmask(Color c, Square sq){
     Bitboard checks = 0ULL;
@@ -1097,29 +943,7 @@ inline void Board::init(Color c, Square sq){
     pinMask = create_pins(c, sq);
 }
 
-// funtion that returns a list of pseudo-legal moves
-Moves Board::generatePseudoLegalMoves() {
-    // init empty move list
-    Moves moveList;
-    init(sideToMove, bsf(Kings(sideToMove)));
 
-    // loop over all 6 pieces
-    for (int piece = (int)Pawn; piece <= (int)King; piece++) {
-        // store copy of current piece's bitboard
-        Bitboard bitboard = PieceBB(PieceType(piece), sideToMove);
-
-        // loop over pieces within piece bitboard
-        while (bitboard) {
-            // extract current source square and remove it
-            Square source = poplsb(bitboard);
-
-            // generate corresponding piece pseudo legal moves
-            GenPseudoLegalPieceMoves(moveList, source, Square(0), PieceType(piece), sideToMove);
-        }
-    }
-
-    return moveList;
-}
 
 // function that returns a list of legal moves
 Moves Board::generateLegalMoves() {
