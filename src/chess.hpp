@@ -7,7 +7,6 @@
 #include <cstring>
 #include <unordered_map>
 #include <bitset>
-#include <intrin.h>
 #include <cmath>
 #include <algorithm>
 
@@ -187,13 +186,6 @@ const Bitboard MASK_ANTI_DIAGONAL[15] = {
     0x2040800000000000, 0x4080000000000000, 0x8000000000000000
 };
 
-// returns index of most significant bit
-inline Square bsr(Bitboard bb) {
-    unsigned long index;
-    _BitScanReverse64(&index, bb);
-    return Square(index);
-}
-
 //returns reversed bitboard (rotate 180 degrees)
 inline Bitboard reverse(Bitboard bb) {
     bb = (bb & 0x5555555555555555) << 1 | ((bb >> 1) & 0x5555555555555555);
@@ -205,12 +197,36 @@ inline Bitboard reverse(Bitboard bb) {
 }
 
 
+#ifdef _WIN32
+#include <intrin.h>
 // returns index of least significant bit of given Bitboard
 inline Square bsf(Bitboard bb) {
     unsigned long index;
     _BitScanForward64(&index, bb);
     return Square(index);
 }
+// returns index of most significant bit
+inline Square bsr(Bitboard bb) {
+    unsigned long index;
+    _BitScanReverse64(&index, bb);
+    return Square(index);
+}
+#else
+// returns index of least significant bit of given Bitboard
+inline Square bsf(unsigned long long bb) {
+    if (!bb) return NO_SQ;
+    int index;
+    index = __builtin_ffsll(bb);
+    return Square(index-1);
+}
+// returns index of most significant bit
+inline Square bsr(Bitboard bb) {
+    if (!bb) return NO_SQ;
+    int index;
+    index = __builtin_clzll (bb);
+    return Square(index);
+}
+#endif
 
 // returns index of LSB and removes that bit from given Bitboard
 Square poplsb(Bitboard &bb) {

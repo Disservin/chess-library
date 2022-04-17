@@ -28,7 +28,7 @@ unsigned long long perft(int depth) {
 
 void perftTest(int depth) {
     auto t1 = std::chrono::high_resolution_clock::now();
-    int nodes = perft(depth);
+    unsigned long long nodes = perft(depth);
     auto t2 = std::chrono::high_resolution_clock::now();
 
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
@@ -61,6 +61,7 @@ int main() {
     perftTest(4);
     perftTest(5);
     perftTest(6);
+    perftTest(7);
     std::cout << "Done\n---------------------------\n";
     board.parseFEN("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1");
     perftTest(1);
