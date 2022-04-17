@@ -39,10 +39,10 @@ void perftTest(int depth) {
 }
 
 int main() {
-    perftTest(1);
-    perftTest(2);
-    perftTest(3);
-    perftTest(4);
-    perftTest(5);
-    perftTest(6);
+    board.parseFEN("rnbqkbnr/2pppppp/p7/Pp6/8/8/1PPPPPPP/RNBQKBNR w KQkq b6 0 1");
+    board.print();
+
+    Move enp = Move(SQ_A5, SQ_B6, WhitePawn, None, 1, 0, 1, 0);
+    board.makemove(enp);
+    board.print();
 }
