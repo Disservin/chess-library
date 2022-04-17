@@ -984,7 +984,7 @@ inline Bitboard Board::LegalKingMoves(Color c, Square sq){
     Bitboard king_moves = GetKingAttacks(sq) & EnemyEmpty(c);
 
     // remove king
-    PiecesBB[King + 6 * c] &= ~(1ULL << sq);
+    removePiece(makePiece(King, c), sq);
 
     Bitboard legal_king = 0ULL;
     while (king_moves){
@@ -998,7 +998,7 @@ inline Bitboard Board::LegalKingMoves(Color c, Square sq){
     }
     
     // restore king
-    PiecesBB[King + 6 * c] |= (1ULL << sq);
+    placePiece(makePiece(King, c), sq);
 
     Bitboard castlingMoves = 0ULL;
     bool inCheck = 18446744073709551615ULL != checkMask;
@@ -1319,6 +1319,7 @@ bool Board::isSquareAttacked(Square sq, Color color) {
         if (GetBishopAttacks(sq, allPieces(White) | allPieces(Black)) & Bishops(color))   return true;
         if (GetRookAttacks  (sq, allPieces(White) | allPieces(Black)) & Rooks(color))     return true;
         if (GetQueenAttacks (sq, allPieces(White) | allPieces(Black)) & Queens(color))    return true;
+        if (GetKingAttacks  (sq)                                      & Kings(color))     return true;
     }
     return false;
 }
