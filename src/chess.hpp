@@ -10,7 +10,6 @@
 #include <intrin.h>
 #include <cmath>
 #include <algorithm>
-#include <stack>
 
 
 namespace Chess {
@@ -415,11 +414,9 @@ void printMove(Move move) {
 
 // struct for copying/storing previous states
 struct State {
-    Bitboard PiecesCopyBB[12];
-    Piece    boardCopy   [64];
-    Color    sideToMoveCopy;
     Square   enpassantCopy;
     uint8_t  castlingRightsCopy;
+    Piece  capturedPiece;
 };
 
 
@@ -441,7 +438,9 @@ private:
     uint8_t castlingRights;
 
     // store previous states
-    std::stack<State> storeInfo;
+    State storeInfo[1024];
+
+    uint16_t storeCount;
 
     // store hash key of previous states
     uint64_t gameHistory[1024];
@@ -503,7 +502,7 @@ public:
 
     void makemove(Move& move);
 
-    void unmakemove();
+    void unmakemove(Move& move);
 
     Piece getPiece(Square sq);
 
@@ -537,8 +536,8 @@ public:
 
 // place a piece on a particular square
 inline void Board::placePiece(Piece piece, Square sq) {
-    board[sq] = piece;
     PiecesBB[piece] |= SQUARE_BB[sq];
+    board[sq] = piece;
 }
 
 // remove a piece from a particular square
@@ -940,13 +939,13 @@ inline Bitboard Board::LegalPawnMoves(Color c, Square sq){
     if (enpassantSquare != NO_SQ && squareDistance(sq, enpassantSquare) == 1) {
         // Horizontal Ep rook pins our pawn through another pawn, our pawn can push but not take enpassant 
         if ((1ULL << enpassantSquare) & attacks){
-            PiecesBB[Pawn + 6*c] &= ~(1ULL << sq);
-            PiecesBB[Pawn + 6*~c] &= ~(1ULL << (enpassantSquare + offset));
+            removePiece(makePiece(Pawn, c), sq);
+            removePiece(makePiece(Pawn, ~c), Square(enpassantSquare + offset));
             placePiece(makePiece(Pawn,c), enpassantSquare);
             if (!isSquareAttacked(KingSq(c), ~c)) moves |= (1ULL << enpassantSquare);
             removePiece(makePiece(Pawn,c), enpassantSquare);
-            PiecesBB[Pawn + 6*c] |= (1ULL << sq);
-            PiecesBB[Pawn + 6*~c] |= (1ULL << (enpassantSquare + offset));            
+            placePiece(makePiece(Pawn, c), sq);
+            placePiece(makePiece(Pawn, ~c), Square(enpassantSquare + offset));         
         }
 
     }
@@ -1052,7 +1051,7 @@ inline Bitboard Board::LegalKingMoves(Color c, Square sq){
 // function that returns a list of legal moves
 Moves Board::generateLegalMoves() {
     // init move list
-    Moves moveList;
+    Moves moveList{};
     init(sideToMove, KingSq(sideToMove));
     // printBitboard(pinMaskD);
     // printBitboard(pinMaskHV);
@@ -1069,7 +1068,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalPawnMoves(sideToMove, source);
             while (moves){
                 Square target = poplsb(moves);
-                int8_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
+                uint32_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
                 if (rank_of(target) == 7 || rank_of(target) == 0){
                     moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), makePiece(Queen, sideToMove), capture));
                     moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), makePiece(Rook, sideToMove), capture));
@@ -1077,7 +1076,7 @@ Moves Board::generateLegalMoves() {
                     moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), makePiece(Knight, sideToMove), capture));
                 }
                 else if (std::abs(source - target) == 16)
-                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), None, capture, 1, 0));
+                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), None, 0, 1, 0));
                 else if (target == enpassantSquare)
                     moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), None, 1, 0, 1));
                 else
@@ -1089,7 +1088,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalKnightMoves(sideToMove, source);
             while (moves){
                 Square target = poplsb(moves);
-                int8_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
+                uint32_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
                 moveList.Add(Move(source, target, makePiece(Knight, sideToMove), None, capture));
             }
         }
@@ -1098,7 +1097,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalBishopMoves(sideToMove, source);
             while (moves){
                 Square target = poplsb(moves);
-                int8_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
+                uint32_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
                 moveList.Add(Move(source, target, makePiece(Bishop, sideToMove), None, capture));
             }
         }
@@ -1107,7 +1106,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalRookMoves(sideToMove, source);
             while (moves){
                 Square target = poplsb(moves);
-                int8_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
+                uint32_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
                 moveList.Add(Move(source, target, makePiece(Rook, sideToMove), None, capture));
             }
         }
@@ -1116,7 +1115,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalQueenMoves(sideToMove, source);
             while (moves){
                 Square target = poplsb(moves);
-                int8_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
+                uint32_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
                 moveList.Add(Move(source, target, makePiece(Queen, sideToMove), None, capture));
             }
         }
@@ -1126,15 +1125,15 @@ Moves Board::generateLegalMoves() {
     Bitboard moves = LegalKingMoves(sideToMove, source);
     while (moves){
         Square target = poplsb(moves);
-        int8_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
+        uint32_t capture = ((1ULL << target) & Enemy(sideToMove)) ? 1 : 0;
         if (target == SQ_G1 && source == SQ_E1)
-            moveList.Add(Move(source, target, makePiece(King, sideToMove), None, 0, 0, 0, 1));
+            moveList.Add(Move(source, target, WhiteKing, None, 0, 0, 0, 1));
         else if (target == SQ_C1 && source == SQ_E1)
-            moveList.Add(Move(source, target, makePiece(King, sideToMove), None, 0, 0, 0, 1));
+            moveList.Add(Move(source, target, WhiteKing, None, 0, 0, 0, 1));
         else if (target == SQ_G8 && source == SQ_E8)
-            moveList.Add(Move(source, target, makePiece(King, sideToMove), None, 0, 0, 0, 1));
+            moveList.Add(Move(source, target, BlackKing, None, 0, 0, 0, 1));
         else if (target == SQ_C8 && source == SQ_E8)
-            moveList.Add(Move(source, target, makePiece(King, sideToMove), None, 0, 0, 0, 1));
+            moveList.Add(Move(source, target, BlackKing, None, 0, 0, 0, 1));
         else
             moveList.Add(Move(source, target, makePiece(King, sideToMove), None, capture));
     }
@@ -1146,117 +1145,169 @@ Piece Board::getPiece(Square sq){
     return board[sq];
 }
 void Board::makemove(Move& move){
+    bool capture = move.capture();
+    Piece capturedPiece = capture ? board[move.target()] : None;
+    // Safe important board information
     State safeState{};
-    std::copy(std::begin(PiecesBB), std::end(PiecesBB), safeState.PiecesCopyBB);
-    std::copy(std::begin(board), std::end(board), safeState.boardCopy);
-    safeState.sideToMoveCopy = sideToMove;
     safeState.enpassantCopy = enpassantSquare;
     safeState.castlingRightsCopy = castlingRights;
-    storeInfo.push(safeState);
+    safeState.capturedPiece = capturedPiece;
+    storeInfo[storeCount] = safeState;
+    storeCount++;
+
+    Piece piece = move.piece();
+    Piece promoted = move.promoted();
+    Square source = move.source();
+    Square target = move.target();
+    bool enpassant = move.enpassant();
+    
     // update castling rights
-    if (move.piece() == makePiece(King, sideToMove)){
-        if (move.source() == SQ_E1 && move.target() == SQ_G1 && castlingRights & whiteKingSideCastling){
+    if (piece == makePiece(King, sideToMove)){
+        if (source == SQ_E1 && target == SQ_G1 && castlingRights & whiteKingSideCastling){
             castlingRights &= ~whiteKingSideCastling;
             castlingRights &= ~whiteQueenSideCastling;
-            removePiece(makePiece(Rook, White), SQ_H1);
-            placePiece(makePiece(Rook, White), SQ_F1);
+            removePiece(WhiteRook, SQ_H1);
+            placePiece(WhiteRook, SQ_F1);
         }  
-        else if (move.source() == SQ_E8 && move.target() == SQ_G8 && castlingRights & blackKingSideCastling){
+        else if (source == SQ_E8 && target == SQ_G8 && castlingRights & blackKingSideCastling){
             castlingRights &= ~blackKingSideCastling;
             castlingRights &= ~blackQueenSideCastling;
-            removePiece(makePiece(Rook, Black), SQ_H8);
-            placePiece(makePiece(Rook, Black), SQ_F8);
+            removePiece(BlackRook, SQ_H8);
+            placePiece(BlackRook, SQ_F8);
         }
-        else if (move.source() == SQ_E1 && move.target() == SQ_C1 && castlingRights & whiteQueenSideCastling){
+        else if (source == SQ_E1 && target == SQ_C1 && castlingRights & whiteQueenSideCastling){
             castlingRights &= ~whiteQueenSideCastling;
             castlingRights &= ~whiteKingSideCastling;
-            removePiece(makePiece(Rook, White), SQ_A1);
-            placePiece(makePiece(Rook, White), SQ_D1);
+            removePiece(WhiteRook, SQ_A1);
+            placePiece(WhiteRook, SQ_D1);
         } 
-        else if (move.source() == SQ_E8 && move.target() == SQ_C8 && castlingRights & blackQueenSideCastling){
+        else if (source == SQ_E8 && target == SQ_C8 && castlingRights & blackQueenSideCastling){
             castlingRights &= ~blackQueenSideCastling;
             castlingRights &= ~blackKingSideCastling;
-            removePiece(makePiece(Rook, Black), SQ_A8);
-            placePiece(makePiece(Rook, Black), SQ_D8);
+            removePiece(BlackRook, SQ_A8);
+            placePiece(BlackRook, SQ_D8);
         }
     }
-    if (move.piece() == makePiece(King, sideToMove) && sideToMove == White){
+    if (piece == WhiteKing && sideToMove == White){
         castlingRights &= ~whiteKingSideCastling;
         castlingRights &= ~whiteQueenSideCastling;
     }
-        if (move.piece() == makePiece(King, sideToMove) && sideToMove == Black){
+    if (piece == BlackKing && sideToMove == Black){
         castlingRights &= ~blackKingSideCastling;
         castlingRights &= ~blackQueenSideCastling;
     }
     // rook move loses castle rights
-    if (move.piece() == makePiece(Rook, White)){
-        if (move.source() == SQ_A1)
+    if (piece == WhiteRook){
+        if (source == SQ_A1)
             castlingRights &= ~whiteQueenSideCastling;
-        else if (move.source() == SQ_H1)
+        else if (source == SQ_H1)
             castlingRights &= ~whiteKingSideCastling;
     }
-    else if (move.piece() == makePiece(Rook, Black)){
-        if (move.source() == SQ_A8)
+    else if (piece == BlackRook){
+        if (source == SQ_A8)
             castlingRights &= ~blackQueenSideCastling;
-        else if (move.source() == SQ_H8)
+        else if (source == SQ_H8)
             castlingRights &= ~blackKingSideCastling;
     }
     // Rook capture loses castle rights
-    if (move.capture() && (1ULL << move.target() & Rooks(~sideToMove))){
-        if (move.target() == SQ_A1)
+    if (capture && (1ULL << target & Rooks(~sideToMove))){
+        if (target == SQ_A1)
             castlingRights &= ~whiteQueenSideCastling;
-        else if (move.target() == SQ_H1)
+        else if (target == SQ_H1)
             castlingRights &= ~whiteKingSideCastling;
     }
-    else if (move.capture() && (1ULL << move.target() & Rooks(~sideToMove))){
-        if (move.target() == SQ_A8)
+    else if (capture && (1ULL << target & Rooks(~sideToMove))){
+        if (target == SQ_A8)
             castlingRights &= ~blackQueenSideCastling;
-        else if (move.target() == SQ_H8)
+        else if (target == SQ_H8)
             castlingRights &= ~blackKingSideCastling;
     }
 
     // enpassant capture
-    if (move.target() == enpassantSquare && move.enpassant() == 1){
+    if (target == enpassantSquare && enpassant == 1){
         int8_t offset = sideToMove == White ? -8 : 8;
-        removePiece(makePiece(Pawn, ~sideToMove), Square(move.target() + offset));
+        removePiece(makePiece(Pawn, ~sideToMove), Square(target + offset));
     }
 
     // update enpassant square
     enpassantSquare = NO_SQ;
-    if (move.piece() == makePiece(Pawn, sideToMove) && std::abs(move.source() - move.target()) == 16){
+    if (piece == makePiece(Pawn, sideToMove) && std::abs(source - target) == 16){
         int8_t offset = sideToMove == White ? -8 : 8;
-        Bitboard epMask = GetPawnAttacks(Square(move.target() + offset), sideToMove);
+        Bitboard epMask = GetPawnAttacks(Square(target + offset), sideToMove);
         if (epMask & Pawns(~sideToMove))
-            enpassantSquare = Square(move.target() + offset);
+            enpassantSquare = Square(target + offset);
     }
 
 
     // update half move clock
-    // if (move.piece() == makePiece(Pawn, sideToMove))
+    // if (piece == makePiece(Pawn, sideToMove))
     //     halfMoveClock = 0;
-    if (move.capture())
-        removePiece(getPiece(move.target()), move.target());
 
-    removePiece(move.piece(), move.source());
-    placePiece(move.piece(), move.target());
+    if (capture == 1 && enpassant != 1)
+        removePiece(capturedPiece, target);
 
-    if (move.promoted() != None){
-        removePiece(move.piece(), move.target());
-        placePiece(move.promoted(), move.target());
+    removePiece(piece, source);
+    placePiece(piece, target);
+
+    if (promoted != None){
+        removePiece(piece, target);
+        placePiece(promoted, target);
     }
 
     // Switch sides
     sideToMove = ~sideToMove;
 }
-void Board::unmakemove(){
-    State safeState = storeInfo.top();
-    
-    std::copy(std::begin(safeState.PiecesCopyBB), std::end(safeState.PiecesCopyBB), PiecesBB);
-    std::copy(std::begin(safeState.boardCopy), std::end(safeState.boardCopy), board);
-    sideToMove = safeState.sideToMoveCopy;
+void Board::unmakemove(Move& move){
+    // Retrive important board information
+    storeCount--;
+    State safeState = storeInfo[storeCount];
     enpassantSquare = safeState.enpassantCopy;
     castlingRights = safeState.castlingRightsCopy;
-    storeInfo.pop();
+
+    sideToMove = ~sideToMove;
+
+    Piece piece = move.piece();
+    Piece promoted = move.promoted();
+    Square source = move.source();
+    Square target = move.target();
+    bool enpassant = move.enpassant();
+
+    removePiece(piece, target);
+    placePiece(piece, source);
+
+    if (enpassant && piece == WhitePawn) {
+        placePiece(BlackPawn, Square((int)enpassantSquare - 8));
+    }
+    if (enpassant && piece == BlackPawn) {
+        placePiece(WhitePawn, Square((int)enpassantSquare + 8));
+    }
+    if (promoted != None) {
+        removePiece(promoted, target);
+    }
+    if (move.capture() == 1 && !enpassant) {
+        placePiece(safeState.capturedPiece, target);
+    }
+    if (piece == WhiteKing && move.castling() == 1) {
+        if (target == SQ_G1 && source == SQ_E1) {
+            removePiece(WhiteRook, SQ_F1);
+            placePiece(WhiteRook, SQ_H1);
+        }
+        if (target == SQ_C1 && source == SQ_E1) {
+            removePiece(WhiteRook, SQ_D1);
+            placePiece(WhiteRook, SQ_A1);
+        }
+    }
+    if (piece == BlackKing && move.castling() == 1){
+        if (target == SQ_G8 && source == SQ_E8) {
+            removePiece(BlackRook, SQ_F8);
+            placePiece(BlackRook, SQ_H8);
+        }
+        if (target == SQ_C8 && source == SQ_E8) {
+            removePiece(BlackRook, SQ_D8);
+            placePiece(BlackRook, SQ_A8);
+            
+        }
+    }
 }
 
 // checks if the square is attacked by the specified color
