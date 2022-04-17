@@ -1237,6 +1237,7 @@ void Board::makemove(Move& move){
         if (epMask & Pawns(~sideToMove))
             enpassantSquare = Square(target + offset);
     }
+    
 
 
     // update half move clock
