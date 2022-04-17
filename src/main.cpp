@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 
 #include "chess.hpp"
 
@@ -6,49 +7,42 @@ using namespace Chess;
 
 Board board = Board();
 
-unsigned long long perft(int depth, int maxDepth) {
+unsigned long long perft(int depth) {
     if (depth == 0) {
         return 1;
     }
 
-    unsigned long long count = 0;
+    unsigned long long nodes = 0;
     unsigned long long total = 0;
     Moves moveList = board.generateLegalMoves();
-    for (int i = 0; i < (int)moveList.size(); i++) {
-        Move move = moveList[i];
+    for (int i = 0; i < (int)moveList.count; i++) {
+        Move move = moveList.moves[i];
         board.makemove(move);
-        count += perft(depth - 1, maxDepth);
+        nodes += perft(depth - 1);
         board.unmakemove();
-        if (depth == maxDepth){
-            std::cout << squareToString[move.source()] << squareToString[move.target()];
-            std::cout << ": " << count << std::endl;
-            total += count;
-            count = 0;
-        }
     }
-    if (depth == maxDepth)
-        std::cout << "Total: " << total << std::endl;
-    return count;
+
+    return nodes;
+}
+
+void perftTest(int depth) {
+    auto t1 = std::chrono::high_resolution_clock::now();
+    int nodes = perft(depth);
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+    
+    std::cout << "Depth " << depth << "\n";
+    std::cout << "Nodes: " << nodes << "\n";
+    std::cout << "Time: " << ms.count() << " ms\n";
+    std::cout << "\n\n";
 }
 
 int main() {
-    while (true){
-        std::string input;
-        std::getline(std::cin, input);
-        if (input.find("position fen") != std::string::npos) {
-            std::size_t start_index = input.find("fen");
-			std::string fen = input.substr(start_index + 4);
-            board.parseFEN(fen);
-        }
-        if (input.find("go perft") != std::string::npos){
-            std::size_t start_index = input.find("perft");
-			std::string depth_str = input.substr(start_index + 6);
-			int depth = std::stoi(depth_str);
-            perft(depth, depth);
-        }
-        if (input == "quit")
-            break;
-        if (input == "print")
-            board.print();
-    }
+    perftTest(1);
+    perftTest(2);
+    perftTest(3);
+    perftTest(4);
+    perftTest(5);
+    perftTest(6);
 }
