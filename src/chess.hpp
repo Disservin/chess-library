@@ -10,7 +10,7 @@
 #include <cmath>
 #include <algorithm>
 
-
+#define Compiletime __forceinline constexpr
 namespace Chess {
 
 
@@ -528,16 +528,16 @@ public:
 
     // functions for getting individual
     // piece bitboards
-    template <Color c> Bitboard Pawns();
-    template <Color c> Bitboard Knights();
-    template <Color c> Bitboard Bishops();
-    template <Color c> Bitboard Rooks();
-    template <Color c> Bitboard Queens();
-    template <Color c> Bitboard Kings();
-    template <Color c> Bitboard allPieces();
-    template <Color c> Bitboard Enemy();
-    template <Color c> Bitboard EnemyEmpty();
-    template <Color c> Bitboard PieceBB(PieceType type);
+    template <Color c> Compiletime Bitboard Pawns();
+    template <Color c> Compiletime Bitboard Knights();
+    template <Color c> Compiletime Bitboard Bishops();
+    template <Color c> Compiletime Bitboard Rooks();
+    template <Color c> Compiletime Bitboard Queens();
+    template <Color c> Compiletime Bitboard Kings();
+    template <Color c> Compiletime Bitboard allPieces();
+    template <Color c> Compiletime Bitboard Enemy();
+    template <Color c> Compiletime Bitboard EnemyEmpty();
+    template <Color c> Compiletime Bitboard PieceBB(PieceType type);
 
     template <Color c> Square KingSq();
     template <Color c> Bitboard doCheckmask(Square sq);
@@ -606,68 +606,68 @@ inline void Board::removePiece(Piece piece, Square sq) {
 
 // returns pawns bitboard for given color
 template <Color c> 
-inline Bitboard Board::Pawns(){
+Compiletime Bitboard Board::Pawns(){
     return PiecesBB[c * 6];
 }
 
 // returns knights bitboard for given color
 template <Color c> 
-inline Bitboard Board::Knights(){
+Compiletime Bitboard Board::Knights(){
     return PiecesBB[c * 6 + Knight];
 }
 
 // returns bishops bitboard for given color
 template <Color c> 
-inline Bitboard Board::Bishops(){
+Compiletime Bitboard Board::Bishops(){
     return PiecesBB[c * 6 + Bishop];
 }
 
 // returns rooks bitboard for given color
 template <Color c> 
-inline Bitboard Board::Rooks(){
+Compiletime Bitboard Board::Rooks(){
     return PiecesBB[c * 6 + Rook];
 }
 
 // returns queens bitboard for given color
 template <Color c> 
-inline Bitboard Board::Queens(){
+Compiletime Bitboard Board::Queens(){
     return PiecesBB[c * 6 + Queen];
 }
 
 
 // returns king bitboard for given color
 template <Color c> 
-inline Bitboard Board::Kings(){
+Compiletime Bitboard Board::Kings(){
     return PiecesBB[c * 6 + King];
 }
 
 // returns bitboard containing all pieces of given color
 template <Color c> 
-inline Bitboard Board::allPieces(){
+Compiletime Bitboard Board::allPieces(){
     return Pawns<c>() | Knights<c>() | Bishops<c>() | Rooks<c>() | Queens<c>() | Kings<c>();
 }
 
 template <Color c> 
-inline Bitboard Board::Enemy(){
-    if (c==White) return allPieces<Black>();
+Compiletime Bitboard Board::Enemy(){
+    if constexpr (c==White) return allPieces<Black>();
     return allPieces<White>();
 }
 
 template <Color c> 
-inline Bitboard Board::EnemyEmpty(){
-    if (c==White) return ~allPieces<White>();
+Compiletime Bitboard Board::EnemyEmpty(){
+    if constexpr (c==White) return ~allPieces<White>();
     return ~allPieces<Black>();
 }
 
 template <Color c> 
-inline Square Board::KingSq(){
-    if (c==White) return bsf(Kings<White>());
-    return bsf(Kings<Black>());
+Compiletime Bitboard Board::PieceBB(PieceType type) {
+    return PiecesBB[c * 6 + type];
 }
 
 template <Color c> 
-inline Bitboard Board::PieceBB(PieceType type) {
-    return PiecesBB[c * 6 + type];
+inline Square Board::KingSq(){
+    if constexpr (c==White) return bsf(Kings<White>());
+    return bsf(Kings<Black>());
 }
 
 // Board constructor that takes in FEN string.

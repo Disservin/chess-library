@@ -41,6 +41,7 @@ void perftTest(int depth) {
 }
 
 int main() {
+    auto t1 = std::chrono::high_resolution_clock::now();
     perftTest(1);
     perftTest(2);
     perftTest(3);
@@ -84,5 +85,8 @@ int main() {
     perftTest(3);
     perftTest(4);
     perftTest(5);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+    std::cout << "Time: " << ms.count() << " ms\n";
     return 0;
 }
