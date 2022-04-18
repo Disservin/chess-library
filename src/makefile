@@ -5,4 +5,4 @@ main.o: main.cpp chess.hpp
 	g++ -c -flto -O3 -msse2 -march=native -std=c++17 -static-libgcc -static-libstdc++ main.cpp 
 
 clean:
-	del *.o *.exe
+	rm *.o *.exe

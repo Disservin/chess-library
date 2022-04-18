@@ -196,37 +196,84 @@ inline Bitboard reverse(Bitboard bb) {
     return (bb << 48) | ((bb & 0xffff0000) << 16) | ((bb >> 16) & 0xffff0000) | (bb >> 48);
 }
 
+// Compiler specific functions, taken from Stockfish https://github.com/official-stockfish/Stockfish
+#if defined(__GNUC__)  // GCC, Clang, ICC
+#include <nmmintrin.h>
+inline Square bsf(Bitboard b) {
 
-#ifdef _WIN32
+  return Square(__builtin_ctzll(b));
+}
+
+inline Square bsr(Bitboard b) {
+
+  return Square(63 ^ __builtin_clzll(b));
+}
+
+#elif defined(_MSC_VER)  // MSVC
+
+#ifdef _WIN64  // MSVC, WIN64
 #include <intrin.h>
-// returns index of least significant bit of given Bitboard
-inline Square bsf(Bitboard bb) {
-    unsigned long index;
-    _BitScanForward64(&index, bb);
-    return Square(index);
+inline Square bsf(Bitboard b) {
+
+  unsigned long idx;
+  _BitScanForward64(&idx, b);
+  return (Square) idx;
 }
-// returns index of most significant bit
-inline Square bsr(Bitboard bb) {
-    unsigned long index;
-    _BitScanReverse64(&index, bb);
-    return Square(index);
+
+inline Square bsr(Bitboard b) {
+
+  unsigned long idx;
+  _BitScanReverse64(&idx, b);
+  return (Square) idx;
 }
-#else
-// returns index of least significant bit of given Bitboard
-inline Square bsf(unsigned long long bb) {
-    if (!bb) return NO_SQ;
-    int index;
-    index = __builtin_ffsll(bb);
-    return Square(index-1);
+
+#else  // MSVC, WIN32
+#include <intrin.h>
+inline Square bsf(Bitboard b) {
+
+  unsigned long idx;
+
+  if (b & 0xffffffff) {
+      _BitScanForward(&idx, int32_t(b));
+      return Square(idx);
+  } else {
+      _BitScanForward(&idx, int32_t(b >> 32));
+      return Square(idx + 32);
+  }
 }
-// returns index of most significant bit
-inline Square bsr(Bitboard bb) {
-    if (!bb) return NO_SQ;
-    int index;
-    index = __builtin_clzll (bb);
-    return Square(index);
+
+inline Square bsr(Bitboard b) {
+
+  unsigned long idx;
+
+  if (b >> 32) {
+      _BitScanReverse(&idx, int32_t(b >> 32));
+      return Square(idx + 32);
+  } else {
+      _BitScanReverse(&idx, int32_t(b));
+      return Square(idx);
+  }
 }
+
 #endif
+
+#else  // Compiler is neither GCC nor MSVC compatible
+
+#error "Compiler not supported."
+
+#endif
+
+inline int popCount(Bitboard b){
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+
+  return (int)_mm_popcnt_u64(b);
+
+#else // Assumed gcc or compatible compiler
+
+  return __builtin_popcountll(b);
+
+#endif
+}
 
 // returns index of LSB and removes that bit from given Bitboard
 Square poplsb(Bitboard &bb) {
@@ -235,7 +282,6 @@ Square poplsb(Bitboard &bb) {
     return lsb;
 }
 
-
 // sets bit at given square to 1
 inline void setBit(Bitboard& bb, Square sq) {
     bb |= SQUARE_BB[sq];
@@ -243,15 +289,6 @@ inline void setBit(Bitboard& bb, Square sq) {
 
 inline bool isBitSet(Bitboard bb, Square sq) {
     return (bb & SQUARE_BB[sq]) ? true : false;
-}
-
-//Returns number of set bits in the bitboard
-inline int popCount(Bitboard x) {
-	x = x - ((x >> 1) & 0x5555555555555555);
-	x = (x & 0x3333333333333333) + ((x >> 2) & 0x3333333333333333);
-	x = (x + (x >> 4)) & 0x0f0f0f0f0f0f0f0f;
-	x = (x * 0x0101010101010101) >> 56;
-	return int(x);
 }
 
 // print given bitboard (for debugging purposes)
@@ -300,8 +337,9 @@ PieceType piece_type(Piece p){
     return PieceType(p % 6);
 }
 
-Piece makePiece(PieceType type, Color color) {
-  return Piece(6 * color + type);
+template <Color c>
+Piece makePiece(PieceType type) {
+  return Piece(6 * c + type);
 }
 
 Color piece_color(Piece p){
@@ -473,6 +511,10 @@ private:
     // Doublecheck
     uint8_t doubleCheck{};
 
+    // Occupancy bitboard, done during generateMoves
+    Bitboard occupancyWhite;
+    Bitboard occupancyBlack;
+    Bitboard occupancyAll;
 public:
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
@@ -889,11 +931,13 @@ inline Bitboard Board::GetKingAttacks(Square square) {
 
 template <Color c> 
 inline Bitboard Board::doCheckmask(Square sq){
+    Bitboard us = (c == White) ? occupancyWhite : occupancyBlack;
+    Bitboard them = (c == White) ? occupancyBlack : occupancyWhite;
     Bitboard checks = 0ULL;
     Bitboard pawn_attack    = GetPawnAttacks<c>(sq);
     Bitboard knight_attack  = GetKnightAttacks(sq);
-    Bitboard bishop_attack  = GetBishopAttacks(sq, allPieces<c>() | allPieces<~c>()) & ~allPieces<c>();
-    Bitboard rook_attack    = GetRookAttacks(sq, allPieces<c>() | allPieces<~c>()) & ~allPieces<c>();
+    Bitboard bishop_attack  = GetBishopAttacks(sq, us | them) & ~us;
+    Bitboard rook_attack    = GetRookAttacks(sq, us | them) & ~us;
 
     Bitboard pawn_mask      = pawn_attack & Pawns<~c>();
     Bitboard knight_mask    = knight_attack & Knights<~c>();
@@ -909,11 +953,11 @@ inline Bitboard Board::doCheckmask(Square sq){
         doubleCheck++;
     }
     if (bishop_mask){
-        checks |= (bishop_attack & GetBishopAttacks(bsf(bishop_mask), allPieces<c>())) | (1ULL << bsf(bishop_mask));
+        checks |= (bishop_attack & GetBishopAttacks(bsf(bishop_mask), us)) | (1ULL << bsf(bishop_mask));
         doubleCheck++;
     } 
     if (rook_mask){
-        checks |= (rook_attack & GetRookAttacks(bsf(rook_mask), allPieces<c>()))       | (1ULL << bsf(rook_mask));
+        checks |= (rook_attack & GetRookAttacks(bsf(rook_mask), us))       | (1ULL << bsf(rook_mask));
         doubleCheck++;
     }
     return checks;
@@ -921,8 +965,10 @@ inline Bitboard Board::doCheckmask(Square sq){
 
 template <Color c> 
 inline void Board::create_pins(Square sq){
-    Bitboard rook_attack   = GetRookAttacks(sq, allPieces<~c>());
-    Bitboard bishop_attack = GetBishopAttacks(sq, allPieces<~c>());
+    Bitboard us = (c == White) ? occupancyWhite : occupancyBlack;
+    Bitboard them = (c == White) ? occupancyBlack : occupancyWhite;
+    Bitboard rook_attack   = GetRookAttacks(sq, them);
+    Bitboard bishop_attack = GetBishopAttacks(sq, them);
     Bitboard rook_mask     = rook_attack & (Rooks<~c>() | Queens<~c>());
     Bitboard bishop_mask   = bishop_attack & (Bishops<~c>() | Queens<~c>());
     Bitboard rook_pin      = 0ULL;
@@ -932,13 +978,13 @@ inline void Board::create_pins(Square sq){
     while (rook_mask){
         Square index = poplsb(rook_mask);
         Bitboard possible_pin = ((rook_attack) & GetRookAttacks(index, Kings<c>())) | (1ULL << index);
-        if (popCount(possible_pin & allPieces<c>()) == 1)
+        if (popCount(possible_pin & us) == 1)
             rook_pin |= possible_pin;
     }
     while (bishop_mask){
         Square index = poplsb(bishop_mask);
         Bitboard possible_pin = ((bishop_attack) & GetBishopAttacks(index, Kings<c>())) | (1ULL << index);
-        if (popCount(possible_pin & allPieces<c>()) == 1)
+        if (popCount(possible_pin & us) == 1)
             bishop_pin |= possible_pin;
     }
     pinMaskHV = rook_pin;
@@ -947,6 +993,9 @@ inline void Board::create_pins(Square sq){
 
 template <Color c> 
 inline void Board::init(Square sq){
+    occupancyWhite = allPieces<White>();
+    occupancyBlack = allPieces<Black>();
+    occupancyAll   = occupancyWhite | occupancyBlack;
     Bitboard mask = doCheckmask<c>(sq);
     checkMask = mask ? mask : 18446744073709551615ULL;
     create_pins<c>(sq);
@@ -954,10 +1003,11 @@ inline void Board::init(Square sq){
 
 template <Color c> 
 inline Bitboard Board::LegalPawnMoves(Square sq){
+    Bitboard enemy = c==White ? occupancyBlack : occupancyWhite;
     if (doubleCheck == 2) return 0ULL;
-    if (pinMaskD & (1ULL << sq)) return GetPawnAttacks<c>(sq) & pinMaskD & checkMask & Enemy<c>();
+    if (pinMaskD & (1ULL << sq)) return GetPawnAttacks<c>(sq) & pinMaskD & checkMask & enemy;
 
-    Bitboard not_all = ~allPieces<c>() & ~allPieces<~c>();
+    Bitboard not_all = ~occupancyWhite & ~occupancyBlack;
     Bitboard attacks = GetPawnAttacks<c>(sq);
     Bitboard push = GetPawnPush<c>(sq) & not_all;
     Bitboard push2 = c==White && rank_of(sq) == 1 ?
@@ -966,19 +1016,19 @@ inline Bitboard Board::LegalPawnMoves(Square sq){
     if (pinMaskHV & (1ULL << sq)) return (push | push2) & pinMaskHV & checkMask;
     int8_t offset = c==White ? -8 : 8;
     if (checkMask != 18446744073709551615ULL && attacks & (1ULL << enpassantSquare) && checkMask & (1ULL << (enpassantSquare + offset))) return (GetPawnAttacks<c>(sq) & (1ULL << enpassantSquare));
-    if (checkMask != 18446744073709551615ULL) return ((GetPawnAttacks<c>(sq) & Enemy<c>()) | push | push2) & checkMask;
+    if (checkMask != 18446744073709551615ULL) return ((GetPawnAttacks<c>(sq) & enemy) | push | push2) & checkMask;
 
-    Bitboard moves = ((attacks & Enemy<c>()) | push | push2) & checkMask;
+    Bitboard moves = ((attacks & enemy) | push | push2) & checkMask;
     if (enpassantSquare != NO_SQ && squareDistance(sq, enpassantSquare) == 1) {
         // Horizontal Ep rook pins our pawn through another pawn, our pawn can push but not take enpassant 
         if ((1ULL << enpassantSquare) & attacks){
-            removePiece(makePiece(Pawn, c), sq);
-            removePiece(makePiece(Pawn, ~c), Square(enpassantSquare + offset));
-            placePiece(makePiece(Pawn,c), enpassantSquare);
+            removePiece(makePiece<c>(Pawn), sq);
+            removePiece(makePiece<~c>(Pawn), Square(enpassantSquare + offset));
+            placePiece(makePiece<c>(Pawn), enpassantSquare);
             if (!isSquareAttacked<~c>(KingSq<c>())) moves |= (1ULL << enpassantSquare);
-            removePiece(makePiece(Pawn,c), enpassantSquare);
-            placePiece(makePiece(Pawn, c), sq);
-            placePiece(makePiece(Pawn, ~c), Square(enpassantSquare + offset));         
+            removePiece(makePiece<c>(Pawn), enpassantSquare);
+            placePiece(makePiece<c>(Pawn), sq);
+            placePiece(makePiece<~c>(Pawn), Square(enpassantSquare + offset));         
         }
 
     }
@@ -996,19 +1046,17 @@ template <Color c>
 inline Bitboard Board::LegalBishopMoves(Square sq){
     if (doubleCheck == 2) return 0ULL;
     if (pinMaskHV & (1ULL << sq)) return 0ULL;
-    if (pinMaskD & (1ULL << sq)) return GetBishopAttacks(sq, allPieces<White>() | allPieces<Black>()) & EnemyEmpty<c>() & checkMask & pinMaskD;
+    if (pinMaskD & (1ULL << sq)) return GetBishopAttacks(sq, occupancyWhite | occupancyBlack) & EnemyEmpty<c>() & checkMask & pinMaskD;
     // Bitboard containing all occupancies
-    const Bitboard allBB = allPieces<White>() | allPieces<Black>();
-    return GetBishopAttacks(sq, allBB) & EnemyEmpty<c>() & checkMask;
+    return GetBishopAttacks(sq, occupancyAll) & EnemyEmpty<c>() & checkMask;
 }
 
 template <Color c> 
 inline Bitboard Board::LegalRookMoves(Square sq){
     if (doubleCheck == 2) return 0ULL;
     if (pinMaskD & (1ULL << sq)) return 0ULL;
-    if (pinMaskHV & (1ULL << sq)) return GetRookAttacks(sq, allPieces<White>() | allPieces<Black>()) & EnemyEmpty<c>() & checkMask & pinMaskHV;
-    const Bitboard allBB = allPieces<White>() | allPieces<Black>();
-    return GetRookAttacks(sq, allBB) & EnemyEmpty<c>() & checkMask;
+    if (pinMaskHV & (1ULL << sq)) return GetRookAttacks(sq, occupancyWhite | occupancyBlack) & EnemyEmpty<c>() & checkMask & pinMaskHV;
+    return GetRookAttacks(sq, occupancyAll) & EnemyEmpty<c>() & checkMask;
 }
 
 template <Color c> 
@@ -1022,29 +1070,28 @@ inline Bitboard Board::LegalKingMoves(Square sq){
     Bitboard king_moves = GetKingAttacks(sq) & EnemyEmpty<c>();
 
     // remove king
-    removePiece(makePiece(King, c), sq);
+    removePiece(makePiece<c>(King), sq);
 
     Bitboard legal_king = 0ULL;
     while (king_moves){
-        Square index = bsf(king_moves);
+        Square index = poplsb(king_moves);
         if (isSquareAttacked<~c>(index)){
             legal_king |= 0ULL;
         }
         else
             legal_king |= (1ULL << index);
-        poplsb(king_moves);
+        
     }
     
     // restore king
-    placePiece(makePiece(King, c), sq);
+    placePiece(makePiece<c>(King), sq);
 
     Bitboard castlingMoves = 0ULL;
     bool inCheck = 18446744073709551615ULL != checkMask;
     if (!inCheck){
-        Bitboard allBB = allPieces<White>() | allPieces<Black>();
         if (castlingRights & whiteKingSideCastling && sideToMove == White &&
-            !(allBB & (1ULL << SQ_F1)) &&
-            !(allBB & (1ULL << SQ_G1)) &&
+            !(occupancyAll & (1ULL << SQ_F1)) &&
+            !(occupancyAll & (1ULL << SQ_G1)) &&
             (1ULL << SQ_H1 & Rooks<White>()) &&
             !(isSquareAttacked<~c>(SQ_F1)) &&
             !(isSquareAttacked<~c>(SQ_G1)))
@@ -1053,9 +1100,9 @@ inline Bitboard Board::LegalKingMoves(Square sq){
         }
 
         if (castlingRights & whiteQueenSideCastling && sideToMove == White &&
-            !(allBB & (1ULL << SQ_D1)) &&
-            !(allBB & (1ULL << SQ_C1)) &&
-            !(allBB & (1ULL << SQ_B1)) &&
+            !(occupancyAll & (1ULL << SQ_D1)) &&
+            !(occupancyAll & (1ULL << SQ_C1)) &&
+            !(occupancyAll & (1ULL << SQ_B1)) &&
             (1ULL << SQ_A1 & Rooks<White>()) &&
             !(isSquareAttacked<~c>(SQ_D1)) &&
             !(isSquareAttacked<~c>(SQ_C1)))
@@ -1064,8 +1111,8 @@ inline Bitboard Board::LegalKingMoves(Square sq){
         }
 
         if (castlingRights & blackKingSideCastling && sideToMove == Black &&
-            !(allBB & (1ULL << SQ_F8)) &&
-            !(allBB & (1ULL << SQ_G8)) &&
+            !(occupancyAll & (1ULL << SQ_F8)) &&
+            !(occupancyAll & (1ULL << SQ_G8)) &&
             (1ULL << SQ_H8 & Rooks<Black>()) &&
             !(isSquareAttacked<~c>(SQ_F8)) &&
             !(isSquareAttacked<~c>(SQ_G8)))
@@ -1073,9 +1120,9 @@ inline Bitboard Board::LegalKingMoves(Square sq){
             castlingMoves |= (1ULL << SQ_G8);
         }
         if (castlingRights & blackQueenSideCastling && sideToMove == Black &&
-            !(allBB & (1ULL << SQ_D8)) &&
-            !(allBB & (1ULL << SQ_C8)) &&
-            !(allBB & (1ULL << SQ_B8)) &&
+            !(occupancyAll & (1ULL << SQ_D8)) &&
+            !(occupancyAll & (1ULL << SQ_C8)) &&
+            !(occupancyAll & (1ULL << SQ_B8)) &&
             (1ULL << SQ_A8 & Rooks<Black>()) &&
             !(isSquareAttacked<~Black>(SQ_D8)) &&
             !(isSquareAttacked<~Black>(SQ_C8)))
@@ -1099,25 +1146,26 @@ Moves Board::generateLegalMoves() {
     Bitboard rook_mask = Rooks<c>();
     Bitboard queen_mask = Queens<c>();
     Bitboard king_mask = Kings<c>();
+    Bitboard enemy = c==White ? occupancyBlack : occupancyWhite;
     if (doubleCheck < 2){
         while (pawn_mask){
             Square source = poplsb(pawn_mask);
             Bitboard moves = LegalPawnMoves<c>(source);
             while (moves){
                 Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & Enemy<c>()) ? 1 : 0;
+                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
                 if (rank_of(target) == 7 || rank_of(target) == 0){
-                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), makePiece(Queen, sideToMove), capture));
-                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), makePiece(Rook, sideToMove), capture));
-                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), makePiece(Bishop, sideToMove), capture));
-                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), makePiece(Knight, sideToMove), capture));
+                    moveList.Add(Move(source, target, makePiece<c>(Pawn), makePiece<c>(Queen), capture));
+                    moveList.Add(Move(source, target, makePiece<c>(Pawn), makePiece<c>(Rook), capture));
+                    moveList.Add(Move(source, target, makePiece<c>(Pawn), makePiece<c>(Bishop), capture));
+                    moveList.Add(Move(source, target, makePiece<c>(Pawn), makePiece<c>(Knight), capture));
                 }
                 else if (std::abs(source - target) == 16)
-                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), None, 0, 1, 0));
+                    moveList.Add(Move(source, target, makePiece<c>(Pawn), None, 0, 1, 0));
                 else if (target == enpassantSquare)
-                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), None, 1, 0, 1));
+                    moveList.Add(Move(source, target, makePiece<c>(Pawn), None, 1, 0, 1));
                 else
-                    moveList.Add(Move(source, target, makePiece(Pawn, sideToMove), None, capture, 0, 0));
+                    moveList.Add(Move(source, target, makePiece<c>(Pawn), None, capture, 0, 0));
             }
         }
         while (knight_mask){
@@ -1125,8 +1173,8 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalKnightMoves<c>(source);
             while (moves){
                 Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & Enemy<c>()) ? 1 : 0;
-                moveList.Add(Move(source, target, makePiece(Knight, sideToMove), None, capture));
+                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
+                moveList.Add(Move(source, target, makePiece<c>(Knight), None, capture));
             }
         }
         while (bishop_mask){
@@ -1134,8 +1182,8 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalBishopMoves<c>(source);
             while (moves){
                 Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & Enemy<c>()) ? 1 : 0;
-                moveList.Add(Move(source, target, makePiece(Bishop, sideToMove), None, capture));
+                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
+                moveList.Add(Move(source, target, makePiece<c>(Bishop), None, capture));
             }
         }
         while (rook_mask){
@@ -1143,8 +1191,8 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalRookMoves<c>(source);
             while (moves){
                 Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & Enemy<c>()) ? 1 : 0;
-                moveList.Add(Move(source, target, makePiece(Rook, sideToMove), None, capture));
+                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
+                moveList.Add(Move(source, target, makePiece<c>(Rook), None, capture));
             }
         }
         while (queen_mask){
@@ -1152,8 +1200,8 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalQueenMoves<c>(source);
             while (moves){
                 Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & Enemy<c>()) ? 1 : 0;
-                moveList.Add(Move(source, target, makePiece(Queen, sideToMove), None, capture));
+                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
+                moveList.Add(Move(source, target, makePiece<c>(Queen), None, capture));
             }
         }
     }
@@ -1162,7 +1210,7 @@ Moves Board::generateLegalMoves() {
     Bitboard moves = LegalKingMoves<c>(source);
     while (moves){
         Square target = poplsb(moves);
-        uint32_t capture = ((1ULL << target) & Enemy<c>()) ? 1 : 0;
+        uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
         if (target == SQ_G1 && source == SQ_E1)
             moveList.Add(Move(source, target, WhiteKing, None, 0, 0, 0, 1));
         else if (target == SQ_C1 && source == SQ_E1)
@@ -1172,7 +1220,7 @@ Moves Board::generateLegalMoves() {
         else if (target == SQ_C8 && source == SQ_E8)
             moveList.Add(Move(source, target, BlackKing, None, 0, 0, 0, 1));
         else
-            moveList.Add(Move(source, target, makePiece(King, sideToMove), None, capture));
+            moveList.Add(Move(source, target, makePiece<c>(King), None, capture));
     }
 
     return moveList;
@@ -1200,7 +1248,7 @@ void Board::makemove(Move& move){
     bool enpassant = move.enpassant();
     
     // update castling rights
-    if (piece == makePiece(King, sideToMove)){
+    if (piece == makePiece<c>(King)){
         if (source == SQ_E1 && target == SQ_G1 && castlingRights & whiteKingSideCastling){
             castlingRights &= ~whiteKingSideCastling;
             castlingRights &= ~whiteQueenSideCastling;
@@ -1264,12 +1312,12 @@ void Board::makemove(Move& move){
     // enpassant capture
     if (target == enpassantSquare && enpassant == 1){
         int8_t offset = sideToMove == White ? -8 : 8;
-        removePiece(makePiece(Pawn, ~sideToMove), Square(target + offset));
+        removePiece(makePiece<~c>(Pawn), Square(target + offset));
     }
 
     // update enpassant square
     enpassantSquare = NO_SQ;
-    if (piece == makePiece(Pawn, sideToMove) && std::abs(source - target) == 16){
+    if (piece == makePiece<c>(Pawn) && std::abs(source - target) == 16){
         int8_t offset = sideToMove == White ? -8 : 8;
         Bitboard epMask = GetPawnAttacks<c>(Square(target + offset));
         if (epMask & Pawns<~c>()){
