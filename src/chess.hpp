@@ -1,5 +1,7 @@
 #pragma once
 
+#define Compiletime __forceinline constexpr
+
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -10,7 +12,6 @@
 #include <cmath>
 #include <algorithm>
 
-#define Compiletime __forceinline constexpr
 namespace Chess {
 
 
@@ -54,6 +55,11 @@ enum Square : uint8_t {
     SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
     NO_SQ
 };
+
+// operator for incrementing a square
+inline Square& operator++(Square& s) { 
+    return s = Square(int(s) + 1); 
+}
 
 // enums for Files
 enum File : uint8_t {
@@ -515,6 +521,12 @@ private:
     Bitboard occupancyWhite;
     Bitboard occupancyBlack;
     Bitboard occupancyAll;
+
+    // lookup table for squares between two squares
+    Bitboard SQUARES_BETWEEN_BB[64][64];
+
+    void initializeLookupTables();
+
 public:
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
@@ -541,25 +553,17 @@ public:
 
     template <Color c> Square KingSq();
     template <Color c> Bitboard doCheckmask(Square sq);
-
     template <Color c> void create_pins(Square sq);
-
     template <Color c> void init(Square sq);
 
     template <Color c> Bitboard LegalPawnMoves(Square sq);
-
     template <Color c> Bitboard LegalKnightMoves(Square sq);
-
     template <Color c> Bitboard LegalBishopMoves(Square sq);
-
     template <Color c> Bitboard LegalRookMoves(Square sq);
-
     template <Color c> Bitboard LegalQueenMoves(Square sq);
-    
     template <Color c> Bitboard LegalKingMoves(Square sq);
 
     template <Color c> void makemove(Move& move);
-
     template <Color c> void unmakemove(Move& move);
 
     Piece getPiece(Square sq);
@@ -670,9 +674,28 @@ inline Square Board::KingSq(){
     return bsf(Kings<Black>());
 }
 
+void Board::initializeLookupTables() {
+    //initialize squares between table
+    Bitboard sqs;
+    for (Square sq1 = SQ_A1; sq1 <= SQ_H8; ++sq1) {
+        for (Square sq2 = SQ_A1; sq2 <= SQ_H8; ++sq2) {
+            sqs = SQUARE_BB[sq1] | SQUARE_BB[sq2];
+            if (file_of(sq1) == file_of(sq2) || rank_of(sq1) == rank_of(sq2))
+                SQUARES_BETWEEN_BB[sq1][sq2] =
+                GetRookAttacks(sq1, sqs) & GetRookAttacks(sq2, sqs);
+            else if (diagonal_of(sq1) == diagonal_of(sq2) || anti_diagonal_of(sq1) == anti_diagonal_of(sq2))
+                SQUARES_BETWEEN_BB[sq1][sq2] =
+                GetBishopAttacks(sq1, sqs) & GetBishopAttacks(sq2, sqs);
+        }   
+    }
+}
+
 // Board constructor that takes in FEN string.
 // if no parameter given, set to default position
 Board::Board(std::string FEN) {
+    // init lookup tables used for movegen
+    initializeLookupTables();
+
     // reset board info
     memset(PiecesBB, 0ULL, sizeof(PiecesBB));
     memset(board, None, sizeof(board));
@@ -953,11 +976,13 @@ inline Bitboard Board::doCheckmask(Square sq){
         doubleCheck++;
     }
     if (bishop_mask){
-        checks |= (bishop_attack & GetBishopAttacks(bsf(bishop_mask), us)) | (1ULL << bsf(bishop_mask));
+        Square index = bsf(bishop_mask);
+        checks |= SQUARES_BETWEEN_BB[sq][index] | SQUARE_BB[index];
         doubleCheck++;
     } 
     if (rook_mask){
-        checks |= (rook_attack & GetRookAttacks(bsf(rook_mask), us))       | (1ULL << bsf(rook_mask));
+        Square index = bsf(rook_mask);
+        checks |= SQUARES_BETWEEN_BB[sq][index] | SQUARE_BB[index];
         doubleCheck++;
     }
     return checks;
@@ -975,15 +1000,16 @@ inline void Board::create_pins(Square sq){
     Bitboard bishop_pin    = 0ULL;
     pinMaskHV = 0ULL;
     pinMaskD  = 0ULL;
+    //SQUARES_BETWEEN_BB[SQ][index] | SQUARES_BB[index]
     while (rook_mask){
         Square index = poplsb(rook_mask);
-        Bitboard possible_pin = ((rook_attack) & GetRookAttacks(index, Kings<c>())) | (1ULL << index);
+        Bitboard possible_pin = (SQUARES_BETWEEN_BB[sq][index] | SQUARE_BB[index]) | (1ULL << index);
         if (popCount(possible_pin & us) == 1)
             rook_pin |= possible_pin;
     }
     while (bishop_mask){
         Square index = poplsb(bishop_mask);
-        Bitboard possible_pin = ((bishop_attack) & GetBishopAttacks(index, Kings<c>())) | (1ULL << index);
+        Bitboard possible_pin = (SQUARES_BETWEEN_BB[sq][index] | SQUARE_BB[index]) | (1ULL << index);
         if (popCount(possible_pin & us) == 1)
             bishop_pin |= possible_pin;
     }
