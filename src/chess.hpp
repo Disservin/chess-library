@@ -77,17 +77,17 @@ enum Flag : uint8_t {
 };
 
 // castling rights masks
-const uint8_t whiteKingSideCastling  = 1;
-const uint8_t whiteQueenSideCastling = 2;
-const uint8_t blackKingSideCastling  = 4;
-const uint8_t blackQueenSideCastling = 8;
+static constexpr uint8_t whiteKingSideCastling  = 1;
+static constexpr uint8_t whiteQueenSideCastling = 2;
+static constexpr uint8_t blackKingSideCastling  = 4;
+static constexpr uint8_t blackQueenSideCastling = 8;
 
 
 // default FEN string (start position)
 const std::string defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
 
 // map a piece to its corresponding character
-std::unordered_map<Piece, char> pieceToChar({
+static std::unordered_map<Piece, char> pieceToChar({
     { WhitePawn, 'P' },
     { WhiteKnight, 'N' },
     { WhiteBishop, 'B' },
@@ -103,7 +103,7 @@ std::unordered_map<Piece, char> pieceToChar({
 });
 
 // map a character to its corresponding piece
-std::unordered_map<char, Piece> charToPiece({
+static std::unordered_map<char, Piece> charToPiece({
     { 'P', WhitePawn },
     { 'N', WhiteKnight },
     { 'B', WhiteBishop },
@@ -143,7 +143,7 @@ const std::string squareToString[64] = {
 typedef uint64_t Bitboard;
 
 //Array containing bitboard for each square (1 << sq)
-const Bitboard SQUARE_BB[64] = {
+static constexpr Bitboard SQUARE_BB[64] = {
     0x1, 0x2, 0x4, 0x8,
     0x10, 0x20, 0x40, 0x80,
     0x100, 0x200, 0x400, 0x800,
@@ -163,19 +163,19 @@ const Bitboard SQUARE_BB[64] = {
 };
 
 //file masks
-const Bitboard MASK_FILE[8] = {
+static constexpr Bitboard MASK_FILE[8] = {
     0x101010101010101, 0x202020202020202, 0x404040404040404, 0x808080808080808,
     0x1010101010101010, 0x2020202020202020, 0x4040404040404040, 0x8080808080808080,
 };
 
 //rank masks
-const Bitboard MASK_RANK[8] = {
+static constexpr Bitboard MASK_RANK[8] = {
     0xff, 0xff00, 0xff0000, 0xff000000,
     0xff00000000, 0xff0000000000, 0xff000000000000, 0xff00000000000000
 };
 
 //diagonal masks
-const Bitboard MASK_DIAGONAL[15] = {
+static constexpr Bitboard MASK_DIAGONAL[15] = {
     0x80, 0x8040, 0x804020,
     0x80402010, 0x8040201008, 0x804020100804,
     0x80402010080402, 0x8040201008040201, 0x4020100804020100,
@@ -184,7 +184,7 @@ const Bitboard MASK_DIAGONAL[15] = {
 };
 
 //anti-diagonal masks
-const Bitboard MASK_ANTI_DIAGONAL[15] = {
+static constexpr Bitboard MASK_ANTI_DIAGONAL[15] = {
     0x1, 0x102, 0x10204,
     0x1020408, 0x102040810, 0x10204081020,
     0x1020408102040, 0x102040810204080, 0x204081020408000,
@@ -1115,46 +1115,49 @@ inline Bitboard Board::LegalKingMoves(Square sq){
     Bitboard castlingMoves = 0ULL;
     bool inCheck = 18446744073709551615ULL != checkMask;
     if (!inCheck){
-        if (castlingRights & whiteKingSideCastling && sideToMove == White &&
-            !(occupancyAll & (1ULL << SQ_F1)) &&
-            !(occupancyAll & (1ULL << SQ_G1)) &&
-            (1ULL << SQ_H1 & Rooks<White>()) &&
-            !(isSquareAttacked<~c>(SQ_F1)) &&
-            !(isSquareAttacked<~c>(SQ_G1)))
-        {
-            castlingMoves |= (1ULL << SQ_G1);
-        }
+        if constexpr (c==White){
+            if (castlingRights & whiteKingSideCastling &&
+                !(occupancyAll & (1ULL << SQ_F1)) &&
+                !(occupancyAll & (1ULL << SQ_G1)) &&
+                (1ULL << SQ_H1 & Rooks<White>()) &&
+                !(isSquareAttacked<~c>(SQ_F1)) &&
+                !(isSquareAttacked<~c>(SQ_G1)))
+                {
+                    castlingMoves |= (1ULL << SQ_G1);
+                }
 
-        if (castlingRights & whiteQueenSideCastling && sideToMove == White &&
-            !(occupancyAll & (1ULL << SQ_D1)) &&
-            !(occupancyAll & (1ULL << SQ_C1)) &&
-            !(occupancyAll & (1ULL << SQ_B1)) &&
-            (1ULL << SQ_A1 & Rooks<White>()) &&
-            !(isSquareAttacked<~c>(SQ_D1)) &&
-            !(isSquareAttacked<~c>(SQ_C1)))
-        {
-            castlingMoves |= (1ULL << SQ_C1);
+            if (castlingRights & whiteQueenSideCastling &&
+                !(occupancyAll & (1ULL << SQ_D1)) &&
+                !(occupancyAll & (1ULL << SQ_C1)) &&
+                !(occupancyAll & (1ULL << SQ_B1)) &&
+                (1ULL << SQ_A1 & Rooks<White>()) &&
+                !(isSquareAttacked<~c>(SQ_D1)) &&
+                !(isSquareAttacked<~c>(SQ_C1)))
+                {
+                    castlingMoves |= (1ULL << SQ_C1);
+                }
         }
-
-        if (castlingRights & blackKingSideCastling && sideToMove == Black &&
-            !(occupancyAll & (1ULL << SQ_F8)) &&
-            !(occupancyAll & (1ULL << SQ_G8)) &&
-            (1ULL << SQ_H8 & Rooks<Black>()) &&
-            !(isSquareAttacked<~c>(SQ_F8)) &&
-            !(isSquareAttacked<~c>(SQ_G8)))
-        {
-            castlingMoves |= (1ULL << SQ_G8);
-        }
-        if (castlingRights & blackQueenSideCastling && sideToMove == Black &&
-            !(occupancyAll & (1ULL << SQ_D8)) &&
-            !(occupancyAll & (1ULL << SQ_C8)) &&
-            !(occupancyAll & (1ULL << SQ_B8)) &&
-            (1ULL << SQ_A8 & Rooks<Black>()) &&
-            !(isSquareAttacked<~Black>(SQ_D8)) &&
-            !(isSquareAttacked<~Black>(SQ_C8)))
-        {
-            castlingMoves |= (1ULL << SQ_C8);
-        }        
+        if constexpr (c==Black){
+            if (castlingRights & blackKingSideCastling &&
+                !(occupancyAll & (1ULL << SQ_F8)) &&
+                !(occupancyAll & (1ULL << SQ_G8)) &&
+                (1ULL << SQ_H8 & Rooks<Black>()) &&
+                !(isSquareAttacked<~c>(SQ_F8)) &&
+                !(isSquareAttacked<~c>(SQ_G8)))
+                {
+                    castlingMoves |= (1ULL << SQ_G8);
+                }
+            if (castlingRights & blackQueenSideCastling &&
+                !(occupancyAll & (1ULL << SQ_D8)) &&
+                !(occupancyAll & (1ULL << SQ_C8)) &&
+                !(occupancyAll & (1ULL << SQ_B8)) &&
+                (1ULL << SQ_A8 & Rooks<Black>()) &&
+                !(isSquareAttacked<~Black>(SQ_D8)) &&
+                !(isSquareAttacked<~Black>(SQ_C8)))
+                {
+                    castlingMoves |= (1ULL << SQ_C8);
+                }    
+        }    
     }
     return legal_king | castlingMoves;
 }
