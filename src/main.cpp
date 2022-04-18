@@ -7,20 +7,21 @@ using namespace Chess;
 
 Board board = Board();
 
+template <Color c>
 unsigned long long perft(int depth) {
-    Moves moveList = board.generateLegalMoves();
-    if (depth == 1) {
-        return moveList.count;
+    
+    if (depth == 0) {
+        return 1;
     }
 
     unsigned long long nodes = 0;
     unsigned long long total = 0;
-    
+    Moves moveList = board.generateLegalMoves<c>();
     for (int i = 0; i < (int)moveList.count; i++) {
         Move move = moveList.moves[i];
-        board.makemove(move);
-        nodes += perft(depth - 1);
-        board.unmakemove(move);
+        board.makemove<c>(move);
+        nodes += perft<~c>(depth - 1);
+        board.unmakemove<c>(move);
     }
 
     return nodes;
@@ -28,7 +29,7 @@ unsigned long long perft(int depth) {
 
 void perftTest(int depth) {
     auto t1 = std::chrono::high_resolution_clock::now();
-    unsigned long long nodes = perft(depth);
+    unsigned long long nodes = perft<White>(depth);
     auto t2 = std::chrono::high_resolution_clock::now();
 
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
