@@ -534,8 +534,8 @@ private:
     void removePiece(Piece piece, Square sq);
 
     // functions for pawn, knight and king movegen
-    inline Bitboard GetPawnPush(Square sq, Color c); 
-    inline Bitboard GetPawnAttacks(Square square, Color c);
+    template <Color c> inline Bitboard GetPawnPush(Square sq); 
+    template <Color c> inline Bitboard GetPawnAttacks(Square square);
     inline Bitboard GetKnightAttacks(Square square); 
     inline Bitboard GetKingAttacks(Square square);
 
@@ -849,12 +849,14 @@ inline Bitboard Board::hyp_quint(Square square, Bitboard occ, Bitboard mask) {
         reverse(reverse(mask & occ) - reverse(SQUARE_BB[square]) * 2)) & mask;
 }
 // get Pawn push bitboard
-inline Bitboard Board::GetPawnPush(Square sq, Color c) {
+template <Color c>
+inline Bitboard Board::GetPawnPush(Square sq) {
     return (c == White) ? (SQUARE_BB[sq + 8]) : (SQUARE_BB[sq - 8]);
 }
 
 // get absolute pawn attacks from lookup table
-inline Bitboard Board::GetPawnAttacks(Square square, Color c) {
+template <Color c>
+inline Bitboard Board::GetPawnAttacks(Square square) {
     return PAWN_ATTACKS_TABLE[c][square];
 }
 
@@ -888,7 +890,7 @@ inline Bitboard Board::GetKingAttacks(Square square) {
 template <Color c> 
 inline Bitboard Board::doCheckmask(Square sq){
     Bitboard checks = 0ULL;
-    Bitboard pawn_attack    = GetPawnAttacks(sq, c);
+    Bitboard pawn_attack    = GetPawnAttacks<c>(sq);
     Bitboard knight_attack  = GetKnightAttacks(sq);
     Bitboard bishop_attack  = GetBishopAttacks(sq, allPieces<c>() | allPieces<~c>()) & ~allPieces<c>();
     Bitboard rook_attack    = GetRookAttacks(sq, allPieces<c>() | allPieces<~c>()) & ~allPieces<c>();
@@ -953,18 +955,18 @@ inline void Board::init(Square sq){
 template <Color c> 
 inline Bitboard Board::LegalPawnMoves(Square sq){
     if (doubleCheck == 2) return 0ULL;
-    if (pinMaskD & (1ULL << sq)) return GetPawnAttacks(sq, c) & pinMaskD & checkMask & Enemy<c>();
+    if (pinMaskD & (1ULL << sq)) return GetPawnAttacks<c>(sq) & pinMaskD & checkMask & Enemy<c>();
 
     Bitboard not_all = ~allPieces<c>() & ~allPieces<~c>();
-    Bitboard attacks = GetPawnAttacks(sq, c);
-    Bitboard push = GetPawnPush(sq, c) & not_all;
+    Bitboard attacks = GetPawnAttacks<c>(sq);
+    Bitboard push = GetPawnPush<c>(sq) & not_all;
     Bitboard push2 = c==White && rank_of(sq) == 1 ?
                      push |= (push << 8) & not_all : c==Black && rank_of(sq) == 6 ?
                      push |= (push >> 8) & not_all : 0ULL;
     if (pinMaskHV & (1ULL << sq)) return (push | push2) & pinMaskHV & checkMask;
     int8_t offset = c==White ? -8 : 8;
-    if (checkMask != 18446744073709551615ULL && attacks & (1ULL << enpassantSquare) && checkMask & (1ULL << (enpassantSquare + offset))) return (GetPawnAttacks(sq, c) & (1ULL << enpassantSquare));
-    if (checkMask != 18446744073709551615ULL) return ((GetPawnAttacks(sq, c) & Enemy<c>()) | push | push2) & checkMask;
+    if (checkMask != 18446744073709551615ULL && attacks & (1ULL << enpassantSquare) && checkMask & (1ULL << (enpassantSquare + offset))) return (GetPawnAttacks<c>(sq) & (1ULL << enpassantSquare));
+    if (checkMask != 18446744073709551615ULL) return ((GetPawnAttacks<c>(sq) & Enemy<c>()) | push | push2) & checkMask;
 
     Bitboard moves = ((attacks & Enemy<c>()) | push | push2) & checkMask;
     if (enpassantSquare != NO_SQ && squareDistance(sq, enpassantSquare) == 1) {
@@ -1269,7 +1271,7 @@ void Board::makemove(Move& move){
     enpassantSquare = NO_SQ;
     if (piece == makePiece(Pawn, sideToMove) && std::abs(source - target) == 16){
         int8_t offset = sideToMove == White ? -8 : 8;
-        Bitboard epMask = GetPawnAttacks(Square(target + offset), sideToMove);
+        Bitboard epMask = GetPawnAttacks<c>(Square(target + offset));
         if (epMask & Pawns<~c>()){
             enpassantSquare = Square(target + offset);
         }
@@ -1353,7 +1355,7 @@ void Board::unmakemove(Move& move){
 template <Color c> 
 bool Board::isSquareAttacked(Square sq) {
     if (sq != NO_SQ) {
-        if (GetPawnAttacks  (sq, ~c) & Pawns<c>())                                  return true;
+        if (GetPawnAttacks<~c>(sq) & Pawns<c>())                                  return true;
         if (GetKnightAttacks(sq) & Knights<c>())                                        return true;
         if (GetBishopAttacks(sq, allPieces<White>() | allPieces<Black>()) & Bishops<c>())   return true;
         if (GetRookAttacks  (sq, allPieces<White>() | allPieces<Black>()) & Rooks<c>())     return true;
