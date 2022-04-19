@@ -1423,6 +1423,9 @@ Board board;
 #define POSITION_1 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 #define POSITION_2 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - "
 #define POSITION_3 "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - "
+#define POSITION_4 "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
+#define POSITION_5 "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
+#define POSITION_6 "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
 
 // struct for individual perft positions
 struct PerftPosition {
@@ -1439,7 +1442,8 @@ std::vector<PerftPosition> testPosition1 = {
     PerftPosition(POSITION_1, 400, 2),
     PerftPosition(POSITION_1, 8902, 3),
     PerftPosition(POSITION_1, 197281, 4),
-    PerftPosition(POSITION_1, 4865609, 5)
+    PerftPosition(POSITION_1, 4865609, 5),
+    PerftPosition(POSITION_1, 119060324, 6)
 };
 
 std::vector<PerftPosition> testPosition2 = {
@@ -1458,6 +1462,30 @@ std::vector<PerftPosition> testPosition3 = {
     PerftPosition(POSITION_3, 674624, 5),
     PerftPosition(POSITION_3, 11030083, 6),
     PerftPosition(POSITION_3, 178633661, 7)
+};
+
+std::vector<PerftPosition> testPosition4 = {
+    PerftPosition(POSITION_4, 6, 1),
+    PerftPosition(POSITION_4, 264, 2),
+    PerftPosition(POSITION_4, 9467, 3),
+    PerftPosition(POSITION_4, 422333, 4),
+    PerftPosition(POSITION_4, 15833292, 5)
+};
+
+std::vector<PerftPosition> testPosition5 = {
+    PerftPosition(POSITION_5, 44, 1),
+    PerftPosition(POSITION_5, 1486, 2),
+    PerftPosition(POSITION_5, 62379, 3),
+    PerftPosition(POSITION_5, 2103487, 4),
+    PerftPosition(POSITION_5, 89941194, 5)
+};
+
+std::vector<PerftPosition> testPosition6 = {
+    PerftPosition(POSITION_6, 46, 1),
+    PerftPosition(POSITION_6, 2079, 2),
+    PerftPosition(POSITION_6, 89890, 3),
+    PerftPosition(POSITION_6, 3894594, 4),
+    PerftPosition(POSITION_6, 164075551, 5)
 };
 
 template<Color c>
@@ -1509,6 +1537,9 @@ void RunPerftTest() {
     PASSED = RunTestOnPosition(testPosition1, POSITION_1);
     PASSED = RunTestOnPosition(testPosition2, POSITION_2);
     PASSED = RunTestOnPosition(testPosition3, POSITION_3);
+    PASSED = RunTestOnPosition(testPosition4, POSITION_4);
+    PASSED = RunTestOnPosition(testPosition5, POSITION_5);
+    PASSED = RunTestOnPosition(testPosition6, POSITION_6);
 
     if (PASSED = true) {
         std::cout << "Passed all tests" << std::endl;
