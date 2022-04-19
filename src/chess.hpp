@@ -1,8 +1,5 @@
 #pragma once
 
-#define Compiletime __forceinline constexpr
-
-
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -205,10 +202,8 @@ inline Bitboard reverse(Bitboard bb) {
 
 // Compiler specific functions, taken from Stockfish https://github.com/official-stockfish/Stockfish
 #if defined(__GNUC__)  // GCC, Clang, ICC
-#include <nmmintrin.h>
 
 inline Square bsf(Bitboard b) {
-
   return Square(__builtin_ctzll(b));
 }
 
@@ -524,16 +519,16 @@ private:
 
     // functions for getting individual
     // piece bitboards
-    template <Color c> Compiletime Bitboard Pawns();
-    template <Color c> Compiletime Bitboard Knights();
-    template <Color c> Compiletime Bitboard Bishops();
-    template <Color c> Compiletime Bitboard Rooks();
-    template <Color c> Compiletime Bitboard Queens();
-    template <Color c> Compiletime Bitboard Kings();
-    template <Color c> Compiletime Bitboard allPieces();
-    template <Color c> Compiletime Bitboard Enemy();
-    template <Color c> Compiletime Bitboard EnemyEmpty();
-    template <Color c> Compiletime Bitboard PieceBB(PieceType type);
+    template <Color c> constexpr Bitboard Pawns();
+    template <Color c> constexpr Bitboard Knights();
+    template <Color c> constexpr Bitboard Bishops();
+    template <Color c> constexpr Bitboard Rooks();
+    template <Color c> constexpr Bitboard Queens();
+    template <Color c> constexpr Bitboard Kings();
+    template <Color c> constexpr Bitboard allPieces();
+    template <Color c> constexpr Bitboard Enemy();
+    template <Color c> constexpr Bitboard EnemyEmpty();
+    template <Color c> constexpr Bitboard PieceBB(PieceType type);
     template <Color c> Square KingSq();
 
     // initialization for movegen
@@ -980,12 +975,12 @@ Piece Board::getPiece(Square sq){
 template <Color c> 
 bool Board::isSquareAttacked(Square sq) {
     if (sq != NO_SQ) {
-        if (GetPawnAttacks<~c>(sq) & Pawns<c>())                                            return true;
-        if (GetKnightAttacks(sq) & Knights<c>())                                            return true;
-        if (GetBishopAttacks(sq, allPieces<White>() | allPieces<Black>()) & Bishops<c>())   return true;
-        if (GetRookAttacks  (sq, allPieces<White>() | allPieces<Black>()) & Rooks<c>())     return true;
-        if (GetQueenAttacks (sq, allPieces<White>() | allPieces<Black>()) & Queens<c>())    return true;
-        if (GetKingAttacks  (sq)                                          & Kings<c>())     return true;
+        if (Pawns<c>()   & GetPawnAttacks<~c>(sq))                                          return true;
+        if (Knights<c>() & GetKnightAttacks(sq))                                            return true;
+        if (Bishops<c>() & GetBishopAttacks(sq, allPieces<White>() | allPieces<Black>()))   return true;
+        if (Rooks<c>()   & GetRookAttacks(sq,   allPieces<White>() | allPieces<Black>()))   return true;
+        if (Queens<c>()  & GetQueenAttacks(sq,  allPieces<White>() | allPieces<Black>()))   return true;
+        if (Kings<c>()   & GetKingAttacks(sq))                                              return true;
     }
     return false;
 }
@@ -1004,61 +999,61 @@ inline void Board::removePiece(Piece piece, Square sq) {
 
 // returns pawns bitboard for given color
 template <Color c> 
-Compiletime Bitboard Board::Pawns(){
+constexpr Bitboard Board::Pawns(){
     return PiecesBB[c * 6];
 }
 
 // returns knights bitboard for given color
 template <Color c> 
-Compiletime Bitboard Board::Knights(){
+constexpr Bitboard Board::Knights(){
     return PiecesBB[c * 6 + Knight];
 }
 
 // returns bishops bitboard for given color
 template <Color c> 
-Compiletime Bitboard Board::Bishops(){
+constexpr Bitboard Board::Bishops(){
     return PiecesBB[c * 6 + Bishop];
 }
 
 // returns rooks bitboard for given color
 template <Color c> 
-Compiletime Bitboard Board::Rooks(){
+constexpr Bitboard Board::Rooks(){
     return PiecesBB[c * 6 + Rook];
 }
 
 // returns queens bitboard for given color
 template <Color c> 
-Compiletime Bitboard Board::Queens(){
+constexpr Bitboard Board::Queens(){
     return PiecesBB[c * 6 + Queen];
 }
 
 
 // returns king bitboard for given color
 template <Color c> 
-Compiletime Bitboard Board::Kings(){
+constexpr Bitboard Board::Kings(){
     return PiecesBB[c * 6 + King];
 }
 
 // returns bitboard containing all pieces of given color
 template <Color c> 
-Compiletime Bitboard Board::allPieces(){
+constexpr Bitboard Board::allPieces(){
     return Pawns<c>() | Knights<c>() | Bishops<c>() | Rooks<c>() | Queens<c>() | Kings<c>();
 }
 
 template <Color c> 
-Compiletime Bitboard Board::Enemy(){
+constexpr Bitboard Board::Enemy(){
     if constexpr (c==White) return allPieces<Black>();
     return allPieces<White>();
 }
 
 template <Color c> 
-Compiletime Bitboard Board::EnemyEmpty(){
+constexpr Bitboard Board::EnemyEmpty(){
     if constexpr (c==White) return ~allPieces<White>();
     return ~allPieces<Black>();
 }
 
 template <Color c> 
-Compiletime Bitboard Board::PieceBB(PieceType type) {
+constexpr Bitboard Board::PieceBB(PieceType type) {
     return PiecesBB[c * 6 + type];
 }
 
@@ -1234,46 +1229,46 @@ inline void Board::init(Square sq){
 
 
 // Hyperbola Quintessence algorithm (for sliding pieces)
-inline Bitboard Board::hyp_quint(Square square, Bitboard occ, Bitboard mask) {
+Bitboard Board::hyp_quint(Square square, Bitboard occ, Bitboard mask) {
     return (((mask & occ) - SQUARE_BB[square] * 2) ^
         reverse(reverse(mask & occ) - reverse(SQUARE_BB[square]) * 2)) & mask;
 }
 // get Pawn push bitboard
 template <Color c>
-inline Bitboard Board::GetPawnPush(Square sq) {
+Bitboard Board::GetPawnPush(Square sq) {
     return (c == White) ? (SQUARE_BB[sq + 8]) : (SQUARE_BB[sq - 8]);
 }
 
 // get absolute pawn attacks from lookup table
 template <Color c>
-inline Bitboard Board::GetPawnAttacks(Square square) {
+Bitboard Board::GetPawnAttacks(Square square) {
     return PAWN_ATTACKS_TABLE[c][square];
 }
 
 // get absolute knight attacks from lookup table
-inline Bitboard Board::GetKnightAttacks(Square square) {
+Bitboard Board::GetKnightAttacks(Square square) {
     return KNIGHT_ATTACKS_TABLE[square];
 }
  
 // get bishop attacks using Hyperbola Quintessence
-inline Bitboard Board::GetBishopAttacks(Square square, Bitboard occ) {
+Bitboard Board::GetBishopAttacks(Square square, Bitboard occ) {
     return hyp_quint(square, occ, MASK_DIAGONAL[diagonal_of(square)]) |
            hyp_quint(square, occ, MASK_ANTI_DIAGONAL[anti_diagonal_of(square)]);
 }
  
 // get rook attacks using Hyperbola Quintessence
-inline Bitboard Board::GetRookAttacks(Square square, Bitboard occ) {
+Bitboard Board::GetRookAttacks(Square square, Bitboard occ) {
     return hyp_quint(square, occ, MASK_FILE[file_of(square)]) |
            hyp_quint(square, occ, MASK_RANK[rank_of(square)]);
 }
 
 // get queen attacks using Hyperbola Quintessence
-inline Bitboard Board::GetQueenAttacks(Square square, Bitboard occ) {
+Bitboard Board::GetQueenAttacks(Square square, Bitboard occ) {
     return GetBishopAttacks(square, occ) | GetRookAttacks(square, occ);
 }
 
 // get absolute king attacks from lookup table
-inline Bitboard Board::GetKingAttacks(Square square) {
+Bitboard Board::GetKingAttacks(Square square) {
     return KING_ATTACKS_TABLE[square];
 }
 
