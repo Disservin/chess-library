@@ -417,9 +417,6 @@ struct Moves {
     }
 };
 
-// define move list as a vector of moves
-//typedef std::vector<Move> Moves;
-
 void printMove(Move move) {
     std::cout << "Move: " << squareToString[move.source()] << squareToString[move.target()] << " |";
     std::cout << " Piece: " << signed(move.piece()) << " |";
@@ -723,19 +720,15 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalPawnMoves<c>(source);
             while (moves){
                 Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
-                if (rank_of(target) == 7 || rank_of(target) == 0){
+                if (rank_of(target) == 0 || rank_of(target) == 7){
                     moveList.Add(Move(source, target, Queen, 1));
                     moveList.Add(Move(source, target, Rook, 1));
                     moveList.Add(Move(source, target, Bishop, 1));
                     moveList.Add(Move(source, target, Knight, 1));
                 }
-                else if (std::abs(source - target) == 16)
+                else{
                     moveList.Add(Move(source, target, Pawn));
-                else if (target == enpassantSquare)
-                    moveList.Add(Move(source, target, Pawn));
-                else
-                    moveList.Add(Move(source, target, Pawn));
+                } 
             }
         }
         while(knight_mask){
@@ -743,7 +736,6 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalKnightMoves<c>(source);
             while(moves){
                 const Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
                 moveList.Add(Move(source, target, Knight));
             }
         }
@@ -752,7 +744,6 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalBishopMoves<c>(source);
             while (moves){
                 const Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
                 moveList.Add(Move(source, target, Bishop));
             }
         }
@@ -761,7 +752,6 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalRookMoves<c>(source);
             while (moves){
                 const Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
                 moveList.Add(Move(source, target, Rook));
             }
         }
@@ -770,8 +760,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalQueenMoves<c>(source);
             while (moves){
                 const Square target = poplsb(moves);
-                uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
-                moveList.Add(Move(source, target,Queen));
+                moveList.Add(Move(source, target, Queen));
             }
         }
     }
@@ -780,19 +769,17 @@ Moves Board::generateLegalMoves() {
     Bitboard moves = LegalKingMoves<c>(source);
     while (moves){
         const Square target = poplsb(moves);
-        uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
+        // For some reason this is faster
         if (target == SQ_G1 && source == SQ_E1)
-            moveList.Add(Move(source, target, King));
-        else if (target == SQ_C1 && source == SQ_E1)
-            moveList.Add(Move(source, target, King));
-        else if (target == SQ_G8 && source == SQ_E8)
-            moveList.Add(Move(source, target, King));
-        else if (target == SQ_C8 && source == SQ_E8)
             moveList.Add(Move(source, target, King));
         else
             moveList.Add(Move(source, target, King));
+        // than this:
+        // moveList.Add(Move(source, target, King));  
+        // I have no idea why this is faster and I suspect it
+        // has to do something with -O3 optimization because at -O2
+        // both versions are about the same speed.
     }
-
     return moveList;
 }
 
@@ -917,7 +904,7 @@ void Board::unmakemove(Move& move){
     Square source = move.source();
     Square target = move.target();
 
-    bool capture = safeState.capturedPiece == None ? false : true;
+    Piece capture = safeState.capturedPiece;
     
     if (!move.promoted()) {
         removePiece(piece, target);
@@ -926,12 +913,12 @@ void Board::unmakemove(Move& move){
     else{
         placePiece(makePiece<c>(Pawn), source);
         removePiece(piece, target);
-        if (capture)
-            placePiece(safeState.capturedPiece, target);
+        if (capture != None)
+            placePiece(capture, target);
         return;
     }
 
-    if (move.piece() == Pawn && target == enpassantSquare && piece == makePiece<c>(Pawn)){
+    if (target == enpassantSquare && piece == makePiece<c>(Pawn)){
         if constexpr (c == White){
             placePiece(BlackPawn, Square((int)enpassantSquare - 8));
         }
@@ -940,8 +927,8 @@ void Board::unmakemove(Move& move){
         }
     }
 
-    if (capture) {
-        placePiece(safeState.capturedPiece, target);
+    if (capture != None) {
+        placePiece(capture, target);
     }
 
     if (piece == makePiece<c>(King)){
@@ -976,12 +963,11 @@ Piece Board::getPiece(Square sq){
 template <Color c> 
 bool Board::isSquareAttacked(Square sq) {
     if (sq != NO_SQ) {
-        if (Pawns<c>()   & GetPawnAttacks<~c>(sq))                                          return true;
-        if (Knights<c>() & GetKnightAttacks(sq))                                            return true;
-        if (Bishops<c>() & GetBishopAttacks(sq, allPieces<White>() | allPieces<Black>()))   return true;
-        if (Rooks<c>()   & GetRookAttacks(sq,   allPieces<White>() | allPieces<Black>()))   return true;
-        if (Queens<c>()  & GetQueenAttacks(sq,  allPieces<White>() | allPieces<Black>()))   return true;
-        if (Kings<c>()   & GetKingAttacks(sq))                                              return true;
+        if (Pawns<c>()                   & GetPawnAttacks<~c>(sq))                                          return true;
+        if (Knights<c>()                 & GetKnightAttacks(sq))                                            return true;
+        if ((Bishops<c>() | Queens<c>()) & GetBishopAttacks(sq, allPieces<White>() | allPieces<Black>()))   return true;
+        if ((Rooks<c>() | Queens<c>())   & GetRookAttacks(sq,   allPieces<White>() | allPieces<Black>()))   return true;
+        if (Kings<c>()                   & GetKingAttacks(sq))                                              return true;
     }
     return false;
 }
