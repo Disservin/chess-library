@@ -510,8 +510,6 @@ public:
 
     // checks if a square is being attacked by the given side
     template <Color c> bool isSquareAttacked(Square sq);
-
-    template <Color c> bool hasHorizontalAttacker(Square sq);
 private:
     // places a piece on a particular square
     void placePiece(Piece piece, Square sq);
