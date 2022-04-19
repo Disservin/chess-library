@@ -740,8 +740,6 @@ Moves Board::generateLegalMoves() {
                     moveList.Add(Move(source, target, Pawn));
                 else
                     moveList.Add(Move(source, target, Pawn));
-                // printMove(Move(source, target, Pawn));
-                // std::cout << << signed(Move(source, target, Pawn).promoted())<<std::endl;
             }
         }
         while(knight_mask){
