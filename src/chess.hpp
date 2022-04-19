@@ -713,7 +713,6 @@ Moves Board::generateLegalMoves() {
     Bitboard rook_mask = Rooks<c>();
     Bitboard queen_mask = Queens<c>();
     Bitboard king_mask = Kings<c>();
-    Bitboard enemy = c==White ? occupancyBlack : occupancyWhite;
     if (doubleCheck < 2){
         while (pawn_mask){
             Square source = poplsb(pawn_mask);
@@ -1541,7 +1540,7 @@ void RunPerftTest() {
     PASSED = RunTestOnPosition(testPosition5, POSITION_5);
     PASSED = RunTestOnPosition(testPosition6, POSITION_6);
 
-    if (PASSED = true) {
+    if (PASSED) {
         std::cout << "Passed all tests" << std::endl;
     }
 
