@@ -41,7 +41,7 @@ enum Piece : uint8_t {
 };
 
 enum PieceType : uint8_t {
-    Pawn, Knight, Bishop, Rook, Queen, King
+    Pawn, Knight, Bishop, Rook, Queen, King, Nonetype
 };
 
 // enum type for mapping a square to int
@@ -371,7 +371,7 @@ class Move {
 
 private:
     // internal binary representation of a move
-    uint32_t move;
+    uint16_t move;
 
 public:
     // constructor for encoding a move
@@ -379,60 +379,31 @@ public:
         // main move info
         Square source  = NO_SQ,
         Square target  = NO_SQ,
-        Piece piece    = None,
-        Piece promoted = None,
+        PieceType piece = Nonetype,
+        uint16_t promoted = 0
 
-        // move flags
-        uint32_t capture    = 0,
-        uint32_t doublePush = 0,
-        uint32_t enpassant  = 0,
-        uint32_t castling   = 0
     ) {
-        move = (uint32_t)source | (uint32_t)target << 6 | (uint32_t)piece << 12 |
-        (uint32_t)promoted << 16 | capture << 20 | doublePush << 21 | enpassant << 22 | castling << 23;
-
+        move = (uint16_t)source | (uint16_t)target << 6 | (uint16_t)piece << 12 | (uint16_t)promoted << 15;
     }
 
     // extract source square
     inline Square source() {
-        return Square(move & 0x3f);
+        return Square(move & 0b111111);
     }
 
     // extract target square
     inline Square target() {
-        return Square((move & 0xfc0) >> 6);
+        return Square((move & 0b111111000000) >> 6);
     }
 
     // extract moved piece
-    inline Piece piece() {
-        return Piece((move & 0xf000) >> 12);
+    inline PieceType piece() {
+        return PieceType((move & 0b111000000000000) >> 12);
     }
-
     // extract promoted piece
-    inline Piece promoted() {
-        return Piece((move & 0xf0000) >> 16);
+    inline bool promoted() {
+        return bool((move & 0b1000000000000000) >> 15);
     }
-
-    // extract capture flag
-    inline bool capture() {
-        return (move & 0x100000) >> 20;
-    }
-
-    // extract double push flag
-    inline bool doublePush() {
-        return (move & 0x200000) >> 21;
-    }
-
-    // extract enpassant flag
-    inline bool enpassant() {
-        return (move & 0x400000) >> 22;
-    }
-
-    // extract castling flag
-    inline bool castling() {
-        return (move & 0x800000) >> 23;
-    }
-
     // returns move in UCI string format
     std::string toUci() {
         return squareToString[this->source()] + squareToString[this->target()];
@@ -450,20 +421,13 @@ struct Moves {
     }
 };
 
-
-
-
 // define move list as a vector of moves
 //typedef std::vector<Move> Moves;
 
 void printMove(Move move) {
     std::cout << "Move: " << squareToString[move.source()] << squareToString[move.target()] << " |";
-    std::cout << " Piece: " << pieceToChar[move.piece()] << " |";
-    std::cout << " Promoted: " << (move.promoted()==None ? "None" : std::string(1, pieceToChar[move.promoted()])) << " |";
-    std::cout << " Capture: " << move.capture() << " |";
-    std::cout << " Double Push: " << move.doublePush() << " |";
-    std::cout << " Enpassant: " << move.enpassant() << " |";
-    std::cout << " Castling: " << move.castling() << " |"; 
+    std::cout << " Piece: " << signed(move.piece()) << " |";
+    std::cout << " Promoted: " << move.promoted() << " |";
     std::cout << std::endl;
 }
 
@@ -765,17 +729,19 @@ Moves Board::generateLegalMoves() {
                 Square target = poplsb(moves);
                 uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
                 if (rank_of(target) == 7 || rank_of(target) == 0){
-                    moveList.Add(Move(source, target, makePiece<c>(Pawn), makePiece<c>(Queen), capture));
-                    moveList.Add(Move(source, target, makePiece<c>(Pawn), makePiece<c>(Rook), capture));
-                    moveList.Add(Move(source, target, makePiece<c>(Pawn), makePiece<c>(Bishop), capture));
-                    moveList.Add(Move(source, target, makePiece<c>(Pawn), makePiece<c>(Knight), capture));
+                    moveList.Add(Move(source, target, Queen, 1));
+                    moveList.Add(Move(source, target, Rook, 1));
+                    moveList.Add(Move(source, target, Bishop, 1));
+                    moveList.Add(Move(source, target, Knight, 1));
                 }
                 else if (std::abs(source - target) == 16)
-                    moveList.Add(Move(source, target, makePiece<c>(Pawn), None, 0, 1, 0));
+                    moveList.Add(Move(source, target, Pawn));
                 else if (target == enpassantSquare)
-                    moveList.Add(Move(source, target, makePiece<c>(Pawn), None, 1, 0, 1));
+                    moveList.Add(Move(source, target, Pawn));
                 else
-                    moveList.Add(Move(source, target, makePiece<c>(Pawn), None, capture, 0, 0));
+                    moveList.Add(Move(source, target, Pawn));
+                // printMove(Move(source, target, Pawn));
+                // std::cout << << signed(Move(source, target, Pawn).promoted())<<std::endl;
             }
         }
         while(knight_mask){
@@ -784,7 +750,7 @@ Moves Board::generateLegalMoves() {
             while(moves){
                 const Square target = poplsb(moves);
                 uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
-                moveList.Add(Move(source, target, makePiece<c>(Knight), None, capture));
+                moveList.Add(Move(source, target, Knight));
             }
         }
         while (bishop_mask){
@@ -793,7 +759,7 @@ Moves Board::generateLegalMoves() {
             while (moves){
                 const Square target = poplsb(moves);
                 uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
-                moveList.Add(Move(source, target, makePiece<c>(Bishop), None, capture));
+                moveList.Add(Move(source, target, Bishop));
             }
         }
         while (rook_mask){
@@ -802,7 +768,7 @@ Moves Board::generateLegalMoves() {
             while (moves){
                 const Square target = poplsb(moves);
                 uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
-                moveList.Add(Move(source, target, makePiece<c>(Rook), None, capture));
+                moveList.Add(Move(source, target, Rook));
             }
         }
         while (queen_mask){
@@ -811,7 +777,7 @@ Moves Board::generateLegalMoves() {
             while (moves){
                 const Square target = poplsb(moves);
                 uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
-                moveList.Add(Move(source, target, makePiece<c>(Queen), None, capture));
+                moveList.Add(Move(source, target,Queen));
             }
         }
     }
@@ -822,15 +788,15 @@ Moves Board::generateLegalMoves() {
         const Square target = poplsb(moves);
         uint32_t capture = ((1ULL << target) & enemy) ? 1 : 0;
         if (target == SQ_G1 && source == SQ_E1)
-            moveList.Add(Move(source, target, WhiteKing, None, 0, 0, 0, 1));
+            moveList.Add(Move(source, target, King));
         else if (target == SQ_C1 && source == SQ_E1)
-            moveList.Add(Move(source, target, WhiteKing, None, 0, 0, 0, 1));
+            moveList.Add(Move(source, target, King));
         else if (target == SQ_G8 && source == SQ_E8)
-            moveList.Add(Move(source, target, BlackKing, None, 0, 0, 0, 1));
+            moveList.Add(Move(source, target, King));
         else if (target == SQ_C8 && source == SQ_E8)
-            moveList.Add(Move(source, target, BlackKing, None, 0, 0, 0, 1));
+            moveList.Add(Move(source, target, King));
         else
-            moveList.Add(Move(source, target, makePiece<c>(King), None, capture));
+            moveList.Add(Move(source, target, King));
     }
 
     return moveList;
@@ -838,115 +804,109 @@ Moves Board::generateLegalMoves() {
 
 template <Color c> 
 void Board::makemove(Move& move){
-    bool capture = move.capture();
-    Piece capturedPiece = capture ? board[move.target()] : None;
+    Piece piece = makePiece<c>(move.piece());
+
+    Square source = move.source();
+    Square target = move.target();
+
+    Piece capturedPiece = board[target];
     // Safe important board information
     storeInfo[storeCount] = State(enpassantSquare, castlingRights, capturedPiece);
     storeCount++;
 
-    Piece piece = move.piece();
-    Piece promoted = move.promoted();
-    Square source = move.source();
-    Square target = move.target();
-    bool enpassant = move.enpassant();
-    
     // update castling rights
     if (piece == makePiece<c>(King)){
-        if (source == SQ_E1 && target == SQ_G1 && castlingRights & whiteKingSideCastling){
+        if constexpr (c == White){
+            if (source == SQ_E1 && target == SQ_G1 && castlingRights & whiteKingSideCastling){
+                removePiece(WhiteRook, SQ_H1);
+                placePiece(WhiteRook, SQ_F1);
+            }  
+            else if (source == SQ_E1 && target == SQ_C1 && castlingRights & whiteQueenSideCastling){
+                removePiece(WhiteRook, SQ_A1);
+                placePiece(WhiteRook, SQ_D1);
+            }
             castlingRights &= ~whiteKingSideCastling;
             castlingRights &= ~whiteQueenSideCastling;
-            removePiece(WhiteRook, SQ_H1);
-            placePiece(WhiteRook, SQ_F1);
-        }  
-        else if (source == SQ_E8 && target == SQ_G8 && castlingRights & blackKingSideCastling){
+        }
+        else{
+            if (source == SQ_E8 && target == SQ_G8 && castlingRights & blackKingSideCastling){
+                removePiece(BlackRook, SQ_H8);
+                placePiece(BlackRook, SQ_F8);
+            }
+            else if (source == SQ_E8 && target == SQ_C8 && castlingRights & blackQueenSideCastling){
+                removePiece(BlackRook, SQ_A8);
+                placePiece(BlackRook, SQ_D8);
+            }
             castlingRights &= ~blackKingSideCastling;
             castlingRights &= ~blackQueenSideCastling;
-            removePiece(BlackRook, SQ_H8);
-            placePiece(BlackRook, SQ_F8);
-        }
-        else if (source == SQ_E1 && target == SQ_C1 && castlingRights & whiteQueenSideCastling){
-            castlingRights &= ~whiteQueenSideCastling;
-            castlingRights &= ~whiteKingSideCastling;
-            removePiece(WhiteRook, SQ_A1);
-            placePiece(WhiteRook, SQ_D1);
-        } 
-        else if (source == SQ_E8 && target == SQ_C8 && castlingRights & blackQueenSideCastling){
-            castlingRights &= ~blackQueenSideCastling;
-            castlingRights &= ~blackKingSideCastling;
-            removePiece(BlackRook, SQ_A8);
-            placePiece(BlackRook, SQ_D8);
         }
     }
-    if (piece == WhiteKing && sideToMove == White){
-        castlingRights &= ~whiteKingSideCastling;
-        castlingRights &= ~whiteQueenSideCastling;
-    }
-    if (piece == BlackKing && sideToMove == Black){
-        castlingRights &= ~blackKingSideCastling;
-        castlingRights &= ~blackQueenSideCastling;
-    }
+
+
     // rook move loses castle rights
-    if (piece == WhiteRook){
-        if (source == SQ_A1)
-            castlingRights &= ~whiteQueenSideCastling;
-        else if (source == SQ_H1)
-            castlingRights &= ~whiteKingSideCastling;
-    }
-    else if (piece == BlackRook){
-        if (source == SQ_A8)
-            castlingRights &= ~blackQueenSideCastling;
-        else if (source == SQ_H8)
-            castlingRights &= ~blackKingSideCastling;
+    if (piece == makePiece<c>(Rook)){
+        if constexpr (c== White){
+            if (source == SQ_A1)
+                castlingRights &= ~whiteQueenSideCastling;
+            else if (source == SQ_H1)
+                castlingRights &= ~whiteKingSideCastling;
+        }
+        else{
+            if (source == SQ_A8)
+                castlingRights &= ~blackQueenSideCastling;
+            else if (source == SQ_H8)
+                castlingRights &= ~blackKingSideCastling;
+        }
+
     }
     // Rook capture loses castle rights
-    if (capture && (1ULL << target & Rooks<~c>())){
+    if (capturedPiece == makePiece<~c>(Rook)){
         if (target == SQ_A1)
             castlingRights &= ~whiteQueenSideCastling;
         else if (target == SQ_H1)
             castlingRights &= ~whiteKingSideCastling;
-    }
-    else if (capture && (1ULL << target & Rooks<~c>())){
-        if (target == SQ_A8)
+        else if (target == SQ_A8)
             castlingRights &= ~blackQueenSideCastling;
         else if (target == SQ_H8)
             castlingRights &= ~blackKingSideCastling;
     }
 
-    // enpassant capture
-    if (target == enpassantSquare && enpassant == 1){
-        int8_t offset = sideToMove == White ? -8 : 8;
-        removePiece(makePiece<~c>(Pawn), Square(target + offset));
-    }
+    bool enpassant = (target) == enpassantSquare ? true : false;
 
-    // update enpassant square
     enpassantSquare = NO_SQ;
-    if (piece == makePiece<c>(Pawn) && std::abs(source - target) == 16){
-        int8_t offset = sideToMove == White ? -8 : 8;
-        Bitboard epMask = GetPawnAttacks<c>(Square(target + offset));
-        if (epMask & Pawns<~c>()){
-            enpassantSquare = Square(target + offset);
+    if (move.piece() == Pawn){
+        // enpassant capture
+        if (enpassant){
+            int8_t offset = c == White ? -8 : 8;
+            removePiece(makePiece<~c>(Pawn), Square(target + offset));
+        }
+        // update enpassant square
+        if (piece == makePiece<c>(Pawn) && std::abs(source - target) == 16){
+            int8_t offset = c == White ? -8 : 8;
+            Bitboard epMask = GetPawnAttacks<c>(Square(target + offset));
+            if (epMask & Pawns<~c>()){
+                enpassantSquare = Square(target + offset);
+            }
         }
     }
-    
-
 
     // update half move clock
     // if (piece == makePiece(Pawn, sideToMove))
     //     halfMoveClock = 0;
 
-    if (capture == 1 && enpassant != 1)
+    if (capturedPiece != None)
         removePiece(capturedPiece, target);
 
-    removePiece(piece, source);
-    placePiece(piece, target);
-
-    if (promoted != None){
-        removePiece(piece, target);
-        placePiece(promoted, target);
+    if (!move.promoted()){
+        removePiece(piece, source);
+        placePiece(piece, target);
     }
-
+    else{
+        removePiece(makePiece<c>(Pawn), source);
+        placePiece(piece, target);
+    }
     // Switch sides
-    sideToMove = ~sideToMove;
+    ~sideToMove;
 }
 template <Color c> 
 void Board::unmakemove(Move& move){
@@ -956,48 +916,60 @@ void Board::unmakemove(Move& move){
     enpassantSquare = safeState.enpassantCopy;
     castlingRights = safeState.castlingRightsCopy;
 
-    sideToMove = ~sideToMove;
+    ~sideToMove;
 
-    Piece piece = move.piece();
-    Piece promoted = move.promoted();
+    Piece piece = makePiece<c>(move.piece());
+    
     Square source = move.source();
     Square target = move.target();
-    bool enpassant = move.enpassant();
 
-    removePiece(piece, target);
-    placePiece(piece, source);
+    bool capture = safeState.capturedPiece == None ? false : true;
+    
+    if (!move.promoted()) {
+        removePiece(piece, target);
+        placePiece(piece, source);
+    }
+    else{
+        placePiece(makePiece<c>(Pawn), source);
+        removePiece(piece, target);
+        if (capture)
+            placePiece(safeState.capturedPiece, target);
+        return;
+    }
 
-    if (enpassant && piece == WhitePawn) {
-        placePiece(BlackPawn, Square((int)enpassantSquare - 8));
+    if (move.piece() == Pawn && target == enpassantSquare && piece == makePiece<c>(Pawn)){
+        if constexpr (c == White){
+            placePiece(BlackPawn, Square((int)enpassantSquare - 8));
+        }
+        else{
+            placePiece(WhitePawn, Square((int)enpassantSquare + 8));
+        }
     }
-    if (enpassant && piece == BlackPawn) {
-        placePiece(WhitePawn, Square((int)enpassantSquare + 8));
-    }
-    if (promoted != None) {
-        removePiece(promoted, target);
-    }
-    if (move.capture() == 1 && !enpassant) {
+
+    if (capture) {
         placePiece(safeState.capturedPiece, target);
     }
-    if (piece == WhiteKing && move.castling() == 1) {
-        if (target == SQ_G1 && source == SQ_E1) {
-            removePiece(WhiteRook, SQ_F1);
-            placePiece(WhiteRook, SQ_H1);
+
+    if (piece == makePiece<c>(King)){
+        if constexpr (c == White){
+            if (source == SQ_E1 && target == SQ_G1){
+                removePiece(WhiteRook, SQ_F1);
+                placePiece(WhiteRook, SQ_H1);
+            }
+            else if (source == SQ_E1 && target == SQ_C1){
+                removePiece(WhiteRook, SQ_D1);
+                placePiece(WhiteRook, SQ_A1);
+            }
         }
-        if (target == SQ_C1 && source == SQ_E1) {
-            removePiece(WhiteRook, SQ_D1);
-            placePiece(WhiteRook, SQ_A1);
-        }
-    }
-    if (piece == BlackKing && move.castling() == 1){
-        if (target == SQ_G8 && source == SQ_E8) {
-            removePiece(BlackRook, SQ_F8);
-            placePiece(BlackRook, SQ_H8);
-        }
-        if (target == SQ_C8 && source == SQ_E8) {
-            removePiece(BlackRook, SQ_D8);
-            placePiece(BlackRook, SQ_A8);
-            
+        else{
+            if (source == SQ_E8 && target == SQ_G8){
+                removePiece(BlackRook, SQ_F8);
+                placePiece(BlackRook, SQ_H8);
+            }
+            else if (source == SQ_E8 && target == SQ_C8){
+                removePiece(BlackRook, SQ_D8);
+                placePiece(BlackRook, SQ_A8);
+            }
         }
     }
 }
@@ -1010,8 +982,8 @@ Piece Board::getPiece(Square sq){
 template <Color c> 
 bool Board::isSquareAttacked(Square sq) {
     if (sq != NO_SQ) {
-        if (GetPawnAttacks<~c>(sq) & Pawns<c>())                                  return true;
-        if (GetKnightAttacks(sq) & Knights<c>())                                        return true;
+        if (GetPawnAttacks<~c>(sq) & Pawns<c>())                                            return true;
+        if (GetKnightAttacks(sq) & Knights<c>())                                            return true;
         if (GetBishopAttacks(sq, allPieces<White>() | allPieces<Black>()) & Bishops<c>())   return true;
         if (GetRookAttacks  (sq, allPieces<White>() | allPieces<Black>()) & Rooks<c>())     return true;
         if (GetQueenAttacks (sq, allPieces<White>() | allPieces<Black>()) & Queens<c>())    return true;
