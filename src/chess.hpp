@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <bitset>
 #include <cmath>
+#include <chrono>
 #include <algorithm>
 
 namespace Chess {
@@ -1418,4 +1419,123 @@ inline Bitboard Board::LegalKingMoves(Square sq){
     }
     return legal_king;
 }
+
+
+/**********************************\
+ ==================================
+               Perft
+ ==================================
+\**********************************/
+
+namespace Testing {
+
+// Board instance
+Board board;
+
+// https://www.chessprogramming.org/Perft_Results
+
+#define POSITION_1 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+#define POSITION_2 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - "
+#define POSITION_3 "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - "
+
+// struct for individual perft positions
+struct PerftPosition {
+    std::string fen;
+    uint64_t nodes;
+    int depth;
+
+    PerftPosition(std::string fen, uint64_t nodes, int depth) : 
+    fen(fen), nodes(nodes), depth(depth) {}
+};
+
+std::vector<PerftPosition> testPosition1 = {
+    PerftPosition(POSITION_1, 20, 1),
+    PerftPosition(POSITION_1, 400, 2),
+    PerftPosition(POSITION_1, 8902, 3),
+    PerftPosition(POSITION_1, 197281, 4),
+    PerftPosition(POSITION_1, 4865609, 5)
+};
+
+std::vector<PerftPosition> testPosition2 = {
+    PerftPosition(POSITION_2, 48, 1),
+    PerftPosition(POSITION_2, 2039, 2),
+    PerftPosition(POSITION_2, 97862, 3),
+    PerftPosition(POSITION_2, 4085603, 4),
+    PerftPosition(POSITION_2, 193690690, 5)
+};
+
+std::vector<PerftPosition> testPosition3 = {
+    PerftPosition(POSITION_3, 14, 1),
+    PerftPosition(POSITION_3, 191, 2),
+    PerftPosition(POSITION_3, 2812, 3),
+    PerftPosition(POSITION_3, 43238, 4),
+    PerftPosition(POSITION_3, 674624, 5),
+    PerftPosition(POSITION_3, 11030083, 6),
+    PerftPosition(POSITION_3, 178633661, 7)
+};
+
+template<Color c>
+uint64_t Driver(int depth) {
+    if (depth == 0) {
+        return 1;
+    }
+
+    uint64_t nodes = 0;
+    Moves moveList = board.generateLegalMoves<c>();
+    for (int i = 0; i < (int)moveList.count; i++) {
+        Move move = moveList.moves[i];
+        board.makemove<c>(move);
+        nodes += Driver<~c>(depth - 1);
+        board.unmakemove<c>(move);
+    }
+
+    return nodes;
 }
+
+
+bool RunTestOnPosition(std::vector<PerftPosition> positions, std::string fen) {
+    auto t1 = std::chrono::high_resolution_clock::now();
+    board.parseFEN(fen);
+    for (PerftPosition position : positions) {
+        uint64_t nodes = Driver<White>(position.depth);
+        if (nodes != position.nodes) {
+            std::cout << "Failed: " << position.fen << " Depth " << position.depth << std::endl;
+            std::cout << "Got: " << nodes << " Expected: " << position.nodes << std::endl;
+            return false;
+        }
+        std::cout << "Passed: " << nodes << std::endl;
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+    std::cout << "Time: " << ms.count() << "ms" << "\n\n";
+    return true;
+}
+
+
+void RunPerftTest() {
+    std::cout << "BEGIN PERFT TESTING:" << std::endl;
+
+    bool PASSED = true;
+    board.parseFEN(POSITION_1);
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    
+    PASSED = RunTestOnPosition(testPosition1, POSITION_1);
+    PASSED = RunTestOnPosition(testPosition2, POSITION_2);
+    PASSED = RunTestOnPosition(testPosition3, POSITION_3);
+
+    if (PASSED = true) {
+        std::cout << "Passed all tests" << std::endl;
+    }
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+    std::cout << "Total time: " << ms.count() << "ms" << std::endl;
+} 
+
+
+
+} // end of namespace Testing
+
+
+} // end of namespace Chess
