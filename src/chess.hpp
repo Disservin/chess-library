@@ -13,13 +13,11 @@
 
 namespace Chess {
 
-
 /**********************************\
  ==================================
                Types 
  ==================================
 \**********************************/
-
 
 // enum type for mapping a color to int
 enum Color : uint8_t {
@@ -81,9 +79,8 @@ static constexpr uint8_t whiteQueenSideCastling = 2;
 static constexpr uint8_t blackKingSideCastling  = 4;
 static constexpr uint8_t blackQueenSideCastling = 8;
 
-
 // default FEN string (start position)
-const std::string defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
+static constexpr auto defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
 
 // map a piece to its corresponding character
 static std::unordered_map<Piece, char> pieceToChar({
@@ -128,8 +125,6 @@ const std::string squareToString[64] = {
     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 };
-
-
 
 /**********************************\
  ==================================
@@ -191,15 +186,136 @@ static constexpr Bitboard MASK_ANTI_DIAGONAL[15] = {
     0x2040800000000000, 0x4080000000000000, 0x8000000000000000
 };
 
-//returns reversed bitboard (rotate 180 degrees)
-inline Bitboard reverse(Bitboard bb) {
-    bb = (bb & 0x5555555555555555) << 1 | ((bb >> 1) & 0x5555555555555555);
-    bb = (bb & 0x3333333333333333) << 2 | ((bb >> 2) & 0x3333333333333333);
-    bb = (bb & 0x0f0f0f0f0f0f0f0f) << 4 | ((bb >> 4) & 0x0f0f0f0f0f0f0f0f);
-    bb = (bb & 0x00ff00ff00ff00ff) << 8 | ((bb >> 8) & 0x00ff00ff00ff00ff);
+// pre calculated lookup table for knight attacks
+static constexpr Bitboard KNIGHT_ATTACKS_TABLE[64] = {
+    0x0000000000020400, 0x0000000000050800, 0x00000000000A1100, 0x0000000000142200,
+    0x0000000000284400, 0x0000000000508800, 0x0000000000A01000, 0x0000000000402000,
+    0x0000000002040004, 0x0000000005080008, 0x000000000A110011, 0x0000000014220022,
+    0x0000000028440044, 0x0000000050880088, 0x00000000A0100010, 0x0000000040200020,
+    0x0000000204000402, 0x0000000508000805, 0x0000000A1100110A, 0x0000001422002214,
+    0x0000002844004428, 0x0000005088008850, 0x000000A0100010A0, 0x0000004020002040,
+    0x0000020400040200, 0x0000050800080500, 0x00000A1100110A00, 0x0000142200221400,
+    0x0000284400442800, 0x0000508800885000, 0x0000A0100010A000, 0x0000402000204000,
+    0x0002040004020000, 0x0005080008050000, 0x000A1100110A0000, 0x0014220022140000,
+    0x0028440044280000, 0x0050880088500000, 0x00A0100010A00000, 0x0040200020400000,
+    0x0204000402000000, 0x0508000805000000, 0x0A1100110A000000, 0x1422002214000000,
+    0x2844004428000000, 0x5088008850000000, 0xA0100010A0000000, 0x4020002040000000,
+    0x0400040200000000, 0x0800080500000000, 0x1100110A00000000, 0x2200221400000000,
+    0x4400442800000000, 0x8800885000000000, 0x100010A000000000, 0x2000204000000000,
+    0x0004020000000000, 0x0008050000000000, 0x00110A0000000000, 0x0022140000000000,
+    0x0044280000000000, 0x0088500000000000, 0x0010A00000000000, 0x0020400000000000
+};
 
-    return (bb << 48) | ((bb & 0xffff0000) << 16) | ((bb >> 16) & 0xffff0000) | (bb >> 48);
+// pre calculated lookup table for king attacks
+static constexpr Bitboard KING_ATTACKS_TABLE[64] = {
+    0x0000000000000302, 0x0000000000000705, 0x0000000000000E0A, 0x0000000000001C14,
+    0x0000000000003828, 0x0000000000007050, 0x000000000000E0A0, 0x000000000000C040,
+    0x0000000000030203, 0x0000000000070507, 0x00000000000E0A0E, 0x00000000001C141C,
+    0x0000000000382838, 0x0000000000705070, 0x0000000000E0A0E0, 0x0000000000C040C0,
+    0x0000000003020300, 0x0000000007050700, 0x000000000E0A0E00, 0x000000001C141C00,
+    0x0000000038283800, 0x0000000070507000, 0x00000000E0A0E000, 0x00000000C040C000,
+    0x0000000302030000, 0x0000000705070000, 0x0000000E0A0E0000, 0x0000001C141C0000,
+    0x0000003828380000, 0x0000007050700000, 0x000000E0A0E00000, 0x000000C040C00000,
+    0x0000030203000000, 0x0000070507000000, 0x00000E0A0E000000, 0x00001C141C000000,
+    0x0000382838000000, 0x0000705070000000, 0x0000E0A0E0000000, 0x0000C040C0000000,
+    0x0003020300000000, 0x0007050700000000, 0x000E0A0E00000000, 0x001C141C00000000,
+    0x0038283800000000, 0x0070507000000000, 0x00E0A0E000000000, 0x00C040C000000000,
+    0x0302030000000000, 0x0705070000000000, 0x0E0A0E0000000000, 0x1C141C0000000000,
+    0x3828380000000000, 0x7050700000000000, 0xE0A0E00000000000, 0xC040C00000000000,
+    0x0203000000000000, 0x0507000000000000, 0x0A0E000000000000, 0x141C000000000000,
+    0x2838000000000000, 0x5070000000000000, 0xA0E0000000000000, 0x40C0000000000000
+};
+
+// pre calculated lookup table for pawn attacks
+static constexpr Bitboard PAWN_ATTACKS_TABLE[2][64] = {
+    
+    // white pawn attacks
+    { 0x200, 0x500, 0xa00, 0x1400,
+      0x2800, 0x5000, 0xa000, 0x4000,
+      0x20000, 0x50000, 0xa0000, 0x140000,
+      0x280000, 0x500000, 0xa00000, 0x400000,
+      0x2000000, 0x5000000, 0xa000000, 0x14000000,
+      0x28000000, 0x50000000, 0xa0000000, 0x40000000,
+      0x200000000, 0x500000000, 0xa00000000, 0x1400000000,
+      0x2800000000, 0x5000000000, 0xa000000000, 0x4000000000,
+      0x20000000000, 0x50000000000, 0xa0000000000, 0x140000000000,
+      0x280000000000, 0x500000000000, 0xa00000000000, 0x400000000000,
+      0x2000000000000, 0x5000000000000, 0xa000000000000, 0x14000000000000,
+      0x28000000000000, 0x50000000000000, 0xa0000000000000, 0x40000000000000,
+      0x200000000000000, 0x500000000000000, 0xa00000000000000, 0x1400000000000000,
+      0x2800000000000000, 0x5000000000000000, 0xa000000000000000, 0x4000000000000000,
+      0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0 }, 
+    
+    // black pawn attacks
+    { 0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0,
+      0x2, 0x5, 0xa, 0x14,
+      0x28, 0x50, 0xa0, 0x40,
+      0x200, 0x500, 0xa00, 0x1400,
+      0x2800, 0x5000, 0xa000, 0x4000,
+      0x20000, 0x50000, 0xa0000, 0x140000,
+      0x280000, 0x500000, 0xa00000, 0x400000,
+      0x2000000, 0x5000000, 0xa000000, 0x14000000,
+      0x28000000, 0x50000000, 0xa0000000, 0x40000000,
+      0x200000000, 0x500000000, 0xa00000000, 0x1400000000,
+      0x2800000000, 0x5000000000, 0xa000000000, 0x4000000000,
+      0x20000000000, 0x50000000000, 0xa0000000000, 0x140000000000,
+      0x280000000000, 0x500000000000, 0xa00000000000, 0x400000000000,
+      0x2000000000000, 0x5000000000000, 0xa000000000000, 0x14000000000000,
+      0x28000000000000, 0x50000000000000, 0xa0000000000000, 0x40000000000000
+    }
+};
+
+//returns reversed bitboard (rotate 180 degrees)
+inline Bitboard reverse(Bitboard bb);
+
+// returns index of LSB and removes that bit from given Bitboard
+Square poplsb(Bitboard &bb);
+
+// sets bit at given square to 1
+inline void setBit(Bitboard& bb, Square sq);
+
+inline bool isBitSet(Bitboard bb, Square sq);
+
+// print given bitboard (for debugging purposes)
+void printBitboard(Bitboard bb);
+
+/**********************************\
+ ==================================
+         Helper Functions
+ ==================================
+\**********************************/
+
+// returns the rank of a given square
+uint8_t rank_of(Square sq);
+
+// returns the file of a given square
+uint8_t file_of(Square sq);
+
+// returns diagonal of given square
+uint8_t diagonal_of(Square sq);
+
+// returns anti diagonal of given square
+uint8_t anti_diagonal_of(Square sq);
+
+// returns the piece type
+PieceType piece_type(Piece p);
+
+Color piece_color(Piece p);
+
+int squareDistance(Square a, Square b);
+
+template <Color c>
+Piece makePiece(PieceType type) {
+  return Piece(6 * c + type);
 }
+
+/**********************************\
+ ==================================
+             Bit functions
+ ==================================
+\**********************************/
 
 // Compiler specific functions, taken from Stockfish https://github.com/official-stockfish/Stockfish
 #if defined(__GNUC__)  // GCC, Clang, ICC
@@ -279,88 +395,11 @@ inline int popCount(Bitboard b){
 #endif
 }
 
-// returns index of LSB and removes that bit from given Bitboard
-Square poplsb(Bitboard &bb) {
-    Square lsb = bsf(bb);
-    bb &= bb - 1;
-    return lsb;
-}
-
-// sets bit at given square to 1
-inline void setBit(Bitboard& bb, Square sq) {
-    bb |= SQUARE_BB[sq];
-}
-
-inline bool isBitSet(Bitboard bb, Square sq) {
-    return (bb & SQUARE_BB[sq]) ? true : false;
-}
-
-// print given bitboard (for debugging purposes)
-void printBitboard(Bitboard bb) {
-    std::cout << "\n";
-    for (int rank = 7; rank >= 0; rank--) {
-        for (int file = 0; file < 8; file++) {
-            Square sq = Square(rank * 8 + file);
-            if (file == 0) std::cout << " " << rank + 1 << " ";
-            std::cout << " " << (bb & (1ULL << sq) ? 1 : 0);
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n    a b c d e f g h\n\n";
-}
-
-
-/**********************************\
- ==================================
-         Helper Functions
- ==================================
-\**********************************/
-
-// returns the rank of a given square
-uint8_t rank_of(Square sq) {
-    return sq >> 3;
-}
-
-// returns the file of a given square
-uint8_t file_of(Square sq) {
-    return sq & 7;
-}
-
-// returns diagonal of given square
-uint8_t diagonal_of(Square sq) {
-    return 7 + rank_of(sq) - file_of(sq);
-}
-
-// returns anti diagonal of given square
-uint8_t anti_diagonal_of(Square sq) {
-    return rank_of(sq) + file_of(sq);
-}
-
-// returns the piece type
-PieceType piece_type(Piece p){
-    return PieceType(p % 6);
-}
-
-template <Color c>
-Piece makePiece(PieceType type) {
-  return Piece(6 * c + type);
-}
-
-Color piece_color(Piece p){
-    return Color(p / 6);
-}
-
-inline int squareDistance(Square a, Square b) {
-    return std::max(std::abs(file_of(a) - file_of(b)), std::abs(rank_of(a) - rank_of(b)));
-}
-
-
 /**********************************\
  ==================================
                Moves
  ==================================
 \**********************************/
-
 
 // class for representing a move
 class Move {
@@ -417,13 +456,7 @@ struct Moves {
     }
 };
 
-void printMove(Move move) {
-    std::cout << "Move: " << squareToString[move.source()] << squareToString[move.target()] << " |";
-    std::cout << " Piece: " << signed(move.piece()) << " |";
-    std::cout << " Promoted: " << move.promoted() << " |";
-    std::cout << std::endl;
-}
-
+void printMove(Move move);
 
 /**********************************\
  ==================================
@@ -439,7 +472,6 @@ struct State {
     State (Square enpassantCopy={}, uint8_t castlingRightsCopy={}, Piece capturedPiece={}) :
         enpassantCopy(enpassantCopy), castlingRightsCopy(castlingRightsCopy), capturedPiece(capturedPiece) {}
 };
-
 
 class Board {
 private:
@@ -502,12 +534,42 @@ public:
     template <Color c> Moves generateLegalMoves();
 
     template <Color c> void makemove(Move& move);
+
     template <Color c> void unmakemove(Move& move);
 
     Piece getPiece(Square sq);
 
     // checks if a square is being attacked by the given side
     template <Color c> bool isSquareAttacked(Square sq);
+
+    // Returns the square of the king of the given color
+    template <Color c> Square KingSq();
+
+    // returns bitboard containing all pieces of given color
+    template <Color c> constexpr Bitboard allPieces();
+
+    // functions for getting individual
+    // piece bitboards
+
+    // returns pawns bitboard for given color
+    template <Color c> constexpr Bitboard Pawns();
+
+    // returns knights bitboard for given color
+    template <Color c> constexpr Bitboard Knights();
+
+    // returns bishops bitboard for given color
+    template <Color c> constexpr Bitboard Bishops();
+
+    // returns rooks bitboard for given color
+    template <Color c> constexpr Bitboard Rooks();
+    
+    // returns queens bitboard for given color
+    template <Color c> constexpr Bitboard Queens();
+
+    // returns king bitboard for given color
+    template <Color c> constexpr Bitboard Kings();
+    template <Color c> constexpr Bitboard PieceBB(PieceType type);
+
 private:
     // places a piece on a particular square
     void placePiece(Piece piece, Square sq);
@@ -515,20 +577,9 @@ private:
     // removes a piece from a particular square
     void removePiece(Piece piece, Square sq);
 
-    // functions for getting individual
-    // piece bitboards
-    template <Color c> constexpr Bitboard Pawns();
-    template <Color c> constexpr Bitboard Knights();
-    template <Color c> constexpr Bitboard Bishops();
-    template <Color c> constexpr Bitboard Rooks();
-    template <Color c> constexpr Bitboard Queens();
-    template <Color c> constexpr Bitboard Kings();
-    template <Color c> constexpr Bitboard allPieces();
     template <Color c> constexpr Bitboard Enemy();
-    template <Color c> constexpr Bitboard EnemyEmpty();
-    template <Color c> constexpr Bitboard PieceBB(PieceType type);
-    template <Color c> Square KingSq();
-
+    template <Color c> constexpr Bitboard EnemyEmpty();    
+    
     // initialization for movegen
     void initializeLookupTables();
     template <Color c> Bitboard doCheckmask(Square sq);
@@ -536,17 +587,18 @@ private:
     template <Color c> void init(Square sq);
 
     // functions for sliders movegen
-    inline Bitboard hyp_quint(Square square, Bitboard occ, Bitboard mask);
-    inline Bitboard GetBishopAttacks(Square square, Bitboard occ); 
-    inline Bitboard GetRookAttacks(Square square, Bitboard occ); 
-    inline Bitboard GetQueenAttacks(Square square, Bitboard occ); 
+    Bitboard hyp_quint(Square square, Bitboard occ, Bitboard mask);
+    Bitboard GetBishopAttacks(Square square, Bitboard occ); 
+    Bitboard GetRookAttacks(Square square, Bitboard occ); 
+    Bitboard GetQueenAttacks(Square square, Bitboard occ); 
 
     // functions for pawn, knight and king movegen
     template <Color c> inline Bitboard GetPawnPush(Square sq); 
     template <Color c> inline Bitboard GetPawnAttacks(Square square);
-    inline Bitboard GetKnightAttacks(Square square); 
-    inline Bitboard GetKingAttacks(Square square);
+    Bitboard GetKnightAttacks(Square square); 
+    Bitboard GetKingAttacks(Square square);
 
+    // Legal Move Bitboards
     template <Color c> Bitboard LegalPawnMoves(Square sq);
     template <Color c> Bitboard LegalKnightMoves(Square sq);
     template <Color c> Bitboard LegalBishopMoves(Square sq);
@@ -554,233 +606,6 @@ private:
     template <Color c> Bitboard LegalQueenMoves(Square sq);
     template <Color c> Bitboard LegalKingMoves(Square sq);
 };
-
-void Board::initializeLookupTables() {
-    //initialize squares between table
-    Bitboard sqs;
-    for (Square sq1 = SQ_A1; sq1 <= SQ_H8; ++sq1) {
-        for (Square sq2 = SQ_A1; sq2 <= SQ_H8; ++sq2) {
-            sqs = SQUARE_BB[sq1] | SQUARE_BB[sq2];
-            if (file_of(sq1) == file_of(sq2) || rank_of(sq1) == rank_of(sq2))
-                SQUARES_BETWEEN_BB[sq1][sq2] =
-                GetRookAttacks(sq1, sqs) & GetRookAttacks(sq2, sqs);
-            else if (diagonal_of(sq1) == diagonal_of(sq2) || anti_diagonal_of(sq1) == anti_diagonal_of(sq2))
-                SQUARES_BETWEEN_BB[sq1][sq2] =
-                GetBishopAttacks(sq1, sqs) & GetBishopAttacks(sq2, sqs);
-        }   
-    }
-}
-
-// Board constructor that takes in FEN string.
-// if no parameter given, set to default position
-Board::Board(std::string FEN) {
-    // init lookup tables used for movegen
-    initializeLookupTables();
-
-    // reset board info
-    memset(PiecesBB, 0ULL, sizeof(PiecesBB));
-    memset(board, None, sizeof(board));
-
-    // reset enpassant square
-    enpassantSquare = NO_SQ;
-
-    // reset castling rights
-    castlingRights = 0;
-    
-    // parse FEN string
-    parseFEN(FEN);
-}
-
-// parse FEN (Forsyth-Edwards Notation) string
-void Board::parseFEN(std::string FEN) {
-    // reset board info
-    memset(PiecesBB, 0ULL, sizeof(PiecesBB));
-    memset(board, None, sizeof(board));
-
-    // reset enpassant square
-    enpassantSquare = NO_SQ;
-
-    // reset castling rights
-    castlingRights = 0;
-    // vector containing each section of FEN string
-    std::vector<std::string> tokens;
-
-    // general purpose string to handle current token
-    std::string token;
-
-    // split tokens by spaces
-    for (int i = 0; i < (int)FEN.size(); i++) {
-        if (FEN[i] == ' ') {
-            if (token.size() != 0) {
-                tokens.push_back(token);
-                token = "";
-            }
-            continue;
-        }
-        token += FEN[i];
-    }
-
-    // extract four sections from FEN string
-    std::string pieces, color, castling, ep;
-
-    if (tokens.size() >= 4) {
-        pieces   = tokens[0];
-        color    = tokens[1];
-        castling = tokens[2];
-        ep       = tokens[3];
-    }
-    else std::cout << "Invalid FEN string\n";
-
-    // load pieces from FEN into internal board
-    Square square = Square(56);
-    for (int index = 0; index < (int)pieces.size(); index++) {
-        char curr = pieces[index];
-        if (charToPiece.find(curr) != charToPiece.end()) {
-            Piece piece = charToPiece[curr];
-            placePiece(piece, square);
-            square = Square(square + 1);
-        }
-        else if (curr == '/') square = Square(square - 16);
-        else if (isdigit(curr)) square = Square(square + (curr - '0'));
-    }
-
-    // load the side to move for the position
-    sideToMove = color == "w" ? White : Black;
-
-    // set the enpassant square for the position
-    if (ep != "-") {
-        int rank = ((int)ep[1]) - 49;
-        int file = ((int)ep[0]) - 97;
-        enpassantSquare = Square(rank * 8 + file);
-    }
-
-
-    // set castling rights for the position
-    for (int i = 0; i < (int)castling.size(); i++) {
-        switch (castling[i]) {
-        case 'K':
-            castlingRights |= whiteKingSideCastling;
-            break;
-        case 'Q':
-            castlingRights |= whiteQueenSideCastling;
-            break;
-        case 'k':
-            castlingRights |= blackKingSideCastling;
-            break;
-        case 'q':
-            castlingRights |= blackQueenSideCastling;
-            break;
-        }
-    }
-}
-
-// print the current board state
-void Board::print() {
-    std::cout << "\n";
-    for (int rank = 7; rank >= 0; rank--) {
-        for (int file = 0; file < 8; file++) {
-            Square sq = Square(rank * 8 + file);
-            if (file == 0) std::cout << " " << rank + 1 << " ";
-            Piece piece = board[sq];
-            if (piece == None) std::cout << " .";
-            else std::cout << " " << pieceToChar[piece];
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n    a b c d e f g h\n\n";
-    std::cout << "   Side:    " << ((sideToMove == White) ? "White\n" : "Black\n");
-
-    std::cout << "   Castling:  ";
-    std::cout << ((castlingRights & whiteKingSideCastling) ? "K" : "-");
-    std::cout << ((castlingRights & whiteQueenSideCastling) ? "Q" : "-");
-    std::cout << ((castlingRights & blackKingSideCastling) ? "k" : "-");
-    std::cout << ((castlingRights & blackQueenSideCastling) ? "q" : "-");
-
-    std::cout << "\n   Enpass:    " << ((enpassantSquare == NO_SQ) ? "NO_SQ" : squareToString[enpassantSquare]);
-    std::cout << "\n";
-}
-
-// function that returns a list of legal moves
-template <Color c> 
-Moves Board::generateLegalMoves() {
-    // init move list
-    Moves moveList{};
-    init<c>(KingSq<c>());
-
-    Bitboard pawn_mask = Pawns<c>();
-    Bitboard knight_mask = Knights<c>();
-    Bitboard bishop_mask = Bishops<c>();
-    Bitboard rook_mask = Rooks<c>();
-    Bitboard queen_mask = Queens<c>();
-    Bitboard king_mask = Kings<c>();
-    if (doubleCheck < 2){
-        while (pawn_mask){
-            Square source = poplsb(pawn_mask);
-            Bitboard moves = LegalPawnMoves<c>(source);
-            while (moves){
-                Square target = poplsb(moves);
-                if (rank_of(target) == 0 || rank_of(target) == 7){
-                    moveList.Add(Move(source, target, Queen, 1));
-                    moveList.Add(Move(source, target, Rook, 1));
-                    moveList.Add(Move(source, target, Bishop, 1));
-                    moveList.Add(Move(source, target, Knight, 1));
-                }
-                else{
-                    moveList.Add(Move(source, target, Pawn));
-                } 
-            }
-        }
-        while(knight_mask){
-            const Square source = poplsb(knight_mask);
-            Bitboard moves = LegalKnightMoves<c>(source);
-            while(moves){
-                const Square target = poplsb(moves);
-                moveList.Add(Move(source, target, Knight));
-            }
-        }
-        while (bishop_mask){
-            const Square source = poplsb(bishop_mask);
-            Bitboard moves = LegalBishopMoves<c>(source);
-            while (moves){
-                const Square target = poplsb(moves);
-                moveList.Add(Move(source, target, Bishop));
-            }
-        }
-        while (rook_mask){
-            const Square source = poplsb(rook_mask);
-            Bitboard moves = LegalRookMoves<c>(source);
-            while (moves){
-                const Square target = poplsb(moves);
-                moveList.Add(Move(source, target, Rook));
-            }
-        }
-        while (queen_mask){
-            const Square source = poplsb(queen_mask);
-            Bitboard moves = LegalQueenMoves<c>(source);
-            while (moves){
-                const Square target = poplsb(moves);
-                moveList.Add(Move(source, target, Queen));
-            }
-        }
-    }
-
-    const Square source = bsf(king_mask);
-    Bitboard moves = LegalKingMoves<c>(source);
-    while (moves){
-        const Square target = poplsb(moves);
-        // For some reason this is faster
-        if (target == SQ_G1 && source == SQ_E1)
-            moveList.Add(Move(source, target, King));
-        else
-            moveList.Add(Move(source, target, King));
-        // than this:
-        // moveList.Add(Move(source, target, King));  
-        // I have no idea why this is faster and I suspect it
-        // has to do something with -O3 optimization because at -O2
-        // both versions are about the same speed.
-    }
-    return moveList;
-}
 
 template <Color c> 
 void Board::makemove(Move& move){
@@ -888,6 +713,7 @@ void Board::makemove(Move& move){
     // Switch sides
     ~sideToMove;
 }
+
 template <Color c> 
 void Board::unmakemove(Move& move){
     // Retrive important board information
@@ -954,11 +780,6 @@ void Board::unmakemove(Move& move){
     }
 }
 
-Piece Board::getPiece(Square sq){
-    return board[sq];
-}
-
-// checks if the square is attacked by the specified color
 template <Color c> 
 bool Board::isSquareAttacked(Square sq) {
     if (sq != NO_SQ) {
@@ -971,59 +792,50 @@ bool Board::isSquareAttacked(Square sq) {
     return false;
 }
 
-// place a piece on a particular square
-inline void Board::placePiece(Piece piece, Square sq) {
-    PiecesBB[piece] |= SQUARE_BB[sq];
-    board[sq] = piece;
+template <Color c> 
+inline Square Board::KingSq(){
+    if constexpr (c==White) return bsf(Kings<White>());
+    return bsf(Kings<Black>());
 }
 
-// remove a piece from a particular square
-inline void Board::removePiece(Piece piece, Square sq) {
-    PiecesBB[piece] &= ~SQUARE_BB[sq];
-    board[sq] = None;
+template <Color c> 
+constexpr Bitboard Board::allPieces(){
+    return Pawns<c>() | Knights<c>() | Bishops<c>() | Rooks<c>() | Queens<c>() | Kings<c>();
 }
 
-// returns pawns bitboard for given color
 template <Color c> 
 constexpr Bitboard Board::Pawns(){
     return PiecesBB[c * 6];
 }
 
-// returns knights bitboard for given color
 template <Color c> 
 constexpr Bitboard Board::Knights(){
     return PiecesBB[c * 6 + Knight];
 }
 
-// returns bishops bitboard for given color
 template <Color c> 
 constexpr Bitboard Board::Bishops(){
     return PiecesBB[c * 6 + Bishop];
 }
 
-// returns rooks bitboard for given color
 template <Color c> 
 constexpr Bitboard Board::Rooks(){
     return PiecesBB[c * 6 + Rook];
 }
 
-// returns queens bitboard for given color
 template <Color c> 
 constexpr Bitboard Board::Queens(){
     return PiecesBB[c * 6 + Queen];
 }
 
-
-// returns king bitboard for given color
 template <Color c> 
 constexpr Bitboard Board::Kings(){
     return PiecesBB[c * 6 + King];
 }
 
-// returns bitboard containing all pieces of given color
 template <Color c> 
-constexpr Bitboard Board::allPieces(){
-    return Pawns<c>() | Knights<c>() | Bishops<c>() | Rooks<c>() | Queens<c>() | Kings<c>();
+constexpr Bitboard Board::PieceBB(PieceType type) {
+    return PiecesBB[c * 6 + type];
 }
 
 template <Color c> 
@@ -1038,105 +850,11 @@ constexpr Bitboard Board::EnemyEmpty(){
     return ~allPieces<Black>();
 }
 
-template <Color c> 
-constexpr Bitboard Board::PieceBB(PieceType type) {
-    return PiecesBB[c * 6 + type];
-}
-
-template <Color c> 
-inline Square Board::KingSq(){
-    if constexpr (c==White) return bsf(Kings<White>());
-    return bsf(Kings<Black>());
-}
-
 /**********************************\
  ==================================
          Move generation
  ==================================
 \**********************************/
-
-
-// pre calculated lookup table for knight attacks
-static constexpr Bitboard KNIGHT_ATTACKS_TABLE[64] = {
-    0x0000000000020400, 0x0000000000050800, 0x00000000000A1100, 0x0000000000142200,
-    0x0000000000284400, 0x0000000000508800, 0x0000000000A01000, 0x0000000000402000,
-    0x0000000002040004, 0x0000000005080008, 0x000000000A110011, 0x0000000014220022,
-    0x0000000028440044, 0x0000000050880088, 0x00000000A0100010, 0x0000000040200020,
-    0x0000000204000402, 0x0000000508000805, 0x0000000A1100110A, 0x0000001422002214,
-    0x0000002844004428, 0x0000005088008850, 0x000000A0100010A0, 0x0000004020002040,
-    0x0000020400040200, 0x0000050800080500, 0x00000A1100110A00, 0x0000142200221400,
-    0x0000284400442800, 0x0000508800885000, 0x0000A0100010A000, 0x0000402000204000,
-    0x0002040004020000, 0x0005080008050000, 0x000A1100110A0000, 0x0014220022140000,
-    0x0028440044280000, 0x0050880088500000, 0x00A0100010A00000, 0x0040200020400000,
-    0x0204000402000000, 0x0508000805000000, 0x0A1100110A000000, 0x1422002214000000,
-    0x2844004428000000, 0x5088008850000000, 0xA0100010A0000000, 0x4020002040000000,
-    0x0400040200000000, 0x0800080500000000, 0x1100110A00000000, 0x2200221400000000,
-    0x4400442800000000, 0x8800885000000000, 0x100010A000000000, 0x2000204000000000,
-    0x0004020000000000, 0x0008050000000000, 0x00110A0000000000, 0x0022140000000000,
-    0x0044280000000000, 0x0088500000000000, 0x0010A00000000000, 0x0020400000000000
-};
-
-// pre calculated lookup table for king attacks
-static constexpr Bitboard KING_ATTACKS_TABLE[64] = {
-    0x0000000000000302, 0x0000000000000705, 0x0000000000000E0A, 0x0000000000001C14,
-    0x0000000000003828, 0x0000000000007050, 0x000000000000E0A0, 0x000000000000C040,
-    0x0000000000030203, 0x0000000000070507, 0x00000000000E0A0E, 0x00000000001C141C,
-    0x0000000000382838, 0x0000000000705070, 0x0000000000E0A0E0, 0x0000000000C040C0,
-    0x0000000003020300, 0x0000000007050700, 0x000000000E0A0E00, 0x000000001C141C00,
-    0x0000000038283800, 0x0000000070507000, 0x00000000E0A0E000, 0x00000000C040C000,
-    0x0000000302030000, 0x0000000705070000, 0x0000000E0A0E0000, 0x0000001C141C0000,
-    0x0000003828380000, 0x0000007050700000, 0x000000E0A0E00000, 0x000000C040C00000,
-    0x0000030203000000, 0x0000070507000000, 0x00000E0A0E000000, 0x00001C141C000000,
-    0x0000382838000000, 0x0000705070000000, 0x0000E0A0E0000000, 0x0000C040C0000000,
-    0x0003020300000000, 0x0007050700000000, 0x000E0A0E00000000, 0x001C141C00000000,
-    0x0038283800000000, 0x0070507000000000, 0x00E0A0E000000000, 0x00C040C000000000,
-    0x0302030000000000, 0x0705070000000000, 0x0E0A0E0000000000, 0x1C141C0000000000,
-    0x3828380000000000, 0x7050700000000000, 0xE0A0E00000000000, 0xC040C00000000000,
-    0x0203000000000000, 0x0507000000000000, 0x0A0E000000000000, 0x141C000000000000,
-    0x2838000000000000, 0x5070000000000000, 0xA0E0000000000000, 0x40C0000000000000
-};
-
-// pre calculated lookup table for pawn attacks
-static constexpr Bitboard PAWN_ATTACKS_TABLE[2][64] = {
-    
-    // white pawn attacks
-    { 0x200, 0x500, 0xa00, 0x1400,
-      0x2800, 0x5000, 0xa000, 0x4000,
-      0x20000, 0x50000, 0xa0000, 0x140000,
-      0x280000, 0x500000, 0xa00000, 0x400000,
-      0x2000000, 0x5000000, 0xa000000, 0x14000000,
-      0x28000000, 0x50000000, 0xa0000000, 0x40000000,
-      0x200000000, 0x500000000, 0xa00000000, 0x1400000000,
-      0x2800000000, 0x5000000000, 0xa000000000, 0x4000000000,
-      0x20000000000, 0x50000000000, 0xa0000000000, 0x140000000000,
-      0x280000000000, 0x500000000000, 0xa00000000000, 0x400000000000,
-      0x2000000000000, 0x5000000000000, 0xa000000000000, 0x14000000000000,
-      0x28000000000000, 0x50000000000000, 0xa0000000000000, 0x40000000000000,
-      0x200000000000000, 0x500000000000000, 0xa00000000000000, 0x1400000000000000,
-      0x2800000000000000, 0x5000000000000000, 0xa000000000000000, 0x4000000000000000,
-      0x0, 0x0, 0x0, 0x0,
-      0x0, 0x0, 0x0, 0x0 }, 
-    
-    // black pawn attacks
-    { 0x0, 0x0, 0x0, 0x0,
-      0x0, 0x0, 0x0, 0x0,
-      0x2, 0x5, 0xa, 0x14,
-      0x28, 0x50, 0xa0, 0x40,
-      0x200, 0x500, 0xa00, 0x1400,
-      0x2800, 0x5000, 0xa000, 0x4000,
-      0x20000, 0x50000, 0xa0000, 0x140000,
-      0x280000, 0x500000, 0xa00000, 0x400000,
-      0x2000000, 0x5000000, 0xa000000, 0x14000000,
-      0x28000000, 0x50000000, 0xa0000000, 0x40000000,
-      0x200000000, 0x500000000, 0xa00000000, 0x1400000000,
-      0x2800000000, 0x5000000000, 0xa000000000, 0x4000000000,
-      0x20000000000, 0x50000000000, 0xa0000000000, 0x140000000000,
-      0x280000000000, 0x500000000000, 0xa00000000000, 0x400000000000,
-      0x2000000000000, 0x5000000000000, 0xa000000000000, 0x14000000000000,
-      0x28000000000000, 0x50000000000000, 0xa0000000000000, 0x40000000000000
-    }
-};
-
 
 template <Color c> 
 inline Bitboard Board::doCheckmask(Square sq){
@@ -1213,12 +931,6 @@ inline void Board::init(Square sq){
     doPins<c>(sq);
 }
 
-
-// Hyperbola Quintessence algorithm (for sliding pieces)
-Bitboard Board::hyp_quint(Square square, Bitboard occ, Bitboard mask) {
-    return (((mask & occ) - SQUARE_BB[square] * 2) ^
-        reverse(reverse(mask & occ) - reverse(SQUARE_BB[square]) * 2)) & mask;
-}
 // get Pawn push bitboard
 template <Color c>
 Bitboard Board::GetPawnPush(Square sq) {
@@ -1229,33 +941,6 @@ Bitboard Board::GetPawnPush(Square sq) {
 template <Color c>
 Bitboard Board::GetPawnAttacks(Square square) {
     return PAWN_ATTACKS_TABLE[c][square];
-}
-
-// get absolute knight attacks from lookup table
-Bitboard Board::GetKnightAttacks(Square square) {
-    return KNIGHT_ATTACKS_TABLE[square];
-}
- 
-// get bishop attacks using Hyperbola Quintessence
-Bitboard Board::GetBishopAttacks(Square square, Bitboard occ) {
-    return hyp_quint(square, occ, MASK_DIAGONAL[diagonal_of(square)]) |
-           hyp_quint(square, occ, MASK_ANTI_DIAGONAL[anti_diagonal_of(square)]);
-}
- 
-// get rook attacks using Hyperbola Quintessence
-Bitboard Board::GetRookAttacks(Square square, Bitboard occ) {
-    return hyp_quint(square, occ, MASK_FILE[file_of(square)]) |
-           hyp_quint(square, occ, MASK_RANK[rank_of(square)]);
-}
-
-// get queen attacks using Hyperbola Quintessence
-Bitboard Board::GetQueenAttacks(Square square, Bitboard occ) {
-    return GetBishopAttacks(square, occ) | GetRookAttacks(square, occ);
-}
-
-// get absolute king attacks from lookup table
-Bitboard Board::GetKingAttacks(Square square) {
-    return KING_ATTACKS_TABLE[square];
 }
 
 template <Color c> 
@@ -1405,6 +1090,88 @@ inline Bitboard Board::LegalKingMoves(Square sq){
     return legal_king;
 }
 
+// function that returns a Moves Struct that holds all legal moves
+template <Color c> 
+Moves Board::generateLegalMoves() {
+    // init move list
+    Moves moveList{};
+    init<c>(KingSq<c>());
+
+    Bitboard pawn_mask = Pawns<c>();
+    Bitboard knight_mask = Knights<c>();
+    Bitboard bishop_mask = Bishops<c>();
+    Bitboard rook_mask = Rooks<c>();
+    Bitboard queen_mask = Queens<c>();
+    Bitboard king_mask = Kings<c>();
+    if (doubleCheck < 2){
+        while (pawn_mask){
+            Square source = poplsb(pawn_mask);
+            Bitboard moves = LegalPawnMoves<c>(source);
+            while (moves){
+                Square target = poplsb(moves);
+                if (rank_of(target) == 0 || rank_of(target) == 7){
+                    moveList.Add(Move(source, target, Queen, 1));
+                    moveList.Add(Move(source, target, Rook, 1));
+                    moveList.Add(Move(source, target, Bishop, 1));
+                    moveList.Add(Move(source, target, Knight, 1));
+                }
+                else{
+                    moveList.Add(Move(source, target, Pawn));
+                } 
+            }
+        }
+        while(knight_mask){
+            const Square source = poplsb(knight_mask);
+            Bitboard moves = LegalKnightMoves<c>(source);
+            while(moves){
+                const Square target = poplsb(moves);
+                moveList.Add(Move(source, target, Knight));
+            }
+        }
+        while (bishop_mask){
+            const Square source = poplsb(bishop_mask);
+            Bitboard moves = LegalBishopMoves<c>(source);
+            while (moves){
+                const Square target = poplsb(moves);
+                moveList.Add(Move(source, target, Bishop));
+            }
+        }
+        while (rook_mask){
+            const Square source = poplsb(rook_mask);
+            Bitboard moves = LegalRookMoves<c>(source);
+            while (moves){
+                const Square target = poplsb(moves);
+                moveList.Add(Move(source, target, Rook));
+            }
+        }
+        while (queen_mask){
+            const Square source = poplsb(queen_mask);
+            Bitboard moves = LegalQueenMoves<c>(source);
+            while (moves){
+                const Square target = poplsb(moves);
+                moveList.Add(Move(source, target, Queen));
+            }
+        }
+    }
+
+    const Square source = bsf(king_mask);
+    Bitboard moves = LegalKingMoves<c>(source);
+    while (moves){
+        const Square target = poplsb(moves);
+        // For some reason this is faster
+        if (target == SQ_G1 && source == SQ_E1)
+            moveList.Add(Move(source, target, King));
+        else
+            moveList.Add(Move(source, target, King));
+        // than this:
+        // moveList.Add(Move(source, target, King));  
+        // I have no idea why this is faster and I suspect it
+        // has to do something with -O3 optimization because at -O2
+        // both versions are about the same speed.
+    }
+    return moveList;
+}
+
 
 /**********************************\
  ==================================
@@ -1414,17 +1181,14 @@ inline Bitboard Board::LegalKingMoves(Square sq){
 
 namespace Testing {
 
-// Board instance
-Board board;
+static constexpr auto POSITION_1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+static constexpr auto POSITION_2 = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ";
+static constexpr auto POSITION_3 = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - ";
+static constexpr auto POSITION_4 = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
+static constexpr auto POSITION_5 = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
+static constexpr auto POSITION_6 = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10";
 
 // https://www.chessprogramming.org/Perft_Results
-
-#define POSITION_1 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-#define POSITION_2 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - "
-#define POSITION_3 "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - "
-#define POSITION_4 "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
-#define POSITION_5 "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
-#define POSITION_6 "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
 
 // struct for individual perft positions
 struct PerftPosition {
@@ -1436,63 +1200,21 @@ struct PerftPosition {
     fen(fen), nodes(nodes), depth(depth) {}
 };
 
-std::vector<PerftPosition> testPosition1 = {
-    PerftPosition(POSITION_1, 20, 1),
-    PerftPosition(POSITION_1, 400, 2),
-    PerftPosition(POSITION_1, 8902, 3),
-    PerftPosition(POSITION_1, 197281, 4),
-    PerftPosition(POSITION_1, 4865609, 5),
-    PerftPosition(POSITION_1, 119060324, 6)
-};
-
-std::vector<PerftPosition> testPosition2 = {
-    PerftPosition(POSITION_2, 48, 1),
-    PerftPosition(POSITION_2, 2039, 2),
-    PerftPosition(POSITION_2, 97862, 3),
-    PerftPosition(POSITION_2, 4085603, 4),
-    PerftPosition(POSITION_2, 193690690, 5)
-};
-
-std::vector<PerftPosition> testPosition3 = {
-    PerftPosition(POSITION_3, 14, 1),
-    PerftPosition(POSITION_3, 191, 2),
-    PerftPosition(POSITION_3, 2812, 3),
-    PerftPosition(POSITION_3, 43238, 4),
-    PerftPosition(POSITION_3, 674624, 5),
-    PerftPosition(POSITION_3, 11030083, 6),
-    PerftPosition(POSITION_3, 178633661, 7)
-};
-
-std::vector<PerftPosition> testPosition4 = {
-    PerftPosition(POSITION_4, 6, 1),
-    PerftPosition(POSITION_4, 264, 2),
-    PerftPosition(POSITION_4, 9467, 3),
-    PerftPosition(POSITION_4, 422333, 4),
-    PerftPosition(POSITION_4, 15833292, 5)
-};
-
-std::vector<PerftPosition> testPosition5 = {
-    PerftPosition(POSITION_5, 44, 1),
-    PerftPosition(POSITION_5, 1486, 2),
-    PerftPosition(POSITION_5, 62379, 3),
-    PerftPosition(POSITION_5, 2103487, 4),
-    PerftPosition(POSITION_5, 89941194, 5)
-};
-
-std::vector<PerftPosition> testPosition6 = {
-    PerftPosition(POSITION_6, 46, 1),
-    PerftPosition(POSITION_6, 2079, 2),
-    PerftPosition(POSITION_6, 89890, 3),
-    PerftPosition(POSITION_6, 3894594, 4),
-    PerftPosition(POSITION_6, 164075551, 5)
+class PerftTesting{
+    public:
+        void RunPerftTest();
+    private:
+        Board board;
+        template<Color c>
+        uint64_t Driver(int depth);
+        bool RunTestOnPosition(std::vector<PerftPosition> positions, std::string fen);
 };
 
 template<Color c>
-uint64_t Driver(int depth) {
+uint64_t PerftTesting::Driver(int depth) {
     if (depth == 0) {
         return 1;
     }
-
     uint64_t nodes = 0;
     Moves moveList = board.generateLegalMoves<c>();
     for (int i = 0; i < (int)moveList.count; i++) {
@@ -1501,55 +1223,8 @@ uint64_t Driver(int depth) {
         nodes += Driver<~c>(depth - 1);
         board.unmakemove<c>(move);
     }
-
     return nodes;
 }
-
-
-bool RunTestOnPosition(std::vector<PerftPosition> positions, std::string fen) {
-    auto t1 = std::chrono::high_resolution_clock::now();
-    board.parseFEN(fen);
-    for (PerftPosition position : positions) {
-        uint64_t nodes = Driver<White>(position.depth);
-        if (nodes != position.nodes) {
-            std::cout << "Failed: " << position.fen << " Depth " << position.depth << std::endl;
-            std::cout << "Got: " << nodes << " Expected: " << position.nodes << std::endl;
-            return false;
-        }
-        std::cout << "Passed: " << nodes << std::endl;
-    }
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
-    std::cout << "Time: " << ms.count() << "ms" << "\n\n";
-    return true;
-}
-
-
-void RunPerftTest() {
-    std::cout << "BEGIN PERFT TESTING:" << std::endl;
-
-    bool PASSED = true;
-    board.parseFEN(POSITION_1);
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-    
-    PASSED = RunTestOnPosition(testPosition1, POSITION_1);
-    PASSED = RunTestOnPosition(testPosition2, POSITION_2);
-    PASSED = RunTestOnPosition(testPosition3, POSITION_3);
-    PASSED = RunTestOnPosition(testPosition4, POSITION_4);
-    PASSED = RunTestOnPosition(testPosition5, POSITION_5);
-    PASSED = RunTestOnPosition(testPosition6, POSITION_6);
-
-    if (PASSED) {
-        std::cout << "Passed all tests" << std::endl;
-    }
-
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
-    std::cout << "Total time: " << ms.count() << "ms" << std::endl;
-} 
-
-
 
 } // end of namespace Testing
 

@@ -1,11 +1,10 @@
-#include <iostream>
-#include <chrono>
-
 #include "chess.hpp"
 
 using namespace Chess;
+using namespace Testing;
 
 int main() {
-    Testing::RunPerftTest();
+    PerftTesting perft;
+    perft.RunPerftTest();
     return 0;
 }
