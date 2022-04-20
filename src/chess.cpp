@@ -133,6 +133,15 @@ void Board::initializeLookupTables() {
     }
 }
 
+uint8_t Board::ply() {
+    return halfMoveClock;
+}
+
+uint16_t Board::fullmoves() {
+    return fullMoveCounter * 0.5;
+}
+
+
 // Board constructor that takes in FEN string.
 // if no parameter given, set to default position
 Board::Board(std::string FEN) {
@@ -262,9 +271,14 @@ void Board::print() {
     std::cout << "\n";
 }
 
-Piece Board::getPiece(Square sq){
+Piece Board::piece_at(Square sq){
     return board[sq];
 }
+
+PieceType Board::piece_type_at(Square sq){
+    return PieceType(board[sq]);
+}
+
 
 // place a piece on a particular square
 void Board::placePiece(Piece piece, Square sq) {
