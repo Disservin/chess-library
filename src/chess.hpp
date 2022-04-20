@@ -481,9 +481,6 @@ private:
     // array of pieces on squares
     Piece board[64];
 
-    // current side to move
-    Color sideToMove;
-
     // current enpassant square
     Square enpassantSquare;
 
@@ -519,6 +516,9 @@ private:
     Bitboard SQUARES_BETWEEN_BB[64][64];
 
 public:
+    // current side to move
+    Color sideToMove;
+
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
     Board(std::string FEN=defaultFEN);
@@ -711,7 +711,7 @@ void Board::makemove(Move& move){
         placePiece(piece, target);
     }
     // Switch sides
-    ~sideToMove;
+    sideToMove = ~sideToMove;
 }
 
 template <Color c> 
@@ -722,7 +722,7 @@ void Board::unmakemove(Move& move){
     enpassantSquare = safeState.enpassantCopy;
     castlingRights = safeState.castlingRightsCopy;
 
-    ~sideToMove;
+    sideToMove = ~sideToMove;
 
     Piece piece = makePiece<c>(move.piece());
     
