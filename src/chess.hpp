@@ -469,8 +469,9 @@ struct State {
     Square   enpassantCopy;
     uint8_t  castlingRightsCopy;
     Piece  capturedPiece;
-    State (Square enpassantCopy={}, uint8_t castlingRightsCopy={}, Piece capturedPiece={}) :
-        enpassantCopy(enpassantCopy), castlingRightsCopy(castlingRightsCopy), capturedPiece(capturedPiece) {}
+    uint8_t halfmoves;
+    State (Square enpassantCopy={}, uint8_t castlingRightsCopy={}, Piece capturedPieceCopy={}, uint8_t halfmovesCopy={}) :
+        enpassantCopy(enpassantCopy), castlingRightsCopy(castlingRightsCopy), capturedPiece(capturedPieceCopy), halfmoves(halfmovesCopy) {}
 };
 
 class Board {
@@ -480,12 +481,6 @@ private:
 
     // array of pieces on squares
     Piece board[64];
-
-    // current enpassant square
-    Square enpassantSquare;
-
-    // current castling rights
-    uint8_t castlingRights;
 
     // store previous states
     State storeInfo[1024];
@@ -515,10 +510,37 @@ private:
     // lookup table for squares between two squares
     Bitboard SQUARES_BETWEEN_BB[64][64];
 
+    // pawn half moves
+    uint8_t halfMoveClock;
+
+    // full moves
+    uint16_t fullMoveCounter;
 public:
     // current side to move
     Color sideToMove;
 
+    // current enpassant square
+    Square enpassantSquare;
+
+    // current castling rights
+    uint8_t castlingRights;
+
+    // pawn half moves
+    uint8_t ply();
+
+    // full moves
+    uint16_t fullmoves();
+
+    // is check
+    template <Color c> bool isCheck();
+
+    // does move give check?
+    template <Color c> bool givesCheck(Move& move);
+
+    // checkmate
+    template <Color c> bool isCheckmate();
+
+    template <Color c> bool isStalemate(); 
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
     Board(std::string FEN=defaultFEN);
@@ -537,7 +559,9 @@ public:
 
     template <Color c> void unmakemove(Move& move);
 
-    Piece getPiece(Square sq);
+    Piece piece_at(Square sq);
+
+    PieceType piece_type_at(Square sq);
 
     // checks if a square is being attacked by the given side
     template <Color c> bool isSquareAttacked(Square sq);
@@ -616,7 +640,7 @@ void Board::makemove(Move& move){
 
     Piece capturedPiece = board[target];
     // Safe important board information
-    storeInfo[storeCount] = State(enpassantSquare, castlingRights, capturedPiece);
+    storeInfo[storeCount] = State(enpassantSquare, castlingRights, capturedPiece, halfMoveClock);
     storeCount++;
 
     // update castling rights
@@ -680,6 +704,7 @@ void Board::makemove(Move& move){
 
     enpassantSquare = NO_SQ;
     if (move.piece() == Pawn){
+        halfMoveClock = 0;
         // enpassant capture
         if (enpassant){
             int8_t offset = c == White ? -8 : 8;
@@ -695,12 +720,10 @@ void Board::makemove(Move& move){
         }
     }
 
-    // update half move clock
-    // if (piece == makePiece(Pawn, sideToMove))
-    //     halfMoveClock = 0;
-
-    if (capturedPiece != None)
+    if (capturedPiece != None){
+        halfMoveClock = 0;
         removePiece(capturedPiece, target);
+    }
 
     if (!move.promoted()){
         removePiece(piece, source);
@@ -712,6 +735,9 @@ void Board::makemove(Move& move){
     }
     // Switch sides
     sideToMove = ~sideToMove;
+
+    // increase fullmoves
+    fullMoves++;
 }
 
 template <Color c> 
@@ -721,9 +747,13 @@ void Board::unmakemove(Move& move){
     State safeState = storeInfo[storeCount];
     enpassantSquare = safeState.enpassantCopy;
     castlingRights = safeState.castlingRightsCopy;
+    halfMoveClock = safeState.halfMoveClockCopy;
 
+    // Swap sides and decrement fullmoves
     sideToMove = ~sideToMove;
+    fullMoveCounter--;
 
+    // get piece from move
     Piece piece = makePiece<c>(move.piece());
     
     Square source = move.source();
@@ -778,6 +808,42 @@ void Board::unmakemove(Move& move){
             }
         }
     }
+}
+
+template <Color c>
+bool Board::isCheck(){
+    return isSquareAttacked<c>(KingSq<c>());
+}
+
+template <Color c>
+bool Board::givesCheck(Move& move){
+    makemove<c>(move);
+    bool attacked = isSquareAttacked<c>(KingSq<c>());
+    unmakemove<ceil>(move);
+    return attacked;  
+}
+
+template <Color c>
+bool Board::isCheckmate(){
+    if (isCheck<c>()){
+        Moves movesList = generatelegalmoves<c>();
+        if (movesList.count== 0)
+            return true;
+    }
+    return false;
+}
+
+template <Color c>
+bool Board::isStalemate(){
+    if (isCheck<c>()){
+        return false;
+    }
+    else{
+        Moves movesList = generatelegalmoves<c>();
+        if (movesList.count == 0)
+            return true;
+    }
+    return false;
 }
 
 template <Color c> 
