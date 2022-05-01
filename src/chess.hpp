@@ -880,11 +880,13 @@ inline Bitboard Board::doCheckmask(Square sq){
         doubleCheck++;
     }
     if (bishop_mask){
+        if (popCount(bishop_mask) > 1) doubleCheck++;
         Square index = bsf(bishop_mask);
         checks |= SQUARES_BETWEEN_BB[sq][index] | SQUARE_BB[index];
         doubleCheck++;
     } 
     if (rook_mask){
+        if (popCount(rook_mask) > 1) doubleCheck++;
         Square index = bsf(rook_mask);
         checks |= SQUARES_BETWEEN_BB[sq][index] | SQUARE_BB[index];
         doubleCheck++;
