@@ -737,7 +737,7 @@ void Board::makemove(Move& move){
     sideToMove = ~sideToMove;
 
     // increase fullmoves
-    fullMoves++;
+    fullMoveCounter++;
 }
 
 template <Color c> 
@@ -747,7 +747,7 @@ void Board::unmakemove(Move& move){
     State safeState = storeInfo[storeCount];
     enpassantSquare = safeState.enpassantCopy;
     castlingRights = safeState.castlingRightsCopy;
-    halfMoveClock = safeState.halfMoveClockCopy;
+    halfMoveClock = safeState.halfmoves;
 
     // Swap sides and decrement fullmoves
     sideToMove = ~sideToMove;
@@ -819,14 +819,14 @@ template <Color c>
 bool Board::givesCheck(Move& move){
     makemove<c>(move);
     bool attacked = isSquareAttacked<c>(KingSq<c>());
-    unmakemove<ceil>(move);
+    unmakemove<c>(move);
     return attacked;  
 }
 
 template <Color c>
 bool Board::isCheckmate(){
     if (isCheck<c>()){
-        Moves movesList = generatelegalmoves<c>();
+        Moves movesList = generateLegalMoves<c>();
         if (movesList.count== 0)
             return true;
     }
@@ -839,7 +839,7 @@ bool Board::isStalemate(){
         return false;
     }
     else{
-        Moves movesList = generatelegalmoves<c>();
+        Moves movesList = generateLegalMoves<c>();
         if (movesList.count == 0)
             return true;
     }
