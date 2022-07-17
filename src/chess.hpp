@@ -401,49 +401,30 @@ inline int popCount(Bitboard b){
  ==================================
 \**********************************/
 
-// class for representing a move
-class Move {
-
-private:
-    // internal binary representation of a move
-    uint16_t move;
-
-public:
-    // constructor for encoding a move
-    inline Move(
-        // main move info
-        Square source  = NO_SQ,
-        Square target  = NO_SQ,
-        PieceType piece = Nonetype,
-        uint16_t promoted = 0
-
-    ) {
-        move = (uint16_t)source | (uint16_t)target << 6 | (uint16_t)piece << 12 | (uint16_t)promoted << 15;
-    }
-
-    // extract source square
-    inline Square source() {
-        return Square(move & 0b111111);
-    }
-
-    // extract target square
-    inline Square target() {
-        return Square((move & 0b111111000000) >> 6);
-    }
-
-    // extract moved piece
-    inline PieceType piece() {
-        return PieceType((move & 0b111000000000000) >> 12);
-    }
-    // extract promoted piece
-    inline bool promoted() {
-        return bool((move & 0b1000000000000000) >> 15);
-    }
-    // returns move in UCI string format
-    std::string toUci() {
-        return squareToString[this->source()] + squareToString[this->target()];
-    }
+enum Move : uint16_t {
+    NO_MOVE = 0,
+    NULL_MOVE = 65
 };
+
+inline Square from(Move move) {
+    return Square(move & 0b111111);
+}
+
+inline Square to(Move move) {
+    return Square((move & 0b111111000000) >> 6);
+}
+
+inline PieceType piece_type(Move move) {
+    return PieceType((move & 0b111000000000000) >> 12);
+}
+
+inline bool promoted(Move move) {
+    return bool((move & 0b1000000000000000) >> 15);
+}
+
+inline Move make(Square source = NO_SQ, Square target = NO_SQ, PieceType piece = Nonetype, bool promoted = false) {
+    return Move((uint16_t)source | (uint16_t)target << 6 | (uint16_t)piece << 12 | (uint16_t)promoted << 15);
+}
 
 // move list
 struct Moves {
@@ -487,9 +468,6 @@ private:
 
     uint16_t storeCount;
 
-    // store hash key of previous states
-    uint64_t gameHistory[1024];
-
     // Checkmask
     Bitboard checkMask = 18446744073709551615ULL;
 
@@ -503,8 +481,8 @@ private:
     uint8_t doubleCheck{};
 
     // Occupancy bitboard, done during generateMoves
-    Bitboard occupancyWhite;
-    Bitboard occupancyBlack;
+    Bitboard occupancyUs;
+    Bitboard occupancyEnemy;
     Bitboard occupancyAll;
 
     // lookup table for squares between two squares
@@ -618,6 +596,7 @@ private:
 
     // functions for pawn, knight and king movegen
     template <Color c> inline Bitboard GetPawnPush(Square sq); 
+    template <Color c> inline Bitboard PawnPushBoth(Square sq);
     template <Color c> inline Bitboard GetPawnAttacks(Square square);
     Bitboard GetKnightAttacks(Square square); 
     Bitboard GetKingAttacks(Square square);
@@ -633,15 +612,19 @@ private:
 
 template <Color c> 
 void Board::makemove(Move& move){
-    Piece piece = makePiece<c>(move.piece());
+    Piece piece = makePiece<c>(piece_type(move));
 
-    Square source = move.source();
-    Square target = move.target();
+    Square source = from(move);
+    Square target = to(move);
 
     Piece capturedPiece = board[target];
     // Safe important board information
     storeInfo[storeCount] = State(enpassantSquare, castlingRights, capturedPiece, halfMoveClock);
     storeCount++;
+
+    bool enpassant = (target) == enpassantSquare ? true : false;
+
+    enpassantSquare = NO_SQ;
 
     // update castling rights
     if (piece == makePiece<c>(King)){
@@ -654,8 +637,7 @@ void Board::makemove(Move& move){
                 removePiece(WhiteRook, SQ_A1);
                 placePiece(WhiteRook, SQ_D1);
             }
-            castlingRights &= ~whiteKingSideCastling;
-            castlingRights &= ~whiteQueenSideCastling;
+            castlingRights &= ~(whiteKingSideCastling | whiteQueenSideCastling);
         }
         else{
             if (source == SQ_E8 && target == SQ_G8 && castlingRights & blackKingSideCastling){
@@ -666,14 +648,11 @@ void Board::makemove(Move& move){
                 removePiece(BlackRook, SQ_A8);
                 placePiece(BlackRook, SQ_D8);
             }
-            castlingRights &= ~blackKingSideCastling;
-            castlingRights &= ~blackQueenSideCastling;
+            castlingRights &= ~(blackKingSideCastling | blackQueenSideCastling);
         }
     }
-
-
     // rook move loses castle rights
-    if (piece == makePiece<c>(Rook)){
+    else if (piece == makePiece<c>(Rook)){
         if constexpr (c== White){
             if (source == SQ_A1)
                 castlingRights &= ~whiteQueenSideCastling;
@@ -686,24 +665,8 @@ void Board::makemove(Move& move){
             else if (source == SQ_H8)
                 castlingRights &= ~blackKingSideCastling;
         }
-
     }
-    // Rook capture loses castle rights
-    if (capturedPiece == makePiece<~c>(Rook)){
-        if (target == SQ_A1)
-            castlingRights &= ~whiteQueenSideCastling;
-        else if (target == SQ_H1)
-            castlingRights &= ~whiteKingSideCastling;
-        else if (target == SQ_A8)
-            castlingRights &= ~blackQueenSideCastling;
-        else if (target == SQ_H8)
-            castlingRights &= ~blackKingSideCastling;
-    }
-
-    bool enpassant = (target) == enpassantSquare ? true : false;
-
-    enpassantSquare = NO_SQ;
-    if (move.piece() == Pawn){
+    else if (piece_type(move) == Pawn){
         halfMoveClock = 0;
         // enpassant capture
         if (enpassant){
@@ -723,9 +686,20 @@ void Board::makemove(Move& move){
     if (capturedPiece != None){
         halfMoveClock = 0;
         removePiece(capturedPiece, target);
+            // Rook capture loses castle rights
+        if (capturedPiece == makePiece<~c>(Rook)){
+            if (target == SQ_A1)
+                castlingRights &= ~whiteQueenSideCastling;
+            else if (target == SQ_H1)
+                castlingRights &= ~whiteKingSideCastling;
+            else if (target == SQ_A8)
+                castlingRights &= ~blackQueenSideCastling;
+            else if (target == SQ_H8)
+                castlingRights &= ~blackKingSideCastling;
+        }
     }
 
-    if (!move.promoted()){
+    if (!promoted(move)){
         removePiece(piece, source);
         placePiece(piece, target);
     }
@@ -754,14 +728,14 @@ void Board::unmakemove(Move& move){
     fullMoveCounter--;
 
     // get piece from move
-    Piece piece = makePiece<c>(move.piece());
+    Piece piece = makePiece<c>(piece_type(move));
     
-    Square source = move.source();
-    Square target = move.target();
+    Square source = from(move);
+    Square target = to(move);
 
     Piece capture = safeState.capturedPiece;
     
-    if (!move.promoted()) {
+    if (!promoted(move)) {
         removePiece(piece, target);
         placePiece(piece, source);
     }
@@ -781,30 +755,30 @@ void Board::unmakemove(Move& move){
             placePiece(WhitePawn, Square((int)enpassantSquare + 8));
         }
     }
-
-    if (capture != None) {
+    else if (capture != None) {
         placePiece(capture, target);
     }
-
-    if (piece == makePiece<c>(King)){
-        if constexpr (c == White){
-            if (source == SQ_E1 && target == SQ_G1){
-                removePiece(WhiteRook, SQ_F1);
-                placePiece(WhiteRook, SQ_H1);
+    else {
+        if (piece == makePiece<c>(King)){
+            if constexpr (c == White){
+                if (source == SQ_E1 && target == SQ_G1){
+                    removePiece(WhiteRook, SQ_F1);
+                    placePiece(WhiteRook, SQ_H1);
+                }
+                else if (source == SQ_E1 && target == SQ_C1){
+                    removePiece(WhiteRook, SQ_D1);
+                    placePiece(WhiteRook, SQ_A1);
+                }
             }
-            else if (source == SQ_E1 && target == SQ_C1){
-                removePiece(WhiteRook, SQ_D1);
-                placePiece(WhiteRook, SQ_A1);
-            }
-        }
-        else{
-            if (source == SQ_E8 && target == SQ_G8){
-                removePiece(BlackRook, SQ_F8);
-                placePiece(BlackRook, SQ_H8);
-            }
-            else if (source == SQ_E8 && target == SQ_C8){
-                removePiece(BlackRook, SQ_D8);
-                placePiece(BlackRook, SQ_A8);
+            else{
+                if (source == SQ_E8 && target == SQ_G8){
+                    removePiece(BlackRook, SQ_F8);
+                    placePiece(BlackRook, SQ_H8);
+                }
+                else if (source == SQ_E8 && target == SQ_C8){
+                    removePiece(BlackRook, SQ_D8);
+                    placePiece(BlackRook, SQ_A8);
+                }
             }
         }
     }
@@ -924,13 +898,11 @@ constexpr Bitboard Board::EnemyEmpty(){
 
 template <Color c> 
 inline Bitboard Board::doCheckmask(Square sq){
-    Bitboard us = (c == White) ? occupancyWhite : occupancyBlack;
-    Bitboard them = (c == White) ? occupancyBlack : occupancyWhite;
     Bitboard checks = 0ULL;
     Bitboard pawn_attack    = GetPawnAttacks<c>(sq);
     Bitboard knight_attack  = GetKnightAttacks(sq);
-    Bitboard bishop_attack  = GetBishopAttacks(sq, us | them) & ~us;
-    Bitboard rook_attack    = GetRookAttacks(sq, us | them) & ~us;
+    Bitboard bishop_attack  = GetBishopAttacks(sq, occupancyUs | occupancyEnemy) & ~occupancyUs;
+    Bitboard rook_attack    = GetRookAttacks(sq, occupancyUs | occupancyEnemy) & ~occupancyUs;
 
     Bitboard pawn_mask      = pawn_attack & Pawns<~c>();
     Bitboard knight_mask    = knight_attack & Knights<~c>();
@@ -962,10 +934,8 @@ inline Bitboard Board::doCheckmask(Square sq){
 
 template <Color c> 
 inline void Board::doPins(Square sq){
-    Bitboard us = (c == White) ? occupancyWhite : occupancyBlack;
-    Bitboard them = (c == White) ? occupancyBlack : occupancyWhite;
-    Bitboard rook_attack   = GetRookAttacks(sq, them);
-    Bitboard bishop_attack = GetBishopAttacks(sq, them);
+    Bitboard rook_attack   = GetRookAttacks(sq, occupancyEnemy);
+    Bitboard bishop_attack = GetBishopAttacks(sq, occupancyEnemy);
     Bitboard rook_mask     = rook_attack & (Rooks<~c>() | Queens<~c>());
     Bitboard bishop_mask   = bishop_attack & (Bishops<~c>() | Queens<~c>());
     Bitboard rook_pin      = 0ULL;
@@ -976,13 +946,13 @@ inline void Board::doPins(Square sq){
     while (rook_mask){
         Square index = poplsb(rook_mask);
         Bitboard possible_pin = (SQUARES_BETWEEN_BB[sq][index] | SQUARE_BB[index]) | (1ULL << index);
-        if (popCount(possible_pin & us) == 1)
+        if (popCount(possible_pin & occupancyUs) == 1)
             rook_pin |= possible_pin;
     }
     while (bishop_mask){
         Square index = poplsb(bishop_mask);
         Bitboard possible_pin = (SQUARES_BETWEEN_BB[sq][index] | SQUARE_BB[index]) | (1ULL << index);
-        if (popCount(possible_pin & us) == 1)
+        if (popCount(possible_pin & occupancyUs) == 1)
             bishop_pin |= possible_pin;
     }
     pinMaskHV = rook_pin;
@@ -991,9 +961,9 @@ inline void Board::doPins(Square sq){
 
 template <Color c> 
 inline void Board::init(Square sq){
-    occupancyWhite = allPieces<White>();
-    occupancyBlack = allPieces<Black>();
-    occupancyAll   = occupancyWhite | occupancyBlack;
+    occupancyUs = allPieces<c>();
+    occupancyEnemy = allPieces<~c>();
+    occupancyAll   = occupancyUs | occupancyEnemy;
     Bitboard mask = doCheckmask<c>(sq);
     checkMask = mask ? mask : 18446744073709551615ULL;
     doPins<c>(sq);
@@ -1005,6 +975,20 @@ Bitboard Board::GetPawnPush(Square sq) {
     return (c == White) ? (SQUARE_BB[sq + 8]) : (SQUARE_BB[sq - 8]);
 }
 
+template <Color c>
+Bitboard Board::PawnPushBoth(Square sq)
+{
+    Bitboard push = (1ULL << sq);
+    if constexpr (c == White) {
+        push = (push << 8) & ~occupancyAll;
+        return rank_of(sq) == 1 ? push | ((push << 8) & ~occupancyAll) : push;
+    }
+    else {
+        push = (push >> 8) & ~occupancyAll;
+        return rank_of(sq) == 6 ? push | ((push >> 8) & ~occupancyAll) : push;
+    }
+}
+
 // get absolute pawn attacks from lookup table
 template <Color c>
 Bitboard Board::GetPawnAttacks(Square square) {
@@ -1013,23 +997,22 @@ Bitboard Board::GetPawnAttacks(Square square) {
 
 template <Color c> 
 inline Bitboard Board::LegalPawnMoves(Square sq){
-    // Only king can move at double checks
-    if (doubleCheck == 2) return 0ULL;
-    Bitboard enemy = (c == White) ? occupancyBlack : occupancyWhite;
+    Bitboard enemy = occupancyEnemy;
     // If we are pinned diagonally we can only do captures which are on the pinmaskD and on the checkmask
     if (pinMaskD & (1ULL << sq)) return GetPawnAttacks<c>(sq) & pinMaskD & checkMask & enemy;
     // Calculate pawn pushs
-    Bitboard push = GetPawnPush<c>(sq) & ~occupancyAll;
-    push |= (c==White) ? rank_of(sq) == 1 ? (push << 8) & ~occupancyAll : 0ULL : rank_of(sq) == 6 ? (push >> 8) & ~occupancyAll : 0ULL;
+    Bitboard push = PawnPushBoth<c>(sq);
     // If we are pinned horizontally we can do no moves but if we are pinned vertically we can only do pawn pushs
     if (pinMaskHV & (1ULL << sq)) return push & pinMaskHV & checkMask;
-    int8_t offset = (c == White) ? -8 : 8;
     Bitboard attacks = GetPawnAttacks<c>(sq);
     // If we are in check and  the en passant square lies on our attackmask and the en passant piece gives check
     // return the ep mask as a move square
-    if (checkMask != 18446744073709551615ULL && attacks & (1ULL << enpassantSquare) && checkMask & (1ULL << (enpassantSquare + offset))) return (attacks & (1ULL << enpassantSquare));
-    // If we are in check we can do all moves that are on the checkmask
-    if (checkMask != 18446744073709551615ULL) return ((attacks & enemy) | push) & checkMask;
+    if (checkMask != 18446744073709551615ULL)
+    {
+        if (attacks & (1ULL << enpassantSquare) && checkMask & (1ULL << (enpassantSquare - (c * -2 + 1) * 8))) return 1ULL << enpassantSquare;
+        // If we are in check we can do all moves that are on the checkmask
+        return ((attacks & enemy) | push) & checkMask;
+    }
 
     Bitboard moves = ((attacks & enemy) | push) & checkMask;
     // We need to make extra sure that ep moves dont leave the king in check
@@ -1037,6 +1020,7 @@ inline Bitboard Board::LegalPawnMoves(Square sq){
     // Horizontal rook pins our pawn through another pawn, our pawn can push but not take enpassant 
     // remove both the pawn that made the push and our pawn that could take in theory and check if that would give check
     if (enpassantSquare != NO_SQ && squareDistance(sq, enpassantSquare) == 1 && (1ULL << enpassantSquare) & attacks) {
+         int8_t offset = (c == White) ? -8 : 8;
         removePiece(makePiece<c>(Pawn), sq);
         removePiece(makePiece<~c>(Pawn), Square(enpassantSquare + offset));
         placePiece(makePiece<c>(Pawn), enpassantSquare);
@@ -1178,13 +1162,13 @@ Moves Board::generateLegalMoves() {
             while (moves){
                 Square target = poplsb(moves);
                 if (rank_of(target) == 0 || rank_of(target) == 7){
-                    moveList.Add(Move(source, target, Queen, 1));
-                    moveList.Add(Move(source, target, Rook, 1));
-                    moveList.Add(Move(source, target, Bishop, 1));
-                    moveList.Add(Move(source, target, Knight, 1));
+                    moveList.Add(make(source, target, Queen, true));
+                    moveList.Add(make(source, target, Rook, true));
+                    moveList.Add(make(source, target, Bishop, true));
+                    moveList.Add(make(source, target, Knight, true));
                 }
                 else{
-                    moveList.Add(Move(source, target, Pawn));
+                    moveList.Add(make(source, target, Pawn));
                 } 
             }
         }
@@ -1193,7 +1177,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalKnightMoves<c>(source);
             while(moves){
                 const Square target = poplsb(moves);
-                moveList.Add(Move(source, target, Knight));
+                moveList.Add(make(source, target, Knight));
             }
         }
         while (bishop_mask){
@@ -1201,7 +1185,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalBishopMoves<c>(source);
             while (moves){
                 const Square target = poplsb(moves);
-                moveList.Add(Move(source, target, Bishop));
+                moveList.Add(make(source, target, Bishop));
             }
         }
         while (rook_mask){
@@ -1209,7 +1193,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalRookMoves<c>(source);
             while (moves){
                 const Square target = poplsb(moves);
-                moveList.Add(Move(source, target, Rook));
+                moveList.Add(make(source, target, Rook));
             }
         }
         while (queen_mask){
@@ -1217,7 +1201,7 @@ Moves Board::generateLegalMoves() {
             Bitboard moves = LegalQueenMoves<c>(source);
             while (moves){
                 const Square target = poplsb(moves);
-                moveList.Add(Move(source, target, Queen));
+                moveList.Add(make(source, target, Queen));
             }
         }
     }
@@ -1226,16 +1210,7 @@ Moves Board::generateLegalMoves() {
     Bitboard moves = LegalKingMoves<c>(source);
     while (moves){
         const Square target = poplsb(moves);
-        // For some reason this is faster
-        if (target == SQ_G1 && source == SQ_E1)
-            moveList.Add(Move(source, target, King));
-        else
-            moveList.Add(Move(source, target, King));
-        // than this:
-        // moveList.Add(Move(source, target, King));  
-        // I have no idea why this is faster and I suspect it
-        // has to do something with -O3 optimization because at -O2
-        // both versions are about the same speed.
+        moveList.Add(make(source, target, King));
     }
     return moveList;
 }
@@ -1280,11 +1255,11 @@ class PerftTesting{
 
 template<Color c>
 uint64_t PerftTesting::Driver(int depth) {
-    if (depth == 0) {
-        return 1;
+    Moves moveList = board.generateLegalMoves<c>();
+    if (depth == 1) {
+        return (int)moveList.count;
     }
     uint64_t nodes = 0;
-    Moves moveList = board.generateLegalMoves<c>();
     for (int i = 0; i < (int)moveList.count; i++) {
         Move move = moveList.moves[i];
         board.makemove<c>(move);
