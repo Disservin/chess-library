@@ -105,9 +105,9 @@ int squareDistance(Square a, Square b) {
 \**********************************/
 
 void printMove(Move move) {
-    std::cout << "Move: " << squareToString[move.source()] << squareToString[move.target()] << " |";
-    std::cout << " Piece: " << signed(move.piece()) << " |";
-    std::cout << " Promoted: " << move.promoted() << " |";
+    std::cout << "Move: " << squareToString[from(move)] << squareToString[to(move)] << " |";
+    std::cout << " Piece: " << signed(piece_type(move)) << " |";
+    std::cout << " Promoted: " << promoted(move) << " |";
     std::cout << std::endl;
 }
 
