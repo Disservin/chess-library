@@ -537,12 +537,17 @@ public:
     // prints the entire board 
     void print();
 
-    // returns a list of legal moves for current board state
     template <Color c> Moves generateLegalMoves();
+
+    // returns a list of legal moves for current board state
+    Moves legal_moves();
 
     template <Color c> void makemove(Move& move);
 
     template <Color c> void unmakemove(Move& move);
+
+    void make_move(Move& move);
+    void unmake_move(Move& move);
 
     Piece piece_at(Square sq);
 
@@ -1207,7 +1212,6 @@ Moves Board::generateLegalMoves() {
     }
     return moveList;
 }
-
 
 /**********************************\
  ==================================
