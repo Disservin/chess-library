@@ -1,7 +1,6 @@
 #include "chess.hpp"
 
 using namespace Chess;
-using namespace Testing;
 
 Board board = Board();
 uint64_t nodes;

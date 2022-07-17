@@ -299,6 +299,29 @@ bool Board::isCheck(Color c)
     return isCheck<Black>();
 }
 
+bool Board::isCheckmate(){
+    if (isCheck(sideToMove)){
+        Moves movesList = legal_moves();
+        if (movesList.count== 0)
+            return true;
+    }
+    return false;
+}
+
+bool Board::isStalemate(){
+    if (isCheck(sideToMove)){
+        return false;
+    }
+    else
+    {
+        Moves movesList = legal_moves();
+        if (movesList.count == 0)
+            return true;
+    }
+    return false;
+}
+
+
 /**********************************\
  ==================================
          Move generation

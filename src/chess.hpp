@@ -811,28 +811,6 @@ bool Board::givesCheck(Move& move){
     return attacked;  
 }
 
-bool Board::isCheckmate(){
-    if (isCheck(sideToMove)){
-        Moves movesList = legal_moves();
-        if (movesList.count== 0)
-            return true;
-    }
-    return false;
-}
-
-bool Board::isStalemate(){
-    if (isCheck(sideToMove)){
-        return false;
-    }
-    else
-    {
-        Moves movesList = legal_moves();
-        if (movesList.count == 0)
-            return true;
-    }
-    return false;
-}
-
 template <Color c> 
 bool Board::isSquareAttacked(Square sq) {
     if (sq != NO_SQ) {
