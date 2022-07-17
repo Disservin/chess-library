@@ -88,6 +88,7 @@ static constexpr Bitboard WQ_CASTLE_MASK = (1ULL << SQ_D1) | (1ULL << SQ_C1) | (
 static constexpr Bitboard BK_CASTLE_MASK = (1ULL << SQ_F8) | (1ULL << SQ_G8);
 static constexpr Bitboard BQ_CASTLE_MASK = (1ULL << SQ_D8) | (1ULL << SQ_C8) | (1ULL << SQ_B8);
 
+static constexpr Bitboard DEFAULT_CHECKMASK = 18446744073709551615ULL;
 
 // default FEN string (start position)
 static constexpr auto defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
@@ -476,7 +477,7 @@ private:
     uint16_t storeCount;
 
     // Checkmask
-    Bitboard checkMask = 18446744073709551615ULL;
+    Bitboard checkMask = DEFAULT_CHECKMASK;
 
     // Horizontal/Vertical Pinmask
     Bitboard pinMaskHV;
@@ -518,14 +519,15 @@ public:
 
     // is check
     template <Color c> bool isCheck();
+    bool isCheck(Color c);
 
     // does move give check?
     template <Color c> bool givesCheck(Move& move);
 
     // checkmate
-    template <Color c> bool isCheckmate();
+    bool isCheckmate();
 
-    template <Color c> bool isStalemate(); 
+    bool isStalemate(); 
     // constructor for Board, take in a FEN string.
     // if no string is given, set board to default position
     Board(std::string FEN=defaultFEN);
@@ -537,12 +539,17 @@ public:
     // prints the entire board 
     void print();
 
-    // returns a list of legal moves for current board state
     template <Color c> Moves generateLegalMoves();
+
+    // returns a list of legal moves for current board state
+    Moves legal_moves();
 
     template <Color c> void makemove(Move& move);
 
     template <Color c> void unmakemove(Move& move);
+
+    void make_move(Move& move);
+    void unmake_move(Move& move);
 
     Piece piece_at(Square sq);
 
@@ -804,24 +811,22 @@ bool Board::givesCheck(Move& move){
     return attacked;  
 }
 
-template <Color c>
 bool Board::isCheckmate(){
-    if (isCheck<c>()){
-        Moves movesList = generateLegalMoves<c>();
+    if (isCheck(sideToMove)){
+        Moves movesList = legal_moves();
         if (movesList.count== 0)
             return true;
     }
     return false;
 }
 
-template <Color c>
 bool Board::isStalemate(){
-    if (isCheck<c>()){
+    if (isCheck(sideToMove)){
         return false;
     }
     else
     {
-        Moves movesList = generateLegalMoves<c>();
+        Moves movesList = legal_moves();
         if (movesList.count == 0)
             return true;
     }
@@ -973,7 +978,7 @@ inline void Board::init(Square sq){
     occupancyEnemy = allPieces<~c>();
     occupancyAll   = occupancyUs | occupancyEnemy;
     Bitboard mask = doCheckmask<c>(sq);
-    checkMask = mask ? mask : 18446744073709551615ULL;
+    checkMask = mask ? mask : DEFAULT_CHECKMASK;
     doPins<c>(sq);
 }
 
@@ -1015,7 +1020,7 @@ inline Bitboard Board::LegalPawnMoves(Square sq){
     Bitboard attacks = GetPawnAttacks<c>(sq);
     // If we are in check and  the en passant square lies on our attackmask and the en passant piece gives check
     // return the ep mask as a move square
-    if (checkMask != 18446744073709551615ULL)
+    if (checkMask != DEFAULT_CHECKMASK)
     {
         if (attacks & (1ULL << enpassantSquare) && checkMask & (1ULL << (enpassantSquare - (c * -2 + 1) * 8))) return 1ULL << enpassantSquare;
         // If we are in check we can do all moves that are on the checkmask
@@ -1093,7 +1098,7 @@ inline Bitboard Board::LegalKingMoves(Square sq){
     placePiece(makePiece<c>(King), sq);
     
     // During check a king cannot castle
-    if (18446744073709551615ULL == checkMask){
+    if (DEFAULT_CHECKMASK == checkMask){
         Bitboard castlingMoves = 0ULL;
         if constexpr (c==White){
             if (castlingRights & whiteKingSideCastling &&
@@ -1207,7 +1212,6 @@ Moves Board::generateLegalMoves() {
     }
     return moveList;
 }
-
 
 /**********************************\
  ==================================

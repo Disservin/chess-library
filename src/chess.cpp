@@ -292,6 +292,13 @@ void Board::removePiece(Piece piece, Square sq) {
     board[sq] = None;
 }
 
+bool Board::isCheck(Color c)
+{
+    if (c == White)
+        return isCheck<White>();
+    return isCheck<Black>();
+}
+
 /**********************************\
  ==================================
          Move generation
@@ -331,7 +338,28 @@ Bitboard Board::GetKingAttacks(Square square) {
     return KING_ATTACKS_TABLE[square];
 }
 
+Moves Board::legal_moves()
+{
+    if (sideToMove == White)
+        return generateLegalMoves<White>();
+    else
+        return generateLegalMoves<Black>();
+}
 
+void Board::make_move(Move& move)
+{
+    if (sideToMove == White)
+        makemove<White>(move);
+    else
+        makemove<Black>(move);
+}
+void Board::unmake_move(Move& move) 
+{
+    if (sideToMove == White)
+        unmakemove<Black>(move);
+    else
+        unmakemove<White>(move);
+}
 /**********************************\
  ==================================
                Perft
