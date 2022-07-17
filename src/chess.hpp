@@ -11,6 +11,9 @@
 #include <chrono>
 #include <algorithm>
 
+// define Bitboard as unsigned 64-bit integer
+typedef uint64_t Bitboard;
+
 namespace Chess {
 
 /**********************************\
@@ -79,6 +82,13 @@ static constexpr uint8_t whiteQueenSideCastling = 2;
 static constexpr uint8_t blackKingSideCastling  = 4;
 static constexpr uint8_t blackQueenSideCastling = 8;
 
+static constexpr Bitboard WK_CASTLE_MASK = (1ULL << SQ_F1) | (1ULL << SQ_G1);
+static constexpr Bitboard WQ_CASTLE_MASK = (1ULL << SQ_D1) | (1ULL << SQ_C1) | (1ULL << SQ_B1);
+
+static constexpr Bitboard BK_CASTLE_MASK = (1ULL << SQ_F8) | (1ULL << SQ_G8);
+static constexpr Bitboard BQ_CASTLE_MASK = (1ULL << SQ_D8) | (1ULL << SQ_C8) | (1ULL << SQ_B8);
+
+
 // default FEN string (start position)
 static constexpr auto defaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
 
@@ -132,9 +142,6 @@ const std::string squareToString[64] = {
  ==================================
 \**********************************/
 
-
-// define Bitboard as unsigned 64-bit integer
-typedef uint64_t Bitboard;
 
 //Array containing bitboard for each square (1 << sq)
 static constexpr Bitboard SQUARE_BB[64] = {
@@ -812,7 +819,8 @@ bool Board::isStalemate(){
     if (isCheck<c>()){
         return false;
     }
-    else{
+    else
+    {
         Moves movesList = generateLegalMoves<c>();
         if (movesList.count == 0)
             return true;
@@ -1043,8 +1051,6 @@ inline Bitboard Board::LegalKnightMoves(Square sq){
 
 template <Color c> 
 inline Bitboard Board::LegalBishopMoves(Square sq){
-    // Only king can move at double checks
-    if (doubleCheck == 2) return 0ULL;
     // Horizontal/Vertical pinned Bishops cannot move anywhere
     if (pinMaskHV & (1ULL << sq)) return 0ULL;
     // Diagonal pinned Bishops can only move on the pinmaskD & checkmask
@@ -1055,8 +1061,6 @@ inline Bitboard Board::LegalBishopMoves(Square sq){
 
 template <Color c> 
 inline Bitboard Board::LegalRookMoves(Square sq){
-    // Only king can move at double checks
-    if (doubleCheck == 2) return 0ULL;
     // Diagonal pinned Rooks cannot move anywhere
     if (pinMaskD & (1ULL << sq)) return 0ULL;
     // Horizontal/Vertical pinned Rooks can only move on the pinmaskHV & checkmask
@@ -1067,8 +1071,6 @@ inline Bitboard Board::LegalRookMoves(Square sq){
 
 template <Color c> 
 inline Bitboard Board::LegalQueenMoves(Square sq){
-    // Only king can move at double checks
-    if (doubleCheck == 2) return 0ULL;
     // Queen moves are the union of the bishop and rook moves which are already check for legality
     return LegalRookMoves<c>(sq) | LegalBishopMoves<c>(sq);
 }
@@ -1084,11 +1086,8 @@ inline Bitboard Board::LegalKingMoves(Square sq){
     Bitboard legal_king = 0ULL;
     while (king_moves){
         Square index = poplsb(king_moves);
-        if (isSquareAttacked<~c>(index)){
-            legal_king |= 0ULL;
-        }
-        else
-            legal_king |= (1ULL << index);
+        if (isSquareAttacked<~c>(index)) continue;
+        legal_king |= (1ULL << index);
     }
     // restore king
     placePiece(makePiece<c>(King), sq);
@@ -1098,40 +1097,34 @@ inline Bitboard Board::LegalKingMoves(Square sq){
         Bitboard castlingMoves = 0ULL;
         if constexpr (c==White){
             if (castlingRights & whiteKingSideCastling &&
-                !(occupancyAll & (1ULL << SQ_F1)) &&
-                !(occupancyAll & (1ULL << SQ_G1)) &&
+                !(occupancyAll & WK_CASTLE_MASK) &&
                 (1ULL << SQ_H1 & Rooks<White>()) &&
-                !(isSquareAttacked<~c>(SQ_F1)) &&
+                legal_king & (1ULL << SQ_F1) &&
                 !(isSquareAttacked<~c>(SQ_G1)))
                 {
                     castlingMoves |= (1ULL << SQ_G1);
                 }
             if (castlingRights & whiteQueenSideCastling &&
-                !(occupancyAll & (1ULL << SQ_D1)) &&
-                !(occupancyAll & (1ULL << SQ_C1)) &&
-                !(occupancyAll & (1ULL << SQ_B1)) &&
+                !(occupancyAll & WQ_CASTLE_MASK) &&
                 (1ULL << SQ_A1 & Rooks<White>()) &&
-                !(isSquareAttacked<~c>(SQ_D1)) &&
+                legal_king & (1ULL << SQ_D1) &&
                 !(isSquareAttacked<~c>(SQ_C1)))
                 {
                     castlingMoves |= (1ULL << SQ_C1);
                 }
         }else{
             if (castlingRights & blackKingSideCastling &&
-                !(occupancyAll & (1ULL << SQ_F8)) &&
-                !(occupancyAll & (1ULL << SQ_G8)) &&
+                !(occupancyAll & BK_CASTLE_MASK) &&
                 (1ULL << SQ_H8 & Rooks<Black>()) &&
-                !(isSquareAttacked<~c>(SQ_F8)) &&
+                legal_king & (1ULL << SQ_F8) &&
                 !(isSquareAttacked<~c>(SQ_G8)))
             {
                 castlingMoves |= (1ULL << SQ_G8);
             }
             if (castlingRights & blackQueenSideCastling &&
-                !(occupancyAll & (1ULL << SQ_D8)) &&
-                !(occupancyAll & (1ULL << SQ_C8)) &&
-                !(occupancyAll & (1ULL << SQ_B8)) &&
+                !(occupancyAll & BQ_CASTLE_MASK) &&
                 (1ULL << SQ_A8 & Rooks<Black>()) &&
-                !(isSquareAttacked<~Black>(SQ_D8)) &&
+                legal_king & (1ULL << SQ_D8) &&
                 !(isSquareAttacked<~Black>(SQ_C8)))
             {
                 castlingMoves |= (1ULL << SQ_C8);
