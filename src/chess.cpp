@@ -292,6 +292,13 @@ void Board::removePiece(Piece piece, Square sq) {
     board[sq] = None;
 }
 
+bool Board::isCheck(Color c)
+{
+    if (c == White)
+        return isCheck<White>();
+    return isCheck<Black>();
+}
+
 /**********************************\
  ==================================
          Move generation
