@@ -42,7 +42,7 @@ inline void setBit(Bitboard& bb, Square sq) {
 }
 
 inline bool isBitSet(Bitboard bb, Square sq) {
-    return (bb & SQUARE_BB[sq]) ? true : false;
+    return bb & SQUARE_BB[sq];
 }
 
 // print given bitboard (for debugging purposes)
@@ -138,9 +138,8 @@ uint8_t Board::ply() {
 }
 
 uint16_t Board::fullmoves() {
-    return fullMoveCounter * 0.5;
+    return std::max(1,(int)(fullMoveCounter * 0.5));
 }
-
 
 // Board constructor that takes in FEN string.
 // if no parameter given, set to default position
@@ -173,6 +172,13 @@ void Board::parseFEN(std::string FEN) {
 
     // reset castling rights
     castlingRights = 0;
+
+    // reset halfmove clock
+    halfMoveClock = 0;
+
+    // reset fullmove counter
+    fullMoveCounter = 1;
+
     // vector containing each section of FEN string
     std::vector<std::string> tokens;
 
@@ -243,6 +249,7 @@ void Board::parseFEN(std::string FEN) {
             break;
         }
     }
+    hash();
 }
 
 // print the current board state
@@ -268,6 +275,9 @@ void Board::print() {
     std::cout << ((castlingRights & blackQueenSideCastling) ? "q" : "-");
 
     std::cout << "\n   Enpass:    " << ((enpassantSquare == NO_SQ) ? "NO_SQ" : squareToString[enpassantSquare]);
+    std::cout << "\n   Ply:       " << signed(ply()) << "\n";
+    std::cout << "   Fullmoves: " << fullmoves() << "\n";
+    std::cout << "   Hash:      " << hashKey << "\n";
     std::cout << "\n";
 }
 
@@ -290,6 +300,61 @@ void Board::placePiece(Piece piece, Square sq) {
 void Board::removePiece(Piece piece, Square sq) {
     PiecesBB[piece] &= ~SQUARE_BB[sq];
     board[sq] = None;
+}
+
+void Board::hash() {
+    hashKey = 0ULL;
+    Bitboard wPieces = allPieces<White>();
+    Bitboard bPieces = allPieces<Black>();
+    // Piece hashes
+    while (wPieces) {
+        Square sq = poplsb(wPieces);
+        updateKeyPiece(piece_at(sq), sq);
+    }
+    while (bPieces) {
+        Square sq = poplsb(bPieces);
+        updateKeyPiece(piece_at(sq), sq);
+    }
+    // Ep hash
+    
+    if (enpassantSquare != NO_SQ) {
+        Bitboard epMask;
+        Bitboard pawns;
+        if (rank_of(enpassantSquare) == 2)
+        {
+            epMask = GetPawnAttacks<White>(enpassantSquare);
+            pawns = Pawns<Black>();
+        }
+        else
+        {
+            epMask = GetPawnAttacks<Black>(enpassantSquare);
+            pawns = Pawns<White>();
+        }
+        
+        if (epMask & pawns){
+            updateKeyEnPassant(enpassantSquare);
+        }   
+    }
+    // Turn hash
+    if (sideToMove == White) updateKeySideToMove();
+    // Castle hash
+    updateKeyCastling();
+}
+
+inline constexpr void Board::updateKeyPiece(Piece piece, Square sq) {
+    hashKey ^= RANDOM_ARRAY[64 * hash_piece[piece] + sq];
+}
+
+inline constexpr void Board::updateKeyEnPassant(Square sq) {
+    hashKey ^= RANDOM_ARRAY[772 + file_of(sq)];
+}
+
+inline constexpr void Board::updateKeyCastling() {
+    hashKey ^= castlingKey[castlingRights];
+}
+
+inline constexpr void Board::updateKeySideToMove() {
+    hashKey ^= RANDOM_ARRAY[780];
 }
 
 bool Board::isCheck(Color c)

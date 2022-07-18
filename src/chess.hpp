@@ -291,9 +291,226 @@ void printBitboard(Bitboard bb);
 
 /**********************************\
  ==================================
+         Zobrist Hash
+ ==================================
+\**********************************/
+
+static constexpr Bitboard RANDOM_ARRAY[781] = {
+   Bitboard(0x9D39247E33776D41), Bitboard(0x2AF7398005AAA5C7), Bitboard(0x44DB015024623547), Bitboard(0x9C15F73E62A76AE2),
+   Bitboard(0x75834465489C0C89), Bitboard(0x3290AC3A203001BF), Bitboard(0x0FBBAD1F61042279), Bitboard(0xE83A908FF2FB60CA),
+   Bitboard(0x0D7E765D58755C10), Bitboard(0x1A083822CEAFE02D), Bitboard(0x9605D5F0E25EC3B0), Bitboard(0xD021FF5CD13A2ED5),
+   Bitboard(0x40BDF15D4A672E32), Bitboard(0x011355146FD56395), Bitboard(0x5DB4832046F3D9E5), Bitboard(0x239F8B2D7FF719CC),
+   Bitboard(0x05D1A1AE85B49AA1), Bitboard(0x679F848F6E8FC971), Bitboard(0x7449BBFF801FED0B), Bitboard(0x7D11CDB1C3B7ADF0),
+   Bitboard(0x82C7709E781EB7CC), Bitboard(0xF3218F1C9510786C), Bitboard(0x331478F3AF51BBE6), Bitboard(0x4BB38DE5E7219443),
+   Bitboard(0xAA649C6EBCFD50FC), Bitboard(0x8DBD98A352AFD40B), Bitboard(0x87D2074B81D79217), Bitboard(0x19F3C751D3E92AE1),
+   Bitboard(0xB4AB30F062B19ABF), Bitboard(0x7B0500AC42047AC4), Bitboard(0xC9452CA81A09D85D), Bitboard(0x24AA6C514DA27500),
+   Bitboard(0x4C9F34427501B447), Bitboard(0x14A68FD73C910841), Bitboard(0xA71B9B83461CBD93), Bitboard(0x03488B95B0F1850F),
+   Bitboard(0x637B2B34FF93C040), Bitboard(0x09D1BC9A3DD90A94), Bitboard(0x3575668334A1DD3B), Bitboard(0x735E2B97A4C45A23),
+   Bitboard(0x18727070F1BD400B), Bitboard(0x1FCBACD259BF02E7), Bitboard(0xD310A7C2CE9B6555), Bitboard(0xBF983FE0FE5D8244),
+   Bitboard(0x9F74D14F7454A824), Bitboard(0x51EBDC4AB9BA3035), Bitboard(0x5C82C505DB9AB0FA), Bitboard(0xFCF7FE8A3430B241),
+   Bitboard(0x3253A729B9BA3DDE), Bitboard(0x8C74C368081B3075), Bitboard(0xB9BC6C87167C33E7), Bitboard(0x7EF48F2B83024E20),
+   Bitboard(0x11D505D4C351BD7F), Bitboard(0x6568FCA92C76A243), Bitboard(0x4DE0B0F40F32A7B8), Bitboard(0x96D693460CC37E5D),
+   Bitboard(0x42E240CB63689F2F), Bitboard(0x6D2BDCDAE2919661), Bitboard(0x42880B0236E4D951), Bitboard(0x5F0F4A5898171BB6),
+   Bitboard(0x39F890F579F92F88), Bitboard(0x93C5B5F47356388B), Bitboard(0x63DC359D8D231B78), Bitboard(0xEC16CA8AEA98AD76),
+   Bitboard(0x5355F900C2A82DC7), Bitboard(0x07FB9F855A997142), Bitboard(0x5093417AA8A7ED5E), Bitboard(0x7BCBC38DA25A7F3C),
+   Bitboard(0x19FC8A768CF4B6D4), Bitboard(0x637A7780DECFC0D9), Bitboard(0x8249A47AEE0E41F7), Bitboard(0x79AD695501E7D1E8),
+   Bitboard(0x14ACBAF4777D5776), Bitboard(0xF145B6BECCDEA195), Bitboard(0xDABF2AC8201752FC), Bitboard(0x24C3C94DF9C8D3F6),
+   Bitboard(0xBB6E2924F03912EA), Bitboard(0x0CE26C0B95C980D9), Bitboard(0xA49CD132BFBF7CC4), Bitboard(0xE99D662AF4243939),
+   Bitboard(0x27E6AD7891165C3F), Bitboard(0x8535F040B9744FF1), Bitboard(0x54B3F4FA5F40D873), Bitboard(0x72B12C32127FED2B),
+   Bitboard(0xEE954D3C7B411F47), Bitboard(0x9A85AC909A24EAA1), Bitboard(0x70AC4CD9F04F21F5), Bitboard(0xF9B89D3E99A075C2),
+   Bitboard(0x87B3E2B2B5C907B1), Bitboard(0xA366E5B8C54F48B8), Bitboard(0xAE4A9346CC3F7CF2), Bitboard(0x1920C04D47267BBD),
+   Bitboard(0x87BF02C6B49E2AE9), Bitboard(0x092237AC237F3859), Bitboard(0xFF07F64EF8ED14D0), Bitboard(0x8DE8DCA9F03CC54E),
+   Bitboard(0x9C1633264DB49C89), Bitboard(0xB3F22C3D0B0B38ED), Bitboard(0x390E5FB44D01144B), Bitboard(0x5BFEA5B4712768E9),
+   Bitboard(0x1E1032911FA78984), Bitboard(0x9A74ACB964E78CB3), Bitboard(0x4F80F7A035DAFB04), Bitboard(0x6304D09A0B3738C4),
+   Bitboard(0x2171E64683023A08), Bitboard(0x5B9B63EB9CEFF80C), Bitboard(0x506AACF489889342), Bitboard(0x1881AFC9A3A701D6),
+   Bitboard(0x6503080440750644), Bitboard(0xDFD395339CDBF4A7), Bitboard(0xEF927DBCF00C20F2), Bitboard(0x7B32F7D1E03680EC),
+   Bitboard(0xB9FD7620E7316243), Bitboard(0x05A7E8A57DB91B77), Bitboard(0xB5889C6E15630A75), Bitboard(0x4A750A09CE9573F7),
+   Bitboard(0xCF464CEC899A2F8A), Bitboard(0xF538639CE705B824), Bitboard(0x3C79A0FF5580EF7F), Bitboard(0xEDE6C87F8477609D),
+   Bitboard(0x799E81F05BC93F31), Bitboard(0x86536B8CF3428A8C), Bitboard(0x97D7374C60087B73), Bitboard(0xA246637CFF328532),
+   Bitboard(0x043FCAE60CC0EBA0), Bitboard(0x920E449535DD359E), Bitboard(0x70EB093B15B290CC), Bitboard(0x73A1921916591CBD),
+   Bitboard(0x56436C9FE1A1AA8D), Bitboard(0xEFAC4B70633B8F81), Bitboard(0xBB215798D45DF7AF), Bitboard(0x45F20042F24F1768),
+   Bitboard(0x930F80F4E8EB7462), Bitboard(0xFF6712FFCFD75EA1), Bitboard(0xAE623FD67468AA70), Bitboard(0xDD2C5BC84BC8D8FC),
+   Bitboard(0x7EED120D54CF2DD9), Bitboard(0x22FE545401165F1C), Bitboard(0xC91800E98FB99929), Bitboard(0x808BD68E6AC10365),
+   Bitboard(0xDEC468145B7605F6), Bitboard(0x1BEDE3A3AEF53302), Bitboard(0x43539603D6C55602), Bitboard(0xAA969B5C691CCB7A),
+   Bitboard(0xA87832D392EFEE56), Bitboard(0x65942C7B3C7E11AE), Bitboard(0xDED2D633CAD004F6), Bitboard(0x21F08570F420E565),
+   Bitboard(0xB415938D7DA94E3C), Bitboard(0x91B859E59ECB6350), Bitboard(0x10CFF333E0ED804A), Bitboard(0x28AED140BE0BB7DD),
+   Bitboard(0xC5CC1D89724FA456), Bitboard(0x5648F680F11A2741), Bitboard(0x2D255069F0B7DAB3), Bitboard(0x9BC5A38EF729ABD4),
+   Bitboard(0xEF2F054308F6A2BC), Bitboard(0xAF2042F5CC5C2858), Bitboard(0x480412BAB7F5BE2A), Bitboard(0xAEF3AF4A563DFE43),
+   Bitboard(0x19AFE59AE451497F), Bitboard(0x52593803DFF1E840), Bitboard(0xF4F076E65F2CE6F0), Bitboard(0x11379625747D5AF3),
+   Bitboard(0xBCE5D2248682C115), Bitboard(0x9DA4243DE836994F), Bitboard(0x066F70B33FE09017), Bitboard(0x4DC4DE189B671A1C),
+   Bitboard(0x51039AB7712457C3), Bitboard(0xC07A3F80C31FB4B4), Bitboard(0xB46EE9C5E64A6E7C), Bitboard(0xB3819A42ABE61C87),
+   Bitboard(0x21A007933A522A20), Bitboard(0x2DF16F761598AA4F), Bitboard(0x763C4A1371B368FD), Bitboard(0xF793C46702E086A0),
+   Bitboard(0xD7288E012AEB8D31), Bitboard(0xDE336A2A4BC1C44B), Bitboard(0x0BF692B38D079F23), Bitboard(0x2C604A7A177326B3),
+   Bitboard(0x4850E73E03EB6064), Bitboard(0xCFC447F1E53C8E1B), Bitboard(0xB05CA3F564268D99), Bitboard(0x9AE182C8BC9474E8),
+   Bitboard(0xA4FC4BD4FC5558CA), Bitboard(0xE755178D58FC4E76), Bitboard(0x69B97DB1A4C03DFE), Bitboard(0xF9B5B7C4ACC67C96),
+   Bitboard(0xFC6A82D64B8655FB), Bitboard(0x9C684CB6C4D24417), Bitboard(0x8EC97D2917456ED0), Bitboard(0x6703DF9D2924E97E),
+   Bitboard(0xC547F57E42A7444E), Bitboard(0x78E37644E7CAD29E), Bitboard(0xFE9A44E9362F05FA), Bitboard(0x08BD35CC38336615),
+   Bitboard(0x9315E5EB3A129ACE), Bitboard(0x94061B871E04DF75), Bitboard(0xDF1D9F9D784BA010), Bitboard(0x3BBA57B68871B59D),
+   Bitboard(0xD2B7ADEEDED1F73F), Bitboard(0xF7A255D83BC373F8), Bitboard(0xD7F4F2448C0CEB81), Bitboard(0xD95BE88CD210FFA7),
+   Bitboard(0x336F52F8FF4728E7), Bitboard(0xA74049DAC312AC71), Bitboard(0xA2F61BB6E437FDB5), Bitboard(0x4F2A5CB07F6A35B3),
+   Bitboard(0x87D380BDA5BF7859), Bitboard(0x16B9F7E06C453A21), Bitboard(0x7BA2484C8A0FD54E), Bitboard(0xF3A678CAD9A2E38C),
+   Bitboard(0x39B0BF7DDE437BA2), Bitboard(0xFCAF55C1BF8A4424), Bitboard(0x18FCF680573FA594), Bitboard(0x4C0563B89F495AC3),
+   Bitboard(0x40E087931A00930D), Bitboard(0x8CFFA9412EB642C1), Bitboard(0x68CA39053261169F), Bitboard(0x7A1EE967D27579E2),
+   Bitboard(0x9D1D60E5076F5B6F), Bitboard(0x3810E399B6F65BA2), Bitboard(0x32095B6D4AB5F9B1), Bitboard(0x35CAB62109DD038A),
+   Bitboard(0xA90B24499FCFAFB1), Bitboard(0x77A225A07CC2C6BD), Bitboard(0x513E5E634C70E331), Bitboard(0x4361C0CA3F692F12),
+   Bitboard(0xD941ACA44B20A45B), Bitboard(0x528F7C8602C5807B), Bitboard(0x52AB92BEB9613989), Bitboard(0x9D1DFA2EFC557F73),
+   Bitboard(0x722FF175F572C348), Bitboard(0x1D1260A51107FE97), Bitboard(0x7A249A57EC0C9BA2), Bitboard(0x04208FE9E8F7F2D6),
+   Bitboard(0x5A110C6058B920A0), Bitboard(0x0CD9A497658A5698), Bitboard(0x56FD23C8F9715A4C), Bitboard(0x284C847B9D887AAE),
+   Bitboard(0x04FEABFBBDB619CB), Bitboard(0x742E1E651C60BA83), Bitboard(0x9A9632E65904AD3C), Bitboard(0x881B82A13B51B9E2),
+   Bitboard(0x506E6744CD974924), Bitboard(0xB0183DB56FFC6A79), Bitboard(0x0ED9B915C66ED37E), Bitboard(0x5E11E86D5873D484),
+   Bitboard(0xF678647E3519AC6E), Bitboard(0x1B85D488D0F20CC5), Bitboard(0xDAB9FE6525D89021), Bitboard(0x0D151D86ADB73615),
+   Bitboard(0xA865A54EDCC0F019), Bitboard(0x93C42566AEF98FFB), Bitboard(0x99E7AFEABE000731), Bitboard(0x48CBFF086DDF285A),
+   Bitboard(0x7F9B6AF1EBF78BAF), Bitboard(0x58627E1A149BBA21), Bitboard(0x2CD16E2ABD791E33), Bitboard(0xD363EFF5F0977996),
+   Bitboard(0x0CE2A38C344A6EED), Bitboard(0x1A804AADB9CFA741), Bitboard(0x907F30421D78C5DE), Bitboard(0x501F65EDB3034D07),
+   Bitboard(0x37624AE5A48FA6E9), Bitboard(0x957BAF61700CFF4E), Bitboard(0x3A6C27934E31188A), Bitboard(0xD49503536ABCA345),
+   Bitboard(0x088E049589C432E0), Bitboard(0xF943AEE7FEBF21B8), Bitboard(0x6C3B8E3E336139D3), Bitboard(0x364F6FFA464EE52E),
+   Bitboard(0xD60F6DCEDC314222), Bitboard(0x56963B0DCA418FC0), Bitboard(0x16F50EDF91E513AF), Bitboard(0xEF1955914B609F93),
+   Bitboard(0x565601C0364E3228), Bitboard(0xECB53939887E8175), Bitboard(0xBAC7A9A18531294B), Bitboard(0xB344C470397BBA52),
+   Bitboard(0x65D34954DAF3CEBD), Bitboard(0xB4B81B3FA97511E2), Bitboard(0xB422061193D6F6A7), Bitboard(0x071582401C38434D),
+   Bitboard(0x7A13F18BBEDC4FF5), Bitboard(0xBC4097B116C524D2), Bitboard(0x59B97885E2F2EA28), Bitboard(0x99170A5DC3115544),
+   Bitboard(0x6F423357E7C6A9F9), Bitboard(0x325928EE6E6F8794), Bitboard(0xD0E4366228B03343), Bitboard(0x565C31F7DE89EA27),
+   Bitboard(0x30F5611484119414), Bitboard(0xD873DB391292ED4F), Bitboard(0x7BD94E1D8E17DEBC), Bitboard(0xC7D9F16864A76E94),
+   Bitboard(0x947AE053EE56E63C), Bitboard(0xC8C93882F9475F5F), Bitboard(0x3A9BF55BA91F81CA), Bitboard(0xD9A11FBB3D9808E4),
+   Bitboard(0x0FD22063EDC29FCA), Bitboard(0xB3F256D8ACA0B0B9), Bitboard(0xB03031A8B4516E84), Bitboard(0x35DD37D5871448AF),
+   Bitboard(0xE9F6082B05542E4E), Bitboard(0xEBFAFA33D7254B59), Bitboard(0x9255ABB50D532280), Bitboard(0xB9AB4CE57F2D34F3),
+   Bitboard(0x693501D628297551), Bitboard(0xC62C58F97DD949BF), Bitboard(0xCD454F8F19C5126A), Bitboard(0xBBE83F4ECC2BDECB),
+   Bitboard(0xDC842B7E2819E230), Bitboard(0xBA89142E007503B8), Bitboard(0xA3BC941D0A5061CB), Bitboard(0xE9F6760E32CD8021),
+   Bitboard(0x09C7E552BC76492F), Bitboard(0x852F54934DA55CC9), Bitboard(0x8107FCCF064FCF56), Bitboard(0x098954D51FFF6580),
+   Bitboard(0x23B70EDB1955C4BF), Bitboard(0xC330DE426430F69D), Bitboard(0x4715ED43E8A45C0A), Bitboard(0xA8D7E4DAB780A08D),
+   Bitboard(0x0572B974F03CE0BB), Bitboard(0xB57D2E985E1419C7), Bitboard(0xE8D9ECBE2CF3D73F), Bitboard(0x2FE4B17170E59750),
+   Bitboard(0x11317BA87905E790), Bitboard(0x7FBF21EC8A1F45EC), Bitboard(0x1725CABFCB045B00), Bitboard(0x964E915CD5E2B207),
+   Bitboard(0x3E2B8BCBF016D66D), Bitboard(0xBE7444E39328A0AC), Bitboard(0xF85B2B4FBCDE44B7), Bitboard(0x49353FEA39BA63B1),
+   Bitboard(0x1DD01AAFCD53486A), Bitboard(0x1FCA8A92FD719F85), Bitboard(0xFC7C95D827357AFA), Bitboard(0x18A6A990C8B35EBD),
+   Bitboard(0xCCCB7005C6B9C28D), Bitboard(0x3BDBB92C43B17F26), Bitboard(0xAA70B5B4F89695A2), Bitboard(0xE94C39A54A98307F),
+   Bitboard(0xB7A0B174CFF6F36E), Bitboard(0xD4DBA84729AF48AD), Bitboard(0x2E18BC1AD9704A68), Bitboard(0x2DE0966DAF2F8B1C),
+   Bitboard(0xB9C11D5B1E43A07E), Bitboard(0x64972D68DEE33360), Bitboard(0x94628D38D0C20584), Bitboard(0xDBC0D2B6AB90A559),
+   Bitboard(0xD2733C4335C6A72F), Bitboard(0x7E75D99D94A70F4D), Bitboard(0x6CED1983376FA72B), Bitboard(0x97FCAACBF030BC24),
+   Bitboard(0x7B77497B32503B12), Bitboard(0x8547EDDFB81CCB94), Bitboard(0x79999CDFF70902CB), Bitboard(0xCFFE1939438E9B24),
+   Bitboard(0x829626E3892D95D7), Bitboard(0x92FAE24291F2B3F1), Bitboard(0x63E22C147B9C3403), Bitboard(0xC678B6D860284A1C),
+   Bitboard(0x5873888850659AE7), Bitboard(0x0981DCD296A8736D), Bitboard(0x9F65789A6509A440), Bitboard(0x9FF38FED72E9052F),
+   Bitboard(0xE479EE5B9930578C), Bitboard(0xE7F28ECD2D49EECD), Bitboard(0x56C074A581EA17FE), Bitboard(0x5544F7D774B14AEF),
+   Bitboard(0x7B3F0195FC6F290F), Bitboard(0x12153635B2C0CF57), Bitboard(0x7F5126DBBA5E0CA7), Bitboard(0x7A76956C3EAFB413),
+   Bitboard(0x3D5774A11D31AB39), Bitboard(0x8A1B083821F40CB4), Bitboard(0x7B4A38E32537DF62), Bitboard(0x950113646D1D6E03),
+   Bitboard(0x4DA8979A0041E8A9), Bitboard(0x3BC36E078F7515D7), Bitboard(0x5D0A12F27AD310D1), Bitboard(0x7F9D1A2E1EBE1327),
+   Bitboard(0xDA3A361B1C5157B1), Bitboard(0xDCDD7D20903D0C25), Bitboard(0x36833336D068F707), Bitboard(0xCE68341F79893389),
+   Bitboard(0xAB9090168DD05F34), Bitboard(0x43954B3252DC25E5), Bitboard(0xB438C2B67F98E5E9), Bitboard(0x10DCD78E3851A492),
+   Bitboard(0xDBC27AB5447822BF), Bitboard(0x9B3CDB65F82CA382), Bitboard(0xB67B7896167B4C84), Bitboard(0xBFCED1B0048EAC50),
+   Bitboard(0xA9119B60369FFEBD), Bitboard(0x1FFF7AC80904BF45), Bitboard(0xAC12FB171817EEE7), Bitboard(0xAF08DA9177DDA93D),
+   Bitboard(0x1B0CAB936E65C744), Bitboard(0xB559EB1D04E5E932), Bitboard(0xC37B45B3F8D6F2BA), Bitboard(0xC3A9DC228CAAC9E9),
+   Bitboard(0xF3B8B6675A6507FF), Bitboard(0x9FC477DE4ED681DA), Bitboard(0x67378D8ECCEF96CB), Bitboard(0x6DD856D94D259236),
+   Bitboard(0xA319CE15B0B4DB31), Bitboard(0x073973751F12DD5E), Bitboard(0x8A8E849EB32781A5), Bitboard(0xE1925C71285279F5),
+   Bitboard(0x74C04BF1790C0EFE), Bitboard(0x4DDA48153C94938A), Bitboard(0x9D266D6A1CC0542C), Bitboard(0x7440FB816508C4FE),
+   Bitboard(0x13328503DF48229F), Bitboard(0xD6BF7BAEE43CAC40), Bitboard(0x4838D65F6EF6748F), Bitboard(0x1E152328F3318DEA),
+   Bitboard(0x8F8419A348F296BF), Bitboard(0x72C8834A5957B511), Bitboard(0xD7A023A73260B45C), Bitboard(0x94EBC8ABCFB56DAE),
+   Bitboard(0x9FC10D0F989993E0), Bitboard(0xDE68A2355B93CAE6), Bitboard(0xA44CFE79AE538BBE), Bitboard(0x9D1D84FCCE371425),
+   Bitboard(0x51D2B1AB2DDFB636), Bitboard(0x2FD7E4B9E72CD38C), Bitboard(0x65CA5B96B7552210), Bitboard(0xDD69A0D8AB3B546D),
+   Bitboard(0x604D51B25FBF70E2), Bitboard(0x73AA8A564FB7AC9E), Bitboard(0x1A8C1E992B941148), Bitboard(0xAAC40A2703D9BEA0),
+   Bitboard(0x764DBEAE7FA4F3A6), Bitboard(0x1E99B96E70A9BE8B), Bitboard(0x2C5E9DEB57EF4743), Bitboard(0x3A938FEE32D29981),
+   Bitboard(0x26E6DB8FFDF5ADFE), Bitboard(0x469356C504EC9F9D), Bitboard(0xC8763C5B08D1908C), Bitboard(0x3F6C6AF859D80055),
+   Bitboard(0x7F7CC39420A3A545), Bitboard(0x9BFB227EBDF4C5CE), Bitboard(0x89039D79D6FC5C5C), Bitboard(0x8FE88B57305E2AB6),
+   Bitboard(0xA09E8C8C35AB96DE), Bitboard(0xFA7E393983325753), Bitboard(0xD6B6D0ECC617C699), Bitboard(0xDFEA21EA9E7557E3),
+   Bitboard(0xB67C1FA481680AF8), Bitboard(0xCA1E3785A9E724E5), Bitboard(0x1CFC8BED0D681639), Bitboard(0xD18D8549D140CAEA),
+   Bitboard(0x4ED0FE7E9DC91335), Bitboard(0xE4DBF0634473F5D2), Bitboard(0x1761F93A44D5AEFE), Bitboard(0x53898E4C3910DA55),
+   Bitboard(0x734DE8181F6EC39A), Bitboard(0x2680B122BAA28D97), Bitboard(0x298AF231C85BAFAB), Bitboard(0x7983EED3740847D5),
+   Bitboard(0x66C1A2A1A60CD889), Bitboard(0x9E17E49642A3E4C1), Bitboard(0xEDB454E7BADC0805), Bitboard(0x50B704CAB602C329),
+   Bitboard(0x4CC317FB9CDDD023), Bitboard(0x66B4835D9EAFEA22), Bitboard(0x219B97E26FFC81BD), Bitboard(0x261E4E4C0A333A9D),
+   Bitboard(0x1FE2CCA76517DB90), Bitboard(0xD7504DFA8816EDBB), Bitboard(0xB9571FA04DC089C8), Bitboard(0x1DDC0325259B27DE),
+   Bitboard(0xCF3F4688801EB9AA), Bitboard(0xF4F5D05C10CAB243), Bitboard(0x38B6525C21A42B0E), Bitboard(0x36F60E2BA4FA6800),
+   Bitboard(0xEB3593803173E0CE), Bitboard(0x9C4CD6257C5A3603), Bitboard(0xAF0C317D32ADAA8A), Bitboard(0x258E5A80C7204C4B),
+   Bitboard(0x8B889D624D44885D), Bitboard(0xF4D14597E660F855), Bitboard(0xD4347F66EC8941C3), Bitboard(0xE699ED85B0DFB40D),
+   Bitboard(0x2472F6207C2D0484), Bitboard(0xC2A1E7B5B459AEB5), Bitboard(0xAB4F6451CC1D45EC), Bitboard(0x63767572AE3D6174),
+   Bitboard(0xA59E0BD101731A28), Bitboard(0x116D0016CB948F09), Bitboard(0x2CF9C8CA052F6E9F), Bitboard(0x0B090A7560A968E3),
+   Bitboard(0xABEEDDB2DDE06FF1), Bitboard(0x58EFC10B06A2068D), Bitboard(0xC6E57A78FBD986E0), Bitboard(0x2EAB8CA63CE802D7),
+   Bitboard(0x14A195640116F336), Bitboard(0x7C0828DD624EC390), Bitboard(0xD74BBE77E6116AC7), Bitboard(0x804456AF10F5FB53),
+   Bitboard(0xEBE9EA2ADF4321C7), Bitboard(0x03219A39EE587A30), Bitboard(0x49787FEF17AF9924), Bitboard(0xA1E9300CD8520548),
+   Bitboard(0x5B45E522E4B1B4EF), Bitboard(0xB49C3B3995091A36), Bitboard(0xD4490AD526F14431), Bitboard(0x12A8F216AF9418C2),
+   Bitboard(0x001F837CC7350524), Bitboard(0x1877B51E57A764D5), Bitboard(0xA2853B80F17F58EE), Bitboard(0x993E1DE72D36D310),
+   Bitboard(0xB3598080CE64A656), Bitboard(0x252F59CF0D9F04BB), Bitboard(0xD23C8E176D113600), Bitboard(0x1BDA0492E7E4586E),
+   Bitboard(0x21E0BD5026C619BF), Bitboard(0x3B097ADAF088F94E), Bitboard(0x8D14DEDB30BE846E), Bitboard(0xF95CFFA23AF5F6F4),
+   Bitboard(0x3871700761B3F743), Bitboard(0xCA672B91E9E4FA16), Bitboard(0x64C8E531BFF53B55), Bitboard(0x241260ED4AD1E87D),
+   Bitboard(0x106C09B972D2E822), Bitboard(0x7FBA195410E5CA30), Bitboard(0x7884D9BC6CB569D8), Bitboard(0x0647DFEDCD894A29),
+   Bitboard(0x63573FF03E224774), Bitboard(0x4FC8E9560F91B123), Bitboard(0x1DB956E450275779), Bitboard(0xB8D91274B9E9D4FB),
+   Bitboard(0xA2EBEE47E2FBFCE1), Bitboard(0xD9F1F30CCD97FB09), Bitboard(0xEFED53D75FD64E6B), Bitboard(0x2E6D02C36017F67F),
+   Bitboard(0xA9AA4D20DB084E9B), Bitboard(0xB64BE8D8B25396C1), Bitboard(0x70CB6AF7C2D5BCF0), Bitboard(0x98F076A4F7A2322E),
+   Bitboard(0xBF84470805E69B5F), Bitboard(0x94C3251F06F90CF3), Bitboard(0x3E003E616A6591E9), Bitboard(0xB925A6CD0421AFF3),
+   Bitboard(0x61BDD1307C66E300), Bitboard(0xBF8D5108E27E0D48), Bitboard(0x240AB57A8B888B20), Bitboard(0xFC87614BAF287E07),
+   Bitboard(0xEF02CDD06FFDB432), Bitboard(0xA1082C0466DF6C0A), Bitboard(0x8215E577001332C8), Bitboard(0xD39BB9C3A48DB6CF),
+   Bitboard(0x2738259634305C14), Bitboard(0x61CF4F94C97DF93D), Bitboard(0x1B6BACA2AE4E125B), Bitboard(0x758F450C88572E0B),
+   Bitboard(0x959F587D507A8359), Bitboard(0xB063E962E045F54D), Bitboard(0x60E8ED72C0DFF5D1), Bitboard(0x7B64978555326F9F),
+   Bitboard(0xFD080D236DA814BA), Bitboard(0x8C90FD9B083F4558), Bitboard(0x106F72FE81E2C590), Bitboard(0x7976033A39F7D952),
+   Bitboard(0xA4EC0132764CA04B), Bitboard(0x733EA705FAE4FA77), Bitboard(0xB4D8F77BC3E56167), Bitboard(0x9E21F4F903B33FD9),
+   Bitboard(0x9D765E419FB69F6D), Bitboard(0xD30C088BA61EA5EF), Bitboard(0x5D94337FBFAF7F5B), Bitboard(0x1A4E4822EB4D7A59),
+   Bitboard(0x6FFE73E81B637FB3), Bitboard(0xDDF957BC36D8B9CA), Bitboard(0x64D0E29EEA8838B3), Bitboard(0x08DD9BDFD96B9F63),
+   Bitboard(0x087E79E5A57D1D13), Bitboard(0xE328E230E3E2B3FB), Bitboard(0x1C2559E30F0946BE), Bitboard(0x720BF5F26F4D2EAA),
+   Bitboard(0xB0774D261CC609DB), Bitboard(0x443F64EC5A371195), Bitboard(0x4112CF68649A260E), Bitboard(0xD813F2FAB7F5C5CA),
+   Bitboard(0x660D3257380841EE), Bitboard(0x59AC2C7873F910A3), Bitboard(0xE846963877671A17), Bitboard(0x93B633ABFA3469F8),
+   Bitboard(0xC0C0F5A60EF4CDCF), Bitboard(0xCAF21ECD4377B28C), Bitboard(0x57277707199B8175), Bitboard(0x506C11B9D90E8B1D),
+   Bitboard(0xD83CC2687A19255F), Bitboard(0x4A29C6465A314CD1), Bitboard(0xED2DF21216235097), Bitboard(0xB5635C95FF7296E2),
+   Bitboard(0x22AF003AB672E811), Bitboard(0x52E762596BF68235), Bitboard(0x9AEBA33AC6ECC6B0), Bitboard(0x944F6DE09134DFB6),
+   Bitboard(0x6C47BEC883A7DE39), Bitboard(0x6AD047C430A12104), Bitboard(0xA5B1CFDBA0AB4067), Bitboard(0x7C45D833AFF07862),
+   Bitboard(0x5092EF950A16DA0B), Bitboard(0x9338E69C052B8E7B), Bitboard(0x455A4B4CFE30E3F5), Bitboard(0x6B02E63195AD0CF8),
+   Bitboard(0x6B17B224BAD6BF27), Bitboard(0xD1E0CCD25BB9C169), Bitboard(0xDE0C89A556B9AE70), Bitboard(0x50065E535A213CF6),
+   Bitboard(0x9C1169FA2777B874), Bitboard(0x78EDEFD694AF1EED), Bitboard(0x6DC93D9526A50E68), Bitboard(0xEE97F453F06791ED),
+   Bitboard(0x32AB0EDB696703D3), Bitboard(0x3A6853C7E70757A7), Bitboard(0x31865CED6120F37D), Bitboard(0x67FEF95D92607890),
+   Bitboard(0x1F2B1D1F15F6DC9C), Bitboard(0xB69E38A8965C6B65), Bitboard(0xAA9119FF184CCCF4), Bitboard(0xF43C732873F24C13),
+   Bitboard(0xFB4A3D794A9A80D2), Bitboard(0x3550C2321FD6109C), Bitboard(0x371F77E76BB8417E), Bitboard(0x6BFA9AAE5EC05779),
+   Bitboard(0xCD04F3FF001A4778), Bitboard(0xE3273522064480CA), Bitboard(0x9F91508BFFCFC14A), Bitboard(0x049A7F41061A9E60),
+   Bitboard(0xFCB6BE43A9F2FE9B), Bitboard(0x08DE8A1C7797DA9B), Bitboard(0x8F9887E6078735A1), Bitboard(0xB5B4071DBFC73A66),
+   Bitboard(0x230E343DFBA08D33), Bitboard(0x43ED7F5A0FAE657D), Bitboard(0x3A88A0FBBCB05C63), Bitboard(0x21874B8B4D2DBC4F),
+   Bitboard(0x1BDEA12E35F6A8C9), Bitboard(0x53C065C6C8E63528), Bitboard(0xE34A1D250E7A8D6B), Bitboard(0xD6B04D3B7651DD7E),
+   Bitboard(0x5E90277E7CB39E2D), Bitboard(0x2C046F22062DC67D), Bitboard(0xB10BB459132D0A26), Bitboard(0x3FA9DDFB67E2F199),
+   Bitboard(0x0E09B88E1914F7AF), Bitboard(0x10E8B35AF3EEAB37), Bitboard(0x9EEDECA8E272B933), Bitboard(0xD4C718BC4AE8AE5F),
+   Bitboard(0x81536D601170FC20), Bitboard(0x91B534F885818A06), Bitboard(0xEC8177F83F900978), Bitboard(0x190E714FADA5156E),
+   Bitboard(0xB592BF39B0364963), Bitboard(0x89C350C893AE7DC1), Bitboard(0xAC042E70F8B383F2), Bitboard(0xB49B52E587A1EE60),
+   Bitboard(0xFB152FE3FF26DA89), Bitboard(0x3E666E6F69AE2C15), Bitboard(0x3B544EBE544C19F9), Bitboard(0xE805A1E290CF2456),
+   Bitboard(0x24B33C9D7ED25117), Bitboard(0xE74733427B72F0C1), Bitboard(0x0A804D18B7097475), Bitboard(0x57E3306D881EDB4F),
+   Bitboard(0x4AE7D6A36EB5DBCB), Bitboard(0x2D8D5432157064C8), Bitboard(0xD1E649DE1E7F268B), Bitboard(0x8A328A1CEDFE552C),
+   Bitboard(0x07A3AEC79624C7DA), Bitboard(0x84547DDC3E203C94), Bitboard(0x990A98FD5071D263), Bitboard(0x1A4FF12616EEFC89),
+   Bitboard(0xF6F7FD1431714200), Bitboard(0x30C05B1BA332F41C), Bitboard(0x8D2636B81555A786), Bitboard(0x46C9FEB55D120902),
+   Bitboard(0xCCEC0A73B49C9921), Bitboard(0x4E9D2827355FC492), Bitboard(0x19EBB029435DCB0F), Bitboard(0x4659D2B743848A2C),
+   Bitboard(0x963EF2C96B33BE31), Bitboard(0x74F85198B05A2E7D), Bitboard(0x5A0F544DD2B1FB18), Bitboard(0x03727073C2E134B1),
+   Bitboard(0xC7F6AA2DE59AEA61), Bitboard(0x352787BAA0D7C22F), Bitboard(0x9853EAB63B5E0B35), Bitboard(0xABBDCDD7ED5C0860),
+   Bitboard(0xCF05DAF5AC8D77B0), Bitboard(0x49CAD48CEBF4A71E), Bitboard(0x7A4C10EC2158C4A6), Bitboard(0xD9E92AA246BF719E),
+   Bitboard(0x13AE978D09FE5557), Bitboard(0x730499AF921549FF), Bitboard(0x4E4B705B92903BA4), Bitboard(0xFF577222C14F0A3A),
+   Bitboard(0x55B6344CF97AAFAE), Bitboard(0xB862225B055B6960), Bitboard(0xCAC09AFBDDD2CDB4), Bitboard(0xDAF8E9829FE96B5F),
+   Bitboard(0xB5FDFC5D3132C498), Bitboard(0x310CB380DB6F7503), Bitboard(0xE87FBB46217A360E), Bitboard(0x2102AE466EBB1148),
+   Bitboard(0xF8549E1A3AA5E00D), Bitboard(0x07A69AFDCC42261A), Bitboard(0xC4C118BFE78FEAAE), Bitboard(0xF9F4892ED96BD438),
+   Bitboard(0x1AF3DBE25D8F45DA), Bitboard(0xF5B4B0B0D2DEEEB4), Bitboard(0x962ACEEFA82E1C84), Bitboard(0x046E3ECAAF453CE9),
+   Bitboard(0xF05D129681949A4C), Bitboard(0x964781CE734B3C84), Bitboard(0x9C2ED44081CE5FBD), Bitboard(0x522E23F3925E319E),
+   Bitboard(0x177E00F9FC32F791), Bitboard(0x2BC60A63A6F3B3F2), Bitboard(0x222BBFAE61725606), Bitboard(0x486289DDCC3D6780),
+   Bitboard(0x7DC7785B8EFDFC80), Bitboard(0x8AF38731C02BA980), Bitboard(0x1FAB64EA29A2DDF7), Bitboard(0xE4D9429322CD065A),
+   Bitboard(0x9DA058C67844F20C), Bitboard(0x24C0E332B70019B0), Bitboard(0x233003B5A6CFE6AD), Bitboard(0xD586BD01C5C217F6),
+   Bitboard(0x5E5637885F29BC2B), Bitboard(0x7EBA726D8C94094B), Bitboard(0x0A56A5F0BFE39272), Bitboard(0xD79476A84EE20D06),
+   Bitboard(0x9E4C1269BAA4BF37), Bitboard(0x17EFEE45B0DEE640), Bitboard(0x1D95B0A5FCF90BC6), Bitboard(0x93CBE0B699C2585D),
+   Bitboard(0x65FA4F227A2B6D79), Bitboard(0xD5F9E858292504D5), Bitboard(0xC2B5A03F71471A6F), Bitboard(0x59300222B4561E00),
+   Bitboard(0xCE2F8642CA0712DC), Bitboard(0x7CA9723FBB2E8988), Bitboard(0x2785338347F2BA08), Bitboard(0xC61BB3A141E50E8C),
+   Bitboard(0x150F361DAB9DEC26), Bitboard(0x9F6A419D382595F4), Bitboard(0x64A53DC924FE7AC9), Bitboard(0x142DE49FFF7A7C3D),
+   Bitboard(0x0C335248857FA9E7), Bitboard(0x0A9C32D5EAE45305), Bitboard(0xE6C42178C4BBB92E), Bitboard(0x71F1CE2490D20B07),
+   Bitboard(0xF1BCC3D275AFE51A), Bitboard(0xE728E8C83C334074), Bitboard(0x96FBF83A12884624), Bitboard(0x81A1549FD6573DA5),
+   Bitboard(0x5FA7867CAF35E149), Bitboard(0x56986E2EF3ED091B), Bitboard(0x917F1DD5F8886C61), Bitboard(0xD20D8C88C8FFE65F),
+   Bitboard(0x31D71DCE64B2C310), Bitboard(0xF165B587DF898190), Bitboard(0xA57E6339DD2CF3A0), Bitboard(0x1EF6E6DBB1961EC9),
+   Bitboard(0x70CC73D90BC26E24), Bitboard(0xE21A6B35DF0C3AD7), Bitboard(0x003A93D8B2806962), Bitboard(0x1C99DED33CB890A1),
+   Bitboard(0xCF3145DE0ADD4289), Bitboard(0xD0E4427A5514FB72), Bitboard(0x77C621CC9FB3A483), Bitboard(0x67A34DAC4356550B),
+   Bitboard(0xF8D626AAAF278509),
+};
+
+static constexpr Bitboard castlingKey[16] = {0, RANDOM_ARRAY[768], RANDOM_ARRAY[768 + 1], RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 +1],
+                      RANDOM_ARRAY[768 + 2], RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 2], RANDOM_ARRAY[768 + 1]^ RANDOM_ARRAY[768 + 2],
+                      RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2], RANDOM_ARRAY[768 + 3], RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 3],
+                      RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 3], RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 3],
+                      RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768 + 2], RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768], RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768 + 3],
+                      RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768]};
+
+/**********************************\
+ ==================================
          Helper Functions
  ==================================
 \**********************************/
+
+static constexpr int hash_piece[12] = 
+{
+    1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10
+};
 
 // returns the rank of a given square
 uint8_t rank_of(Square sq);
@@ -476,6 +693,9 @@ private:
 
     uint16_t storeCount;
 
+    // Hashkey
+    uint64_t hashKey;
+
     // Checkmask
     Bitboard checkMask = DEFAULT_CHECKMASK;
 
@@ -587,6 +807,14 @@ public:
     template <Color c> constexpr Bitboard PieceBB(PieceType type);
 
 private:
+    // hash
+    void hash();
+
+    inline constexpr void updateKeyPiece(Piece piece, Square sq);
+    inline constexpr void updateKeyEnPassant(Square sq) ;
+    inline constexpr void updateKeyCastling();
+    inline constexpr void updateKeySideToMove();
+
     // places a piece on a particular square
     void placePiece(Piece piece, Square sq);
 
@@ -636,56 +864,85 @@ void Board::makemove(Move& move){
     storeInfo[storeCount] = State(enpassantSquare, castlingRights, capturedPiece, halfMoveClock);
     storeCount++;
 
-    bool enpassant = (target) == enpassantSquare ? true : false;
-
+    bool enpassant;
+    if (target == enpassantSquare) 
+    {
+        updateKeyEnPassant(enpassantSquare);
+        enpassant = true;
+    }
+    else
+        enpassant = false;
+          
     enpassantSquare = NO_SQ;
 
     // update castling rights
-    if (piece == makePiece<c>(King)){
+    if (piece == makePiece<c>(King) && castlingRights){
         if constexpr (c == White){
             if (source == SQ_E1 && target == SQ_G1 && castlingRights & whiteKingSideCastling){
                 removePiece(WhiteRook, SQ_H1);
                 placePiece(WhiteRook, SQ_F1);
+                
+                updateKeyPiece(WhiteRook, SQ_H1);
+                updateKeyPiece(WhiteRook, SQ_F1);
             }  
             else if (source == SQ_E1 && target == SQ_C1 && castlingRights & whiteQueenSideCastling){
                 removePiece(WhiteRook, SQ_A1);
                 placePiece(WhiteRook, SQ_D1);
+                updateKeyPiece(WhiteRook, SQ_A1);
+                updateKeyPiece(WhiteRook, SQ_D1);
             }
+            updateKeyCastling();
             castlingRights &= ~(whiteKingSideCastling | whiteQueenSideCastling);
+            updateKeyCastling();
         }
-        else{
+        else
+        {
             if (source == SQ_E8 && target == SQ_G8 && castlingRights & blackKingSideCastling){
                 removePiece(BlackRook, SQ_H8);
                 placePiece(BlackRook, SQ_F8);
+                updateKeyPiece(WhiteRook, SQ_H8);
+                updateKeyPiece(WhiteRook, SQ_F8);
             }
             else if (source == SQ_E8 && target == SQ_C8 && castlingRights & blackQueenSideCastling){
                 removePiece(BlackRook, SQ_A8);
                 placePiece(BlackRook, SQ_D8);
+                updateKeyPiece(WhiteRook, SQ_A8);
+                updateKeyPiece(WhiteRook, SQ_D8);
             }
+            updateKeyCastling();
             castlingRights &= ~(blackKingSideCastling | blackQueenSideCastling);
+            updateKeyCastling();
         }
     }
     // rook move loses castle rights
-    else if (piece == makePiece<c>(Rook)){
+    else if (piece == makePiece<c>(Rook) && castlingRights)
+    {
         if constexpr (c== White){
+            updateKeyCastling();
             if (source == SQ_A1)
                 castlingRights &= ~whiteQueenSideCastling;
             else if (source == SQ_H1)
                 castlingRights &= ~whiteKingSideCastling;
+            updateKeyCastling();
         }
-        else{
+        else
+        {
+            updateKeyCastling();
             if (source == SQ_A8)
                 castlingRights &= ~blackQueenSideCastling;
             else if (source == SQ_H8)
                 castlingRights &= ~blackKingSideCastling;
+            updateKeyCastling();
         }
     }
     else if (piece_type(move) == Pawn){
         halfMoveClock = 0;
         // enpassant capture
-        if (enpassant){
+        if (enpassant)
+        {
             int8_t offset = c == White ? -8 : 8;
             removePiece(makePiece<~c>(Pawn), Square(target + offset));
+            updateKeyPiece(makePiece<~c>(Pawn), Square(target + offset));
         }
         // update enpassant square
         if (piece == makePiece<c>(Pawn) && std::abs(source - target) == 16){
@@ -693,6 +950,7 @@ void Board::makemove(Move& move){
             Bitboard epMask = GetPawnAttacks<c>(Square(target + offset));
             if (epMask & Pawns<~c>()){
                 enpassantSquare = Square(target + offset);
+                updateKeyEnPassant(enpassantSquare);
             }
         }
     }
@@ -700,8 +958,11 @@ void Board::makemove(Move& move){
     if (capturedPiece != None){
         halfMoveClock = 0;
         removePiece(capturedPiece, target);
-            // Rook capture loses castle rights
-        if (capturedPiece == makePiece<~c>(Rook)){
+        updateKeyPiece(capturedPiece, target);
+        // Rook capture loses castle rights
+        if (capturedPiece == makePiece<~c>(Rook) && castlingRights)
+        {
+            updateKeyCastling();
             if (target == SQ_A1)
                 castlingRights &= ~whiteQueenSideCastling;
             else if (target == SQ_H1)
@@ -710,19 +971,27 @@ void Board::makemove(Move& move){
                 castlingRights &= ~blackQueenSideCastling;
             else if (target == SQ_H8)
                 castlingRights &= ~blackKingSideCastling;
+            updateKeyCastling();
         }
     }
 
-    if (!promoted(move)){
+    if (!promoted(move))
+    {
         removePiece(piece, source);
         placePiece(piece, target);
+        updateKeyPiece(piece, source);
+        updateKeyPiece(piece, target);
     }
-    else{
+    else
+    {
         removePiece(makePiece<c>(Pawn), source);
         placePiece(piece, target);
+        updateKeyPiece(makePiece<c>(Pawn), source);
+        updateKeyPiece(piece, target);
     }
     // Switch sides
     sideToMove = ~sideToMove;
+    updateKeySideToMove();
 
     // increase fullmoves
     fullMoveCounter++;

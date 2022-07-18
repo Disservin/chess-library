@@ -21,8 +21,9 @@ uint64_t perft(Board& board, int depth) {
 
 int main() {
     Board board = Board();
+    board.print();
     auto t1 = std::chrono::high_resolution_clock::now();
-    uint64_t n = perft(board, 6);
+    uint64_t n = perft(board, 7);
     auto t2 = std::chrono::high_resolution_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
     
