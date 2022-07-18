@@ -20,7 +20,7 @@ uint64_t perft(Board& board, int depth) {
 }
 
 int main() {
-    Board board = Board();
+    Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     board.print();
     auto t1 = std::chrono::high_resolution_clock::now();
     uint64_t n = perft(board, 7);

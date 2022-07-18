@@ -689,9 +689,7 @@ private:
     Piece board[64];
 
     // store previous states
-    State storeInfo[1024];
-
-    uint16_t storeCount;
+    std::vector<State> storeInfo;
 
     // Hashkey
     uint64_t hashKey;
@@ -706,7 +704,7 @@ private:
     Bitboard pinMaskD;
 
     // Doublecheck
-    uint8_t doubleCheck{};
+    uint8_t doubleCheck;
 
     // Occupancy bitboard, done during generateMoves
     Bitboard occupancyUs;
@@ -759,20 +757,16 @@ public:
     // prints the entire board 
     void print();
 
-    template <Color c> Moves generateLegalMoves();
-
     // returns a list of legal moves for current board state
+    template <Color c> Moves generateLegalMoves();
     Moves legal_moves();
 
     template <Color c> void makemove(Move& move);
-
     template <Color c> void unmakemove(Move& move);
-
     void make_move(Move& move);
     void unmake_move(Move& move);
 
     Piece piece_at(Square sq);
-
     PieceType piece_type_at(Square sq);
 
     // checks if a square is being attacked by the given side
@@ -817,7 +811,6 @@ private:
 
     // places a piece on a particular square
     void placePiece(Piece piece, Square sq);
-
     // removes a piece from a particular square
     void removePiece(Piece piece, Square sq);
 
@@ -861,8 +854,7 @@ void Board::makemove(Move& move){
 
     Piece capturedPiece = board[target];
     // Safe important board information
-    storeInfo[storeCount] = State(enpassantSquare, castlingRights, capturedPiece, halfMoveClock);
-    storeCount++;
+    storeInfo.push_back(State(enpassantSquare, castlingRights, capturedPiece, halfMoveClock));
 
     bool enpassant;
     if (target == enpassantSquare) 
@@ -1000,11 +992,11 @@ void Board::makemove(Move& move){
 template <Color c> 
 void Board::unmakemove(Move& move){
     // Retrive important board information
-    storeCount--;
-    State safeState = storeInfo[storeCount];
+    State safeState = storeInfo.back();
     enpassantSquare = safeState.enpassantCopy;
     castlingRights = safeState.castlingRightsCopy;
     halfMoveClock = safeState.halfmoves;
+    storeInfo.pop_back();
 
     // Swap sides and decrement fullmoves
     sideToMove = ~sideToMove;
@@ -1294,8 +1286,6 @@ inline Bitboard Board::LegalPawnMoves(Square sq){
 
 template <Color c> 
 inline Bitboard Board::LegalKnightMoves(Square sq){
-    // Only king can move at double checks
-    if (doubleCheck == 2) return 0ULL;
     // Pinned Knights cannot move anywhere
     if ((pinMaskHV | pinMaskD) & (1ULL << sq)) return 0ULL;
     return GetKnightAttacks(sq) & EnemyEmpty<c>() & checkMask;
@@ -1334,8 +1324,9 @@ inline Bitboard Board::LegalKingMoves(Square sq){
     if (!king_moves) return 0ULL;
     // remove the king (which may be blocking the ray from a slider)
     // check if the to square is attacked by the enemy and if so remove it
-    removePiece(makePiece<c>(King), sq);
     Bitboard legal_king = 0ULL;
+
+    removePiece(makePiece<c>(King), sq);
     while (king_moves){
         Square index = poplsb(king_moves);
         if (isSquareAttacked<~c>(index)) continue;
@@ -1394,12 +1385,12 @@ Moves Board::generateLegalMoves() {
     Moves moveList{};
     init<c>(KingSq<c>());
 
-    Bitboard pawn_mask = Pawns<c>();
+    Bitboard pawn_mask   = Pawns<c>();
     Bitboard knight_mask = Knights<c>();
     Bitboard bishop_mask = Bishops<c>();
-    Bitboard rook_mask = Rooks<c>();
-    Bitboard queen_mask = Queens<c>();
-    Bitboard king_mask = Kings<c>();
+    Bitboard rook_mask   = Rooks<c>();
+    Bitboard queen_mask  = Queens<c>();
+
     if (doubleCheck < 2){
         while (pawn_mask){
             Square source = poplsb(pawn_mask);
@@ -1451,7 +1442,7 @@ Moves Board::generateLegalMoves() {
         }
     }
 
-    const Square source = bsf(king_mask);
+    const Square source = bsf(Kings<c>());
     Bitboard moves = LegalKingMoves<c>(source);
     while (moves){
         const Square target = poplsb(moves);

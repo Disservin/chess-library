@@ -166,6 +166,8 @@ void Board::parseFEN(std::string FEN) {
     // reset board info
     memset(PiecesBB, 0ULL, sizeof(PiecesBB));
     memset(board, None, sizeof(board));
+    storeInfo.clear();
+    storeInfo.reserve(1024);
 
     // reset enpassant square
     enpassantSquare = NO_SQ;
