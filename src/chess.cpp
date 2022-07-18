@@ -327,15 +327,21 @@ void Board::hash() {
             epMask = GetPawnAttacks<White>(enpassantSquare);
             pawns = Pawns<Black>();
         }
-        else
+        else if (rank_of(enpassantSquare) == 5)
         {
             epMask = GetPawnAttacks<Black>(enpassantSquare);
             pawns = Pawns<White>();
         }
+        else
+        {
+            // Turn hash
+            if (sideToMove == White) updateKeySideToMove();
+            // Castle hash
+            updateKeyCastling();
+            return;
+        }
         
-        if (epMask & pawns){
-            updateKeyEnPassant(enpassantSquare);
-        }   
+        if (epMask & pawns) updateKeyEnPassant(enpassantSquare);
     }
     // Turn hash
     if (sideToMove == White) updateKeySideToMove();
