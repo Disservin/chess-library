@@ -513,23 +513,23 @@ static constexpr int hash_piece[12] =
 };
 
 // returns the rank of a given square
-uint8_t rank_of(Square sq);
+constexpr uint8_t rank_of(Square sq);
 
 // returns the file of a given square
-uint8_t file_of(Square sq);
+constexpr uint8_t file_of(Square sq);
 
 // returns diagonal of given square
-uint8_t diagonal_of(Square sq);
+constexpr uint8_t diagonal_of(Square sq);
 
 // returns anti diagonal of given square
-uint8_t anti_diagonal_of(Square sq);
+constexpr uint8_t anti_diagonal_of(Square sq);
 
 // returns the piece type
-PieceType piece_type(Piece p);
+constexpr PieceType piece_type(Piece p);
 
-Color piece_color(Piece p);
+constexpr Color piece_color(Piece p);
 
-int squareDistance(Square a, Square b);
+constexpr int squareDistance(Square a, Square b);
 
 template <Color c>
 Piece makePiece(PieceType type) {

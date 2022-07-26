@@ -66,35 +66,35 @@ void printBitboard(Bitboard bb) {
 \**********************************/
 
 // returns the rank of a given square
-uint8_t rank_of(Square sq) {
+constexpr uint8_t rank_of(Square sq) {
     return sq >> 3;
 }
 
 // returns the file of a given square
-uint8_t file_of(Square sq) {
+constexpr uint8_t file_of(Square sq) {
     return sq & 7;
 }
 
 // returns diagonal of given square
-uint8_t diagonal_of(Square sq) {
+constexpr uint8_t diagonal_of(Square sq) {
     return 7 + rank_of(sq) - file_of(sq);
 }
 
 // returns anti diagonal of given square
-uint8_t anti_diagonal_of(Square sq) {
+constexpr uint8_t anti_diagonal_of(Square sq) {
     return rank_of(sq) + file_of(sq);
 }
 
 // returns the piece type
-PieceType piece_type(Piece p){
+constexpr PieceType piece_type(Piece p){
     return PieceType(p % 6);
 }
 
-Color piece_color(Piece p){
+constexpr Color piece_color(Piece p){
     return Color(p / 6);
 }
 
-int squareDistance(Square a, Square b) {
+constexpr int squareDistance(Square a, Square b) {
     return std::max(std::abs(file_of(a) - file_of(b)), std::abs(rank_of(a) - rank_of(b)));
 }
 
