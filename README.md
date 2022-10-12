@@ -68,9 +68,6 @@ Move make(PieceType piece = NONETYPE, Square source = NO_SQ, Square target = NO_
 template <PieceType piece, bool promoted> Move make(Square source = NO_SQ, Square target = NO_SQ)
 
 /// @brief print the uci representation of a move
-<<<<<<< Updated upstream
-std::string uciRep(Move move)
-=======
 std::string uciRep(Move move);
 
 /// @brief requires the move to be 100% legal
@@ -84,17 +81,10 @@ void Board::makeNullMove();
 
 /// @brief make a null move
 void Board::unmakeNullMove();
->>>>>>> Stashed changes
 ```
 
 Intrinsic functions
 ```cpp
-<<<<<<< Updated upstream
-Square bsf(U64 mask)
-Square bsr(U64 mask)
-Square popcount(U64 mask)
-Square poplsb(U64 &mask)
-=======
 /// @brief return the least significant bit
 Square bsf(U64 mask);
 
@@ -106,22 +96,10 @@ uint8_t popcount(U64 mask);
 
 /// @brief return the least significant bit and remove it
 Square poplsb(U64 &mask);
->>>>>>> Stashed changes
 ```
 
 Square related functions
 ```cpp
-<<<<<<< Updated upstream
-uint8_t square_file(Square sq)
-
-uint8_t square_rank(Square sq)
-
-uint8_t square_distance(Square a, Square b)
-
-uint8_t manhatten_distance(Square sq1, Square sq2)
-
-Color get_square_color(Square square)
-=======
 /// @brief return the file a = 0, b = 1, c = 2, d = 3, e = 4, f = 5, g = 6, h = 7
 uint8_t square_file(Square sq);
 
@@ -136,34 +114,23 @@ uint8_t manhatten_distance(Square sq1, Square sq2);
 
 /// @brief color of the square
 Color get_square_color(Square square);
->>>>>>> Stashed changes
 
 ```
 
 Piece specific functions
 
 ```cpp
-<<<<<<< Updated upstream
-PieceType type_of_piece(Piece piece)
-Piece makePiece(PieceType type, Color c)
-=======
 /// @brief return the PieceType of a piece
 PieceType type_of_piece(Piece piece);
 
 /// @brief make a Piece 
 Piece makePiece(PieceType type, Color c);
->>>>>>> Stashed changes
 ```
 
 Helper functions
 ```cpp
-<<<<<<< Updated upstream
-
-void printBitboard(U64 bb)
-=======
 /// @brief print any bitboard
 void printBitboard(U64 bb);
->>>>>>> Stashed changes
 ```
 
 Attack move functions
@@ -174,13 +141,6 @@ uint64_t PawnAttacks(Square sq, Color c)
 
 uint64_t KnightAttacks(Square sq)
 
-<<<<<<< Updated upstream
-uint64_t BishopAttacks(Square sq, uint64_t occupied)
-
-uint64_t RookAttacks(Square sq, uint64_t occupied)
-
-uint64_t QueenAttacks(Square sq, uint64_t occupied)
-=======
 /// @brief occupied = occupancy of both sides
 uint64_t BishopAttacks(Square sq, uint64_t occupied);
 
@@ -189,7 +149,6 @@ uint64_t RookAttacks(Square sq, uint64_t occupied);
 
 /// @brief occupied = occupancy of both sides
 uint64_t QueenAttacks(Square sq, uint64_t occupied);
->>>>>>> Stashed changes
 
 uint64_t KingAttacks(Square sq)
 ```
@@ -197,29 +156,18 @@ uint64_t KingAttacks(Square sq)
 Board class functions
 
 ```cpp
-<<<<<<< Updated upstream
-Board::Board(std::string fen)
-
-void Board::applyFen(std::string fen, bool updateAcc);
-=======
 Board::Board(std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
 void Board::applyFen(std::string fen);
->>>>>>> Stashed changes
 std::string Board::getFen();
 
 void Board::print();
 
-<<<<<<< Updated upstream
-Piece Board::pieceAtBB(Square sq)
-Piece Board::pieceAtB(Square sq)
-=======
 /// @brief uses bitboards to test what piece is on the square
 Piece Board::pieceAtBB(Square sq);
 
 /// @brief uses an array lookup to fetch the piece
 Piece Board::pieceAtB(Square sq);
->>>>>>> Stashed changes
 
 /// @brief detects if the current board is a repetition
 bool Board::isRepetition(int draw = 3);
