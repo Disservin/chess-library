@@ -49,92 +49,92 @@ Move specific functions
 ```cpp
 
 /// @brief return the from square for a move
-Square from(Move move) return 
+Square from(Move move); 
 
 /// @brief return the to square for a move
-Square to(Move move)
+Square to(Move move);
 
 /// @brief return the piecetype of the moved piece
-PieceType piece(Move move)
+PieceType piece(Move move);
 
 /// @brief in case the move is a promotion it will return true
 /// and piece(move) will return the promotion piece type
-bool promoted(Move move)
+bool promoted(Move move);
 
 /// @brief makes a move
-Move make(PieceType piece = NONETYPE, Square source = NO_SQ, Square target = NO_SQ, bool promoted = false)
+Move make(PieceType piece = NONETYPE, Square source = NO_SQ, Square target = NO_SQ, bool promoted = false);
 
 /// @brief make a move
-template <PieceType piece, bool promoted> Move make(Square source = NO_SQ, Square target = NO_SQ)
+template <PieceType piece, bool promoted> Move make(Square source = NO_SQ, Square target = NO_SQ);
 
 /// @brief print the uci representation of a move
-std::string uciRep(Move move)
+std::string uciRep(Move move);
 ```
 
 Intrinsic functions
 ```cpp
-Square bsf(U64 mask)
-Square bsr(U64 mask)
-Square popcount(U64 mask)
-Square poplsb(U64 &mask)
+Square bsf(U64 mask);
+Square bsr(U64 mask);
+Square popcount(U64 mask);
+Square poplsb(U64 &mask);
 ```
 
 Square related functions
 ```cpp
-uint8_t square_file(Square sq)
+uint8_t square_file(Square sq);
 
-uint8_t square_rank(Square sq)
+uint8_t square_rank(Square sq);
 
-uint8_t square_distance(Square a, Square b)
+uint8_t square_distance(Square a, Square b);
 
-uint8_t manhatten_distance(Square sq1, Square sq2)
+uint8_t manhatten_distance(Square sq1, Square sq2);
 
-Color get_square_color(Square square)
+Color get_square_color(Square square);
 
 ```
 
 Piece specific functions
 
 ```cpp
-PieceType type_of_piece(Piece piece)
-Piece makePiece(PieceType type, Color c)
+PieceType type_of_piece(Piece piece);
+Piece makePiece(PieceType type, Color c);
 ```
 
 Helper functions
 ```cpp
 
-void printBitboard(U64 bb)
+void printBitboard(U64 bb);
 ```
 
 Attack move functions
 
 ```cpp
 
-uint64_t PawnAttacks(Square sq, Color c)
+uint64_t PawnAttacks(Square sq, Color c);
 
-uint64_t KnightAttacks(Square sq)
+uint64_t KnightAttacks(Square sq);
 
-uint64_t BishopAttacks(Square sq, uint64_t occupied)
+uint64_t BishopAttacks(Square sq, uint64_t occupied);
 
-uint64_t RookAttacks(Square sq, uint64_t occupied)
+uint64_t RookAttacks(Square sq, uint64_t occupied);
 
-uint64_t QueenAttacks(Square sq, uint64_t occupied)
+uint64_t QueenAttacks(Square sq, uint64_t occupied);
 
-uint64_t KingAttacks(Square sq)
+uint64_t KingAttacks(Square sq);
 ```
 
 Board class functions
 
 ```cpp
-Board::Board(std::string fen)
+Board::Board(std::string fen);
 
-void Board::applyFen(std::string fen, bool updateAcc);
-std::string Board::getFen();
+void Board::applyFen(std::string fen, bool updateAcc);;
+std::string Board::getFen();;
 
-void Board::print();
+void Board::print();;
 
-Piece Board::pieceAtBB(Square sq)
-Piece Board::pieceAtB(Square sq)
+Piece Board::pieceAtBB(Square sq);
+Piece Board::pieceAtB(Square sq);
 
 bool Board::isRepetition(int draw);
 
