@@ -920,7 +920,7 @@ class Board
     /// @brief  applys a new Fen to the board
     /// @param fen
     /// @param updateAcc
-    void applyFen(std::string fen, bool updateAcc = true);
+    void applyFen(std::string fen);
 
     /// @brief returns the current fen
     /// @return
@@ -932,7 +932,7 @@ class Board
     /// @brief detects if the position is a repetition by default 2, fide would be 3
     /// @param draw
     /// @return
-    bool isRepetition(int draw = 1);
+    bool isRepetition(int draw = 3);
 
     /// @brief only pawns + king = true else false
     /// @param c
@@ -1072,7 +1072,7 @@ inline Board::Board(std::string fen)
     prevStates.reserve(MAX_PLY);
     hashHistory.reserve(512);
 
-    applyFen(fen, true);
+    applyFen(fen);
 
     sideToMove = White;
     enPassantSquare = NO_SQ;
@@ -1130,7 +1130,7 @@ inline Piece Board::pieceAtB(Square sq)
     return board[sq];
 }
 
-inline void Board::applyFen(std::string fen, bool updateAcc)
+inline void Board::applyFen(std::string fen)
 {
     for (int i = 0; i < 12; i++)
     {
@@ -1158,10 +1158,7 @@ inline void Board::applyFen(std::string fen, bool updateAcc)
         if (charToPiece.find(curr) != charToPiece.end())
         {
             Piece piece = charToPiece[curr];
-            if (updateAcc)
-                placePiece(piece, square);
-            else
-                placePiece(piece, square);
+            placePiece(piece, square);
             square = Square(square + 1);
         }
         else if (curr == '/')
