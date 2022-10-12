@@ -542,7 +542,7 @@ struct State
 #endif
 
 PACK(struct ExtMove {
-    int value = -100'000;
+    // int value = -100'000;
     Move move;
 });
 
@@ -551,15 +551,15 @@ inline constexpr bool operator==(const ExtMove &a, const ExtMove &b)
     return a.move == b.move;
 }
 
-inline constexpr bool operator>(const ExtMove &a, const ExtMove &b)
-{
-    return a.value > b.value;
-}
+// inline constexpr bool operator>(const ExtMove &a, const ExtMove &b)
+// {
+//     return a.value > b.value;
+// }
 
-inline constexpr bool operator<(const ExtMove &a, const ExtMove &b)
-{
-    return a.value < b.value;
-}
+// inline constexpr bool operator<(const ExtMove &a, const ExtMove &b)
+// {
+//     return a.value < b.value;
+// }
 
 struct Movelist
 {
@@ -569,7 +569,7 @@ struct Movelist
     inline void Add(Move move)
     {
         list[size].move = move;
-        list[size].value = 0;
+        // list[size].value = 0;
         size++;
     }
 
@@ -818,21 +818,6 @@ inline uint64_t KnightAttacks(Square sq)
     return KNIGHT_ATTACKS_TABLE[sq];
 }
 
-inline uint64_t BishopAttacks(Square sq, uint64_t occupied)
-{
-    return GetBishopAttacks(sq, occupied);
-}
-
-inline uint64_t RookAttacks(Square sq, uint64_t occupied)
-{
-    return GetRookAttacks(sq, occupied);
-}
-
-inline uint64_t QueenAttacks(Square sq, uint64_t occupied)
-{
-    return GetQueenAttacks(sq, occupied);
-}
-
 inline uint64_t KingAttacks(Square sq)
 {
     return KING_ATTACKS_TABLE[sq];
@@ -901,7 +886,7 @@ class Board
     std::vector<State> prevStates;
 
     U64 Bitboards[12] = {};
-    Piece board[MAX_SQ];
+    Piece board[MAX_SQ] = {None};
 
     /// @brief initialise the board class
     /// @param fen
@@ -1066,8 +1051,10 @@ class Board
     void removeCastlingRightsRook(Color c, Square sq);
 };
 
-inline Board::Board(std::string fen)
+Board::Board(std::string fen)
 {
+    std::fill(std::begin(board), std::end(board), None);
+
     initializeLookupTables();
     prevStates.reserve(MAX_PLY);
     hashHistory.reserve(512);
@@ -1092,8 +1079,6 @@ inline Board::Board(std::string fen)
     enemyEmptyBB = EnemyEmpty(White);
 
     hashKey = zobristHash();
-
-    std::fill(std::begin(board), std::end(board), None);
 }
 
 inline Piece Board::pieceAtBB(Square sq)
@@ -1130,7 +1115,7 @@ inline Piece Board::pieceAtB(Square sq)
     return board[sq];
 }
 
-inline void Board::applyFen(std::string fen)
+void Board::applyFen(std::string fen)
 {
     for (int i = 0; i < 12; i++)
     {
@@ -1222,6 +1207,7 @@ inline std::string Board::getFen()
     int sq;
     char letter;
     std::string fen = "";
+
     for (int rank = 7; rank >= 0; rank--)
     {
         int free_space = 0;
@@ -1229,6 +1215,7 @@ inline std::string Board::getFen()
         {
             sq = rank * 8 + file;
             Piece piece = pieceAtB(Square(sq));
+
             if (piece != None)
             {
                 if (free_space)
@@ -2141,6 +2128,7 @@ template <Color c, Movetype mt> void LegalPawnMovesAll(Board &board, Movelist &m
                 board.removePiece(ourPawn, from);
                 board.removePiece(theirPawn, tP);
                 board.placePiece(ourPawn, ep);
+
                 if (!((RookAttacks(kSQ, board.All()) & (enemyQueenRook))))
                     movelist.Add(make<PAWN, false>(from, to));
                 board.placePiece(ourPawn, from);
@@ -2234,6 +2222,7 @@ template <Movetype mt> U64 LegalBishopMoves(const Board &board, Square sq)
         return 0ULL;
     if (board.pinD & (1ULL << sq))
         return BishopAttacks(sq, board.occAll) & bb & board.pinD & board.checkMask;
+
     return BishopAttacks(sq, board.occAll) & bb & board.checkMask;
 }
 
@@ -2310,10 +2299,12 @@ template <Color c> U64 LegalKingMovesCastling(const Board &board, Square sq)
 // all legal moves for a position
 template <Color c, Movetype mt> void legalmoves(Board &board, Movelist &movelist)
 {
-    init<c>(board, board.KingSQ<c>());
+    Square KSQ = board.KingSQ<c>();
+    init<c>(board, KSQ);
 
-    Square from = board.KingSQ<c>();
+    Square from = KSQ;
     U64 moves;
+
     if (!board.castlingRights || board.checkMask != DEFAULT_CHECKMASK || mt == CAPTURE)
         moves = LegalKingMoves<mt>(board, from);
     else
