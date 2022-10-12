@@ -1,4 +1,4 @@
-#include "chess_lib.hpp"
+#include "chess.hpp"
 
 using namespace Chess;
 
@@ -29,7 +29,7 @@ int main()
     Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     board.print();
     auto t1 = std::chrono::high_resolution_clock::now();
-    uint64_t n = perft(board, 7);
+    uint64_t n = perft(board, 6);
     auto t2 = std::chrono::high_resolution_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 

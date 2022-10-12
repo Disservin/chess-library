@@ -27,6 +27,112 @@ namespace Chess
 #define MAX_SQ 64
 #define DEFAULT_POS std::string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 
+enum Movetype : uint8_t
+{
+    ALL,
+    CAPTURE,
+    QUIET
+};
+
+enum Color : uint8_t
+{
+    White,
+    Black,
+    NO_COLOR
+};
+
+constexpr Color operator~(Color C)
+{
+    return Color(C ^ Black);
+}
+
+enum Phase : int
+{
+    MG,
+    EG
+};
+
+enum Piece : uint8_t
+{
+    WhitePawn,
+    WhiteKnight,
+    WhiteBishop,
+    WhiteRook,
+    WhiteQueen,
+    WhiteKing,
+    BlackPawn,
+    BlackKnight,
+    BlackBishop,
+    BlackRook,
+    BlackQueen,
+    BlackKing,
+    None
+};
+
+enum PieceType : uint8_t
+{
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    QUEEN,
+    KING,
+    NONETYPE
+};
+
+// clang-format off
+enum Square : uint8_t {
+    SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
+    SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
+    SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
+    SQ_A4, SQ_B4, SQ_C4, SQ_D4, SQ_E4, SQ_F4, SQ_G4, SQ_H4,
+    SQ_A5, SQ_B5, SQ_C5, SQ_D5, SQ_E5, SQ_F5, SQ_G5, SQ_H5,
+    SQ_A6, SQ_B6, SQ_C6, SQ_D6, SQ_E6, SQ_F6, SQ_G6, SQ_H6,
+    SQ_A7, SQ_B7, SQ_C7, SQ_D7, SQ_E7, SQ_F7, SQ_G7, SQ_H7,
+    SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
+    NO_SQ
+};
+
+/// @brief convert a square number to a string
+const std::string squareToString[64] = {
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+};
+
+// clang-format on
+
+enum CastlingRight : uint8_t
+{
+    wk = 1,
+    wq = 2,
+    bk = 4,
+    bq = 8
+};
+
+enum Direction : int8_t
+{
+    NORTH = 8,
+    WEST = -1,
+    SOUTH = -8,
+    EAST = 1,
+    NORTH_EAST = 9,
+    NORTH_WEST = 7,
+    SOUTH_WEST = -9,
+    SOUTH_EAST = -7
+};
+
+enum Move : uint16_t
+{
+    NO_MOVE = 0,
+    NULL_MOVE = 65
+};
+
 static constexpr int MAX_PLY = 120;
 static constexpr int MAX_MOVES = 128;
 
@@ -346,112 +452,6 @@ static constexpr U64 MASK_ANTI_DIAGONAL[15] = {0x1,
                                                0x2040800000000000,
                                                0x4080000000000000,
                                                0x8000000000000000};
-
-enum Movetype : uint8_t
-{
-    ALL,
-    CAPTURE,
-    QUIET
-};
-
-enum Color : uint8_t
-{
-    White,
-    Black,
-    NO_COLOR
-};
-
-constexpr Color operator~(Color C)
-{
-    return Color(C ^ Black);
-}
-
-enum Phase : int
-{
-    MG,
-    EG
-};
-
-enum Piece : uint8_t
-{
-    WhitePawn,
-    WhiteKnight,
-    WhiteBishop,
-    WhiteRook,
-    WhiteQueen,
-    WhiteKing,
-    BlackPawn,
-    BlackKnight,
-    BlackBishop,
-    BlackRook,
-    BlackQueen,
-    BlackKing,
-    None
-};
-
-enum PieceType : uint8_t
-{
-    PAWN,
-    KNIGHT,
-    BISHOP,
-    ROOK,
-    QUEEN,
-    KING,
-    NONETYPE
-};
-
-// clang-format off
-enum Square : uint8_t {
-    SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
-    SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
-    SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
-    SQ_A4, SQ_B4, SQ_C4, SQ_D4, SQ_E4, SQ_F4, SQ_G4, SQ_H4,
-    SQ_A5, SQ_B5, SQ_C5, SQ_D5, SQ_E5, SQ_F5, SQ_G5, SQ_H5,
-    SQ_A6, SQ_B6, SQ_C6, SQ_D6, SQ_E6, SQ_F6, SQ_G6, SQ_H6,
-    SQ_A7, SQ_B7, SQ_C7, SQ_D7, SQ_E7, SQ_F7, SQ_G7, SQ_H7,
-    SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
-    NO_SQ
-};
-
-/// @brief convert a square number to a string
-const std::string squareToString[64] = {
-    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-};
-
-// clang-format on
-
-enum CastlingRight : uint8_t
-{
-    wk = 1,
-    wq = 2,
-    bk = 4,
-    bq = 8
-};
-
-enum Direction : int8_t
-{
-    NORTH = 8,
-    WEST = -1,
-    SOUTH = -8,
-    EAST = 1,
-    NORTH_EAST = 9,
-    NORTH_WEST = 7,
-    SOUTH_WEST = -9,
-    SOUTH_EAST = -7
-};
-
-enum Move : uint16_t
-{
-    NO_MOVE = 0,
-    NULL_MOVE = 65
-};
 
 static std::unordered_map<Piece, char> pieceToChar({{WhitePawn, 'P'},
                                                     {WhiteKnight, 'N'},
@@ -1487,7 +1487,7 @@ inline void Board::makeMove(Move move)
     hashKey ^= updateKeyCastling();
 
     // *****************************
-    // UPDATE PIECES AND NNUE
+    // UPDATE PIECES
     // *****************************
 
     if (pt == KING)
