@@ -81,6 +81,11 @@ void Board::makeNullMove();
 
 /// @brief make a null move
 void Board::unmakeNullMove();
+
+/// @brief generate ALL/CAPTURE/QUIET moves 
+template <Movetype mt> void legalmoves(Board &board, Movelist &movelist);
+
+
 ```
 
 Intrinsic functions
