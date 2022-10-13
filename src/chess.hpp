@@ -1051,7 +1051,7 @@ class Board
     void removeCastlingRightsRook(Color c, Square sq);
 };
 
-Board::Board(std::string fen)
+inline Board::Board(std::string fen)
 {
     std::fill(std::begin(board), std::end(board), None);
 
@@ -1115,7 +1115,7 @@ inline Piece Board::pieceAtB(Square sq)
     return board[sq];
 }
 
-void Board::applyFen(std::string fen)
+inline void Board::applyFen(std::string fen)
 {
     for (int i = 0; i < 12; i++)
     {
