@@ -1873,10 +1873,9 @@ template <Color c> void seenSquares(Board &board)
 {
     U64 pawns = board.Pawns<c>();
     U64 knights = board.Knights<c>();
-    U64 bishops = board.Bishops<c>();
-    U64 rooks = board.Rooks<c>();
     U64 queens = board.Queens<c>();
-    U64 kings = board.Kings<c>();
+    U64 bishops = board.Bishops<c>() | queens;
+    U64 rooks = board.Rooks<c>() | queens;
 
     board.seen = 0ULL;
     Square kSq = board.KingSQ<~c>();
@@ -1899,16 +1898,9 @@ template <Color c> void seenSquares(Board &board)
         Square index = poplsb(rooks);
         board.seen |= RookAttacks(index, board.occAll);
     }
-    while (queens)
-    {
-        Square index = poplsb(queens);
-        board.seen |= QueenAttacks(index, board.occAll);
-    }
-    while (kings)
-    {
-        Square index = poplsb(kings);
-        board.seen |= KingAttacks(index);
-    }
+
+    Square index = bsf(board.Kings<c>());
+    board.seen |= KingAttacks(index);
 
     board.occAll |= (1ULL << kSq);
 }
