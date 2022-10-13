@@ -49,23 +49,23 @@ Move specific functions
 ```cpp
 
 /// @brief return the from square for a move
-Square from(Move move) return 
+Square from(Move move);
 
 /// @brief return the to square for a move
-Square to(Move move)
+Square to(Move move);
 
 /// @brief return the piecetype of the moved piece
-PieceType piece(Move move)
+PieceType piece(Move move);
 
 /// @brief in case the move is a promotion it will return true
 /// and piece(move) will return the promotion piece type
-bool promoted(Move move)
+bool promoted(Move move);
 
 /// @brief makes a move
-Move make(PieceType piece = NONETYPE, Square source = NO_SQ, Square target = NO_SQ, bool promoted = false)
+Move make(PieceType piece = NONETYPE, Square source = NO_SQ, Square target = NO_SQ, bool promoted = false);
 
 /// @brief make a move
-template <PieceType piece, bool promoted> Move make(Square source = NO_SQ, Square target = NO_SQ)
+template <PieceType piece, bool promoted> Move make(Square source = NO_SQ, Square target = NO_SQ);
 
 /// @brief print the uci representation of a move
 std::string uciRep(Move move);
@@ -137,9 +137,9 @@ Attack move functions
 
 ```cpp
 
-uint64_t PawnAttacks(Square sq, Color c)
+uint64_t PawnAttacks(Square sq, Color c);
 
-uint64_t KnightAttacks(Square sq)
+uint64_t KnightAttacks(Square sq);
 
 /// @brief occupied = occupancy of both sides
 uint64_t BishopAttacks(Square sq, uint64_t occupied);
@@ -150,7 +150,7 @@ uint64_t RookAttacks(Square sq, uint64_t occupied);
 /// @brief occupied = occupancy of both sides
 uint64_t QueenAttacks(Square sq, uint64_t occupied);
 
-uint64_t KingAttacks(Square sq)
+uint64_t KingAttacks(Square sq);
 ```
 
 Board class functions
