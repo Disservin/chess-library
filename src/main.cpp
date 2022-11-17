@@ -43,8 +43,7 @@ class PerftTest
 
         if (n != expectedNodeCount)
         {
-            std::cout << "Wrong bench for fen" << board.getFen() << std::endl;
-            return n;
+            ss << "Wrong node count ";
         }
 
         ss << "depth " << std::left << std::setw(2) << depth << " time " << std::setw(5) << ms << " nodes "
