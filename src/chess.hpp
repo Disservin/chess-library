@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <bitset>
+#include <cassert>
 #include <chrono>
 #include <iostream>
 #include <sstream>
@@ -21,9 +22,7 @@ namespace Chess
 // *******************
 // TYPES DEFINITION
 // *******************
-#define U64 unsigned long long
-#define Score int16_t
-#define TimePoint std::chrono::high_resolution_clock
+#define U64 uint64_t
 #define MAX_SQ 64
 #define DEFAULT_POS std::string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 
@@ -34,22 +33,17 @@ enum Movetype : uint8_t
     QUIET
 };
 
+enum Move : uint16_t
+{
+    NO_MOVE = 0,
+    NULL_MOVE = 65
+};
+
 enum Color : uint8_t
 {
     White,
     Black,
     NO_COLOR
-};
-
-constexpr Color operator~(Color C)
-{
-    return Color(C ^ Black);
-}
-
-enum Phase : int
-{
-    MG,
-    EG
 };
 
 enum Piece : uint8_t
@@ -80,32 +74,29 @@ enum PieceType : uint8_t
     NONETYPE
 };
 
-// clang-format off
-enum Square : uint8_t {
-    SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
-    SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
-    SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
-    SQ_A4, SQ_B4, SQ_C4, SQ_D4, SQ_E4, SQ_F4, SQ_G4, SQ_H4,
-    SQ_A5, SQ_B5, SQ_C5, SQ_D5, SQ_E5, SQ_F5, SQ_G5, SQ_H5,
-    SQ_A6, SQ_B6, SQ_C6, SQ_D6, SQ_E6, SQ_F6, SQ_G6, SQ_H6,
-    SQ_A7, SQ_B7, SQ_C7, SQ_D7, SQ_E7, SQ_F7, SQ_G7, SQ_H7,
-    SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
-    NO_SQ
+enum Rank : uint8_t
+{
+    RANK_1,
+    RANK_2,
+    RANK_3,
+    RANK_4,
+    RANK_5,
+    RANK_6,
+    RANK_7,
+    RANK_8
 };
 
-/// @brief convert a square number to a string
-const std::string squareToString[64] = {
-    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+enum File : uint8_t
+{
+    FILE_A,
+    FILE_B,
+    FILE_C,
+    FILE_D,
+    FILE_E,
+    FILE_F,
+    FILE_G,
+    FILE_H
 };
-
-// clang-format on
 
 enum CastlingRight : uint8_t
 {
@@ -127,11 +118,32 @@ enum Direction : int8_t
     SOUTH_EAST = -7
 };
 
-enum Move : uint16_t
-{
-    NO_MOVE = 0,
-    NULL_MOVE = 65
+// clang-format off
+enum Square : uint8_t {
+    SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
+    SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
+    SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
+    SQ_A4, SQ_B4, SQ_C4, SQ_D4, SQ_E4, SQ_F4, SQ_G4, SQ_H4,
+    SQ_A5, SQ_B5, SQ_C5, SQ_D5, SQ_E5, SQ_F5, SQ_G5, SQ_H5,
+    SQ_A6, SQ_B6, SQ_C6, SQ_D6, SQ_E6, SQ_F6, SQ_G6, SQ_H6,
+    SQ_A7, SQ_B7, SQ_C7, SQ_D7, SQ_E7, SQ_F7, SQ_G7, SQ_H7,
+    SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
+    NO_SQ
 };
+
+/// @brief convert a square number to a string
+const std::string squareToString[MAX_SQ] = {
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+};
+
+// clang-format on
 
 static constexpr int MAX_PLY = 120;
 static constexpr int MAX_MOVES = 128;
@@ -142,44 +154,64 @@ static constexpr U64 WQ_CASTLE_MASK = (1ULL << SQ_D1) | (1ULL << SQ_C1) | (1ULL 
 static constexpr U64 BK_CASTLE_MASK = (1ULL << SQ_F8) | (1ULL << SQ_G8);
 static constexpr U64 BQ_CASTLE_MASK = (1ULL << SQ_D8) | (1ULL << SQ_C8) | (1ULL << SQ_B8);
 
+// all 64 bits set
 static constexpr U64 DEFAULT_CHECKMASK = 18446744073709551615ULL;
+
+// *******************
+// Type operations
+// *******************
+
+constexpr Color operator~(Color C)
+{
+    return Color(C ^ Black);
+}
+
+#define INCR_OP_ON(T)                                                                                                  \
+    constexpr inline T &operator++(T &p)                                                                               \
+    {                                                                                                                  \
+        return p = static_cast<T>(static_cast<int>(p) + 1);                                                            \
+    }                                                                                                                  \
+    constexpr inline T operator++(T &p, int)                                                                           \
+    {                                                                                                                  \
+        auto old = p;                                                                                                  \
+        ++p;                                                                                                           \
+        return old;                                                                                                    \
+    }
+
+INCR_OP_ON(Piece)
+INCR_OP_ON(Square)
+INCR_OP_ON(PieceType)
+INCR_OP_ON(Rank)
+INCR_OP_ON(File)
+
+#undef INCR_OP_ON
+
+#define BASE_OP_ON(T)                                                                                                  \
+    inline constexpr Square operator+(Square s, T d)                                                                   \
+    {                                                                                                                  \
+        return Square(int(s) + int(d));                                                                                \
+    }                                                                                                                  \
+    inline constexpr Square operator-(Square s, T d)                                                                   \
+    {                                                                                                                  \
+        return Square(int(s) - int(d));                                                                                \
+    }                                                                                                                  \
+    inline constexpr Square &operator+=(Square &s, T d)                                                                \
+    {                                                                                                                  \
+        return s = s + d;                                                                                              \
+    }                                                                                                                  \
+    inline constexpr Square &operator-=(Square &s, T d)                                                                \
+    {                                                                                                                  \
+        return s = s - d;                                                                                              \
+    }
+
+BASE_OP_ON(Direction)
+
+#undef BASE_OP_ON
 
 // clang-format off
 
-// pre calculated lookup table for knight attacks
-static constexpr U64 KNIGHT_ATTACKS_TABLE[64] = {
-    0x0000000000020400, 0x0000000000050800, 0x00000000000A1100, 0x0000000000142200, 0x0000000000284400,
-    0x0000000000508800, 0x0000000000A01000, 0x0000000000402000, 0x0000000002040004, 0x0000000005080008,
-    0x000000000A110011, 0x0000000014220022, 0x0000000028440044, 0x0000000050880088, 0x00000000A0100010,
-    0x0000000040200020, 0x0000000204000402, 0x0000000508000805, 0x0000000A1100110A, 0x0000001422002214,
-    0x0000002844004428, 0x0000005088008850, 0x000000A0100010A0, 0x0000004020002040, 0x0000020400040200,
-    0x0000050800080500, 0x00000A1100110A00, 0x0000142200221400, 0x0000284400442800, 0x0000508800885000,
-    0x0000A0100010A000, 0x0000402000204000, 0x0002040004020000, 0x0005080008050000, 0x000A1100110A0000,
-    0x0014220022140000, 0x0028440044280000, 0x0050880088500000, 0x00A0100010A00000, 0x0040200020400000,
-    0x0204000402000000, 0x0508000805000000, 0x0A1100110A000000, 0x1422002214000000, 0x2844004428000000,
-    0x5088008850000000, 0xA0100010A0000000, 0x4020002040000000, 0x0400040200000000, 0x0800080500000000,
-    0x1100110A00000000, 0x2200221400000000, 0x4400442800000000, 0x8800885000000000, 0x100010A000000000,
-    0x2000204000000000, 0x0004020000000000, 0x0008050000000000, 0x00110A0000000000, 0x0022140000000000,
-    0x0044280000000000, 0x0088500000000000, 0x0010A00000000000, 0x0020400000000000};
-
-// pre calculated lookup table for king attacks
-static constexpr U64 KING_ATTACKS_TABLE[64] = {
-    0x0000000000000302, 0x0000000000000705, 0x0000000000000E0A, 0x0000000000001C14, 0x0000000000003828,
-    0x0000000000007050, 0x000000000000E0A0, 0x000000000000C040, 0x0000000000030203, 0x0000000000070507,
-    0x00000000000E0A0E, 0x00000000001C141C, 0x0000000000382838, 0x0000000000705070, 0x0000000000E0A0E0,
-    0x0000000000C040C0, 0x0000000003020300, 0x0000000007050700, 0x000000000E0A0E00, 0x000000001C141C00,
-    0x0000000038283800, 0x0000000070507000, 0x00000000E0A0E000, 0x00000000C040C000, 0x0000000302030000,
-    0x0000000705070000, 0x0000000E0A0E0000, 0x0000001C141C0000, 0x0000003828380000, 0x0000007050700000,
-    0x000000E0A0E00000, 0x000000C040C00000, 0x0000030203000000, 0x0000070507000000, 0x00000E0A0E000000,
-    0x00001C141C000000, 0x0000382838000000, 0x0000705070000000, 0x0000E0A0E0000000, 0x0000C040C0000000,
-    0x0003020300000000, 0x0007050700000000, 0x000E0A0E00000000, 0x001C141C00000000, 0x0038283800000000,
-    0x0070507000000000, 0x00E0A0E000000000, 0x00C040C000000000, 0x0302030000000000, 0x0705070000000000,
-    0x0E0A0E0000000000, 0x1C141C0000000000, 0x3828380000000000, 0x7050700000000000, 0xE0A0E00000000000,
-    0xC040C00000000000, 0x0203000000000000, 0x0507000000000000, 0x0A0E000000000000, 0x141C000000000000,
-    0x2838000000000000, 0x5070000000000000, 0xA0E0000000000000, 0x40C0000000000000};
-
 // pre calculated lookup table for pawn attacks
-static constexpr U64 PAWN_ATTACKS_TABLE[2][64] = {
+static constexpr U64 PAWN_ATTACKS_TABLE[2][MAX_SQ] = {
     // white pawn attacks
     { 0x200, 0x500, 0xa00, 0x1400,
       0x2800, 0x5000, 0xa000, 0x4000,
@@ -218,6 +250,39 @@ static constexpr U64 PAWN_ATTACKS_TABLE[2][64] = {
       }
 };
 
+// pre calculated lookup table for knight attacks
+static constexpr U64 KNIGHT_ATTACKS_TABLE[MAX_SQ] = {
+    0x0000000000020400, 0x0000000000050800, 0x00000000000A1100, 0x0000000000142200, 0x0000000000284400,
+    0x0000000000508800, 0x0000000000A01000, 0x0000000000402000, 0x0000000002040004, 0x0000000005080008,
+    0x000000000A110011, 0x0000000014220022, 0x0000000028440044, 0x0000000050880088, 0x00000000A0100010,
+    0x0000000040200020, 0x0000000204000402, 0x0000000508000805, 0x0000000A1100110A, 0x0000001422002214,
+    0x0000002844004428, 0x0000005088008850, 0x000000A0100010A0, 0x0000004020002040, 0x0000020400040200,
+    0x0000050800080500, 0x00000A1100110A00, 0x0000142200221400, 0x0000284400442800, 0x0000508800885000,
+    0x0000A0100010A000, 0x0000402000204000, 0x0002040004020000, 0x0005080008050000, 0x000A1100110A0000,
+    0x0014220022140000, 0x0028440044280000, 0x0050880088500000, 0x00A0100010A00000, 0x0040200020400000,
+    0x0204000402000000, 0x0508000805000000, 0x0A1100110A000000, 0x1422002214000000, 0x2844004428000000,
+    0x5088008850000000, 0xA0100010A0000000, 0x4020002040000000, 0x0400040200000000, 0x0800080500000000,
+    0x1100110A00000000, 0x2200221400000000, 0x4400442800000000, 0x8800885000000000, 0x100010A000000000,
+    0x2000204000000000, 0x0004020000000000, 0x0008050000000000, 0x00110A0000000000, 0x0022140000000000,
+    0x0044280000000000, 0x0088500000000000, 0x0010A00000000000, 0x0020400000000000};
+
+// pre calculated lookup table for king attacks
+static constexpr U64 KING_ATTACKS_TABLE[MAX_SQ] = {
+    0x0000000000000302, 0x0000000000000705, 0x0000000000000E0A, 0x0000000000001C14, 0x0000000000003828,
+    0x0000000000007050, 0x000000000000E0A0, 0x000000000000C040, 0x0000000000030203, 0x0000000000070507,
+    0x00000000000E0A0E, 0x00000000001C141C, 0x0000000000382838, 0x0000000000705070, 0x0000000000E0A0E0,
+    0x0000000000C040C0, 0x0000000003020300, 0x0000000007050700, 0x000000000E0A0E00, 0x000000001C141C00,
+    0x0000000038283800, 0x0000000070507000, 0x00000000E0A0E000, 0x00000000C040C000, 0x0000000302030000,
+    0x0000000705070000, 0x0000000E0A0E0000, 0x0000001C141C0000, 0x0000003828380000, 0x0000007050700000,
+    0x000000E0A0E00000, 0x000000C040C00000, 0x0000030203000000, 0x0000070507000000, 0x00000E0A0E000000,
+    0x00001C141C000000, 0x0000382838000000, 0x0000705070000000, 0x0000E0A0E0000000, 0x0000C040C0000000,
+    0x0003020300000000, 0x0007050700000000, 0x000E0A0E00000000, 0x001C141C00000000, 0x0038283800000000,
+    0x0070507000000000, 0x00E0A0E000000000, 0x00C040C000000000, 0x0302030000000000, 0x0705070000000000,
+    0x0E0A0E0000000000, 0x1C141C0000000000, 0x3828380000000000, 0x7050700000000000, 0xE0A0E00000000000,
+    0xC040C00000000000, 0x0203000000000000, 0x0507000000000000, 0x0A0E000000000000, 0x141C000000000000,
+    0x2838000000000000, 0x5070000000000000, 0xA0E0000000000000, 0x40C0000000000000};
+
+// used for hash generation
 static constexpr U64 RANDOM_ARRAY[781] = {
     0x9D39247E33776D41, 0x2AF7398005AAA5C7, 0x44DB015024623547, 0x9C15F73E62A76AE2, 0x75834465489C0C89,
     0x3290AC3A203001BF, 0x0FBBAD1F61042279, 0xE83A908FF2FB60CA, 0x0D7E765D58755C10, 0x1A083822CEAFE02D,
@@ -400,8 +465,8 @@ static constexpr U64 castlingKey[16] = {0,
 static constexpr int hash_piece[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 
 /// @brief convert a piece to a piecetype
-static constexpr PieceType PieceToPieceType[12] = {PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
-                                                   PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING};
+static constexpr PieceType PieceToPieceType[13] = {PAWN,   KNIGHT, BISHOP, ROOK,  QUEEN, KING,    PAWN,
+                                                   KNIGHT, BISHOP, ROOK,   QUEEN, KING,  NONETYPE};
 
 // file masks
 
@@ -416,42 +481,6 @@ static constexpr U64 MASK_FILE[8] = {
 /// @brief Bitboard of all ranks
 static constexpr U64 MASK_RANK[8] = {0xff,         0xff00,         0xff0000,         0xff000000,
                                      0xff00000000, 0xff0000000000, 0xff000000000000, 0xff00000000000000};
-
-// diagonal masks
-static constexpr U64 MASK_DIAGONAL[15] = {
-    0x80,
-    0x8040,
-    0x804020,
-    0x80402010,
-    0x8040201008,
-    0x804020100804,
-    0x80402010080402,
-    0x8040201008040201,
-    0x4020100804020100,
-    0x2010080402010000,
-    0x1008040201000000,
-    0x804020100000000,
-    0x402010000000000,
-    0x201000000000000,
-    0x100000000000000,
-};
-
-// anti-diagonal masks
-static constexpr U64 MASK_ANTI_DIAGONAL[15] = {0x1,
-                                               0x102,
-                                               0x10204,
-                                               0x1020408,
-                                               0x102040810,
-                                               0x10204081020,
-                                               0x1020408102040,
-                                               0x102040810204080,
-                                               0x204081020408000,
-                                               0x408102040800000,
-                                               0x810204080000000,
-                                               0x1020408000000000,
-                                               0x2040800000000000,
-                                               0x4080000000000000,
-                                               0x8000000000000000};
 
 static std::unordered_map<Piece, char> pieceToChar({{WhitePawn, 'P'},
                                                     {WhiteKnight, 'N'},
@@ -489,27 +518,34 @@ static std::unordered_map<char, PieceType> pieceToInt(
 
 static std::unordered_map<Square, CastlingRight> castlingMapRook({{SQ_A1, wq}, {SQ_H1, wk}, {SQ_A8, bq}, {SQ_H8, bk}});
 
-inline Square from(Move move)
+static std::unordered_map<char, CastlingRight> readCastleString({{'K', wk}, {'k', bk}, {'Q', wq}, {'q', bq}});
+
+// *******************
+// Move encoding
+// *******************
+
+constexpr inline Square from(Move move)
 {
     return Square(move & 0b111111);
 }
 
-inline Square to(Move move)
+constexpr inline Square to(Move move)
 {
     return Square((move & 0b111111000000) >> 6);
 }
 
-inline PieceType piece(Move move)
+constexpr inline PieceType piece(Move move)
 {
     return PieceType((move & 0b111000000000000) >> 12);
 }
 
-inline bool promoted(Move move)
+constexpr inline bool promoted(Move move)
 {
     return bool((move & 0b1000000000000000) >> 15);
 }
 
-inline Move make(PieceType piece = NONETYPE, Square source = NO_SQ, Square target = NO_SQ, bool promoted = false)
+constexpr inline Move make(PieceType piece = NONETYPE, Square source = NO_SQ, Square target = NO_SQ,
+                           bool promoted = false)
 {
     return Move((uint16_t)source | (uint16_t)target << 6 | (uint16_t)piece << 12 | (uint16_t)promoted << 15);
 }
@@ -533,33 +569,26 @@ struct State
     }
 };
 
-#ifdef __GNUC__
-#define PACK(__Declaration__) __Declaration__ __attribute__((__packed__))
-#endif
-
-#ifdef _MSC_VER
-#define PACK(__Declaration__) __pragma(pack(push, 1)) __Declaration__ __pragma(pack(pop))
-#endif
-
-PACK(struct ExtMove {
-    // int value = -100'000;
-    Move move;
-});
+struct ExtMove
+{
+    int value = 0;
+    Move move = NO_MOVE;
+};
 
 inline constexpr bool operator==(const ExtMove &a, const ExtMove &b)
 {
     return a.move == b.move;
 }
 
-// inline constexpr bool operator>(const ExtMove &a, const ExtMove &b)
-// {
-//     return a.value > b.value;
-// }
+inline constexpr bool operator>(const ExtMove &a, const ExtMove &b)
+{
+    return a.value > b.value;
+}
 
-// inline constexpr bool operator<(const ExtMove &a, const ExtMove &b)
-// {
-//     return a.value < b.value;
-// }
+inline constexpr bool operator<(const ExtMove &a, const ExtMove &b)
+{
+    return a.value < b.value;
+}
 
 struct Movelist
 {
@@ -569,7 +598,7 @@ struct Movelist
     inline void Add(Move move)
     {
         list[size].move = move;
-        // list[size].value = 0;
+        list[size].value = 0;
         size++;
     }
 
@@ -586,14 +615,14 @@ struct Movelist
 // Compiler specific functions, taken from Stockfish https://github.com/official-stockfish/Stockfish
 #if defined(__GNUC__) // GCC, Clang, ICC
 
-inline Square bsf(U64 b)
+inline Square lsb(U64 b)
 {
     if (!b)
         return NO_SQ;
     return Square(__builtin_ctzll(b));
 }
 
-inline Square bsr(U64 b)
+inline Square msb(U64 b)
 {
     if (!b)
         return NO_SQ;
@@ -604,14 +633,14 @@ inline Square bsr(U64 b)
 
 #ifdef _WIN64 // MSVC, WIN64
 #include <intrin.h>
-inline Square bsf(U64 b)
+inline Square lsb(U64 b)
 {
     unsigned long idx;
     _BitScanForward64(&idx, b);
     return (Square)idx;
 }
 
-inline Square bsr(U64 b)
+inline Square msb(U64 b)
 {
     unsigned long idx;
     _BitScanReverse64(&idx, b);
@@ -620,7 +649,7 @@ inline Square bsr(U64 b)
 
 #else // MSVC, WIN32
 #include <intrin.h>
-inline Square bsf(U64 b)
+inline Square lsb(U64 b)
 {
     unsigned long idx;
 
@@ -636,7 +665,7 @@ inline Square bsf(U64 b)
     }
 }
 
-inline Square bsr(U64 b)
+inline Square msb(U64 b)
 {
     unsigned long idx;
 
@@ -678,42 +707,51 @@ inline uint8_t popcount(U64 mask)
 /// @return
 inline Square poplsb(U64 &mask)
 {
-    int8_t s = bsf(mask);
+    int8_t s = lsb(mask);
     mask &= mask - 1;
-    // mask = _blsr_u64(mask);
     return Square(s);
 }
 
 /// @brief splits a string into multiple parts, delimiter is whitespace
 /// @param fen
 /// @return std::vector
-inline std::vector<std::string> splitInput(std::string fen)
+inline std::vector<std::string> splitInput(const std::string &input)
 {
-    std::stringstream fen_stream(fen);
+    std::stringstream input_stream(input);
     std::string segment;
     std::vector<std::string> seglist;
 
-    while (std::getline(fen_stream, segment, ' '))
+    while (std::getline(input_stream, segment, ' '))
     {
         seglist.push_back(segment);
     }
+
     return seglist;
 }
 
-/// @brief file a = 0, file h = 7
+/// @brief Gets the file index of the square where 0 is the a-file
 /// @param sq
-/// @return
-inline uint8_t square_file(Square sq)
+/// @return the file of the square
+inline constexpr File square_file(Square sq)
 {
-    return sq & 7;
+    return File(sq & 7);
 }
 
-/// @brief rank 1 = 0 rank 8 = 7
+/// @brief Gets the rank index of the square where 0 is the first rank.
 /// @param sq
-/// @return
-inline uint8_t square_rank(Square sq)
+/// @return the rank of the square
+inline constexpr Rank square_rank(Square sq)
 {
-    return sq >> 3;
+    return Rank(sq >> 3);
+}
+
+/// @brief makes a square out of rank and file
+/// @param f
+/// @param r
+/// @return
+inline constexpr Square file_rank_square(File f, Rank r)
+{
+    return Square((r << 3) + f);
 }
 
 /// @brief distance between two squares
@@ -764,22 +802,7 @@ inline Color get_square_color(Square square)
 /// @return the piecetype
 inline PieceType type_of_piece(Piece piece)
 {
-    if (piece == None)
-        return NONETYPE;
     return PieceToPieceType[piece];
-}
-
-/// @brief uci representation of a move
-/// @param move
-/// @return
-inline std::string uciRep(Move move)
-{
-    std::string m = "";
-    m += squareToString[from(move)];
-    m += squareToString[to(move)];
-    if (promoted(move))
-        m += PieceTypeToPromPiece[piece(move)];
-    return m;
 }
 
 /// @brief makes a piece out of a PieceType and Color
@@ -846,9 +869,11 @@ class Board
     // full moves start at 1
     uint16_t fullMoveNumber;
 
-    // keeps track of previous hashes, used for
-    // repetition detection
-    std::vector<U64> hashHistory;
+    // current hashkey
+    U64 hashKey;
+
+    U64 Bitboards[12] = {};
+    Piece board[MAX_SQ];
 
     // keeps track on how many checks there currently are
     // 2 = only king moves are valid
@@ -878,134 +903,71 @@ class Board
     U64 occAll;
     U64 enemyEmptyBB;
 
-    // current hashkey
-    U64 hashKey;
-
     U64 SQUARES_BETWEEN_BB[MAX_SQ][MAX_SQ];
 
-    std::vector<State> prevStates;
+  private:
+    // keeps track of previous hashes, used for
+    // repetition detection
+    std::vector<U64> hashHistory;
 
-    U64 Bitboards[12] = {};
-    Piece board[MAX_SQ] = {None};
+    std::vector<State> stateHistory;
 
-    /// @brief initialise the board class
-    /// @param fen
+  public:
+    /// @brief constructor for the board, loads startpos and initializes SQUARES_BETWEEN_BB array
     Board(std::string fen = DEFAULT_POS);
 
-    /// @brief Finds what piece is on the square using the bitboards
+    /// @brief Finds what piece is on the square using bitboards (slow)
     /// @param sq
-    /// @return
+    /// @return found piece otherwise None
     Piece pieceAtBB(Square sq);
 
     /// @brief Finds what piece is on the square using the board (more performant)
     /// @param sq
-    /// @return
-    Piece pieceAtB(Square sq);
+    /// @return found piece otherwise None
+    Piece pieceAtB(Square sq) const;
 
-    /// @brief  applys a new Fen to the board
+    /// @brief applys a new Fen to the board and also reload the entire nnue
     /// @param fen
-    /// @param updateAcc
-    void applyFen(std::string fen);
+    void applyFen(const std::string &fen);
 
-    /// @brief returns the current fen
-    /// @return
-    std::string getFen();
+    /// @brief returns a Fen string of the current board
+    /// @return fen string
+    std::string getFen() const;
 
-    /// @brief prints the current board
-    void print();
-
-    /// @brief detects if the position is a repetition by default 2, fide would be 3
+    /// @brief detects if the position is a repetition by default 1, fide would be 2
     /// @param draw
+    /// @return true for repetition otherwise false
+    bool isRepetition(int draw = 2) const;
+
+    /// @brief false if only pawns on the board
+    bool nonPawnMat(Color c) const;
+
+    Square KingSQ(Color c) const;
+
+    U64 Enemy(Color c) const;
+    U64 EnemyEmpty(Color c) const;
+    U64 Us(Color c) const;
+    U64 All() const;
+
+    // Gets individual bitboards
+
+    U64 Pawns(Color c) const;
+    U64 Knights(Color c) const;
+    U64 Bishops(Color c) const;
+    U64 Rooks(Color c) const;
+    U64 Queens(Color c) const;
+    U64 Kings(Color c) const;
+
+    /// @brief returns the color of a piece at a square
+    /// @param loc
     /// @return
-    bool isRepetition(int draw = 3);
+    Color colorOf(Square loc) const;
 
-    /// @brief only pawns + king = true else false
-    /// @param c
-    /// @return
-    bool nonPawnMat(Color c);
-
-    /// @brief returns the King Square of the specified color
-    /// @param c
-    /// @return
-    Square KingSQ(Color c);
-
-    // returns the King Square of the specified color
-    template <Color c> Square KingSQ();
-
-    /// @brief returns all pieces of the other color
-    /// @param c
-    /// @return
-    U64 Enemy(Color c);
-
-    /// @brief returns all pieces of the other color
-    /// @tparam c
-    /// @return
-    template <Color c> U64 Enemy();
-
-    /// @brief returns a bitboard of our pieces
-    /// @param c
-    /// @return
-    U64 Us(Color c);
-
-    /// @brief returns a bitboard of our pieces
-    /// @tparam c
-    /// @return
-    template <Color c> U64 Us();
-
-    /// @brief returns all empty squares or squares with an enemy on them
-    /// @param c
-    /// @return
-    U64 EnemyEmpty(Color c);
-
-    /// @brief returns all pieces color
-    /// @return
-    U64 All();
-
-    U64 Empty();
-
-    // Gets the piece of the specified color
-
-    /// @brief get pawns
-    /// @param c
-    /// @return
-    U64 Pawns(Color c);
-
-    /// @brief get knights
-    /// @param c
-    /// @return
-    U64 Knights(Color c);
-
-    /// @brief get bishops
-    /// @param c
-    /// @return
-    U64 Bishops(Color c);
-
-    /// @brief get rooks
-    /// @param c
-    /// @return
-    U64 Rooks(Color c);
-
-    /// @brief get queens
-    /// @param c
-    /// @return
-    U64 Queens(Color c);
-
-    /// @brief get kings
-    /// @param c
-    /// @return
-    U64 Kings(Color c);
-    template <Color c> U64 Pawns();
-    template <Color c> U64 Knights();
-    template <Color c> U64 Bishops();
-    template <Color c> U64 Rooks();
-    template <Color c> U64 Queens();
-    template <Color c> U64 Kings();
-
-    /// @brief Is square attacked by color c
+    /// @brief is square attacked by color c
     /// @param c
     /// @param sq
     /// @return
-    bool isSquareAttacked(Color c, Square sq);
+    bool isSquareAttacked(Color c, Square sq) const;
 
     /// @brief plays the move on the internal board
     /// @param move
@@ -1015,51 +977,56 @@ class Board
     /// @param move
     void unmakeMove(Move move);
 
-    /// @brief make a null move
+    /// @brief make a nullmove
     void makeNullMove();
 
-    /// @brief unmake a null move
+    /// @brief unmake a nullmove
     void unmakeNullMove();
-
-    // update the internal board representation
 
     /// @brief Remove a Piece from the board
     /// @param piece
     /// @param sq
     void removePiece(Piece piece, Square sq);
 
-    /// @brief Place a Piece on the board    /// @param piece
+    /// @brief Place a Piece on the board
+    /// @param piece
     /// @param sq
     void placePiece(Piece piece, Square sq);
+
+    /// @brief Move a piece on the board
+    /// @param piece
+    /// @param fromSq
+    /// @param toSq
+    void movePiece(Piece piece, Square fromSq, Square toSq);
+
+    U64 attacksByPiece(PieceType pt, Square sq, Color c) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const Board &b);
 
   private:
     /// @brief calculate the current zobrist hash from scratch
     /// @return
-    U64 zobristHash();
+    U64 zobristHash() const;
 
     /// @brief initialize SQUARES_BETWEEN_BB array
     void initializeLookupTables();
 
     // update the hash
 
-    U64 updateKeyPiece(Piece piece, Square sq);
-    U64 updateKeyCastling();
-    U64 updateKeyEnPassant(Square sq);
-    U64 updateKeySideToMove();
+    U64 updateKeyPiece(Piece piece, Square sq) const;
+    U64 updateKeyCastling() const;
+    U64 updateKeyEnPassant(Square sq) const;
+    U64 updateKeySideToMove() const;
 
     void removeCastlingRightsAll(Color c);
-    void removeCastlingRightsRook(Color c, Square sq);
+    void removeCastlingRightsRook(Square sq);
 };
 
 inline Board::Board(std::string fen)
 {
-    std::fill(std::begin(board), std::end(board), None);
-
     initializeLookupTables();
-    prevStates.reserve(MAX_PLY);
+    stateHistory.reserve(MAX_PLY);
     hashHistory.reserve(512);
-
-    applyFen(fen);
 
     sideToMove = White;
     enPassantSquare = NO_SQ;
@@ -1073,68 +1040,51 @@ inline Board::Board(std::string fen)
     checkMask = DEFAULT_CHECKMASK;
     seen = 0;
 
-    occEnemy = Enemy<White>();
-    occUs = Us<White>();
-    occAll = All();
-    enemyEmptyBB = EnemyEmpty(White);
+    std::fill(std::begin(board), std::end(board), None);
 
-    hashKey = zobristHash();
+    applyFen(fen);
+
+    occEnemy = Enemy(sideToMove);
+    occUs = Us(sideToMove);
+    occAll = All();
+    enemyEmptyBB = EnemyEmpty(sideToMove);
 }
 
 inline Piece Board::pieceAtBB(Square sq)
 {
-    if (Bitboards[WhitePawn] & (1ULL << sq))
-        return WhitePawn;
-    if (Bitboards[WhiteKnight] & (1ULL << sq))
-        return WhiteKnight;
-    if (Bitboards[WhiteBishop] & (1ULL << sq))
-        return WhiteBishop;
-    if (Bitboards[WhiteRook] & (1ULL << sq))
-        return WhiteRook;
-    if (Bitboards[WhiteQueen] & (1ULL << sq))
-        return WhiteQueen;
-    if (Bitboards[WhiteKing] & (1ULL << sq))
-        return WhiteKing;
-    if (Bitboards[BlackPawn] & (1ULL << sq))
-        return BlackPawn;
-    if (Bitboards[BlackKnight] & (1ULL << sq))
-        return BlackKnight;
-    if (Bitboards[BlackBishop] & (1ULL << sq))
-        return BlackBishop;
-    if (Bitboards[BlackRook] & (1ULL << sq))
-        return BlackRook;
-    if (Bitboards[BlackQueen] & (1ULL << sq))
-        return BlackQueen;
-    if (Bitboards[BlackKing] & (1ULL << sq))
-        return BlackKing;
+    for (Piece p = WhitePawn; p < None; p++)
+    {
+        if (Bitboards[p] & (1ULL << sq))
+            return p;
+    }
     return None;
 }
 
-inline Piece Board::pieceAtB(Square sq)
+inline Piece Board::pieceAtB(Square sq) const
 {
     return board[sq];
 }
 
-inline void Board::applyFen(std::string fen)
+inline void Board::applyFen(const std::string &fen)
 {
-    for (int i = 0; i < 12; i++)
+    for (Piece p = WhitePawn; p < None; p++)
     {
-        Bitboards[i] = 0ULL;
+        Bitboards[p] = 0ULL;
     }
-    std::vector<std::string> params = splitInput(fen);
-    std::string position = params[0];
-    std::string move_right = params[1];
-    std::string castling = params[2];
-    std::string en_passant = params[3];
-    // default
-    std::string half_move_clock = "0";
-    std::string full_move_counter = "1";
-    if (params.size() > 4)
-    {
-        half_move_clock = params[4];
-        full_move_counter = params[5];
-    }
+
+    const std::vector<std::string> params = splitInput(fen);
+
+    const std::string position = params[0];
+    const std::string move_right = params[1];
+    const std::string castling = params[2];
+    const std::string en_passant = params[3];
+
+    const std::string half_move_clock = params.size() > 4 ? params[4] : "0";
+    const std::string full_move_counter = params.size() > 4 ? params[5] : "1";
+
     sideToMove = (move_right == "w") ? White : Black;
+
+    std::fill(std::begin(board), std::end(board), None);
 
     Square square = Square(56);
     for (int index = 0; index < static_cast<int>(position.size()); index++)
@@ -1142,42 +1092,26 @@ inline void Board::applyFen(std::string fen)
         char curr = position[index];
         if (charToPiece.find(curr) != charToPiece.end())
         {
-            Piece piece = charToPiece[curr];
+            const Piece piece = charToPiece[curr];
             placePiece(piece, square);
+
             square = Square(square + 1);
         }
         else if (curr == '/')
             square = Square(square - 16);
         else if (isdigit(curr))
-        {
-            for (int i = 0; i < static_cast<int>(curr - '0'); i++)
-            {
-                board[square + i] = None;
-            }
             square = Square(square + (curr - '0'));
-        }
     }
 
-    castlingRights = 0;
+    removeCastlingRightsAll(White);
+    removeCastlingRightsAll(Black);
+
     for (size_t i = 0; i < castling.size(); i++)
     {
-        if (castling[i] == 'K')
-        {
-            castlingRights |= wk;
-        }
-        if (castling[i] == 'Q')
-        {
-            castlingRights |= wq;
-        }
-        if (castling[i] == 'k')
-        {
-            castlingRights |= bk;
-        }
-        if (castling[i] == 'q')
-        {
-            castlingRights |= bq;
-        }
+        if (readCastleString.find(castling[i]) != readCastleString.end())
+            castlingRights |= readCastleString[castling[i]];
     }
+
     if (en_passant == "-")
     {
         enPassantSquare = NO_SQ;
@@ -1189,97 +1123,101 @@ inline void Board::applyFen(std::string fen)
         int rank = en_passant[1] - 48;
         enPassantSquare = Square((rank - 1) * 8 + file - 1);
     }
-    // half_move_clock
+
     halfMoveClock = std::stoi(half_move_clock);
 
     // full_move_counter actually half moves
     fullMoveNumber = std::stoi(full_move_counter) * 2;
 
-    hashHistory.clear();
-    hashHistory.push_back(zobristHash());
-
-    prevStates.clear();
     hashKey = zobristHash();
+
+    hashHistory.clear();
+    stateHistory.clear();
+
+    hashHistory.push_back(hashKey);
 }
 
-inline std::string Board::getFen()
+inline std::string Board::getFen() const
 {
-    int sq;
-    char letter;
-    std::string fen = "";
+    std::stringstream ss;
 
+    // Loop through the ranks of the board in reverse order
     for (int rank = 7; rank >= 0; rank--)
     {
         int free_space = 0;
+
+        // Loop through the files of the board
         for (int file = 0; file < 8; file++)
         {
-            sq = rank * 8 + file;
+            // Calculate the square index
+            int sq = rank * 8 + file;
+
+            // Get the piece at the current square
             Piece piece = pieceAtB(Square(sq));
 
+            // If there is a piece at the current square
             if (piece != None)
             {
+                // If there were any empty squares before this piece,
+                // append the number of empty squares to the FEN string
                 if (free_space)
                 {
-                    fen += std::to_string(free_space);
+                    ss << free_space;
                     free_space = 0;
                 }
-                letter = pieceToChar[piece];
-                fen += letter;
+
+                // Append the character representing the piece to the FEN string
+                ss << pieceToChar[piece];
             }
             else
             {
+                // If there is no piece at the current square, increment the
+                // counter for the number of empty squares
                 free_space++;
             }
         }
+
+        // If there are any empty squares at the end of the rank,
+        // append the number of empty squares to the FEN string
         if (free_space != 0)
         {
-            fen += std::to_string(free_space);
+            ss << free_space;
         }
-        fen += rank > 0 ? "/" : "";
-    }
-    fen += sideToMove == White ? " w " : " b ";
 
+        // Append a "/" character to the FEN string, unless this is the last rank
+        ss << (rank > 0 ? "/" : "");
+    }
+
+    // Append " w " or " b " to the FEN string, depending on which player's turn it is
+    ss << (sideToMove == White ? " w " : " b ");
+
+    // Append the appropriate characters to the FEN string to indicate
+    // whether or not castling is allowed for each player
     if (castlingRights & wk)
-        fen += "K";
+        ss << "K";
     if (castlingRights & wq)
-        fen += "Q";
+        ss << "Q";
     if (castlingRights & bk)
-        fen += "k";
+        ss << "k";
     if (castlingRights & bq)
-        fen += "q";
+        ss << "q";
     if (castlingRights == 0)
-        fen += "-";
+        ss << "-";
 
+    // Append information about the en passant square (if any)
+    // and the halfmove clock and fullmove number to the FEN string
     if (enPassantSquare == NO_SQ)
-        fen += " - ";
+        ss << " - ";
     else
-        fen += " " + squareToString[enPassantSquare] + " ";
+        ss << " " << squareToString[enPassantSquare] << " ";
 
-    fen += std::to_string(halfMoveClock);
-    fen += " " + std::to_string(fullMoveNumber / 2);
-    return fen;
+    ss << int(halfMoveClock) << " " << int(fullMoveNumber / 2);
+
+    // Return the resulting FEN string
+    return ss.str();
 }
 
-inline void Board::print()
-{
-    for (int i = 63; i >= 0; i -= 8)
-    {
-        std::cout << " " << pieceToChar[board[i - 7]] << " " << pieceToChar[board[i - 6]] << " "
-                  << pieceToChar[board[i - 5]] << " " << pieceToChar[board[i - 4]] << " " << pieceToChar[board[i - 3]]
-                  << " " << pieceToChar[board[i - 2]] << " " << pieceToChar[board[i - 1]] << " "
-                  << pieceToChar[board[i]] << " " << std::endl;
-    }
-    std::cout << '\n' << std::endl;
-    std::cout << "Fen: " << getFen() << std::endl;
-    std::cout << "Side to move: " << static_cast<int>(sideToMove) << std::endl;
-    std::cout << "Castling rights: " << static_cast<int>(castlingRights) << std::endl;
-    std::cout << "Halfmoves: " << static_cast<int>(halfMoveClock) << std::endl;
-    std::cout << "Fullmoves: " << static_cast<int>(fullMoveNumber) / 2 << std::endl;
-    std::cout << "EP: " << static_cast<int>(enPassantSquare) << std::endl;
-    std::cout << "Hash: " << hashKey << std::endl;
-}
-
-inline bool Board::isRepetition(int draw)
+inline bool Board::isRepetition(int draw) const
 {
     uint8_t c = 0;
     for (int i = static_cast<int>(hashHistory.size()) - 2;
@@ -1293,73 +1231,84 @@ inline bool Board::isRepetition(int draw)
     return false;
 }
 
-inline bool Board::nonPawnMat(Color c)
+inline bool Board::nonPawnMat(Color c) const
 {
     return Knights(c) | Bishops(c) | Rooks(c) | Queens(c);
 }
 
-inline Square Board::KingSQ(Color c)
+inline Square Board::KingSQ(Color c) const
 {
-    return bsf(Kings(c));
+    return lsb(Kings(c));
 }
 
-inline U64 Board::Enemy(Color c)
+inline U64 Board::Enemy(Color c) const
 {
     return Us(~c);
 }
 
-inline U64 Board::Us(Color c)
+inline U64 Board::Us(Color c) const
 {
     return Bitboards[PAWN + c * 6] | Bitboards[KNIGHT + c * 6] | Bitboards[BISHOP + c * 6] | Bitboards[ROOK + c * 6] |
            Bitboards[QUEEN + c * 6] | Bitboards[KING + c * 6];
 }
 
-inline U64 Board::EnemyEmpty(Color c)
+inline U64 Board::EnemyEmpty(Color c) const
 {
     return ~Us(c);
 }
-inline U64 Board::All()
+
+inline U64 Board::All() const
 {
-    return Us<White>() | Us<Black>();
+    return Us(White) | Us(Black);
 }
-inline U64 Board::Empty()
-{
-    return ~All();
-}
-inline U64 Board::Pawns(Color c)
+
+inline U64 Board::Pawns(Color c) const
 {
     return Bitboards[PAWN + c * 6];
 }
-inline U64 Board::Knights(Color c)
+
+inline U64 Board::Knights(Color c) const
 {
     return Bitboards[KNIGHT + c * 6];
 }
-inline U64 Board::Bishops(Color c)
+
+inline U64 Board::Bishops(Color c) const
 {
     return Bitboards[BISHOP + c * 6];
 }
-inline U64 Board::Rooks(Color c)
+
+inline U64 Board::Rooks(Color c) const
 {
     return Bitboards[ROOK + c * 6];
 }
-inline U64 Board::Queens(Color c)
+
+inline U64 Board::Queens(Color c) const
 {
     return Bitboards[QUEEN + c * 6];
 }
-inline U64 Board::Kings(Color c)
+
+inline U64 Board::Kings(Color c) const
 {
     return Bitboards[KING + c * 6];
 }
 
-inline bool Board::isSquareAttacked(Color c, Square sq)
+inline Color Board::colorOf(Square loc) const
+{
+    return Color((pieceAtB(loc) / 6));
+}
+
+inline bool Board::isSquareAttacked(Color c, Square sq) const
 {
     if (Pawns(c) & PawnAttacks(sq, ~c))
         return true;
     if (Knights(c) & KnightAttacks(sq))
         return true;
-    if ((Bishops(c) | Queens(c)) & BishopAttacks(sq, All()))
+
+    const U64 bb = All();
+
+    if ((Bishops(c) | Queens(c)) & BishopAttacks(sq, bb))
         return true;
-    if ((Rooks(c) | Queens(c)) & RookAttacks(sq, All()))
+    if ((Rooks(c) | Queens(c)) & RookAttacks(sq, bb))
         return true;
     if (Kings(c) & KingAttacks(sq))
         return true;
@@ -1374,19 +1323,27 @@ inline void Board::makeMove(Move move)
     Square to_sq = to(move);
     Piece capture = board[to_sq];
 
+    assert(from_sq >= 0 && from_sq < MAX_SQ);
+    assert(to_sq >= 0 && to_sq < MAX_SQ);
+    assert(type_of_piece(capture) != KING);
+    assert(p != None);
+    assert((promoted(move) && (pt != PAWN && pt != KING)) || !promoted(move));
+
     // *****************************
     // STORE STATE HISTORY
     // *****************************
 
     hashHistory.emplace_back(hashKey);
-
-    State store = State(enPassantSquare, castlingRights, halfMoveClock, capture);
-    prevStates.push_back(store);
+    stateHistory.emplace_back(State(enPassantSquare, castlingRights, halfMoveClock, capture));
 
     halfMoveClock++;
     fullMoveNumber++;
 
     bool ep = to_sq == enPassantSquare;
+    const bool isCastlingWhite =
+        (p == WhiteKing && capture == WhiteRook) || (p == WhiteKing && square_distance(to_sq, from_sq) >= 2);
+    const bool isCastlingBlack =
+        (p == BlackKing && capture == BlackRook) || (p == BlackKing && square_distance(to_sq, from_sq) >= 2);
 
     // *****************************
     // UPDATE HASH
@@ -1397,25 +1354,15 @@ inline void Board::makeMove(Move move)
     enPassantSquare = NO_SQ;
 
     hashKey ^= updateKeyCastling();
-    if (p == WhiteKing && from_sq == SQ_E1 && to_sq == SQ_G1)
+
+    if (isCastlingWhite || isCastlingBlack)
     {
-        hashKey ^= updateKeyPiece(WhiteRook, SQ_H1);
-        hashKey ^= updateKeyPiece(WhiteRook, SQ_F1);
-    }
-    else if (p == WhiteKing && from_sq == SQ_E1 && to_sq == SQ_C1)
-    {
-        hashKey ^= updateKeyPiece(WhiteRook, SQ_A1);
-        hashKey ^= updateKeyPiece(WhiteRook, SQ_D1);
-    }
-    else if (p == BlackKing && from_sq == SQ_E8 && to_sq == SQ_G8)
-    {
-        hashKey ^= updateKeyPiece(BlackRook, SQ_H8);
-        hashKey ^= updateKeyPiece(BlackRook, SQ_F8);
-    }
-    else if (p == BlackKing && from_sq == SQ_E8 && to_sq == SQ_C8)
-    {
-        hashKey ^= updateKeyPiece(BlackRook, SQ_A8);
-        hashKey ^= updateKeyPiece(BlackRook, SQ_D8);
+        Piece rook = sideToMove == White ? WhiteRook : BlackRook;
+        Square rookSQ = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
+
+        assert(type_of_piece(pieceAtB(to_sq)) == ROOK);
+        hashKey ^= updateKeyPiece(rook, to_sq);
+        hashKey ^= updateKeyPiece(rook, rookSQ);
     }
 
     if (pt == KING)
@@ -1424,7 +1371,7 @@ inline void Board::makeMove(Move move)
     }
     else if (pt == ROOK)
     {
-        removeCastlingRightsRook(sideToMove, from_sq);
+        removeCastlingRightsRook(from_sq);
     }
     else if (pt == PAWN)
     {
@@ -1440,18 +1387,18 @@ inline void Board::makeMove(Move move)
             {
                 enPassantSquare = Square(to_sq - (sideToMove * -2 + 1) * 8);
                 hashKey ^= updateKeyEnPassant(enPassantSquare);
+
+                assert(pieceAtB(enPassantSquare) == None);
             }
         }
     }
 
-    if (capture != None)
+    if (capture != None && !(isCastlingWhite || isCastlingBlack))
     {
         halfMoveClock = 0;
         hashKey ^= updateKeyPiece(capture, to_sq);
-        if (type_of_piece(capture) == ROOK && castlingMapRook.find(to_sq) != castlingMapRook.end())
-        {
-            castlingRights &= ~castlingMapRook[to_sq];
-        }
+        if (type_of_piece(capture) == ROOK)
+            removeCastlingRightsRook(to_sq);
     }
 
     if (promoted(move))
@@ -1471,51 +1418,48 @@ inline void Board::makeMove(Move move)
     hashKey ^= updateKeyCastling();
 
     // *****************************
-    // UPDATE PIECES
+    // UPDATE PIECES AND NNUE
     // *****************************
 
-    if (pt == KING)
+    if (isCastlingWhite || isCastlingBlack)
     {
-        if (sideToMove == White && from_sq == SQ_E1 && to_sq == SQ_G1)
-        {
-            removePiece(WhiteRook, SQ_H1);
-            placePiece(WhiteRook, SQ_F1);
-        }
-        else if (sideToMove == White && from_sq == SQ_E1 && to_sq == SQ_C1)
-        {
-            removePiece(WhiteRook, SQ_A1);
-            placePiece(WhiteRook, SQ_D1);
-        }
-        else if (sideToMove == Black && from_sq == SQ_E8 && to_sq == SQ_G8)
-        {
-            removePiece(BlackRook, SQ_H8);
-            placePiece(BlackRook, SQ_F8);
-        }
-        else if (sideToMove == Black && from_sq == SQ_E8 && to_sq == SQ_C8)
-        {
-            removePiece(BlackRook, SQ_A8);
-            placePiece(BlackRook, SQ_D8);
-        }
+        Square rookToSq;
+        Piece rook = sideToMove == White ? WhiteRook : BlackRook;
+
+        removePiece(p, from_sq);
+        removePiece(rook, to_sq);
+
+        rookToSq = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
+        to_sq = file_rank_square(to_sq > from_sq ? FILE_G : FILE_C, square_rank(from_sq));
+
+        placePiece(p, to_sq);
+        placePiece(rook, rookToSq);
     }
     else if (pt == PAWN && ep)
     {
+        assert(pieceAtB(Square(to_sq - (sideToMove * -2 + 1) * 8)) != None);
+
         removePiece(makePiece(PAWN, ~sideToMove), Square(to_sq - (sideToMove * -2 + 1) * 8));
     }
-
-    if (capture != None)
+    else if (capture != None && !(isCastlingWhite || isCastlingBlack))
     {
+        assert(pieceAtB(to_sq) != None);
+
         removePiece(capture, to_sq);
     }
 
     if (promoted(move))
     {
+        assert(pieceAtB(to_sq) == None);
+
         removePiece(makePiece(PAWN, sideToMove), from_sq);
         placePiece(p, to_sq);
     }
-    else
+    else if (!(isCastlingWhite || isCastlingBlack))
     {
-        removePiece(p, from_sq);
-        placePiece(p, to_sq);
+        assert(pieceAtB(to_sq) == None);
+
+        movePiece(p, from_sq, to_sq);
     }
 
     sideToMove = ~sideToMove;
@@ -1523,8 +1467,8 @@ inline void Board::makeMove(Move move)
 
 inline void Board::unmakeMove(Move move)
 {
-    State restore = prevStates.back();
-    prevStates.pop_back();
+    const State restore = stateHistory.back();
+    stateHistory.pop_back();
 
     hashKey = hashHistory.back();
     hashHistory.pop_back();
@@ -1533,6 +1477,7 @@ inline void Board::unmakeMove(Move move)
     castlingRights = restore.castling;
     halfMoveClock = restore.halfMove;
     Piece capture = restore.capturedPiece;
+
     fullMoveNumber--;
 
     Square from_sq = from(move);
@@ -1543,20 +1488,36 @@ inline void Board::unmakeMove(Move move)
     PieceType pt = piece(move);
     Piece p = makePiece(pt, sideToMove);
 
-    if (promotion)
+    const bool isCastlingWhite =
+        (p == WhiteKing && capture == WhiteRook) || (p == WhiteKing && square_distance(to_sq, from_sq) >= 2);
+    const bool isCastlingBlack =
+        (p == BlackKing && capture == BlackRook) || (p == BlackKing && square_distance(to_sq, from_sq) >= 2);
+
+    if ((isCastlingWhite || isCastlingBlack))
+    {
+        Square rookToSq = to_sq;
+        Piece rook = sideToMove == White ? WhiteRook : BlackRook;
+        Square rookFromSq = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
+        to_sq = file_rank_square(to_sq > from_sq ? FILE_G : FILE_C, square_rank(from_sq));
+
+        // We need to remove both pieces first and then place them back.
+        removePiece(rook, rookFromSq);
+        removePiece(p, to_sq);
+
+        placePiece(p, from_sq);
+        placePiece(rook, rookToSq);
+    }
+    else if (promotion)
     {
         removePiece(p, to_sq);
         placePiece(makePiece(PAWN, sideToMove), from_sq);
         if (capture != None)
-        {
             placePiece(capture, to_sq);
-        }
         return;
     }
     else
     {
-        removePiece(p, to_sq);
-        placePiece(p, from_sq);
+        movePiece(p, to_sq, from_sq);
     }
 
     if (to_sq == enPassantSquare && pt == PAWN)
@@ -1564,40 +1525,15 @@ inline void Board::unmakeMove(Move move)
         int8_t offset = sideToMove == White ? -8 : 8;
         placePiece(makePiece(PAWN, ~sideToMove), Square(enPassantSquare + offset));
     }
-    else if (capture != None)
+    else if (capture != None && !(isCastlingWhite || isCastlingBlack))
     {
         placePiece(capture, to_sq);
-    }
-    else if (pt == KING)
-    {
-        if (from_sq == SQ_E1 && to_sq == SQ_G1 && castlingRights & wk)
-        {
-            removePiece(WhiteRook, SQ_F1);
-            placePiece(WhiteRook, SQ_H1);
-        }
-        else if (from_sq == SQ_E1 && to_sq == SQ_C1 && castlingRights & wq)
-        {
-            removePiece(WhiteRook, SQ_D1);
-            placePiece(WhiteRook, SQ_A1);
-        }
-
-        else if (from_sq == SQ_E8 && to_sq == SQ_G8 && castlingRights & bk)
-        {
-            removePiece(BlackRook, SQ_F8);
-            placePiece(BlackRook, SQ_H8);
-        }
-        else if (from_sq == SQ_E8 && to_sq == SQ_C8 && castlingRights & bq)
-        {
-            removePiece(BlackRook, SQ_D8);
-            placePiece(BlackRook, SQ_A8);
-        }
     }
 }
 
 inline void Board::makeNullMove()
 {
-    State store = State(enPassantSquare, castlingRights, halfMoveClock, None);
-    prevStates.push_back(store);
+    stateHistory.emplace_back(State(enPassantSquare, castlingRights, halfMoveClock, None));
     sideToMove = ~sideToMove;
 
     hashKey ^= updateKeySideToMove();
@@ -1610,8 +1546,8 @@ inline void Board::makeNullMove()
 
 inline void Board::unmakeNullMove()
 {
-    State restore = prevStates.back();
-    prevStates.pop_back();
+    const State restore = stateHistory.back();
+    stateHistory.pop_back();
 
     enPassantSquare = restore.enPassant;
     castlingRights = restore.castling;
@@ -1625,15 +1561,81 @@ inline void Board::unmakeNullMove()
     sideToMove = ~sideToMove;
 }
 
+inline void Board::removePiece(Piece piece, Square sq)
+{
+    Bitboards[piece] &= ~(1ULL << sq);
+    board[sq] = None;
+}
+
+inline void Board::placePiece(Piece piece, Square sq)
+{
+    Bitboards[piece] |= (1ULL << sq);
+    board[sq] = piece;
+}
+
+inline void Board::movePiece(Piece piece, Square fromSq, Square toSq)
+{
+    Bitboards[piece] &= ~(1ULL << fromSq);
+    Bitboards[piece] |= (1ULL << toSq);
+    board[fromSq] = None;
+    board[toSq] = piece;
+}
+
+inline U64 Board::attacksByPiece(PieceType pt, Square sq, Color c) const
+{
+    switch (pt)
+    {
+    case PAWN:
+        return PawnAttacks(sq, c);
+    case KNIGHT:
+        return KnightAttacks(sq);
+    case BISHOP:
+        return BishopAttacks(sq, All());
+    case ROOK:
+        return RookAttacks(sq, All());
+    case QUEEN:
+        return QueenAttacks(sq, All());
+    case KING:
+        return KingAttacks(sq);
+    case NONETYPE:
+        return 0ULL;
+    default:
+        return 0ULL;
+    }
+}
+
+std::ostream &operator<<(std::ostream &os, const Board &b)
+{
+    for (int i = 63; i >= 0; i -= 8)
+    {
+        os << " " << pieceToChar[b.board[i - 7]] << " " << pieceToChar[b.board[i - 6]] << " "
+           << pieceToChar[b.board[i - 5]] << " " << pieceToChar[b.board[i - 4]] << " " << pieceToChar[b.board[i - 3]]
+           << " " << pieceToChar[b.board[i - 2]] << " " << pieceToChar[b.board[i - 1]] << " " << pieceToChar[b.board[i]]
+           << " \n";
+    }
+    os << "\n\n";
+    os << "Fen: " << b.getFen() << "\n";
+    os << "Side to move: " << static_cast<int>(b.sideToMove) << "\n";
+    os << "Castling rights: " << static_cast<int>(b.castlingRights) << "\n";
+    os << "Halfmoves: " << static_cast<int>(b.halfMoveClock) << "\n";
+    os << "Fullmoves: " << static_cast<int>(b.fullMoveNumber) / 2 << "\n";
+    os << "EP: " << static_cast<int>(b.enPassantSquare) << "\n";
+    os << "Hash: " << b.hashKey << "\n";
+
+    os << std::endl;
+    return os;
+}
+
 // ***************************
-// PRIVATE FUNCTION DECLARTION
+// PRIVATE BOARD FUNCTION DECLARTION
 // ***************************
 
-inline U64 Board::zobristHash()
+inline U64 Board::zobristHash() const
 {
     U64 hash = 0ULL;
-    U64 wPieces = Us<White>();
-    U64 bPieces = Us<Black>();
+    U64 wPieces = Us(White);
+    U64 bPieces = Us(Black);
+
     // Piece hashes
     while (wPieces)
     {
@@ -1645,15 +1647,14 @@ inline U64 Board::zobristHash()
         Square sq = poplsb(bPieces);
         hash ^= updateKeyPiece(pieceAtB(sq), sq);
     }
-    // Ep hash
+
     U64 ep_hash = 0ULL;
+
     if (enPassantSquare != NO_SQ)
-    {
         ep_hash = updateKeyEnPassant(enPassantSquare);
-    }
-    // Turn hash
+
     U64 turn_hash = sideToMove == White ? RANDOM_ARRAY[780] : 0;
-    // Castle hash
+
     U64 cast_hash = updateKeyCastling();
 
     return hash ^ cast_hash ^ turn_hash ^ ep_hash;
@@ -1663,39 +1664,37 @@ inline void Board::initializeLookupTables()
 {
     // initialize squares between table
     U64 sqs;
-    for (int sq1 = 0; sq1 <= 63; ++sq1)
+    for (Square sq1 = SQ_A1; sq1 <= SQ_H8; ++sq1)
     {
-        for (int sq2 = 0; sq2 <= 63; ++sq2)
+        for (Square sq2 = SQ_A1; sq2 <= SQ_H8; ++sq2)
         {
             sqs = (1ULL << sq1) | (1ULL << sq2);
-            if (square_file(Square(sq1)) == square_file(Square(sq2)) ||
-                square_rank(Square(sq1)) == square_rank(Square(sq2)))
-                SQUARES_BETWEEN_BB[sq1][sq2] = RookAttacks(Square(sq1), sqs) & RookAttacks(Square(sq2), sqs);
-
-            else if (diagonal_of(Square(sq1)) == diagonal_of(Square(sq2)) ||
-                     anti_diagonal_of(Square(sq1)) == anti_diagonal_of(Square(sq2)))
-                SQUARES_BETWEEN_BB[Square(sq1)][sq2] =
-                    BishopAttacks(Square(sq1), sqs) & BishopAttacks(Square(sq2), sqs);
+            if (sq1 == sq2)
+                SQUARES_BETWEEN_BB[sq1][sq2] = 0ull;
+            else if (square_file(sq1) == square_file(sq2) || square_rank(sq1) == square_rank(sq2))
+                SQUARES_BETWEEN_BB[sq1][sq2] = RookAttacks(sq1, sqs) & RookAttacks(sq2, sqs);
+            else if (diagonal_of(sq1) == diagonal_of(sq2) || anti_diagonal_of(sq1) == anti_diagonal_of(sq2))
+                SQUARES_BETWEEN_BB[sq1][sq2] = BishopAttacks(sq1, sqs) & BishopAttacks(sq2, sqs);
         }
     }
 }
 
-inline U64 Board::updateKeyPiece(Piece piece, Square sq)
+inline U64 Board::updateKeyPiece(Piece piece, Square sq) const
 {
     return RANDOM_ARRAY[64 * hash_piece[piece] + sq];
 }
 
-inline U64 Board::updateKeyEnPassant(Square sq)
+inline U64 Board::updateKeyEnPassant(Square sq) const
 {
     return RANDOM_ARRAY[772 + square_file(sq)];
 }
 
-inline U64 Board::updateKeyCastling()
+inline U64 Board::updateKeyCastling() const
 {
     return castlingKey[castlingRights];
 }
 
-inline U64 Board::updateKeySideToMove()
+inline U64 Board::updateKeySideToMove() const
 {
     return RANDOM_ARRAY[780];
 }
@@ -1712,146 +1711,138 @@ inline void Board::removeCastlingRightsAll(Color c)
     }
 }
 
-inline void Board::removeCastlingRightsRook(Color c, Square sq)
+inline void Board::removeCastlingRightsRook(Square sq)
 {
-    if (c == White && sq == SQ_A1)
+    if (castlingMapRook.find(sq) != castlingMapRook.end())
     {
-        castlingRights &= ~wq;
-    }
-    else if (c == White && sq == SQ_H1)
-    {
-        castlingRights &= ~wk;
-    }
-    else if (c == Black && sq == SQ_A8)
-    {
-        castlingRights &= ~bq;
-    }
-    else if (c == Black && sq == SQ_H8)
-    {
-        castlingRights &= ~bk;
+        castlingRights &= ~castlingMapRook[sq];
     }
 }
 
-inline void Board::removePiece(Piece piece, Square sq)
+/// @brief uci representation of a move
+/// @param move
+/// @return
+inline std::string convertMoveToUci(Move move)
 {
-    Bitboards[piece] &= ~(1ULL << sq);
-    board[sq] = None;
+    std::stringstream ss;
+
+    // Get the from and to squares
+    Square from_sq = from(move);
+    Square to_sq = to(move);
+
+    // Add the from and to squares to the string stream
+    ss << squareToString[from_sq];
+    ss << squareToString[to_sq];
+
+    // If the move is a promotion, add the promoted piece to the string stream
+    if (promoted(move))
+    {
+        ss << PieceTypeToPromPiece[piece(move)];
+    }
+
+    return ss.str();
 }
 
-inline void Board::placePiece(Piece piece, Square sq)
-{
-    Bitboards[piece] |= (1ULL << sq);
-    board[sq] = piece;
-}
-
-template <Color c> U64 Board::Pawns()
-{
-    return Bitboards[c == White ? WhitePawn : BlackPawn];
-}
-
-template <Color c> U64 Board::Knights()
-{
-    return Bitboards[c == White ? WhiteKnight : BlackKnight];
-}
-
-template <Color c> U64 Board::Bishops()
-{
-    return Bitboards[c == White ? WhiteBishop : BlackBishop];
-}
-
-template <Color c> U64 Board::Rooks()
-{
-    return Bitboards[c == White ? WhiteRook : BlackRook];
-}
-
-template <Color c> U64 Board::Queens()
-{
-    return Bitboards[c == White ? WhiteQueen : BlackQueen];
-}
-
-template <Color c> U64 Board::Kings()
-{
-    return Bitboards[c == White ? WhiteKing : BlackKing];
-}
-
-template <Color c> U64 Board::Us()
-{
-    return Pawns<c>() | Knights<c>() | Bishops<c>() | Rooks<c>() | Queens<c>() | Kings<c>();
-}
-
-template <Color c> U64 Board::Enemy()
-{
-    return Us<~c>();
-}
-
-template <Color c> Square Board::KingSQ()
-{
-    return bsf(Kings<c>());
-}
+} // namespace Chess
 
 namespace Movegen
 {
+using namespace Chess;
 
 template <Color c> U64 pawnLeftAttacks(const U64 pawns)
 {
-    return c == White ? (pawns << 7) & ~MASK_FILE[7] : (pawns >> 7) & ~MASK_FILE[0];
+    return c == White ? (pawns << 7) & ~MASK_FILE[FILE_H] : (pawns >> 7) & ~MASK_FILE[FILE_A];
 }
 
 template <Color c> U64 pawnRightAttacks(const U64 pawns)
 {
-    return c == White ? (pawns << 9) & ~MASK_FILE[0] : (pawns >> 9) & ~MASK_FILE[7];
+    return c == White ? (pawns << 9) & ~MASK_FILE[FILE_A] : (pawns >> 9) & ~MASK_FILE[FILE_H];
 }
 
-// creates the checkmask
+/********************
+ * Creates the checkmask.
+ * A checkmask is the path from the enemy checker to our king.
+ * Knight and pawns get themselves added to the checkmask, otherwise the path is added.
+ * When there is no check at all all bits are set (DEFAULT_CHECKMASK)
+ *******************/
 template <Color c> U64 DoCheckmask(Board &board, Square sq)
 {
     U64 Occ = board.occAll;
     U64 checks = 0ULL;
-    U64 pawn_mask = board.Pawns<~c>() & PawnAttacks(sq, c);
-    U64 knight_mask = board.Knights<~c>() & KnightAttacks(sq);
-    U64 bishop_mask = (board.Bishops<~c>() | board.Queens<~c>()) & BishopAttacks(sq, Occ);
-    U64 rook_mask = (board.Rooks<~c>() | board.Queens<~c>()) & RookAttacks(sq, Occ);
+    U64 pawn_mask = board.Pawns(~c) & PawnAttacks(sq, c);
+    U64 knight_mask = board.Knights(~c) & KnightAttacks(sq);
+    U64 bishop_mask = (board.Bishops(~c) | board.Queens(~c)) & BishopAttacks(sq, Occ);
+    U64 rook_mask = (board.Rooks(~c) | board.Queens(~c)) & RookAttacks(sq, Occ);
+
+    /********************
+     * We keep track of the amount of checks, in case there are
+     * two checks on the board only the king can move!
+     *******************/
     board.doubleCheck = 0;
+
     if (pawn_mask)
     {
         checks |= pawn_mask;
         board.doubleCheck++;
     }
+
     if (knight_mask)
     {
         checks |= knight_mask;
         board.doubleCheck++;
     }
+
     if (bishop_mask)
     {
-        if (popcount(bishop_mask) > 1)
-            board.doubleCheck++;
+        int8_t index = lsb(bishop_mask);
 
-        int8_t index = bsf(bishop_mask);
+        // Now we add the path!
         checks |= board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
         board.doubleCheck++;
     }
+
     if (rook_mask)
     {
+        /********************
+         * 3nk3/4P3/8/8/8/8/8/2K1R3 w - - 0 1, pawn promotes to queen or rook and
+         * suddenly the same piecetype gives check two times
+         * in that case we have a double check and can return early
+         * because king moves dont require the checkmask.
+         *******************/
         if (popcount(rook_mask) > 1)
-            board.doubleCheck++;
+        {
+            board.doubleCheck = 2;
+            return checks;
+        }
 
-        int8_t index = bsf(rook_mask);
+        int8_t index = lsb(rook_mask);
+
+        // Now we add the path!
         checks |= board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
         board.doubleCheck++;
     }
     return checks;
 }
 
-// creates the pinmask
+/********************
+ * Create the pinmask
+ * We define the pin mask as the path from the enemy pinner
+ * through the pinned piece to our king.
+ * We assume that the king can do rook and bishop moves and generate the attacks
+ * for these in case we hit an enemy rook/bishop/queen we might have a possible pin.
+ * We need to confirm the pin because there could be 2 or more pieces from our king to
+ * the possible pinner. We do this by simply using the popcount
+ * of our pieces that lay on the pin mask, if it is only 1 piece then that piece is pinned.
+ *******************/
 template <Color c> void DoPinMask(Board &board, Square sq)
 {
     U64 them = board.occEnemy;
-    U64 rook_mask = (board.Rooks<~c>() | board.Queens<~c>()) & RookAttacks(sq, them);
-    U64 bishop_mask = (board.Bishops<~c>() | board.Queens<~c>()) & BishopAttacks(sq, them);
+    U64 rook_mask = (board.Rooks(~c) | board.Queens(~c)) & RookAttacks(sq, them);
+    U64 bishop_mask = (board.Bishops(~c) | board.Queens(~c)) & BishopAttacks(sq, them);
 
     board.pinD = 0ULL;
     board.pinHV = 0ULL;
+
     while (rook_mask)
     {
         Square index = poplsb(rook_mask);
@@ -1859,6 +1850,7 @@ template <Color c> void DoPinMask(Board &board, Square sq)
         if (popcount(possible_pin & board.occUs) == 1)
             board.pinHV |= possible_pin;
     }
+
     while (bishop_mask)
     {
         Square index = poplsb(bishop_mask);
@@ -1868,17 +1860,23 @@ template <Color c> void DoPinMask(Board &board, Square sq)
     }
 }
 
-// seen squares
+/********************
+ * Seen squares
+ * We keep track of all attacked squares by the enemy
+ * this is used for king move generation.
+ *******************/
 template <Color c> void seenSquares(Board &board)
 {
-    U64 pawns = board.Pawns<c>();
-    U64 knights = board.Knights<c>();
-    U64 queens = board.Queens<c>();
-    U64 bishops = board.Bishops<c>() | queens;
-    U64 rooks = board.Rooks<c>() | queens;
+    U64 pawns = board.Pawns(c);
+    U64 knights = board.Knights(c);
+    U64 queens = board.Queens(c);
+    U64 bishops = board.Bishops(c) | queens;
+    U64 rooks = board.Rooks(c) | queens;
 
     board.seen = 0ULL;
-    Square kSq = board.KingSQ<~c>();
+
+    // Remove our king
+    Square kSq = board.KingSQ(~c);
     board.occAll &= ~(1ULL << kSq);
 
     board.seen |= pawnLeftAttacks<c>(pawns) | pawnRightAttacks<c>(pawns);
@@ -1888,36 +1886,49 @@ template <Color c> void seenSquares(Board &board)
         Square index = poplsb(knights);
         board.seen |= KnightAttacks(index);
     }
+
     while (bishops)
     {
         Square index = poplsb(bishops);
         board.seen |= BishopAttacks(index, board.occAll);
     }
+
     while (rooks)
     {
         Square index = poplsb(rooks);
         board.seen |= RookAttacks(index, board.occAll);
     }
 
-    Square index = bsf(board.Kings<c>());
+    Square index = lsb(board.Kings(c));
     board.seen |= KingAttacks(index);
 
+    // Place our King back
     board.occAll |= (1ULL << kSq);
 }
 
-// creates the pinmask and checkmask
+/********************
+ * Creates the pinmask and checkmask
+ * setup important variables that we use for move generation.
+ *******************/
 template <Color c> void init(Board &board, Square sq)
 {
-    board.occUs = board.Us<c>();
-    board.occEnemy = board.Us<~c>();
+    board.occUs = board.Us(c);
+    board.occEnemy = board.Us(~c);
     board.occAll = board.occUs | board.occEnemy;
     board.enemyEmptyBB = ~board.occUs;
+
     seenSquares<~c>(board);
-    U64 newMask = DoCheckmask<c>(board, sq);
-    board.checkMask = newMask ? newMask : DEFAULT_CHECKMASK;
+
     DoPinMask<c>(board, sq);
+    const U64 newMask = DoCheckmask<c>(board, sq);
+
+    board.checkMask = newMask ? newMask : DEFAULT_CHECKMASK;
 }
 
+/// @brief shift a mask in a direction
+/// @tparam direction
+/// @param b
+/// @return
 template <Direction direction> constexpr U64 shift(const U64 b)
 {
     switch (direction)
@@ -1943,19 +1954,24 @@ template <Direction direction> constexpr U64 shift(const U64 b)
 
 // all legal moves for each piece
 
+/// @brief all legal pawn moves, generated at once
+/// @tparam c
+/// @tparam mt
+/// @param board
+/// @param movelist
 template <Color c, Movetype mt> void LegalPawnMovesAll(Board &board, Movelist &movelist)
 {
-    const U64 pawns_mask = board.Pawns<c>();
+    const U64 pawns_mask = board.Pawns(c);
 
     constexpr Direction UP = c == White ? NORTH : SOUTH;
     constexpr Direction DOWN = c == Black ? NORTH : SOUTH;
     constexpr Direction DOWN_LEFT = c == Black ? NORTH_EAST : SOUTH_WEST;
     constexpr Direction DOWN_RIGHT = c == Black ? NORTH_WEST : SOUTH_EAST;
-    constexpr U64 RANK_BEFORE_PROMO = c == White ? MASK_RANK[6] : MASK_RANK[1];
-    constexpr U64 RANK_PROMO = c == White ? MASK_RANK[7] : MASK_RANK[0];
-    constexpr U64 doublePushRank = c == White ? MASK_RANK[2] : MASK_RANK[5];
+    constexpr U64 RANK_BEFORE_PROMO = c == White ? MASK_RANK[RANK_7] : MASK_RANK[RANK_2];
+    constexpr U64 RANK_PROMO = c == White ? MASK_RANK[RANK_8] : MASK_RANK[RANK_1];
+    constexpr U64 doublePushRank = c == White ? MASK_RANK[RANK_3] : MASK_RANK[RANK_6];
 
-    // These pawns can walk L or R
+    // These pawns can maybe take Left or Right
     const U64 pawnsLR = pawns_mask & ~board.pinHV;
 
     const U64 unpinnedpawnsLR = pawnsLR & ~board.pinD;
@@ -1964,6 +1980,7 @@ template <Color c, Movetype mt> void LegalPawnMovesAll(Board &board, Movelist &m
     U64 Lpawns = (pawnLeftAttacks<c>(unpinnedpawnsLR)) | (pawnLeftAttacks<c>(pinnedpawnsLR) & board.pinD);
     U64 Rpawns = (pawnRightAttacks<c>(unpinnedpawnsLR)) | (pawnRightAttacks<c>(pinnedpawnsLR) & board.pinD);
 
+    // Prune moves that dont capture a piece and are not on the checkmask.
     Lpawns &= board.occEnemy & board.checkMask;
     Rpawns &= board.occEnemy & board.checkMask;
 
@@ -1973,142 +1990,162 @@ template <Color c, Movetype mt> void LegalPawnMovesAll(Board &board, Movelist &m
     const U64 pawnsPinnedHV = pawnsHV & board.pinHV;
     const U64 pawnsUnPinnedHV = pawnsHV & ~board.pinHV;
 
+    // Prune moves that are blocked by a piece
     const U64 singlePushUnpinned = shift<UP>(pawnsUnPinnedHV) & ~board.occAll;
     const U64 singlePushPinned = shift<UP>(pawnsPinnedHV) & board.pinHV & ~board.occAll;
 
+    // Prune moves that are not on the checkmask.
     U64 singlePush = (singlePushUnpinned | singlePushPinned) & board.checkMask;
 
     U64 doublePush = ((shift<UP>(singlePushUnpinned & doublePushRank) & ~board.occAll) |
                       (shift<UP>(singlePushPinned & doublePushRank) & ~board.occAll)) &
                      board.checkMask;
 
-    if (pawns_mask & RANK_BEFORE_PROMO)
+    /********************
+     * Add promotion moves.
+     * These are always generated unless we only want quiet moves.
+     *******************/
+    if ((mt != Movetype::QUIET) && pawns_mask & RANK_BEFORE_PROMO)
     {
         U64 Promote_Left = Lpawns & RANK_PROMO;
         U64 Promote_Right = Rpawns & RANK_PROMO;
         U64 Promote_Move = singlePush & RANK_PROMO;
 
-        while (Promote_Move && (mt == ALL || mt == CAPTURE))
+        while (Promote_Move)
         {
-            const Square to = poplsb(Promote_Move);
-            movelist.Add(make<QUEEN, true>(Square(to + DOWN), to));
-            movelist.Add(make<ROOK, true>(Square(to + DOWN), to));
-            movelist.Add(make<KNIGHT, true>(Square(to + DOWN), to));
-            movelist.Add(make<BISHOP, true>(Square(to + DOWN), to));
+            Square to = poplsb(Promote_Move);
+            movelist.Add(make<QUEEN, true>(to + DOWN, to));
+            movelist.Add(make<ROOK, true>(to + DOWN, to));
+            movelist.Add(make<KNIGHT, true>(to + DOWN, to));
+            movelist.Add(make<BISHOP, true>(to + DOWN, to));
         }
 
-        while (Promote_Right && (mt == ALL || mt == CAPTURE))
+        while (Promote_Right)
         {
-            const Square to = poplsb(Promote_Right);
-            movelist.Add(make<QUEEN, true>(Square(to + DOWN_LEFT), to));
-            movelist.Add(make<ROOK, true>(Square(to + DOWN_LEFT), to));
-            movelist.Add(make<KNIGHT, true>(Square(to + DOWN_LEFT), to));
-            movelist.Add(make<BISHOP, true>(Square(to + DOWN_LEFT), to));
+            Square to = poplsb(Promote_Right);
+            movelist.Add(make<QUEEN, true>(to + DOWN_LEFT, to));
+            movelist.Add(make<ROOK, true>(to + DOWN_LEFT, to));
+            movelist.Add(make<KNIGHT, true>(to + DOWN_LEFT, to));
+            movelist.Add(make<BISHOP, true>(to + DOWN_LEFT, to));
         }
 
-        while (Promote_Left && (mt == ALL || mt == CAPTURE))
+        while (Promote_Left)
         {
-            const Square to = poplsb(Promote_Left);
-            movelist.Add(make<QUEEN, true>(Square(to + DOWN_RIGHT), to));
-            movelist.Add(make<ROOK, true>(Square(to + DOWN_RIGHT), to));
-            movelist.Add(make<KNIGHT, true>(Square(to + DOWN_RIGHT), to));
-            movelist.Add(make<BISHOP, true>(Square(to + DOWN_RIGHT), to));
-        }
-
-        singlePush &= ~RANK_PROMO;
-        Lpawns &= ~RANK_PROMO;
-        Rpawns &= ~RANK_PROMO;
-    }
-
-    if (board.enPassantSquare != NO_SQ && (mt == ALL || mt == CAPTURE))
-    {
-        const Square ep = board.enPassantSquare;
-        const U64 epBB = (1ULL << ep);
-        U64 left = pawnLeftAttacks<c>(pawnsLR) & epBB;
-        U64 right = pawnRightAttacks<c>(pawnsLR) & epBB;
-
-        Square to;
-        Square from;
-
-        while (left || right)
-        {
-            if (left)
-            {
-                to = poplsb(left);
-                from = Square(to + DOWN_RIGHT);
-            }
-            else
-            {
-                to = poplsb(right);
-                from = Square(to + DOWN_LEFT);
-            }
-
-            // if pinned but ep square is not on the pinmask then we cant move there
-            if ((1ULL << from) & board.pinD && !(board.pinD & epBB))
-                continue;
-
-            // If we are in check and the en passant square lies on our attackmask and the en passant piece gives
-            // check return the ep mask as a move square
-            if (board.checkMask != DEFAULT_CHECKMASK)
-            {
-                if (board.checkMask & (1ULL << (ep - (c * -2 + 1) * 8)))
-                    movelist.Add(make<PAWN, false>(from, to));
-                continue;
-            }
-
-            const Square tP = c == White ? Square(static_cast<int>(ep) - 8) : Square(static_cast<int>(ep) + 8);
-            const Square kSQ = board.KingSQ<c>();
-            const U64 enemyQueenRook = board.Rooks(~c) | board.Queens(~c);
-            if (enemyQueenRook & MASK_RANK[square_rank(kSQ)])
-            {
-                Piece ourPawn = makePiece(PAWN, c);
-                Piece theirPawn = makePiece(PAWN, ~c);
-                board.removePiece(ourPawn, from);
-                board.removePiece(theirPawn, tP);
-                board.placePiece(ourPawn, ep);
-                if (!((RookAttacks(kSQ, board.All()) & (enemyQueenRook))))
-                    movelist.Add(make<PAWN, false>(from, to));
-                board.placePiece(ourPawn, from);
-                board.placePiece(theirPawn, tP);
-                board.removePiece(ourPawn, ep);
-            }
-            else
-                movelist.Add(make<PAWN, false>(from, to));
+            Square to = poplsb(Promote_Left);
+            movelist.Add(make<QUEEN, true>(to + DOWN_RIGHT, to));
+            movelist.Add(make<ROOK, true>(to + DOWN_RIGHT, to));
+            movelist.Add(make<KNIGHT, true>(to + DOWN_RIGHT, to));
+            movelist.Add(make<BISHOP, true>(to + DOWN_RIGHT, to));
         }
     }
 
-    while (singlePush && (mt == ALL || mt == QUIET))
+    // Remove the promotion pawns
+    singlePush &= ~RANK_PROMO;
+    Lpawns &= ~RANK_PROMO;
+    Rpawns &= ~RANK_PROMO;
+
+    /********************
+     * Add single pushs.
+     *******************/
+    while (mt != Movetype::CAPTURE && singlePush)
     {
         Square to = poplsb(singlePush);
-        movelist.Add(make<PAWN, false>(Square(to + DOWN), to));
+        movelist.Add(make<PAWN, false>(to + DOWN, to));
     }
 
-    while (doublePush && (mt == ALL || mt == QUIET))
+    /********************
+     * Add double pushs.
+     *******************/
+    while (mt != Movetype::CAPTURE && doublePush)
     {
         Square to = poplsb(doublePush);
-        movelist.Add(make<PAWN, false>(Square(to + DOWN + DOWN), to));
+        movelist.Add(make<PAWN, false>(to + DOWN + DOWN, to));
     }
 
-    while (Rpawns && (mt == ALL || mt == CAPTURE))
+    /********************
+     * Add right pawn captures.
+     *******************/
+    while (mt != Movetype::QUIET && Rpawns)
     {
         Square to = poplsb(Rpawns);
-        movelist.Add(make<PAWN, false>(Square(to + DOWN_LEFT), to));
+        movelist.Add(make<PAWN, false>(to + DOWN_LEFT, to));
     }
 
-    while (Lpawns && (mt == ALL || mt == CAPTURE))
+    /********************
+     * Add left pawn captures.
+     *******************/
+    while (mt != Movetype::QUIET && Lpawns)
     {
         Square to = poplsb(Lpawns);
-        movelist.Add(make<PAWN, false>(Square(to + DOWN_RIGHT), to));
+        movelist.Add(make<PAWN, false>(to + DOWN_RIGHT, to));
+    }
+
+    /********************
+     * Add en passant captures.
+     *******************/
+    if (mt != Movetype::QUIET && board.enPassantSquare != NO_SQ)
+    {
+        const Square ep = board.enPassantSquare;
+        const Square epPawn = ep + DOWN;
+
+        U64 epMask = (1ull << epPawn) | (1ull << ep);
+
+        /********************
+         * In case the en passant square and the enemy pawn
+         * that just moved are not on the checkmask
+         * en passant is not available.
+         *******************/
+        if ((board.checkMask & epMask) == 0)
+            return;
+
+        const Square kSQ = board.KingSQ(c);
+        const U64 kingMask = (1ull << kSQ) & MASK_RANK[square_rank(epPawn)];
+        const U64 enemyQueenRook = board.Rooks(~c) | board.Queens(~c);
+
+        const bool isPossiblePin = kingMask && enemyQueenRook;
+        U64 epBB = PawnAttacks(ep, ~c) & pawnsLR;
+
+        /********************
+         * For one en passant square two pawns could potentially take there.
+         *******************/
+        while (epBB)
+        {
+            Square from = poplsb(epBB);
+            Square to = ep;
+
+            /********************
+             * If the pawn is pinned but the en passant square is not on the
+             * pin mask then the move is illegal.
+             *******************/
+            if ((1ULL << from) & board.pinD && !(board.pinD & (1ull << ep)))
+                continue;
+
+            const U64 connectingPawns = (1ull << epPawn) | (1ull << from);
+
+            /********************
+             * 7k/4p3/8/2KP3r/8/8/8/8 b - - 0 1
+             * If e7e5 there will be a potential ep square for us on e6.
+             * However we cannot take en passant because that would put our king
+             * in check. For this scenario we check if theres an enemy rook/queen
+             * that would give check if the two pawns were removed.
+             * If thats the case then the move is illegal and we can break immediately.
+             *******************/
+            if (isPossiblePin && (RookAttacks(kSQ, board.occAll & ~connectingPawns) & enemyQueenRook) != 0)
+                break;
+
+            movelist.Add(make<PAWN, false>(from, to));
+        }
     }
 }
 
-inline U64 LegalKnightMoves(const Board &board, Square sq, U64 movableSquare)
+inline U64 LegalKnightMoves(Square sq, U64 movableSquare)
 {
     return KnightAttacks(sq) & movableSquare;
 }
 
 inline U64 LegalBishopMoves(const Board &board, Square sq, U64 movableSquare)
 {
+    // The Bishop is pinned diagonally thus can only move diagonally.
     if (board.pinD & (1ULL << sq))
         return BishopAttacks(sq, board.occAll) & movableSquare & board.pinD;
     return BishopAttacks(sq, board.occAll) & movableSquare;
@@ -2116,6 +2153,7 @@ inline U64 LegalBishopMoves(const Board &board, Square sq, U64 movableSquare)
 
 inline U64 LegalRookMoves(const Board &board, Square sq, U64 movableSquare)
 {
+    // The Rook is pinned horizontally thus can only move horizontally.
     if (board.pinHV & (1ULL << sq))
         return RookAttacks(sq, board.occAll) & movableSquare & board.pinHV;
     return RookAttacks(sq, board.occAll) & movableSquare;
@@ -2124,6 +2162,7 @@ inline U64 LegalRookMoves(const Board &board, Square sq, U64 movableSquare)
 inline U64 LegalQueenMoves(const Board &board, Square sq, U64 movableSquare)
 {
     U64 moves = 0ULL;
+
     if (board.pinD & (1ULL << sq))
         moves |= BishopAttacks(sq, board.occAll) & movableSquare & board.pinD;
     else if (board.pinHV & (1ULL << sq))
@@ -2141,9 +2180,9 @@ template <Movetype mt> U64 LegalKingMoves(const Board &board, Square sq)
 {
     U64 bb;
 
-    if (mt == ALL)
+    if (mt == Movetype::ALL)
         bb = board.enemyEmptyBB;
-    else if (mt == CAPTURE)
+    else if (mt == Movetype::CAPTURE)
         bb = board.occEnemy;
     else
         bb = ~board.occAll;
@@ -2151,50 +2190,70 @@ template <Movetype mt> U64 LegalKingMoves(const Board &board, Square sq)
     return KingAttacks(sq) & bb & ~board.seen;
 }
 
-template <Color c> U64 LegalKingMovesCastling(const Board &board, Square sq)
+template <Color c, Movetype mt> U64 LegalKingMovesCastling(const Board &board, Square sq)
 {
-    U64 moves = KingAttacks(sq) & board.enemyEmptyBB & ~board.seen;
+    U64 bb;
 
-    if (c == White)
-    {
-        if (board.castlingRights & wk && !(WK_CASTLE_MASK & board.occAll) && moves & (1ULL << SQ_F1) &&
-            !(board.seen & (1ULL << SQ_G1)))
-        {
-            moves |= (1ULL << SQ_G1);
-        }
-        if (board.castlingRights & wq && !(WQ_CASTLE_MASK & board.occAll) && moves & (1ULL << SQ_D1) &&
-            !(board.seen & (1ULL << SQ_C1)))
-        {
-            moves |= (1ULL << SQ_C1);
-        }
-    }
+    if (mt == Movetype::ALL)
+        bb = board.enemyEmptyBB;
     else
+        bb = ~board.occAll;
+
+    U64 moves = KingAttacks(sq) & bb & ~board.seen;
+    U64 emptyAndNotAttacked = ~board.seen & ~board.occAll;
+
+    switch (c)
     {
-        if (board.castlingRights & bk && !(BK_CASTLE_MASK & board.occAll) && moves & (1ULL << SQ_F8) &&
-            !(board.seen & (1ULL << SQ_G8)))
-        {
-            moves |= (1ULL << SQ_G8);
-        }
-        if (board.castlingRights & bq && !(BQ_CASTLE_MASK & board.occAll) && moves & (1ULL << SQ_D8) &&
-            !(board.seen & (1ULL << SQ_C8)))
-        {
-            moves |= (1ULL << SQ_C8);
-        }
+    case White:
+        if (board.castlingRights & wk && emptyAndNotAttacked & (1ULL << SQ_F1) && emptyAndNotAttacked & (1ull << SQ_G1))
+            moves |= (1ULL << SQ_H1);
+        if (board.castlingRights & wq && emptyAndNotAttacked & (1ULL << SQ_D1) &&
+            emptyAndNotAttacked & (1ull << SQ_C1) && (1ull << SQ_B1) & ~board.occAll)
+            moves |= (1ULL << SQ_A1);
+        break;
+    case Black:
+        if (board.castlingRights & bk && emptyAndNotAttacked & (1ULL << SQ_F8) && emptyAndNotAttacked & (1ull << SQ_G8))
+            moves |= (1ULL << SQ_H8);
+        if (board.castlingRights & bq && emptyAndNotAttacked & (1ULL << SQ_D8) &&
+            emptyAndNotAttacked & (1ull << SQ_C8) && (1ull << SQ_B8) & ~board.occAll)
+            moves |= (1ULL << SQ_A8);
+        break;
+    default:
+        return moves;
     }
+
     return moves;
 }
 
 // all legal moves for a position
 template <Color c, Movetype mt> void legalmoves(Board &board, Movelist &movelist)
 {
-    init<c>(board, board.KingSQ<c>());
+    init<c>(board, board.KingSQ(c));
 
-    Square from = board.KingSQ<c>();
+    assert(board.doubleCheck <= 2);
+
+    /********************
+     * Moves have to be on the checkmask
+     *******************/
+    U64 movableSquare = board.checkMask;
+
+    /********************
+     * Slider, Knights and King moves can only go to enemy or empty squares.
+     *******************/
+    if (mt == Movetype::ALL)
+        movableSquare &= board.enemyEmptyBB;
+    else if (mt == Movetype::CAPTURE)
+        movableSquare &= board.occEnemy;
+    else // QUIET moves
+        movableSquare &= ~board.occAll;
+
+    Square from = board.KingSQ(c);
     U64 moves;
-    if (!board.castlingRights || board.checkMask != DEFAULT_CHECKMASK || mt == CAPTURE)
+
+    if (mt == Movetype::CAPTURE || !board.castlingRights || board.checkMask != DEFAULT_CHECKMASK)
         moves = LegalKingMoves<mt>(board, from);
     else
-        moves = LegalKingMovesCastling<c>(board, from);
+        moves = LegalKingMovesCastling<c, mt>(board, from);
 
     while (moves)
     {
@@ -2202,35 +2261,48 @@ template <Color c, Movetype mt> void legalmoves(Board &board, Movelist &movelist
         movelist.Add(make<KING, false>(from, to));
     }
 
+    /********************
+     * Early return for double check as described earlier
+     *******************/
     if (board.doubleCheck == 2)
         return;
 
-    U64 movableSquare = board.checkMask;
+    /********************
+     * Prune knights that are pinned since these cannot move.
+     *******************/
+    U64 knights_mask = board.Knights(c) & ~(board.pinD | board.pinHV);
 
-    if (mt == ALL)
-        movableSquare &= board.enemyEmptyBB;
-    else if (mt == CAPTURE)
-        movableSquare &= board.occEnemy;
-    else
-        movableSquare &= ~board.occAll;
+    /********************
+     * Prune horizontally pinned bishops
+     *******************/
+    U64 bishops_mask = board.Bishops(c) & ~board.pinHV;
 
-    U64 knights_mask = board.Knights<c>() & ~(board.pinD | board.pinHV);
-    U64 bishops_mask = board.Bishops<c>() & ~board.pinHV;
-    U64 rooks_mask = board.Rooks<c>() & ~board.pinD;
-    U64 queens_mask = board.Queens<c>();
+    /********************
+     * Prune diagonally pinned rooks
+     *******************/
+    U64 rooks_mask = board.Rooks(c) & ~board.pinD;
 
+    /********************
+     * Prune double pinned queens
+     *******************/
+    U64 queens_mask = board.Queens(c) & ~(board.pinD & board.pinHV);
+
+    /********************
+     * Add the moves to the movelist.
+     *******************/
     LegalPawnMovesAll<c, mt>(board, movelist);
 
     while (knights_mask)
     {
         Square from = poplsb(knights_mask);
-        U64 moves = LegalKnightMoves(board, from, movableSquare);
+        U64 moves = LegalKnightMoves(from, movableSquare);
         while (moves)
         {
             Square to = poplsb(moves);
             movelist.Add(make<KNIGHT, false>(from, to));
         }
     }
+
     while (bishops_mask)
     {
         Square from = poplsb(bishops_mask);
@@ -2241,6 +2313,7 @@ template <Color c, Movetype mt> void legalmoves(Board &board, Movelist &movelist
             movelist.Add(make<BISHOP, false>(from, to));
         }
     }
+
     while (rooks_mask)
     {
         Square from = poplsb(rooks_mask);
@@ -2251,6 +2324,7 @@ template <Color c, Movetype mt> void legalmoves(Board &board, Movelist &movelist
             movelist.Add(make<ROOK, false>(from, to));
         }
     }
+
     while (queens_mask)
     {
         Square from = poplsb(queens_mask);
@@ -2262,94 +2336,17 @@ template <Color c, Movetype mt> void legalmoves(Board &board, Movelist &movelist
         }
     }
 }
-/// @brief generate all legalmoves, template parameters are ALL, CAPTURE, QUIET
-/// @tparam mt
-/// @param board
-/// @param movelist
-template <Movetype mt> void legalmoves(Board &board, Movelist &movelist)
+
+/********************
+ * Entry function for the
+ * Color template.
+ *******************/
+template <Movetype mt> void legalmoves(Board &board, Movelist &movelist, int start_index = 0)
 {
+    movelist.size = start_index;
     if (board.sideToMove == White)
         legalmoves<White, mt>(board, movelist);
     else
         legalmoves<Black, mt>(board, movelist);
 }
-
-template <Color c> bool hasLegalMoves(Board &board)
-{
-    init<c>(board, board.KingSQ<c>());
-
-    Square from = board.KingSQ<c>();
-    U64 moves = !board.castlingRights || board.checkMask != DEFAULT_CHECKMASK ? LegalKingMoves<ALL>(board, from)
-                                                                              : LegalKingMovesCastling<c>(board, from);
-    if (moves)
-        return true;
-
-    if (board.doubleCheck == 2)
-        return false;
-
-    U64 knights_mask = board.Knights<c>() & ~(board.pinD | board.pinHV);
-    U64 bishops_mask = board.Bishops<c>() & ~board.pinHV;
-    U64 rooks_mask = board.Rooks<c>() & ~board.pinD;
-    U64 queens_mask = board.Queens<c>();
-
-    Movelist m;
-    LegalPawnMovesAll<c, ALL>(board, m);
-    if (m.size > 0)
-        return true;
-
-    U64 movableSquare = board.checkMask & board.enemyEmptyBB;
-
-    while (knights_mask)
-    {
-        Square from = poplsb(knights_mask);
-        U64 moves = LegalKnightMoves(board, from, movableSquare);
-        while (moves)
-        {
-            return true;
-        }
-    }
-    while (bishops_mask)
-    {
-        Square from = poplsb(bishops_mask);
-        U64 moves = LegalBishopMoves(board, from, movableSquare);
-        while (moves)
-        {
-            return true;
-        }
-    }
-    while (rooks_mask)
-    {
-        Square from = poplsb(rooks_mask);
-        U64 moves = LegalRookMoves(board, from, movableSquare);
-        while (moves)
-        {
-            return true;
-        }
-    }
-    while (queens_mask)
-    {
-        Square from = poplsb(queens_mask);
-        U64 moves = LegalQueenMoves(board, from, movableSquare);
-        while (moves)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/// @brief tests if there are any legal moves
-/// @tparam c
-/// @param board
-/// @return
-inline bool hasLegalMoves(Board &board)
-{
-    if (board.sideToMove == White)
-        return hasLegalMoves<White>(board);
-    else
-        return hasLegalMoves<Black>(board);
-}
 } // namespace Movegen
-
-} // namespace Chess

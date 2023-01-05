@@ -8,26 +8,27 @@ class PerftTest
 {
   public:
     uint64_t nodes;
-    Movelist movesl[20];
 
     uint64_t perft(Board &board, int depth)
     {
-        movesl[depth].size = 0;
-        Movegen::legalmoves<ALL>(board, movesl[depth]);
+        Movelist moveslist;
+        Movegen::legalmoves<ALL>(board, moveslist);
 
         if (depth == 1)
         {
-            return (int)movesl[depth].size;
+            return int(moveslist.size);
         }
 
         uint64_t nodes = 0;
-        for (int i = 0; i < (int)movesl[depth].size; i++)
+
+        for (int i = 0; i < int(moveslist.size); i++)
         {
-            Move move = movesl[depth][i].move;
+            Move move = moveslist[i].move;
             board.makeMove(move);
             nodes += perft(board, depth - 1);
             board.unmakeMove(move);
         }
+
         return nodes;
     }
 
@@ -50,6 +51,7 @@ class PerftTest
            << std::setw(12) << n << " nps " << std::setw(9) << (n * 1000) / (ms + 1) << " fen " << std::setw(87)
            << board.getFen();
         std::cout << ss.str() << std::endl;
+
         return n;
     }
 };
@@ -59,7 +61,6 @@ int main()
     Board board = Board(DEFAULT_POS);
     PerftTest perft = PerftTest();
 
-    board.print();
     U64 totalNodes = 0;
 
     const auto t1 = std::chrono::high_resolution_clock::now();
