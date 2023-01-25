@@ -594,6 +594,8 @@ struct Movelist
 {
     ExtMove list[MAX_MOVES] = {};
     uint8_t size = 0;
+    typedef ExtMove *iterator;
+    typedef const ExtMove *const_iterator;
 
     inline void Add(Move move)
     {
@@ -605,6 +607,37 @@ struct Movelist
     inline constexpr ExtMove &operator[](int i)
     {
         return list[i];
+    }
+
+    inline constexpr int find(Move m)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            if (list[i].move == m)
+                return i;
+        }
+        return -1;
+    }
+
+    inline iterator begin()
+    {
+        return (std::begin(list));
+    }
+    inline const_iterator begin() const
+    {
+        return (std::begin(list));
+    }
+    inline iterator end()
+    {
+        auto it = std::begin(list);
+        std::advance(it, size);
+        return it;
+    }
+    inline const_iterator end() const
+    {
+        auto it = std::begin(list);
+        std::advance(it, size);
+        return it;
     }
 };
 
@@ -872,7 +905,7 @@ class Board
     // current hashkey
     U64 hashKey;
 
-    U64 Bitboards[12] = {};
+    U64 piecesBB[12] = {};
     Piece board[MAX_SQ];
 
     // keeps track on how many checks there currently are
@@ -897,7 +930,7 @@ class Board
     // all squares that are seen by an enemy piece
     U64 seen;
 
-    // Occupation Bitboards
+    // Occupation piecesBB
     U64 occEnemy;
     U64 occUs;
     U64 occAll;
@@ -947,16 +980,34 @@ class Board
     U64 Enemy(Color c) const;
     U64 EnemyEmpty(Color c) const;
     U64 Us(Color c) const;
-    U64 All() const;
 
-    // Gets individual bitboards
+    template <Color c> U64 Us() const
+    {
+        return piecesBB[PAWN + c * 6] | piecesBB[KNIGHT + c * 6] | piecesBB[BISHOP + c * 6] | piecesBB[ROOK + c * 6] |
+               piecesBB[QUEEN + c * 6] | piecesBB[KING + c * 6];
+    }
 
-    U64 Pawns(Color c) const;
-    U64 Knights(Color c) const;
-    U64 Bishops(Color c) const;
-    U64 Rooks(Color c) const;
-    U64 Queens(Color c) const;
-    U64 Kings(Color c) const;
+    inline U64 All() const
+    {
+        return Us<White>() | Us<Black>();
+    }
+
+    // Gets individual piece bitboards
+
+    template <Piece p> constexpr U64 pieces() const
+    {
+        return piecesBB[p];
+    }
+
+    template <PieceType p, Color c> constexpr U64 pieces() const
+    {
+        return piecesBB[p + c * 6];
+    }
+
+    inline constexpr U64 pieces(PieceType p, Color c) const
+    {
+        return piecesBB[p + c * 6];
+    }
 
     /// @brief returns the color of a piece at a square
     /// @param loc
@@ -1054,7 +1105,7 @@ inline Piece Board::pieceAtBB(Square sq)
 {
     for (Piece p = WhitePawn; p < None; p++)
     {
-        if (Bitboards[p] & (1ULL << sq))
+        if (piecesBB[p] & (1ULL << sq))
             return p;
     }
     return None;
@@ -1069,7 +1120,7 @@ inline void Board::applyFen(const std::string &fen)
 {
     for (Piece p = WhitePawn; p < None; p++)
     {
-        Bitboards[p] = 0ULL;
+        piecesBB[p] = 0ULL;
     }
 
     const std::vector<std::string> params = splitInput(fen);
@@ -1220,25 +1271,27 @@ inline std::string Board::getFen() const
 inline bool Board::isRepetition(int draw) const
 {
     uint8_t c = 0;
+
     for (int i = static_cast<int>(hashHistory.size()) - 2;
-         i >= 0 && i >= static_cast<int>(hashHistory.size()) - halfMoveClock; i -= 2)
+         i >= 0 && i >= static_cast<int>(hashHistory.size()) - halfMoveClock - 1; i -= 2)
     {
         if (hashHistory[i] == hashKey)
             c++;
         if (c == draw)
             return true;
     }
+
     return false;
 }
 
 inline bool Board::nonPawnMat(Color c) const
 {
-    return Knights(c) | Bishops(c) | Rooks(c) | Queens(c);
+    return pieces(KNIGHT, c) | pieces(BISHOP, c) | pieces(ROOK, c) | pieces(QUEEN, c);
 }
 
 inline Square Board::KingSQ(Color c) const
 {
-    return lsb(Kings(c));
+    return lsb(pieces(KING, c));
 }
 
 inline U64 Board::Enemy(Color c) const
@@ -1248,48 +1301,13 @@ inline U64 Board::Enemy(Color c) const
 
 inline U64 Board::Us(Color c) const
 {
-    return Bitboards[PAWN + c * 6] | Bitboards[KNIGHT + c * 6] | Bitboards[BISHOP + c * 6] | Bitboards[ROOK + c * 6] |
-           Bitboards[QUEEN + c * 6] | Bitboards[KING + c * 6];
+    return piecesBB[PAWN + c * 6] | piecesBB[KNIGHT + c * 6] | piecesBB[BISHOP + c * 6] | piecesBB[ROOK + c * 6] |
+           piecesBB[QUEEN + c * 6] | piecesBB[KING + c * 6];
 }
 
 inline U64 Board::EnemyEmpty(Color c) const
 {
     return ~Us(c);
-}
-
-inline U64 Board::All() const
-{
-    return Us(White) | Us(Black);
-}
-
-inline U64 Board::Pawns(Color c) const
-{
-    return Bitboards[PAWN + c * 6];
-}
-
-inline U64 Board::Knights(Color c) const
-{
-    return Bitboards[KNIGHT + c * 6];
-}
-
-inline U64 Board::Bishops(Color c) const
-{
-    return Bitboards[BISHOP + c * 6];
-}
-
-inline U64 Board::Rooks(Color c) const
-{
-    return Bitboards[ROOK + c * 6];
-}
-
-inline U64 Board::Queens(Color c) const
-{
-    return Bitboards[QUEEN + c * 6];
-}
-
-inline U64 Board::Kings(Color c) const
-{
-    return Bitboards[KING + c * 6];
 }
 
 inline Color Board::colorOf(Square loc) const
@@ -1299,18 +1317,18 @@ inline Color Board::colorOf(Square loc) const
 
 inline bool Board::isSquareAttacked(Color c, Square sq) const
 {
-    if (Pawns(c) & PawnAttacks(sq, ~c))
+    if (pieces(PAWN, c) & PawnAttacks(sq, ~c))
         return true;
-    if (Knights(c) & KnightAttacks(sq))
+    if (pieces(KNIGHT, c) & KnightAttacks(sq))
         return true;
 
     const U64 bb = All();
 
-    if ((Bishops(c) | Queens(c)) & BishopAttacks(sq, bb))
+    if ((pieces(BISHOP, c) | pieces(QUEEN, c)) & BishopAttacks(sq, bb))
         return true;
-    if ((Rooks(c) | Queens(c)) & RookAttacks(sq, bb))
+    if ((pieces(ROOK, c) | pieces(QUEEN, c)) & RookAttacks(sq, bb))
         return true;
-    if (Kings(c) & KingAttacks(sq))
+    if (pieces(KING, c) & KingAttacks(sq))
         return true;
     return false;
 }
@@ -1383,7 +1401,7 @@ inline void Board::makeMove(Move move)
         else if (std::abs(from_sq - to_sq) == 16)
         {
             U64 epMask = PawnAttacks(Square(to_sq - (sideToMove * -2 + 1) * 8), sideToMove);
-            if (epMask & Pawns(~sideToMove))
+            if (epMask & pieces(PAWN, ~sideToMove))
             {
                 enPassantSquare = Square(to_sq - (sideToMove * -2 + 1) * 8);
                 hashKey ^= updateKeyEnPassant(enPassantSquare);
@@ -1563,20 +1581,20 @@ inline void Board::unmakeNullMove()
 
 inline void Board::removePiece(Piece piece, Square sq)
 {
-    Bitboards[piece] &= ~(1ULL << sq);
+    piecesBB[piece] &= ~(1ULL << sq);
     board[sq] = None;
 }
 
 inline void Board::placePiece(Piece piece, Square sq)
 {
-    Bitboards[piece] |= (1ULL << sq);
+    piecesBB[piece] |= (1ULL << sq);
     board[sq] = piece;
 }
 
 inline void Board::movePiece(Piece piece, Square fromSq, Square toSq)
 {
-    Bitboards[piece] &= ~(1ULL << fromSq);
-    Bitboards[piece] |= (1ULL << toSq);
+    piecesBB[piece] &= ~(1ULL << fromSq);
+    piecesBB[piece] |= (1ULL << toSq);
     board[fromSq] = None;
     board[toSq] = piece;
 }
@@ -1769,10 +1787,10 @@ template <Color c> U64 DoCheckmask(Board &board, Square sq)
 {
     U64 Occ = board.occAll;
     U64 checks = 0ULL;
-    U64 pawn_mask = board.Pawns(~c) & PawnAttacks(sq, c);
-    U64 knight_mask = board.Knights(~c) & KnightAttacks(sq);
-    U64 bishop_mask = (board.Bishops(~c) | board.Queens(~c)) & BishopAttacks(sq, Occ);
-    U64 rook_mask = (board.Rooks(~c) | board.Queens(~c)) & RookAttacks(sq, Occ);
+    U64 pawn_mask = board.pieces<PAWN, ~c>() & PawnAttacks(sq, c);
+    U64 knight_mask = board.pieces<KNIGHT, ~c>() & KnightAttacks(sq);
+    U64 bishop_mask = (board.pieces<BISHOP, ~c>() | board.pieces<QUEEN, ~c>()) & BishopAttacks(sq, Occ);
+    U64 rook_mask = (board.pieces<ROOK, ~c>() | board.pieces<QUEEN, ~c>()) & RookAttacks(sq, Occ);
 
     /********************
      * We keep track of the amount of checks, in case there are
@@ -1785,13 +1803,11 @@ template <Color c> U64 DoCheckmask(Board &board, Square sq)
         checks |= pawn_mask;
         board.doubleCheck++;
     }
-
     if (knight_mask)
     {
         checks |= knight_mask;
         board.doubleCheck++;
     }
-
     if (bishop_mask)
     {
         int8_t index = lsb(bishop_mask);
@@ -1800,7 +1816,6 @@ template <Color c> U64 DoCheckmask(Board &board, Square sq)
         checks |= board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
         board.doubleCheck++;
     }
-
     if (rook_mask)
     {
         /********************
@@ -1821,6 +1836,10 @@ template <Color c> U64 DoCheckmask(Board &board, Square sq)
         checks |= board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
         board.doubleCheck++;
     }
+
+    if (!checks)
+        return DEFAULT_CHECKMASK;
+
     return checks;
 }
 
@@ -1834,30 +1853,36 @@ template <Color c> U64 DoCheckmask(Board &board, Square sq)
  * the possible pinner. We do this by simply using the popcount
  * of our pieces that lay on the pin mask, if it is only 1 piece then that piece is pinned.
  *******************/
-template <Color c> void DoPinMask(Board &board, Square sq)
+template <Color c> U64 DoPinMaskRooks(Board &board, Square sq)
 {
-    U64 them = board.occEnemy;
-    U64 rook_mask = (board.Rooks(~c) | board.Queens(~c)) & RookAttacks(sq, them);
-    U64 bishop_mask = (board.Bishops(~c) | board.Queens(~c)) & BishopAttacks(sq, them);
+    U64 rook_mask = (board.pieces<ROOK, ~c>() | board.pieces<QUEEN, ~c>()) & RookAttacks(sq, board.occEnemy);
 
-    board.pinD = 0ULL;
-    board.pinHV = 0ULL;
-
+    U64 pinHV = 0ULL;
     while (rook_mask)
     {
-        Square index = poplsb(rook_mask);
-        U64 possible_pin = (board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index));
+        const Square index = poplsb(rook_mask);
+        const U64 possible_pin = (board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index));
         if (popcount(possible_pin & board.occUs) == 1)
-            board.pinHV |= possible_pin;
+            pinHV |= possible_pin;
     }
+    return pinHV;
+}
+
+template <Color c> U64 DoPinMaskBishops(Board &board, Square sq)
+{
+    U64 bishop_mask = (board.pieces<BISHOP, ~c>() | board.pieces<QUEEN, ~c>()) & BishopAttacks(sq, board.occEnemy);
+
+    U64 pinD = 0ULL;
 
     while (bishop_mask)
     {
-        Square index = poplsb(bishop_mask);
-        U64 possible_pin = (board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index));
+        const Square index = poplsb(bishop_mask);
+        const U64 possible_pin = (board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index));
         if (popcount(possible_pin & board.occUs) == 1)
-            board.pinD |= possible_pin;
+            pinD |= possible_pin;
     }
+
+    return pinD;
 }
 
 /********************
@@ -1865,45 +1890,44 @@ template <Color c> void DoPinMask(Board &board, Square sq)
  * We keep track of all attacked squares by the enemy
  * this is used for king move generation.
  *******************/
-template <Color c> void seenSquares(Board &board)
+template <Color c> U64 seenSquares(Board &board)
 {
-    U64 pawns = board.Pawns(c);
-    U64 knights = board.Knights(c);
-    U64 queens = board.Queens(c);
-    U64 bishops = board.Bishops(c) | queens;
-    U64 rooks = board.Rooks(c) | queens;
+    const Square kSq = board.KingSQ(~c);
 
-    board.seen = 0ULL;
+    U64 pawns = board.pieces<PAWN, c>();
+    U64 knights = board.pieces<KNIGHT, c>();
+    U64 queens = board.pieces<QUEEN, c>();
+    U64 bishops = board.pieces<BISHOP, c>() | queens;
+    U64 rooks = board.pieces<ROOK, c>() | queens;
 
     // Remove our king
-    Square kSq = board.KingSQ(~c);
     board.occAll &= ~(1ULL << kSq);
 
-    board.seen |= pawnLeftAttacks<c>(pawns) | pawnRightAttacks<c>(pawns);
+    U64 seen = pawnLeftAttacks<c>(pawns) | pawnRightAttacks<c>(pawns);
 
     while (knights)
     {
         Square index = poplsb(knights);
-        board.seen |= KnightAttacks(index);
+        seen |= KnightAttacks(index);
     }
-
     while (bishops)
     {
         Square index = poplsb(bishops);
-        board.seen |= BishopAttacks(index, board.occAll);
+        seen |= BishopAttacks(index, board.occAll);
     }
-
     while (rooks)
     {
         Square index = poplsb(rooks);
-        board.seen |= RookAttacks(index, board.occAll);
+        seen |= RookAttacks(index, board.occAll);
     }
 
-    Square index = lsb(board.Kings(c));
-    board.seen |= KingAttacks(index);
+    Square index = lsb(board.pieces<KING, c>());
+    seen |= KingAttacks(index);
 
     // Place our King back
     board.occAll |= (1ULL << kSq);
+
+    return seen;
 }
 
 /********************
@@ -1912,17 +1936,15 @@ template <Color c> void seenSquares(Board &board)
  *******************/
 template <Color c> void init(Board &board, Square sq)
 {
-    board.occUs = board.Us(c);
-    board.occEnemy = board.Us(~c);
+    board.occUs = board.Us<c>();
+    board.occEnemy = board.Us<~c>();
     board.occAll = board.occUs | board.occEnemy;
     board.enemyEmptyBB = ~board.occUs;
 
-    seenSquares<~c>(board);
-
-    DoPinMask<c>(board, sq);
-    const U64 newMask = DoCheckmask<c>(board, sq);
-
-    board.checkMask = newMask ? newMask : DEFAULT_CHECKMASK;
+    board.seen = seenSquares<~c>(board);
+    board.checkMask = DoCheckmask<c>(board, sq);
+    board.pinHV = DoPinMaskRooks<c>(board, sq);
+    board.pinD = DoPinMaskBishops<c>(board, sq);
 }
 
 /// @brief shift a mask in a direction
@@ -1961,7 +1983,7 @@ template <Direction direction> constexpr U64 shift(const U64 b)
 /// @param movelist
 template <Color c, Movetype mt> void LegalPawnMovesAll(Board &board, Movelist &movelist)
 {
-    const U64 pawns_mask = board.Pawns(c);
+    const U64 pawns_mask = board.pieces(PAWN, c);
 
     constexpr Direction UP = c == White ? NORTH : SOUTH;
     constexpr Direction DOWN = c == Black ? NORTH : SOUTH;
@@ -2100,7 +2122,7 @@ template <Color c, Movetype mt> void LegalPawnMovesAll(Board &board, Movelist &m
 
         const Square kSQ = board.KingSQ(c);
         const U64 kingMask = (1ull << kSQ) & MASK_RANK[square_rank(epPawn)];
-        const U64 enemyQueenRook = board.Rooks(~c) | board.Queens(~c);
+        const U64 enemyQueenRook = board.pieces(ROOK, ~c) | board.pieces(QUEEN, ~c);
 
         const bool isPossiblePin = kingMask && enemyQueenRook;
         U64 epBB = PawnAttacks(ep, ~c) & pawnsLR;
@@ -2202,25 +2224,35 @@ template <Color c, Movetype mt> U64 LegalKingMovesCastling(const Board &board, S
     U64 moves = KingAttacks(sq) & bb & ~board.seen;
     U64 emptyAndNotAttacked = ~board.seen & ~board.occAll;
 
+    // clang-format off
     switch (c)
     {
     case White:
-        if (board.castlingRights & wk && emptyAndNotAttacked & (1ULL << SQ_F1) && emptyAndNotAttacked & (1ull << SQ_G1))
+        if (    board.castlingRights & wk 
+            &&  emptyAndNotAttacked & (1ULL << SQ_F1) 
+            &&  emptyAndNotAttacked & (1ull << SQ_G1))
             moves |= (1ULL << SQ_H1);
-        if (board.castlingRights & wq && emptyAndNotAttacked & (1ULL << SQ_D1) &&
-            emptyAndNotAttacked & (1ull << SQ_C1) && (1ull << SQ_B1) & ~board.occAll)
+        if (    board.castlingRights & wq 
+            &&  emptyAndNotAttacked & (1ULL << SQ_D1) 
+            &&  emptyAndNotAttacked & (1ull << SQ_C1) 
+            &&  (1ull << SQ_B1) & ~board.occAll)
             moves |= (1ULL << SQ_A1);
         break;
     case Black:
-        if (board.castlingRights & bk && emptyAndNotAttacked & (1ULL << SQ_F8) && emptyAndNotAttacked & (1ull << SQ_G8))
+        if (    board.castlingRights & bk 
+            &&  emptyAndNotAttacked & (1ULL << SQ_F8) 
+            &&  emptyAndNotAttacked & (1ull << SQ_G8))
             moves |= (1ULL << SQ_H8);
-        if (board.castlingRights & bq && emptyAndNotAttacked & (1ULL << SQ_D8) &&
-            emptyAndNotAttacked & (1ull << SQ_C8) && (1ull << SQ_B8) & ~board.occAll)
+        if (    board.castlingRights & bq 
+            &&  emptyAndNotAttacked & (1ULL << SQ_D8) 
+            &&  emptyAndNotAttacked & (1ull << SQ_C8) 
+            &&  (1ull << SQ_B8) & ~board.occAll)
             moves |= (1ULL << SQ_A8);
         break;
     default:
         return moves;
     }
+    // clang-format on
 
     return moves;
 }
@@ -2270,22 +2302,22 @@ template <Color c, Movetype mt> void legalmoves(Board &board, Movelist &movelist
     /********************
      * Prune knights that are pinned since these cannot move.
      *******************/
-    U64 knights_mask = board.Knights(c) & ~(board.pinD | board.pinHV);
+    U64 knights_mask = board.pieces(KNIGHT, c) & ~(board.pinD | board.pinHV);
 
     /********************
      * Prune horizontally pinned bishops
      *******************/
-    U64 bishops_mask = board.Bishops(c) & ~board.pinHV;
+    U64 bishops_mask = board.pieces(BISHOP, c) & ~board.pinHV;
 
     /********************
      * Prune diagonally pinned rooks
      *******************/
-    U64 rooks_mask = board.Rooks(c) & ~board.pinD;
+    U64 rooks_mask = board.pieces(ROOK, c) & ~board.pinD;
 
     /********************
      * Prune double pinned queens
      *******************/
-    U64 queens_mask = board.Queens(c) & ~(board.pinD & board.pinHV);
+    U64 queens_mask = board.pieces(QUEEN, c) & ~(board.pinD & board.pinHV);
 
     /********************
      * Add the moves to the movelist.
