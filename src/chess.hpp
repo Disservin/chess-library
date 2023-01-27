@@ -680,43 +680,9 @@ inline Square msb(U64 b)
     return (Square)idx;
 }
 
-#else // MSVC, WIN32
-#include <intrin.h>
-inline Square lsb(U64 b)
-{
-    unsigned long idx;
-
-    if (b & 0xffffffff)
-    {
-        _BitScanForward(&idx, int32_t(b));
-        return Square(idx);
-    }
-    else
-    {
-        _BitScanForward(&idx, int32_t(b >> 32));
-        return Square(idx + 32);
-    }
-}
-
-inline Square msb(U64 b)
-{
-    unsigned long idx;
-
-    if (b >> 32)
-    {
-        _BitScanReverse(&idx, int32_t(b >> 32));
-        return Square(idx + 32);
-    }
-    else
-    {
-        _BitScanReverse(&idx, int32_t(b));
-        return Square(idx);
-    }
-}
-
 #endif
 
-#else // Compiler is neither GCC nor MSVC compatible
+#else
 
 #error "Compiler not supported."
 
@@ -728,7 +694,7 @@ inline uint8_t popcount(U64 mask)
 
     return (uint8_t)_mm_popcnt_u64(mask);
 
-#else // Assumed gcc or compatible compiler
+#else
 
     return __builtin_popcountll(mask);
 
@@ -964,7 +930,7 @@ class Board
     /// @return found piece otherwise None
     Piece pieceAtB(Square sq) const;
 
-    /// @brief applys a new Fen to the board and also reload the entire nnue
+    /// @brief applys a new Fen to the board
     /// @param fen
     void applyFen(const std::string &fen);
 
@@ -1446,7 +1412,7 @@ inline void Board::makeMove(Move move)
     hashKey ^= updateKeyCastling();
 
     // *****************************
-    // UPDATE PIECES AND NNUE
+    // UPDATE PIECES
     // *****************************
 
     if (isCastlingWhite || isCastlingBlack)
