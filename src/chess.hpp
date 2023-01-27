@@ -954,6 +954,11 @@ class Board
     /// @return found piece otherwise None
     Piece pieceAtBB(Square sq);
 
+    /// @brief Finds what piecetype is on the square
+    /// @param sq
+    /// @return found piece otherwise None
+    PieceType pieceTypeAtB(Square sq) const;
+
     /// @brief Finds what piece is on the square using the board (more performant)
     /// @param sq
     /// @return found piece otherwise None
@@ -1114,6 +1119,11 @@ inline Piece Board::pieceAtBB(Square sq)
 inline Piece Board::pieceAtB(Square sq) const
 {
     return board[sq];
+}
+
+inline PieceType Board::pieceTypeAtB(Square sq) const
+{
+    return type_of_piece(board[sq]);
 }
 
 inline void Board::applyFen(const std::string &fen)
@@ -1511,7 +1521,7 @@ inline void Board::unmakeMove(Move move)
     const bool isCastlingBlack =
         (p == BlackKing && capture == BlackRook) || (p == BlackKing && square_distance(to_sq, from_sq) >= 2);
 
-    if ((isCastlingWhite || isCastlingBlack))
+    if (isCastlingWhite || isCastlingBlack)
     {
         Square rookToSq = to_sq;
         Piece rook = sideToMove == White ? WhiteRook : BlackRook;
@@ -1759,6 +1769,46 @@ inline std::string convertMoveToUci(Move move)
     }
 
     return ss.str();
+}
+
+/// @brief helper function
+/// @param squareStr
+/// @return
+inline Square extractSquare(std::string_view squareStr)
+{
+    char letter = squareStr[0];
+    int file = letter - 96;
+    int rank = squareStr[1] - 48;
+    int index = (rank - 1) * 8 + file - 1;
+    return Square(index);
+}
+
+/// @brief Convert a string move to an internal move
+/// @param board
+/// @param input
+/// @return
+inline Move convertUciToMove(const Board &board, const std::string &input)
+{
+    Square source = extractSquare(input.substr(0, 2));
+    Square target = extractSquare(input.substr(2, 2));
+    PieceType piece = board.pieceTypeAtB(source);
+
+    // convert to king captures rook
+    if (piece == KING && square_distance(target, source) == 2)
+    {
+        target = file_rank_square(target > source ? FILE_H : FILE_A, square_rank(source));
+    }
+
+    switch (input.length())
+    {
+    case 4:
+        return make(piece, source, target, false);
+    case 5:
+        return make(pieceToInt[input.at(4)], source, target, true);
+    default:
+        std::cout << "FALSE INPUT" << std::endl;
+        return make(NONETYPE, NO_SQ, NO_SQ, false);
+    }
 }
 
 } // namespace Chess

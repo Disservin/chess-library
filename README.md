@@ -63,6 +63,8 @@ int main() {
 
 Move specific functions
 ```cpp
+/// @brief convert a move like "e2e4" to an internal move
+Move convertUciToMove(const Board& board, const std::string &input);
 
 /// @brief return the from square for a move
 Square from(Move move);
@@ -187,6 +189,9 @@ Piece Board::pieceAtBB(Square sq);
 /// @brief uses an array lookup to fetch the piece
 Piece Board::pieceAtB(Square sq);
 
+/// @brief uses an array lookup to fetch the piece
+PieceType Board::pieceTypeAtB(Square sq);
+
 /// @brief detects if the current board is a repetition
 bool Board::isRepetition(int draw = 2);
 
@@ -199,12 +204,11 @@ U64 Board::EnemyEmpty(Color c);
 U64 Board::Us(Color c);
 U64 Board::All();
 
-U64 Board::Pawns(Color c);
-U64 Board::Knights(Color c);
-U64 Board::Bishops(Color c);
-U64 Board::Rooks(Color c);
-U64 Board::Queens(Color c);
-U64 Board::Kings(Color c);
+template <Piece p> constexpr U64 pieces() const
+
+template <PieceType p, Color c> constexpr U64 pieces() const
+
+U64 pieces(PieceType p, Color c) const
 
 /// @brief returns the color of a piece at a square
 Color Board::colorOf(Square loc)
