@@ -609,6 +609,9 @@ struct Movelist
         return list[i];
     }
 
+    /// @brief
+    /// @param m
+    /// @return -1 if move was not found
     inline constexpr int find(Move m)
     {
         for (int i = 0; i < size; i++)

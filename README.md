@@ -42,6 +42,15 @@ uint64_t perft(Board &board, int depth)
         board.unmakeMove(move);
     }
 
+    // for (auto extmove : moves)
+    // {
+    //     Move move = extmove.move;
+    //     assert(moves.find(move) != -1);
+    //     board.makeMove(move);
+    //     nodes += perft(board, depth - 1);
+    //     board.unmakeMove(move);
+    // }
+
     return nodes;
 }
 
@@ -100,6 +109,7 @@ void Board::unmakeNullMove();
 
 /// @brief generate ALL/CAPTURE/QUIET moves 
 template <Movetype mt> void legalmoves(Board &board, Movelist &movelist);
+
 
 
 ```
