@@ -1337,10 +1337,7 @@ inline void Board::makeMove(Move move)
     fullMoveNumber++;
 
     bool ep = to_sq == enPassantSquare;
-    const bool isCastlingWhite =
-        (p == WhiteKing && capture == WhiteRook) || (p == WhiteKing && square_distance(to_sq, from_sq) >= 2);
-    const bool isCastlingBlack =
-        (p == BlackKing && capture == BlackRook) || (p == BlackKing && square_distance(to_sq, from_sq) >= 2);
+    const bool isCastling = pt == KING && type_of_piece(capture) == ROOK && colorOf(from_sq) == colorOf(to_sq);
 
     // *****************************
     // UPDATE HASH
@@ -1352,7 +1349,7 @@ inline void Board::makeMove(Move move)
 
     hashKey ^= updateKeyCastling();
 
-    if (isCastlingWhite || isCastlingBlack)
+    if (isCastling)
     {
         Piece rook = sideToMove == White ? WhiteRook : BlackRook;
         Square rookSQ = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
@@ -1375,14 +1372,14 @@ inline void Board::makeMove(Move move)
         halfMoveClock = 0;
         if (ep)
         {
-            hashKey ^= updateKeyPiece(makePiece(PAWN, ~sideToMove), Square(to_sq - (sideToMove * -2 + 1) * 8));
+            hashKey ^= updateKeyPiece(makePiece(PAWN, ~sideToMove), Square(to_sq ^ 8));
         }
         else if (std::abs(from_sq - to_sq) == 16)
         {
-            U64 epMask = PawnAttacks(Square(to_sq - (sideToMove * -2 + 1) * 8), sideToMove);
+            U64 epMask = PawnAttacks(Square(to_sq ^ 8), sideToMove);
             if (epMask & pieces(PAWN, ~sideToMove))
             {
-                enPassantSquare = Square(to_sq - (sideToMove * -2 + 1) * 8);
+                enPassantSquare = Square(to_sq ^ 8);
                 hashKey ^= updateKeyEnPassant(enPassantSquare);
 
                 assert(pieceAtB(enPassantSquare) == None);
@@ -1390,7 +1387,7 @@ inline void Board::makeMove(Move move)
         }
     }
 
-    if (capture != None && !(isCastlingWhite || isCastlingBlack))
+    if (capture != None && !isCastling)
     {
         halfMoveClock = 0;
         hashKey ^= updateKeyPiece(capture, to_sq);
@@ -1418,27 +1415,25 @@ inline void Board::makeMove(Move move)
     // UPDATE PIECES
     // *****************************
 
-    if (isCastlingWhite || isCastlingBlack)
+    if (isCastling)
     {
-        Square rookToSq;
-        Piece rook = sideToMove == White ? WhiteRook : BlackRook;
+        const Piece rook = sideToMove == White ? WhiteRook : BlackRook;
+        Square rookToSq = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
+        Square kingToSq = file_rank_square(to_sq > from_sq ? FILE_G : FILE_C, square_rank(from_sq));
 
         removePiece(p, from_sq);
         removePiece(rook, to_sq);
 
-        rookToSq = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
-        to_sq = file_rank_square(to_sq > from_sq ? FILE_G : FILE_C, square_rank(from_sq));
-
-        placePiece(p, to_sq);
+        placePiece(p, kingToSq);
         placePiece(rook, rookToSq);
     }
     else if (pt == PAWN && ep)
     {
-        assert(pieceAtB(Square(to_sq - (sideToMove * -2 + 1) * 8)) != None);
+        assert(pieceAtB(Square(to_sq ^ 8)) != None);
 
-        removePiece(makePiece(PAWN, ~sideToMove), Square(to_sq - (sideToMove * -2 + 1) * 8));
+        removePiece(makePiece(PAWN, ~sideToMove), Square(to_sq ^ 8));
     }
-    else if (capture != None && !(isCastlingWhite || isCastlingBlack))
+    else if (capture != None && !isCastling)
     {
         assert(pieceAtB(to_sq) != None);
 
@@ -1452,7 +1447,7 @@ inline void Board::makeMove(Move move)
         removePiece(makePiece(PAWN, sideToMove), from_sq);
         placePiece(p, to_sq);
     }
-    else if (!(isCastlingWhite || isCastlingBlack))
+    else if (!isCastling)
     {
         assert(pieceAtB(to_sq) == None);
 
@@ -1485,12 +1480,9 @@ inline void Board::unmakeMove(Move move)
     PieceType pt = piece(move);
     Piece p = makePiece(pt, sideToMove);
 
-    const bool isCastlingWhite =
-        (p == WhiteKing && capture == WhiteRook) || (p == WhiteKing && square_distance(to_sq, from_sq) >= 2);
-    const bool isCastlingBlack =
-        (p == BlackKing && capture == BlackRook) || (p == BlackKing && square_distance(to_sq, from_sq) >= 2);
+    const bool isCastling = (p == WhiteKing && capture == WhiteRook) || (p == BlackKing && capture == BlackRook);
 
-    if (isCastlingWhite || isCastlingBlack)
+    if (isCastling)
     {
         Square rookToSq = to_sq;
         Piece rook = sideToMove == White ? WhiteRook : BlackRook;
@@ -1522,7 +1514,7 @@ inline void Board::unmakeMove(Move move)
         int8_t offset = sideToMove == White ? -8 : 8;
         placePiece(makePiece(PAWN, ~sideToMove), Square(enPassantSquare + offset));
     }
-    else if (capture != None && !(isCastlingWhite || isCastlingBlack))
+    else if (capture != None && !isCastling)
     {
         placePiece(capture, to_sq);
     }
