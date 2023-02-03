@@ -571,8 +571,8 @@ struct State
 
 struct ExtMove
 {
-    int value = 0;
-    Move move = NO_MOVE;
+    int value;
+    Move move;
 };
 
 inline constexpr bool operator==(const ExtMove &a, const ExtMove &b)
@@ -592,7 +592,7 @@ inline constexpr bool operator<(const ExtMove &a, const ExtMove &b)
 
 struct Movelist
 {
-    ExtMove list[MAX_MOVES] = {};
+    ExtMove list[MAX_MOVES];
     uint8_t size = 0;
     typedef ExtMove *iterator;
     typedef const ExtMove *const_iterator;
