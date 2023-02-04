@@ -1026,7 +1026,7 @@ class Board
 
     U64 attacksByPiece(PieceType pt, Square sq, Color c) const;
 
-    friend std::ostream &operator<<(std::ostream &os, const Board &b);
+    friend inline std::ostream &operator<<(std::ostream &os, const Board &b);
 
   private:
     /// @brief calculate the current zobrist hash from scratch
@@ -1593,7 +1593,7 @@ inline U64 Board::attacksByPiece(PieceType pt, Square sq, Color c) const
     }
 }
 
-std::ostream &operator<<(std::ostream &os, const Board &b)
+inline std::ostream &operator<<(std::ostream &os, const Board &b)
 {
     for (int i = 63; i >= 0; i -= 8)
     {
