@@ -13,10 +13,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "sliders.hpp"
-
-using namespace Chess_Lookup::Fancy;
-
 namespace Chess {
 
 // *******************
@@ -665,13 +661,22 @@ inline Square poplsb(U64 &mask) {
 // *******************
 
 namespace Attacks {
+
+#include "sliders.hpp"
+
 static inline constexpr U64 PAWN(Color c, Square sq) {
     return PAWN_ATTACKS_TABLE[static_cast<int>(c)][sq];
 }
 static inline constexpr U64 KNIGHT(Square sq) { return KNIGHT_ATTACKS_TABLE[sq]; }
-static inline constexpr U64 BISHOP(Square sq, U64 occ) { return BishopAttacks(sq, occ); }
-static inline constexpr U64 ROOK(Square sq, U64 occ) { return RookAttacks(sq, occ); }
-static inline constexpr U64 QUEEN(Square sq, U64 occ) { return QueenAttacks(sq, occ); }
+static inline constexpr U64 BISHOP(Square sq, U64 occ) {
+    return Chess_Lookup::Fancy::BishopAttacks(sq, occ);
+}
+static inline constexpr U64 ROOK(Square sq, U64 occ) {
+    return Chess_Lookup::Fancy::RookAttacks(sq, occ);
+}
+static inline constexpr U64 QUEEN(Square sq, U64 occ) {
+    return Chess_Lookup::Fancy::QueenAttacks(sq, occ);
+}
 static inline constexpr U64 KING(Square sq) { return KING_ATTACKS_TABLE[sq]; }
 }  // namespace Attacks
 
@@ -1205,6 +1210,7 @@ inline Board::Board(const std::string &fen) {
 inline void Board::makeMove(const Move &move) {
     auto capture = pieceAt(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
     auto captured = pieceAt(move.to());
+    const auto pt = typeOfPiece(pieceAt(move.from()));
 
     prev_states_.emplace_back(enpassant_square_, castling_rights_, half_moves_, captured);
     hash_history_.emplace_back(hash_key_);
@@ -1215,8 +1221,6 @@ inline void Board::makeMove(const Move &move) {
     if (enpassant_square_ != NO_SQ) updateKeyEnPassant(enpassant_square_);
 
     enpassant_square_ = NO_SQ;
-
-    const auto pt = typeOfPiece(pieceAt(move.from()));
 
     updateKeyCastling();
 
@@ -1246,15 +1250,9 @@ inline void Board::makeMove(const Move &move) {
         const auto king_sq = kingSq(side_to_move_);
 
         if (rank == Rank::RANK_8 && side_to_move_ == Color::BLACK) {
-            if (move.from() > king_sq)
-                castling_rights_ &= ~(BK);
-            else
-                castling_rights_ &= ~(BQ);
+            castling_rights_ &= ~(move.from() > king_sq ? BK : BQ);
         } else if (rank == Rank::RANK_1 && side_to_move_ == Color::WHITE) {
-            if (move.from() > king_sq)
-                castling_rights_ &= ~(WK);
-            else
-                castling_rights_ &= ~(WQ);
+            castling_rights_ &= ~(move.from() > king_sq ? WK : WQ);
         }
     } else if (pt == PieceType::PAWN) {
         half_moves_ = 0;
@@ -1263,9 +1261,9 @@ inline void Board::makeMove(const Move &move) {
         if (move.typeOf() == Move::EN_PASSANT) {
             updateKeyPiece(makePiece(~side_to_move_, PieceType::PAWN), possible_ep);
         } else if (std::abs(static_cast<int>(move.to()) - static_cast<int>(move.from())) == 16) {
-            U64 epMask = Attacks::PAWN(side_to_move_, possible_ep);
+            U64 ep_mask = Attacks::PAWN(side_to_move_, possible_ep);
 
-            if (epMask & pieces(PieceType::PAWN, ~side_to_move_)) {
+            if (ep_mask & pieces(PieceType::PAWN, ~side_to_move_)) {
                 enpassant_square_ = possible_ep;
 
                 updateKeyEnPassant(enpassant_square_);
@@ -1278,9 +1276,9 @@ inline void Board::makeMove(const Move &move) {
         assert(typeOfPiece(pieceAt(move.from())) == PieceType::KING);
         assert(typeOfPiece(pieceAt(move.to())) == PieceType::ROOK);
 
-        bool kingSide = move.to() > move.from();
-        auto rookTo = relative_square(side_to_move_, kingSide ? Square::SQ_F1 : Square::SQ_D1);
-        auto kingTo = relative_square(side_to_move_, kingSide ? Square::SQ_G1 : Square::SQ_C1);
+        bool king_side = move.to() > move.from();
+        auto rookTo = relative_square(side_to_move_, king_side ? Square::SQ_F1 : Square::SQ_D1);
+        auto kingTo = relative_square(side_to_move_, king_side ? Square::SQ_G1 : Square::SQ_C1);
 
         assert(typeOfPiece(pieceAt(move.from())) == PieceType::KING);
         assert(typeOfPiece(pieceAt(move.to())) == PieceType::ROOK);
@@ -1323,18 +1321,18 @@ void Board::unmakeMove(const Move &move) {
     side_to_move_ = ~side_to_move_;
 
     if (move.typeOf() == Move::CASTLING) {
-        const bool kingSide = move.to() > move.from();
+        const bool king_side = move.to() > move.from();
 
-        const auto rookFromSq =
-            file_rank_square(kingSide ? File::FILE_F : File::FILE_D, square_rank(move.from()));
-        const auto KingToSq =
-            file_rank_square(kingSide ? File::FILE_G : File::FILE_C, square_rank(move.from()));
+        const auto rook_from_sq =
+            file_rank_square(king_side ? File::FILE_F : File::FILE_D, square_rank(move.from()));
+        const auto king_to_sq =
+            file_rank_square(king_side ? File::FILE_G : File::FILE_C, square_rank(move.from()));
 
-        assert(typeOfPiece(pieceAt(rookFromSq)) == PieceType::ROOK);
-        assert(typeOfPiece(pieceAt(KingToSq)) == PieceType::KING);
+        assert(typeOfPiece(pieceAt(rook_from_sq)) == PieceType::ROOK);
+        assert(typeOfPiece(pieceAt(king_to_sq)) == PieceType::KING);
 
-        const auto rook = removePiece(rookFromSq);
-        const auto king = removePiece(KingToSq);
+        const auto rook = removePiece(rook_from_sq);
+        const auto king = removePiece(king_to_sq);
 
         placePiece(king, move.from());
         placePiece(rook, move.to());
@@ -1730,14 +1728,14 @@ void generatePawnMoves(const Board &board, Movelist<T> &moves, U64 pin_d, U64 pi
     if (ep != NO_SQ) {
         const Square epPawn = ep + DOWN;
 
-        const U64 epMask = (1ull << epPawn) | (1ull << ep);
+        const U64 ep_mask = (1ull << epPawn) | (1ull << ep);
 
         /*
          In case the en passant square and the enemy pawn
          that just moved are not on the checkmask
          en passant is not available.
         */
-        if ((checkmask & epMask) == 0) return;
+        if ((checkmask & ep_mask) == 0) return;
 
         const Square kSQ = board.kingSq(c);
         const U64 kingMask = (1ull << kSQ) & MASK_RANK[static_cast<int>(square_rank(epPawn))];
@@ -1788,8 +1786,8 @@ inline U64 generateBishopMoves(Square sq, U64 movable, U64 pin_d, U64 occ_all) {
 
 inline U64 generateRookMoves(Square sq, U64 movable, U64 pin_hv, U64 occ_all) {
     // The Rook is pinned horizontally thus can only move horizontally.
-    if (pin_hv & (1ULL << sq)) return RookAttacks(sq, occ_all) & movable & pin_hv;
-    return RookAttacks(sq, occ_all) & movable;
+    if (pin_hv & (1ULL << sq)) return Attacks::ROOK(sq, occ_all) & movable & pin_hv;
+    return Attacks::ROOK(sq, occ_all) & movable;
 }
 
 inline U64 generateQueenMoves(Square sq, U64 movable, U64 pin_d, U64 pin_hv, U64 occ_all) {

@@ -14,21 +14,23 @@ class PerftTest {
         Movelist<Move> moves;
         Movegen::legalmove<Move, MoveGenType::ALL>(moves, board);
 
-        if (depth == 0)
-            return 1;
-        else if (depth == 1 && max != 1)
+        if (depth == 1) {
             return moves.size();
+        }
+
         U64 nodesIt = 0;
-        for (auto move : moves) {
+
+        for (int i = 0; i < moves.size(); i++) {
+            const auto move = moves[i];
             board.makeMove(move);
             nodesIt += perft(depth - 1, depth);
             board.unmakeMove(move);
             if (depth == max) {
                 nodes += nodesIt;
-                std::cout << board.uci(move) << " " << nodesIt << std::endl;
                 nodesIt = 0;
             }
         }
+
         return nodesIt;
     }
 
