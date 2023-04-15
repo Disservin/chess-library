@@ -100,7 +100,7 @@ static constexpr U64 BK_CASTLE_MASK = (1ULL << SQ_F8) | (1ULL << SQ_G8);
 static constexpr U64 BQ_CASTLE_MASK = (1ULL << SQ_D8) | (1ULL << SQ_C8) | (1ULL << SQ_B8);
 
 // all 64 bits set
-static constexpr U64 DEFAULT_CHECKMASK = 18446744073709551615ULL;
+static constexpr U64 DEFAULT_CHECKMASK = 0xffffffffffffffffull;
 
 static std::unordered_map<char, PieceType> pieceToInt({{'n', PieceType::KNIGHT},
                                                        {'b', PieceType::BISHOP},
@@ -858,8 +858,8 @@ class Board {
 
     friend std::ostream &operator<<(std::ostream &os, const Board &b);
 
-    std::string uci(const Move &move);
-    Move uciToMove(const std::string &uci);
+    [[nodiscard]] std::string uci(const Move &move) const;
+    [[nodiscard]] Move uciToMove(const std::string &uci) const;
 
    protected:
    private:
@@ -1389,7 +1389,7 @@ void Board::unmakeNullMove() {
     prev_states_.pop_back();
 }
 
-std::string Board::uci(const Move &move) {
+std::string Board::uci(const Move &move) const {
     std::stringstream ss;
 
     auto from = move.from();
@@ -1416,7 +1416,7 @@ inline Square extractSquare(std::string_view squareStr) {
     return Square(index);
 }
 
-Move Board::uciToMove(const std::string &uci) {
+Move Board::uciToMove(const std::string &uci) const {
     Square source = extractSquare(uci.substr(0, 2));
     Square target = extractSquare(uci.substr(2, 2));
     PieceType piece = typeOfPiece(pieceAt(source));
