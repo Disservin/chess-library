@@ -1551,7 +1551,7 @@ U64 pinMaskBishops(const Board &board, Square sq, U64 occ_enemy, U64 occ_us) {
 }
 
 template <Color c>
-U64 seenSquares(const Board &board) {
+U64 seenSquares(const Board &board, U64 enemy_empty) {
     const auto king_sq = board.kingSq(~c);
 
     const auto queens = board.pieces<PieceType::QUEEN, c>();
@@ -1561,6 +1561,12 @@ U64 seenSquares(const Board &board) {
     auto rooks = board.pieces<PieceType::ROOK, c>() | queens;
 
     auto occ = board.all();
+
+    U64 map_king_atk = Attacks::KING(king_sq) & enemy_empty;
+
+    if (map_king_atk == 0ull) {
+        return 0ull;
+    }
 
     occ &= ~(1ULL << king_sq);
 
@@ -1852,7 +1858,7 @@ void legalmoves(Movelist<T> &movelist, const Board &board) {
     U64 _occ_all = _occ_us | _occ_enemy;
     U64 _enemy_emptyBB = ~_occ_us;
 
-    U64 _seen = seenSquares<~c>(board);
+    U64 _seen = seenSquares<~c>(board, _enemy_emptyBB);
     U64 _checkMask = checkMask<c>(board, king_sq, _doubleCheck);
     U64 _pinHV = pinMaskRooks<c>(board, king_sq, _occ_enemy, _occ_us);
     U64 _pinD = pinMaskBishops<c>(board, king_sq, _occ_enemy, _occ_us);
