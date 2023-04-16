@@ -159,12 +159,15 @@ const std::string squareToString[64] = {
 // *******************
 
 struct State {
-    Square enpassant{};
-    uint8_t castling{};
-    uint8_t half_moves{};
-    Piece captured_piece = Piece::NONE;
+    U64 hash;
+    Square enpassant;
+    uint8_t castling;
+    uint8_t half_moves;
+    Piece captured_piece;
 
-    State(Square _enpassant, uint8_t _castling, uint8_t _half_move, Piece _captured_piece) {
+    State(U64 _hash, Square _enpassant, uint8_t _castling, uint8_t _half_move,
+          Piece _captured_piece) {
+        hash = _hash;
         enpassant = _enpassant;
         castling = _castling;
         half_moves = _half_move;
@@ -877,7 +880,7 @@ class Board {
 
     void zobristHash();
 
-    std::vector<U64> hash_history_;
+    //    std::vector<U64> hash_history_;
     std::vector<State> prev_states_;
 
     Color side_to_move_;
@@ -902,7 +905,6 @@ class Board {
 };
 
 inline Board::Board() {
-    hash_history_.reserve(256);
     side_to_move_ = Color::WHITE;
     enpassant_square_ = Square::NO_SQ;
     castling_rights_ = WK | WQ | BK | BQ;
@@ -1083,9 +1085,9 @@ inline constexpr Color Board::colorOfPiece(Square square) const {
 bool Board::isRepetition() const {
     uint8_t c = 0;
 
-    for (int i = static_cast<int>(hash_history_.size()) - 2;
-         i >= 0 && i >= static_cast<int>(hash_history_.size()) - half_moves_ - 1; i -= 2) {
-        if (hash_history_[i] == hash_key_) c++;
+    for (int i = static_cast<int>(prev_states_.size()) - 2;
+         i >= 0 && i >= static_cast<int>(prev_states_.size()) - half_moves_ - 1; i -= 2) {
+        if (prev_states_[i].hash == hash_key_) c++;
 
         if (c == 2) return true;
     }
@@ -1194,7 +1196,6 @@ inline void Board::zobristHash() {
 }
 
 inline Board::Board(const std::string &fen) {
-    hash_history_.reserve(256);
     side_to_move_ = Color::WHITE;
     enpassant_square_ = Square::NO_SQ;
     castling_rights_ = WK | WQ | BK | BQ;
@@ -1212,8 +1213,8 @@ inline void Board::makeMove(const Move &move) {
     auto captured = pieceAt(move.to());
     const auto pt = typeOfPiece(pieceAt(move.from()));
 
-    prev_states_.emplace_back(enpassant_square_, castling_rights_, half_moves_, captured);
-    hash_history_.emplace_back(hash_key_);
+    prev_states_.emplace_back(hash_key_, enpassant_square_, castling_rights_, half_moves_,
+                              captured);
 
     half_moves_++;
     full_moves_++;
@@ -1366,8 +1367,8 @@ void Board::unmakeMove(const Move &move) {
 }
 
 void Board::makeNullMove() {
-    prev_states_.emplace_back(enpassant_square_, castling_rights_, half_moves_, Piece::NONE);
-    hash_history_.emplace_back(hash_key_);
+    prev_states_.emplace_back(hash_key_, enpassant_square_, castling_rights_, half_moves_,
+                              Piece::NONE);
 
     enpassant_square_ = NO_SQ;
     side_to_move_ = ~side_to_move_;
@@ -1381,11 +1382,10 @@ void Board::unmakeNullMove() {
     enpassant_square_ = prev.enpassant;
     castling_rights_ = prev.castling;
     half_moves_ = prev.half_moves;
+    hash_key_ = prev.hash;
 
     full_moves_--;
 
-    hash_key_ = hash_history_.back();
-    hash_history_.pop_back();
     prev_states_.pop_back();
 }
 
