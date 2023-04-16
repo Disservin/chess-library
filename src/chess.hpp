@@ -1477,7 +1477,7 @@ U64 checkMask(const Board &board, Square sq, int &double_check) {
     double_check += bool(pawn_attacks);
 
     // check for bishop checks
-    U64 bishop_attacks = Attacks::BISHOP(sq, board.all()) & (opp_bishop | opp_queen);
+    U64 bishop_attacks = Attacks::BISHOP(sq, board.occ()) & (opp_bishop | opp_queen);
 
     if (bishop_attacks) {
         const auto index = lsb(bishop_attacks);
@@ -1486,7 +1486,7 @@ U64 checkMask(const Board &board, Square sq, int &double_check) {
         double_check++;
     }
 
-    U64 rook_attacks = Attacks::ROOK(sq, board.all()) & (opp_rook | opp_queen);
+    U64 rook_attacks = Attacks::ROOK(sq, board.occ()) & (opp_rook | opp_queen);
     if (rook_attacks) {
         if (popcount(rook_attacks) > 1) {
             double_check = 2;
@@ -1554,7 +1554,7 @@ U64 seenSquares(const Board &board, U64 enemy_empty) {
     auto bishops = board.pieces<PieceType::BISHOP, c>() | queens;
     auto rooks = board.pieces<PieceType::ROOK, c>() | queens;
 
-    auto occ = board.all();
+    auto occ = board.occ();
 
     U64 map_king_atk = Attacks::KING(king_sq) & enemy_empty;
 
