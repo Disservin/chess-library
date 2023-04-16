@@ -25,6 +25,14 @@ using U64 = uint64_t;
 // TYPES DEFINITION
 // *******************
 
+// Generate moves for a given position.
+
+// If MoveGenType = ALL, generate all pseudo-legal moves.
+
+// If MoveGenType = CAPTURE, generate only pseudo-legal captures.
+
+// If MoveGenType = QUIET, generate only pseudo-legal quiet moves.
+
 enum MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 
 // clang-format off
@@ -90,7 +98,6 @@ inline constexpr Color operator~(const Color &c) {
 
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 static constexpr int MAX_SQ = 64;
-static constexpr int MAX_PLY = 120;
 static constexpr int MAX_MOVES = 128;
 
 static constexpr U64 WK_CASTLE_MASK = (1ULL << SQ_F1) | (1ULL << SQ_G1);
@@ -701,49 +708,49 @@ static inline constexpr U64 KING(Square sq) { return KING_ATTACKS_TABLE[sq]; }
 /// @brief Gets the file index of the square where 0 is the a-file
 /// @param sq
 /// @return the file of the square
-inline constexpr File square_file(Square sq) { return File(sq & 7); }
+inline constexpr File squareFile(Square sq) { return File(sq & 7); }
 
 /// @brief Gets the rank index of the square where 0 is the first rank.
 /// @param sq
 /// @return the rank of the square
-inline constexpr Rank square_rank(Square sq) { return Rank(sq >> 3); }
+inline constexpr Rank squareRank(Square sq) { return Rank(sq >> 3); }
 
 /// @brief makes a square out of rank and file
 /// @param f
 /// @param r
 /// @return
-inline constexpr Square file_rank_square(File f, Rank r) {
-    return Square((static_cast<int>(r) << 3) + f);
+inline constexpr Square fileRankSquare(File f, Rank r) {
+    return static_cast<Square>((static_cast<int>(r) << 3) + f);
 }
 
 /// @brief distance between two squares
 /// @param a
 /// @param b
 /// @return
-inline constexpr uint8_t square_distance(Square a, Square b) {
-    return std::max(std::abs(static_cast<int>(square_file(a) - square_file(b))),
-                    std::abs(static_cast<int>(square_rank(a) - square_rank(b))));
+inline constexpr uint8_t squareDistance(Square a, Square b) {
+    return std::max(std::abs(static_cast<int>(squareFile(a) - squareFile(b))),
+                    std::abs(static_cast<int>(squareRank(a) - squareRank(b))));
 }
 
-inline constexpr uint8_t diagonal_of(Square sq) { return 7 + square_rank(sq) - square_file(sq); }
+inline constexpr uint8_t diagonalOf(Square sq) { return 7 + squareRank(sq) - squareFile(sq); }
 
-inline constexpr uint8_t anti_diagonal_of(Square sq) {
-    return static_cast<uint8_t>(square_rank(sq) + square_file(sq));
+inline constexpr uint8_t antiDiagonalOf(Square sq) {
+    return static_cast<uint8_t>(squareRank(sq) + squareFile(sq));
 }
 
 /// @brief manhatten distance between two squares
 /// @param sq1
 /// @param sq2
 /// @return
-inline constexpr uint8_t manhatten_distance(Square sq1, Square sq2) {
-    return std::abs(static_cast<int>(square_file(sq1) - square_file(sq2))) +
-           std::abs(static_cast<int>(square_rank(sq1) - square_rank(sq2)));
+inline constexpr uint8_t manhattenDistance(Square sq1, Square sq2) {
+    return std::abs(static_cast<int>(squareFile(sq1) - squareFile(sq2))) +
+           std::abs(static_cast<int>(squareRank(sq1) - squareRank(sq2)));
 }
 
 /// @brief color of a square, has nothing to do with whose piece is on that square
 /// @param square
 /// @return
-inline constexpr Color get_square_color(Square square) {
+inline constexpr Color getSquareColor(Square square) {
     if ((square % 8) % 2 == (square / 8) % 2) {
         return Color::BLACK;
     } else {
@@ -751,11 +758,7 @@ inline constexpr Color get_square_color(Square square) {
     }
 }
 
-inline constexpr Square make_square(File f, Rank r) {
-    return static_cast<Square>((static_cast<int>(r) << 3) + f);
-}
-
-inline constexpr Square relative_square(Color c, Square s) {
+inline constexpr Square relativeSquare(Color c, Square s) {
     return Square(s ^ (static_cast<int>(c) * 56));
 }
 
@@ -766,6 +769,8 @@ inline constexpr Piece makePiece(Color c, PieceType pt) {
 inline constexpr PieceType typeOfPiece(Piece piece) {
     return static_cast<PieceType>(static_cast<int>(piece) % 6);
 }
+
+bool sameColor(Square sq1, Square sq2) { return ((9 * (sq1 ^ sq2)) & 8) == 0; }
 
 void printBitboard(U64 bb) {
     std::bitset<64> b(bb);
@@ -788,10 +793,10 @@ auto init_squares_between = []() constexpr {
             sqs = (1ULL << sq1) | (1ULL << sq2);
             if (sq1 == sq2)
                 squares_between_bb[sq1][sq2] = 0ull;
-            else if (square_file(sq1) == square_file(sq2) || square_rank(sq1) == square_rank(sq2))
+            else if (squareFile(sq1) == squareFile(sq2) || squareRank(sq1) == squareRank(sq2))
                 squares_between_bb[sq1][sq2] = Attacks::ROOK(sq1, sqs) & Attacks::ROOK(sq2, sqs);
-            else if (diagonal_of(sq1) == diagonal_of(sq2) ||
-                     anti_diagonal_of(sq1) == anti_diagonal_of(sq2))
+            else if (diagonalOf(sq1) == diagonalOf(sq2) ||
+                     antiDiagonalOf(sq1) == antiDiagonalOf(sq2))
                 squares_between_bb[sq1][sq2] =
                     Attacks::BISHOP(sq1, sqs) & Attacks::BISHOP(sq2, sqs);
         }
@@ -859,15 +864,25 @@ class Board {
     [[nodiscard]] Color sideToMove() const { return side_to_move_; }
     [[nodiscard]] Square enpassantSquare() const { return enpassant_square_; }
     [[nodiscard]] uint8_t castlingRights() const { return castling_rights_; }
+    /// TODO
+    /// @return
     [[nodiscard]] bool chess960() const { return chess960_; }
     [[nodiscard]] U64 occ() const {
         assert((us(Color::WHITE) | us(Color::BLACK)) == occ_all_);
         return occ_all_;
     }
 
-    [[nodiscard]] bool isRepetition() const;
+    /// @brief every position has at least occured once, so a game will be drawn if its seen 2 times
+    /// after the intial one
+    /// @param count
+    /// @return
+    [[nodiscard]] bool isRepetition(int count = 2) const;
     GameResult isGameOver();
 
+    /// Is the square attacked by color c?
+    /// @param square
+    /// @param c
+    /// @return
     [[nodiscard]] bool isSquareAttacked(Square square, Color c) const;
 
     friend std::ostream &operator<<(std::ostream &os, const Board &b);
@@ -1096,20 +1111,18 @@ inline constexpr Color Board::colorOfPiece(Square square) const {
     return static_cast<Color>(static_cast<int>(pieceAt(square)) / 6);
 }
 
-bool Board::isRepetition() const {
+bool Board::isRepetition(int count) const {
     uint8_t c = 0;
 
     for (int i = static_cast<int>(prev_states_.size()) - 2;
          i >= 0 && i >= static_cast<int>(prev_states_.size()) - half_moves_ - 1; i -= 2) {
         if (prev_states_[i].hash == hash_key_) c++;
 
-        if (c == 2) return true;
+        if (c == count) return true;
     }
 
     return false;
 }
-
-GameResult Board::isGameOver() { return GameResult::WIN; }
 
 bool Board::isSquareAttacked(Square square, Color c) const {
     if (Attacks::PAWN(~c, square) & pieces<PieceType::PAWN>(c)) return true;
@@ -1147,7 +1160,7 @@ inline void Board::updateKeyPiece(Piece piece, Square sq) {
 }
 
 inline void Board::updateKeyEnPassant(Square sq) {
-    hash_key_ ^= RANDOM_ARRAY[772 + square_file(sq)];
+    hash_key_ ^= RANDOM_ARRAY[772 + squareFile(sq)];
 }
 
 inline void Board::updateKeyCastling() { hash_key_ ^= castlingKey[castling_rights_]; }
@@ -1244,7 +1257,7 @@ inline void Board::makeMove(const Move &move) {
 
         removePiece(captured, move.to());
 
-        const auto rank = square_rank(move.to());
+        const auto rank = squareRank(move.to());
 
         if (typeOfPiece(captured) == PieceType::ROOK &&
             (rank == Rank::RANK_1 || rank == Rank::RANK_8)) {
@@ -1261,7 +1274,7 @@ inline void Board::makeMove(const Move &move) {
     if (pt == PieceType::KING) {
         castling_rights_ &= ~(side_to_move_ == Color::WHITE ? (WK | WQ) : (BK | BQ));
     } else if (pt == PieceType::ROOK) {
-        const auto rank = square_rank(move.from());
+        const auto rank = squareRank(move.from());
         const auto king_sq = kingSq(side_to_move_);
 
         if (rank == Rank::RANK_8 && side_to_move_ == Color::BLACK) {
@@ -1292,8 +1305,8 @@ inline void Board::makeMove(const Move &move) {
         assert(typeOfPiece(pieceAt(move.to())) == PieceType::ROOK);
 
         bool king_side = move.to() > move.from();
-        auto rookTo = relative_square(side_to_move_, king_side ? Square::SQ_F1 : Square::SQ_D1);
-        auto kingTo = relative_square(side_to_move_, king_side ? Square::SQ_G1 : Square::SQ_C1);
+        auto rookTo = relativeSquare(side_to_move_, king_side ? Square::SQ_F1 : Square::SQ_D1);
+        auto kingTo = relativeSquare(side_to_move_, king_side ? Square::SQ_G1 : Square::SQ_C1);
 
         assert(typeOfPiece(pieceAt(move.from())) == PieceType::KING);
         assert(typeOfPiece(pieceAt(move.to())) == PieceType::ROOK);
@@ -1339,9 +1352,9 @@ void Board::unmakeMove(const Move &move) {
         const bool king_side = move.to() > move.from();
 
         const auto rook_from_sq =
-            file_rank_square(king_side ? File::FILE_F : File::FILE_D, square_rank(move.from()));
+            fileRankSquare(king_side ? File::FILE_F : File::FILE_D, squareRank(move.from()));
         const auto king_to_sq =
-            file_rank_square(king_side ? File::FILE_G : File::FILE_C, square_rank(move.from()));
+            fileRankSquare(king_side ? File::FILE_G : File::FILE_C, squareRank(move.from()));
 
         assert(typeOfPiece(pieceAt(rook_from_sq)) == PieceType::ROOK);
         assert(typeOfPiece(pieceAt(king_to_sq)) == PieceType::KING);
@@ -1410,7 +1423,7 @@ std::string Board::uci(const Move &move) const {
     auto to = move.to();
 
     if (!chess960_ && move.typeOf() == Move::CASTLING) {
-        to = file_rank_square(to > from ? File::FILE_G : File::FILE_C, square_rank(to));
+        to = fileRankSquare(to > from ? File::FILE_G : File::FILE_C, squareRank(to));
     }
 
     ss << squareToString[from] << squareToString[to];
@@ -1437,9 +1450,8 @@ Move Board::uciToMove(const std::string &uci) const {
 
     // convert to king captures rook
     // in chess960 the move should be sent as king captures rook already!
-    if (piece == PieceType::KING && square_distance(target, source) == 2) {
-        target =
-            file_rank_square(target > source ? File::FILE_H : File::FILE_A, square_rank(source));
+    if (piece == PieceType::KING && squareDistance(target, source) == 2) {
+        target = fileRankSquare(target > source ? File::FILE_H : File::FILE_A, squareRank(source));
     }
 
     switch (uci.length()) {
@@ -1752,7 +1764,7 @@ void generatePawnMoves(const Board &board, Movelist<T> &moves, U64 pin_d, U64 pi
         if ((checkmask & ep_mask) == 0) return;
 
         const Square kSQ = board.kingSq(c);
-        const U64 kingMask = (1ull << kSQ) & MASK_RANK[static_cast<int>(square_rank(epPawn))];
+        const U64 kingMask = (1ull << kSQ) & MASK_RANK[static_cast<int>(squareRank(epPawn))];
         const U64 enemyQueenRook =
             board.pieces<PieceType::ROOK, ~c>() | board.pieces<PieceType::QUEEN, ~c>();
 
@@ -1834,8 +1846,8 @@ inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen, U64 enem
     for (const auto cr : {king_side, queen_side}) {
         if (!(rights & cr)) continue;
 
-        const auto end_sq = relative_square(c, cr == king_side ? Square::SQ_G1 : Square::SQ_C1);
-        const auto to_sq = relative_square(c, cr == king_side ? Square::SQ_H1 : Square::SQ_A1);
+        const auto end_sq = relativeSquare(c, cr == king_side ? Square::SQ_G1 : Square::SQ_C1);
+        const auto to_sq = relativeSquare(c, cr == king_side ? Square::SQ_H1 : Square::SQ_A1);
 
         const auto not_occ_path = SQUARES_BETWEEN_BB[sq][to_sq];
         const auto not_attacked_path = SQUARES_BETWEEN_BB[sq][end_sq] | (1ull << end_sq);
@@ -1851,7 +1863,7 @@ inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen, U64 enem
 
 // all legal moves for a position
 template <typename T, Color c, MoveGenType mt>
-void legalmoves(Movelist<T> &movelist, const Board &board) {
+void genLegalmoves(Movelist<T> &movelist, const Board &board) {
     /*
      The size of the movelist might not
      be 0! This is done on purpose since it enables
@@ -1888,7 +1900,7 @@ void legalmoves(Movelist<T> &movelist, const Board &board) {
         movelist.add(T::template make<Move::NORMAL>(king_sq, to));
     }
 
-    if (square_rank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
+    if (squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
         (board.castlingRights() && _checkMask == DEFAULT_CHECKMASK)) {
         moves = generateCastleMoves<c>(board, king_sq, _seen, _enemy_emptyBB);
 
@@ -1954,15 +1966,60 @@ void legalmoves(Movelist<T> &movelist, const Board &board) {
 }
 
 template <typename T, MoveGenType mt>
-inline void legalmove(Movelist<T> &movelist, const Board &board) {
+inline void legalmoves(Movelist<T> &movelist, const Board &board) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<T, Color::WHITE, mt>(movelist, board);
+        genLegalmoves<T, Color::WHITE, mt>(movelist, board);
     else
-        legalmoves<T, Color::BLACK, mt>(movelist, board);
+        genLegalmoves<T, Color::BLACK, mt>(movelist, board);
 }
 
 }  // namespace Movegen
+
+GameResult Board::isGameOver() {
+    if (half_moves_ >= 100) {
+        const Board &board = *this;
+
+        Movelist<Move> movelist;
+        Movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
+        if (isSquareAttacked(kingSq(side_to_move_), ~side_to_move_) && movelist.size() == 0)
+            return GameResult::LOSE;
+        return GameResult::DRAW;
+    }
+
+    const auto count = popcount(all());
+
+    if (count == 2) return GameResult::DRAW;
+
+    if (count == 3) {
+        if (pieces<PieceType::BISHOP, Color::WHITE>() || pieces<PieceType::BISHOP, Color::BLACK>())
+            return GameResult::DRAW;
+        if (pieces<PieceType::KNIGHT, Color::WHITE>() || pieces<PieceType::KNIGHT, Color::BLACK>())
+            return GameResult::DRAW;
+    }
+
+    if (count == 4) {
+        if (pieces<PieceType::BISHOP, Color::WHITE>() &&
+            pieces<PieceType::BISHOP, Color::BLACK>() &&
+            sameColor(lsb(pieces<PieceType::BISHOP, Color::WHITE>()),
+                      lsb(pieces<PieceType::BISHOP, Color::BLACK>())))
+            return GameResult::DRAW;
+    }
+
+    if (isRepetition()) return GameResult::DRAW;
+
+    const Board &board = *this;
+
+    Movelist<Move> movelist;
+    Movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
+
+    if (movelist.size() == 0) {
+        if (isSquareAttacked(kingSq(side_to_move_), ~side_to_move_)) return GameResult::LOSE;
+        return GameResult::DRAW;
+    }
+
+    return GameResult::NONE;
+}
 
 }  // namespace Chess
