@@ -16,6 +16,15 @@ averaged:
 nodes 4528287989 nps 412976560
 ```
 
+## Usage
+
+This is a single/two header library.  
+
+You only need to include `chess.hpp` header and have the `sliders.hpp` header in the same directory.
+Aftewards you can access the chess logic over the `Chess::` namespace. 
+
+__Currenlty MoveGenType and chess960 are not fully implemented!__
+
 ## Types:
 
 ```c++
