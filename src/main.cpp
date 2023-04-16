@@ -11,8 +11,8 @@ class PerftTest {
     Board board;
 
     uint64_t perft(int depth, int max) {
-        Movelist<ExtMove> moves;
-        Movegen::legalmove<ExtMove, MoveGenType::ALL>(moves, board);
+        Movelist<Move> moves;
+        Movegen::legalmove<Move, MoveGenType::ALL>(moves, board);
 
         if (depth == 1) {
             return moves.size();
