@@ -1458,7 +1458,6 @@ U64 checkMask(const Board &board, Square sq, int &double_check) {
     U64 mask = 0;
     double_check = 0;
 
-    const auto opp_king = board.pieces<PieceType::KING, ~c>();
     const auto opp_knight = board.pieces<PieceType::KNIGHT, ~c>();
     const auto opp_bishop = board.pieces<PieceType::BISHOP, ~c>();
     const auto opp_rook = board.pieces<PieceType::ROOK, ~c>();
@@ -1471,11 +1470,6 @@ U64 checkMask(const Board &board, Square sq, int &double_check) {
     double_check += bool(knight_attacks);
 
     mask |= knight_attacks;
-
-    // check for king checks
-    U64 king_attacks = Attacks::KING(sq) & opp_king;
-    mask |= king_attacks;
-    double_check += bool(king_attacks);
 
     // check for pawn checks
     U64 pawn_attacks = Attacks::PAWN(board.sideToMove(), sq) & opp_pawns;
