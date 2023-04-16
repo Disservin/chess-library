@@ -5,6 +5,7 @@
 #include <atomic>
 #include <bitset>
 #include <cassert>
+#include <cctype>
 #include <chrono>
 #include <iostream>
 #include <sstream>
@@ -12,111 +13,27 @@
 #include <unordered_map>
 #include <vector>
 
-#include "sliders.hpp"
+namespace Chess {
 
-using namespace Chess_Lookup::Fancy;
+// *******************
+// TYPE ALIAS
+// *******************
 
-namespace Chess
-{
+using U64 = uint64_t;
 
 // *******************
 // TYPES DEFINITION
 // *******************
-#define U64 uint64_t
-#define MAX_SQ 64
-#define DEFAULT_POS std::string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 
-enum Movetype : uint8_t
-{
-    ALL,
-    CAPTURE,
-    QUIET
-};
+// Generate moves for a given position.
 
-enum Move : uint16_t
-{
-    NO_MOVE = 0,
-    NULL_MOVE = 65
-};
+// If MoveGenType = ALL, generate all pseudo-legal moves.
 
-enum Color : uint8_t
-{
-    White,
-    Black,
-    NO_COLOR
-};
+// If MoveGenType = CAPTURE, generate only pseudo-legal captures.
 
-enum Piece : uint8_t
-{
-    WhitePawn,
-    WhiteKnight,
-    WhiteBishop,
-    WhiteRook,
-    WhiteQueen,
-    WhiteKing,
-    BlackPawn,
-    BlackKnight,
-    BlackBishop,
-    BlackRook,
-    BlackQueen,
-    BlackKing,
-    None
-};
+// If MoveGenType = QUIET, generate only pseudo-legal quiet moves.
 
-enum PieceType : uint8_t
-{
-    PAWN,
-    KNIGHT,
-    BISHOP,
-    ROOK,
-    QUEEN,
-    KING,
-    NONETYPE
-};
-
-enum Rank : uint8_t
-{
-    RANK_1,
-    RANK_2,
-    RANK_3,
-    RANK_4,
-    RANK_5,
-    RANK_6,
-    RANK_7,
-    RANK_8
-};
-
-enum File : uint8_t
-{
-    FILE_A,
-    FILE_B,
-    FILE_C,
-    FILE_D,
-    FILE_E,
-    FILE_F,
-    FILE_G,
-    FILE_H
-};
-
-enum CastlingRight : uint8_t
-{
-    wk = 1,
-    wq = 2,
-    bk = 4,
-    bq = 8
-};
-
-enum Direction : int8_t
-{
-    NORTH = 8,
-    WEST = -1,
-    SOUTH = -8,
-    EAST = 1,
-    NORTH_EAST = 9,
-    NORTH_WEST = 7,
-    SOUTH_WEST = -9,
-    SOUTH_EAST = -7
-};
+enum MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 
 // clang-format off
 enum Square : uint8_t {
@@ -130,22 +47,57 @@ enum Square : uint8_t {
     SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
     NO_SQ
 };
-
-/// @brief convert a square number to a string
-const std::string squareToString[MAX_SQ] = {
-    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-};
-
 // clang-format on
 
-static constexpr int MAX_PLY = 120;
+enum class Piece : uint8_t {
+    WHITEPAWN,
+    WHITEKNIGHT,
+    WHITEBISHOP,
+    WHITEROOK,
+    WHITEQUEEN,
+    WHITEKING,
+    BLACKPAWN,
+    BLACKKNIGHT,
+    BLACKBISHOP,
+    BLACKROOK,
+    BLACKQUEEN,
+    BLACKKING,
+    NONE
+};
+
+enum class PieceType : uint8_t { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
+
+enum class Rank : uint8_t { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8 };
+
+enum class File : uint8_t { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H };
+
+enum CastlingRight : uint8_t { WK = 1, WQ = 2, BK = 4, BQ = 8 };
+
+enum class Direction : int8_t {
+    NORTH = 8,
+    WEST = -1,
+    SOUTH = -8,
+    EAST = 1,
+    NORTH_EAST = 9,
+    NORTH_WEST = 7,
+    SOUTH_WEST = -9,
+    SOUTH_EAST = -7
+};
+
+enum class Color : uint8_t { WHITE, BLACK, NO_COLOR };
+
+enum class GameResult { WIN, LOSE, DRAW, NONE };
+
+inline constexpr Color operator~(const Color &c) {
+    return static_cast<Color>(static_cast<int>(c) ^ static_cast<int>(Color::BLACK));
+}
+
+// *******************
+// CONSTANTS
+// *******************
+
+static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+static constexpr int MAX_SQ = 64;
 static constexpr int MAX_MOVES = 128;
 
 static constexpr U64 WK_CASTLE_MASK = (1ULL << SQ_F1) | (1ULL << SQ_G1);
@@ -155,62 +107,208 @@ static constexpr U64 BK_CASTLE_MASK = (1ULL << SQ_F8) | (1ULL << SQ_G8);
 static constexpr U64 BQ_CASTLE_MASK = (1ULL << SQ_D8) | (1ULL << SQ_C8) | (1ULL << SQ_B8);
 
 // all 64 bits set
-static constexpr U64 DEFAULT_CHECKMASK = 18446744073709551615ULL;
+static constexpr U64 DEFAULT_CHECKMASK = 0xffffffffffffffffull;
+
+static std::unordered_map<char, PieceType> pieceToInt({{'n', PieceType::KNIGHT},
+                                                       {'b', PieceType::BISHOP},
+                                                       {'r', PieceType::ROOK},
+                                                       {'q', PieceType::QUEEN},
+                                                       {'N', PieceType::KNIGHT},
+                                                       {'B', PieceType::BISHOP},
+                                                       {'R', PieceType::ROOK},
+                                                       {'Q', PieceType::QUEEN}});
+
+static std::unordered_map<char, Piece> charToPiece({{'P', Piece::WHITEPAWN},
+                                                    {'N', Piece::WHITEKNIGHT},
+                                                    {'B', Piece::WHITEBISHOP},
+                                                    {'R', Piece::WHITEROOK},
+                                                    {'Q', Piece::WHITEQUEEN},
+                                                    {'K', Piece::WHITEKING},
+                                                    {'p', Piece::BLACKPAWN},
+                                                    {'n', Piece::BLACKKNIGHT},
+                                                    {'b', Piece::BLACKBISHOP},
+                                                    {'r', Piece::BLACKROOK},
+                                                    {'q', Piece::BLACKQUEEN},
+                                                    {'k', Piece::BLACKKING},
+                                                    {'.', Piece::NONE}});
+
+static std::unordered_map<Piece, char> pieceToChar({{Piece::WHITEPAWN, 'P'},
+                                                    {Piece::WHITEKNIGHT, 'N'},
+                                                    {Piece::WHITEBISHOP, 'B'},
+                                                    {Piece::WHITEROOK, 'R'},
+                                                    {Piece::WHITEQUEEN, 'Q'},
+                                                    {Piece::WHITEKING, 'K'},
+                                                    {Piece::BLACKPAWN, 'p'},
+                                                    {Piece::BLACKKNIGHT, 'n'},
+                                                    {Piece::BLACKBISHOP, 'b'},
+                                                    {Piece::BLACKROOK, 'r'},
+                                                    {Piece::BLACKQUEEN, 'q'},
+                                                    {Piece::BLACKKING, 'k'},
+                                                    {Piece::NONE, '.'}});
+
+static std::unordered_map<char, CastlingRight> charToCR(
+    {{'K', WK}, {'k', BK}, {'Q', WQ}, {'q', BQ}});
+
+static std::unordered_map<PieceType, char> PieceTypeToPromPiece({{PieceType::KNIGHT, 'n'},
+                                                                 {PieceType::BISHOP, 'b'},
+                                                                 {PieceType::ROOK, 'r'},
+                                                                 {PieceType::QUEEN, 'q'}});
+
+const std::string squareToString[64] = {
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1", "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3", "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5", "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7", "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+};
 
 // *******************
-// Type operations
+//
 // *******************
 
-constexpr Color operator~(Color C)
-{
-    return Color(C ^ Black);
+struct State {
+    U64 hash;
+    Square enpassant;
+    uint8_t castling;
+    uint8_t half_moves;
+    Piece captured_piece;
+
+    State(U64 _hash, Square _enpassant, uint8_t _castling, uint8_t _half_move,
+          Piece _captured_piece) {
+        hash = _hash;
+        enpassant = _enpassant;
+        castling = _castling;
+        half_moves = _half_move;
+        captured_piece = _captured_piece;
+    }
+};
+
+struct Move {
+   public:
+    Move() = default;
+
+    explicit Move(uint16_t move) : move_(move){};
+
+    template <uint16_t MoveType = 0>
+    static Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT) {
+        return Move(MoveType +
+                    ((static_cast<uint16_t>(pt) - static_cast<uint16_t>(PieceType::KNIGHT)) << 12) +
+                    static_cast<uint16_t>(source << 6) + static_cast<uint16_t>(target));
+    }
+
+    [[nodiscard]] inline constexpr Square from() const {
+        return static_cast<Square>((move_ >> 6) & 0x3F);
+    }
+
+    [[nodiscard]] inline constexpr Square to() const { return static_cast<Square>(move_ & 0x3F); }
+
+    [[nodiscard]] inline constexpr uint16_t typeOf() const {
+        return static_cast<uint16_t>(move_ & (3 << 14));
+    }
+
+    [[nodiscard]] inline constexpr PieceType promotionType() const {
+        return static_cast<PieceType>(((move_ >> 12) & 3) + static_cast<int>(PieceType::KNIGHT));
+    }
+
+    [[nodiscard]] inline constexpr const uint16_t move() const { return move_; }
+    [[nodiscard]] inline constexpr uint16_t &move() { return move_; }
+
+    inline constexpr bool operator==(const Move &right) const { return move_ == right.move(); }
+    inline constexpr bool operator!=(const Move &right) const { return move_ != right.move(); }
+
+    inline static constexpr uint16_t NO_MOVE = 0;
+    inline static constexpr uint16_t NULL_MOVE = 65;
+
+    inline static constexpr uint16_t NORMAL = 0;
+    inline static constexpr uint16_t PROMOTION = static_cast<uint16_t>(1 << 14);
+    inline static constexpr uint16_t EN_PASSANT = static_cast<uint16_t>(2 << 14);
+    inline static constexpr uint16_t CASTLING = static_cast<uint16_t>(3 << 14);
+
+    friend std::ostream &operator<<(std::ostream &os, const Move &m);
+
+   private:
+    uint16_t move_ = NO_MOVE;
+};
+
+inline std::ostream &operator<<(std::ostream &os, const Move &m) {
+    os << squareToString[m.from()] << squareToString[m.to()];
+    if (m.typeOf() == Move::PROMOTION) {
+        os << PieceTypeToPromPiece.at(m.promotionType());
+    }
+    return os;
 }
 
-#define INCR_OP_ON(T)                                                                                                  \
-    constexpr inline T &operator++(T &p)                                                                               \
-    {                                                                                                                  \
-        return p = static_cast<T>(static_cast<int>(p) + 1);                                                            \
-    }                                                                                                                  \
-    constexpr inline T operator++(T &p, int)                                                                           \
-    {                                                                                                                  \
-        auto old = p;                                                                                                  \
-        ++p;                                                                                                           \
-        return old;                                                                                                    \
+struct ExtMove : public Move {
+   public:
+    ExtMove() = default;
+
+    explicit ExtMove(uint16_t move) : Move(move){};
+
+    template <uint16_t MoveType = 0>
+    static ExtMove make(Square source, Square target, PieceType pt = PieceType::KNIGHT) {
+        return ExtMove(
+            MoveType +
+            ((static_cast<uint16_t>(pt) - static_cast<uint16_t>(PieceType::KNIGHT)) << 12) +
+            static_cast<uint16_t>(source << 6) + static_cast<uint16_t>(target));
     }
 
-INCR_OP_ON(Piece)
-INCR_OP_ON(Square)
-INCR_OP_ON(PieceType)
-INCR_OP_ON(Rank)
-INCR_OP_ON(File)
+    [[nodiscard]] inline constexpr int score() const { return score_; }
 
-#undef INCR_OP_ON
+    inline constexpr void setScore(int score) { score_ = score; }
 
-#define BASE_OP_ON(T)                                                                                                  \
-    inline constexpr Square operator+(Square s, T d)                                                                   \
-    {                                                                                                                  \
-        return Square(int(s) + int(d));                                                                                \
-    }                                                                                                                  \
-    inline constexpr Square operator-(Square s, T d)                                                                   \
-    {                                                                                                                  \
-        return Square(int(s) - int(d));                                                                                \
-    }                                                                                                                  \
-    inline constexpr Square &operator+=(Square &s, T d)                                                                \
-    {                                                                                                                  \
-        return s = s + d;                                                                                              \
-    }                                                                                                                  \
-    inline constexpr Square &operator-=(Square &s, T d)                                                                \
-    {                                                                                                                  \
-        return s = s - d;                                                                                              \
+    inline constexpr bool operator<(const ExtMove &right) const { return score_ < right.score(); }
+    inline constexpr bool operator>(const ExtMove &right) const { return score_ > right.score(); }
+
+   private:
+    int score_ = 0;
+};
+
+template <typename T>
+struct Movelist {
+   public:
+    inline constexpr void add(T move) { list_[size_++] = move; }
+
+    inline constexpr int find(T m) {
+        for (int i = 0; i < size_; i++) {
+            if (list_[i].move == m) return i;
+        }
+
+        return -1;
     }
 
-BASE_OP_ON(Direction)
+    inline constexpr T &operator[](int i) { return list_[i]; }
 
-#undef BASE_OP_ON
+    typedef const T *const_iterator;
+    typedef T *iterator;
+
+    inline iterator begin() { return (std::begin(list_)); }
+    inline const_iterator begin() const { return (std::begin(list_)); }
+    inline iterator end() {
+        auto it = std::begin(list_);
+        std::advance(it, size_);
+        return it;
+    }
+    inline const_iterator end() const {
+        auto it = std::begin(list_);
+        std::advance(it, size_);
+        return it;
+    }
+
+    inline constexpr void clear() { size_ = 0; }
+    [[nodiscard]] inline constexpr int size() const { return size_; }
+
+   private:
+    T list_[MAX_MOVES];
+
+    uint8_t size_ = 0;
+};
+
+// *******************
+// ATTACK ARRAYS
+// *******************
 
 // clang-format off
 
-// pre calculated lookup table for pawn attacks
+// pre-calculated lookup table for pawn attacks
 static constexpr U64 PAWN_ATTACKS_TABLE[2][MAX_SQ] = {
     // white pawn attacks
     { 0x200, 0x500, 0xa00, 0x1400,
@@ -250,7 +348,7 @@ static constexpr U64 PAWN_ATTACKS_TABLE[2][MAX_SQ] = {
       }
 };
 
-// pre calculated lookup table for knight attacks
+// pre-calculated lookup table for knight attacks
 static constexpr U64 KNIGHT_ATTACKS_TABLE[MAX_SQ] = {
     0x0000000000020400, 0x0000000000050800, 0x00000000000A1100, 0x0000000000142200, 0x0000000000284400,
     0x0000000000508800, 0x0000000000A01000, 0x0000000000402000, 0x0000000002040004, 0x0000000005080008,
@@ -266,7 +364,7 @@ static constexpr U64 KNIGHT_ATTACKS_TABLE[MAX_SQ] = {
     0x2000204000000000, 0x0004020000000000, 0x0008050000000000, 0x00110A0000000000, 0x0022140000000000,
     0x0044280000000000, 0x0088500000000000, 0x0010A00000000000, 0x0020400000000000};
 
-// pre calculated lookup table for king attacks
+// pre-calculated lookup table for king attacks
 static constexpr U64 KING_ATTACKS_TABLE[MAX_SQ] = {
     0x0000000000000302, 0x0000000000000705, 0x0000000000000E0A, 0x0000000000001C14, 0x0000000000003828,
     0x0000000000007050, 0x000000000000E0A0, 0x000000000000C040, 0x0000000000030203, 0x0000000000070507,
@@ -457,20 +555,14 @@ static constexpr U64 castlingKey[16] = {0,
                                         RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768 + 2],
                                         RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768],
                                         RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768 + 3],
-                                        RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768 + 3] ^
-                                            RANDOM_ARRAY[768]};
-
+                                        RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768]};
 // clang-format on
 
-static constexpr int hash_piece[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
-
-/// @brief convert a piece to a piecetype
-static constexpr PieceType PieceToPieceType[13] = {PAWN,   KNIGHT, BISHOP, ROOK,  QUEEN, KING,    PAWN,
-                                                   KNIGHT, BISHOP, ROOK,   QUEEN, KING,  NONETYPE};
+static constexpr int MAP_HASH_PIECE[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 
 // file masks
 
-/// @brief Bitboard of all squares
+/// @brief U64 of all squares
 static constexpr U64 MASK_FILE[8] = {
     0x101010101010101,  0x202020202020202,  0x404040404040404,  0x808080808080808,
     0x1010101010101010, 0x2020202020202020, 0x4040404040404040, 0x8080808080808080,
@@ -478,206 +570,78 @@ static constexpr U64 MASK_FILE[8] = {
 
 // rank masks
 
-/// @brief Bitboard of all ranks
-static constexpr U64 MASK_RANK[8] = {0xff,         0xff00,         0xff0000,         0xff000000,
-                                     0xff00000000, 0xff0000000000, 0xff000000000000, 0xff00000000000000};
-
-static std::unordered_map<Piece, char> pieceToChar({{WhitePawn, 'P'},
-                                                    {WhiteKnight, 'N'},
-                                                    {WhiteBishop, 'B'},
-                                                    {WhiteRook, 'R'},
-                                                    {WhiteQueen, 'Q'},
-                                                    {WhiteKing, 'K'},
-                                                    {BlackPawn, 'p'},
-                                                    {BlackKnight, 'n'},
-                                                    {BlackBishop, 'b'},
-                                                    {BlackRook, 'r'},
-                                                    {BlackQueen, 'q'},
-                                                    {BlackKing, 'k'},
-                                                    {None, '.'}});
-
-static std::unordered_map<char, Piece> charToPiece({{'P', WhitePawn},
-                                                    {'N', WhiteKnight},
-                                                    {'B', WhiteBishop},
-                                                    {'R', WhiteRook},
-                                                    {'Q', WhiteQueen},
-                                                    {'K', WhiteKing},
-                                                    {'p', BlackPawn},
-                                                    {'n', BlackKnight},
-                                                    {'b', BlackBishop},
-                                                    {'r', BlackRook},
-                                                    {'q', BlackQueen},
-                                                    {'k', BlackKing},
-                                                    {'.', None}});
-
-static std::unordered_map<PieceType, char> PieceTypeToPromPiece(
-    {{KNIGHT, 'n'}, {BISHOP, 'b'}, {ROOK, 'r'}, {QUEEN, 'q'}});
-
-static std::unordered_map<char, PieceType> pieceToInt(
-    {{'n', KNIGHT}, {'b', BISHOP}, {'r', ROOK}, {'q', QUEEN}, {'N', KNIGHT}, {'B', BISHOP}, {'R', ROOK}, {'Q', QUEEN}});
-
-static std::unordered_map<Square, CastlingRight> castlingMapRook({{SQ_A1, wq}, {SQ_H1, wk}, {SQ_A8, bq}, {SQ_H8, bk}});
-
-static std::unordered_map<char, CastlingRight> readCastleString({{'K', wk}, {'k', bk}, {'Q', wq}, {'q', bq}});
+/// @brief U64 of all ranks
+static constexpr U64 MASK_RANK[8] = {
+    0xff,         0xff00,         0xff0000,         0xff000000,
+    0xff00000000, 0xff0000000000, 0xff000000000000, 0xff00000000000000};
 
 // *******************
-// Move encoding
+// Type operations
 // *******************
 
-constexpr inline Square from(Move move)
-{
-    return Square(move & 0b111111);
-}
-
-constexpr inline Square to(Move move)
-{
-    return Square((move & 0b111111000000) >> 6);
-}
-
-constexpr inline PieceType piece(Move move)
-{
-    return PieceType((move & 0b111000000000000) >> 12);
-}
-
-constexpr inline bool promoted(Move move)
-{
-    return bool((move & 0b1000000000000000) >> 15);
-}
-
-constexpr inline Move make(PieceType piece = NONETYPE, Square source = NO_SQ, Square target = NO_SQ,
-                           bool promoted = false)
-{
-    return Move((uint16_t)source | (uint16_t)target << 6 | (uint16_t)piece << 12 | (uint16_t)promoted << 15);
-}
-
-template <PieceType piece, bool promoted> Move make(Square source = NO_SQ, Square target = NO_SQ)
-{
-    return Move((uint16_t)source | (uint16_t)target << 6 | (uint16_t)piece << 12 | (uint16_t)promoted << 15);
-}
-
-struct State
-{
-    Square enPassant{};
-    uint8_t castling{};
-    uint8_t halfMove{};
-    Piece capturedPiece = None;
-    State(Square enpassantCopy = {}, uint8_t castlingRightsCopy = {}, uint8_t halfMoveCopy = {},
-          Piece capturedPieceCopy = None)
-        : enPassant(enpassantCopy), castling(castlingRightsCopy), halfMove(halfMoveCopy),
-          capturedPiece(capturedPieceCopy)
-    {
-    }
-};
-
-struct ExtMove
-{
-    int value;
-    Move move;
-};
-
-inline constexpr bool operator==(const ExtMove &a, const ExtMove &b)
-{
-    return a.move == b.move;
-}
-
-inline constexpr bool operator>(const ExtMove &a, const ExtMove &b)
-{
-    return a.value > b.value;
-}
-
-inline constexpr bool operator<(const ExtMove &a, const ExtMove &b)
-{
-    return a.value < b.value;
-}
-
-struct Movelist
-{
-    ExtMove list[MAX_MOVES];
-    uint8_t size = 0;
-    typedef ExtMove *iterator;
-    typedef const ExtMove *const_iterator;
-
-    inline void Add(Move move)
-    {
-        list[size].move = move;
-        list[size].value = 0;
-        size++;
+#define INCR_OP_ON(T)                                \
+    constexpr inline T &operator++(T &p) {           \
+        p = static_cast<T>(static_cast<int>(p) + 1); \
+        return p;                                    \
+    }                                                \
+    const constexpr inline T operator++(T &p, int) { \
+        auto old = p;                                \
+        ++p;                                         \
+        return old;                                  \
     }
 
-    inline constexpr ExtMove &operator[](int i)
-    {
-        return list[i];
-    }
+INCR_OP_ON(Piece)
+INCR_OP_ON(Square)
+INCR_OP_ON(PieceType)
+INCR_OP_ON(Rank)
+INCR_OP_ON(File)
 
-    /// @brief
-    /// @param m
-    /// @return -1 if move was not found
-    inline constexpr int find(Move m)
-    {
-        for (int i = 0; i < size; i++)
-        {
-            if (list[i].move == m)
-                return i;
-        }
-        return -1;
-    }
+#undef INCR_OP_ON
 
-    inline iterator begin()
-    {
-        return (std::begin(list));
-    }
-    inline const_iterator begin() const
-    {
-        return (std::begin(list));
-    }
-    inline iterator end()
-    {
-        auto it = std::begin(list);
-        std::advance(it, size);
-        return it;
-    }
-    inline const_iterator end() const
-    {
-        auto it = std::begin(list);
-        std::advance(it, size);
-        return it;
-    }
-};
+#define BASE_OP_ON(D, T)                                                  \
+    inline constexpr D operator+(D s, T d) { return D(int(s) + int(d)); } \
+    inline constexpr D operator-(D s, T d) { return D(int(s) - int(d)); } \
+    inline constexpr D &operator+=(D &s, T d) { return s = s + d; }       \
+    inline constexpr D &operator-=(D &s, T d) { return s = s - d; }
+
+BASE_OP_ON(Square, Direction)
+BASE_OP_ON(Square, Square)
+BASE_OP_ON(int, File)
+BASE_OP_ON(File, File)
+BASE_OP_ON(int, Rank)
+BASE_OP_ON(Rank, Rank)
+BASE_OP_ON(Rank, File)
+BASE_OP_ON(PieceType, PieceType)
+
+#undef BASE_OP_ON
 
 // *******************
 // INTRINSIC FUNCTIONS
 // *******************
 
-// Compiler specific functions, taken from Stockfish https://github.com/official-stockfish/Stockfish
-#if defined(__GNUC__) // GCC, Clang, ICC
+#if defined(__GNUC__)  // GCC, Clang, ICC
 
-inline Square lsb(U64 b)
-{
-    if (!b)
-        return NO_SQ;
-    return Square(__builtin_ctzll(b));
+inline Square lsb(U64 b) {
+    assert(b);
+    return static_cast<Square>(__builtin_ctzll(b));
 }
 
-inline Square msb(U64 b)
-{
-    if (!b)
-        return NO_SQ;
-    return Square(63 ^ __builtin_clzll(b));
+inline Square msb(U64 b) {
+    assert(b);
+    return static_cast<Square>(63 ^ __builtin_clzll(b));
 }
 
-#elif defined(_MSC_VER) // MSVC
+#elif defined(_MSC_VER)  // MSVC
 
-#ifdef _WIN64 // MSVC, WIN64
+#ifdef _WIN64  // MSVC, WIN64
 #include <intrin.h>
-inline Square lsb(U64 b)
-{
+inline Square lsb(U64 b) {
     unsigned long idx;
     _BitScanForward64(&idx, b);
     return (Square)idx;
 }
 
-inline Square msb(U64 b)
-{
+inline Square msb(U64 b) {
     unsigned long idx;
     _BitScanReverse64(&idx, b);
     return (Square)idx;
@@ -691,8 +655,7 @@ inline Square msb(U64 b)
 
 #endif
 
-inline uint8_t popcount(U64 mask)
-{
+inline uint8_t popcount(U64 mask) {
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 
     return (uint8_t)_mm_popcnt_u64(mask);
@@ -707,125 +670,112 @@ inline uint8_t popcount(U64 mask)
 /// @brief return the lsb and remove it
 /// @param mask
 /// @return
-inline Square poplsb(U64 &mask)
-{
+inline Square poplsb(U64 &mask) {
+    assert(mask);
     int8_t s = lsb(mask);
     mask &= mask - 1;
-    return Square(s);
+    return static_cast<Square>(s);
 }
 
-/// @brief splits a string into multiple parts, delimiter is whitespace
-/// @param fen
-/// @return std::vector
-inline std::vector<std::string> splitInput(const std::string &input)
-{
-    std::stringstream input_stream(input);
-    std::string segment;
-    std::vector<std::string> seglist;
+// *******************
+// Attacks
+// *******************
 
-    while (std::getline(input_stream, segment, ' '))
-    {
-        seglist.push_back(segment);
-    }
+namespace Attacks {
 
-    return seglist;
+#include "sliders.hpp"
+
+static inline constexpr U64 PAWN(Color c, Square sq) {
+    return PAWN_ATTACKS_TABLE[static_cast<int>(c)][sq];
 }
+static inline constexpr U64 KNIGHT(Square sq) { return KNIGHT_ATTACKS_TABLE[sq]; }
+static inline constexpr U64 BISHOP(Square sq, U64 occ) {
+    return Chess_Lookup::Fancy::BishopAttacks(sq, occ);
+}
+static inline constexpr U64 ROOK(Square sq, U64 occ) {
+    return Chess_Lookup::Fancy::RookAttacks(sq, occ);
+}
+static inline constexpr U64 QUEEN(Square sq, U64 occ) {
+    return Chess_Lookup::Fancy::QueenAttacks(sq, occ);
+}
+static inline constexpr U64 KING(Square sq) { return KING_ATTACKS_TABLE[sq]; }
+}  // namespace Attacks
+
+// *******************
+// HELPERS
+// *******************
 
 /// @brief Gets the file index of the square where 0 is the a-file
 /// @param sq
 /// @return the file of the square
-inline constexpr File square_file(Square sq)
-{
-    return File(sq & 7);
-}
+inline constexpr File squareFile(Square sq) { return File(sq & 7); }
 
 /// @brief Gets the rank index of the square where 0 is the first rank.
 /// @param sq
 /// @return the rank of the square
-inline constexpr Rank square_rank(Square sq)
-{
-    return Rank(sq >> 3);
-}
+inline constexpr Rank squareRank(Square sq) { return Rank(sq >> 3); }
 
 /// @brief makes a square out of rank and file
 /// @param f
 /// @param r
 /// @return
-inline constexpr Square file_rank_square(File f, Rank r)
-{
-    return Square((r << 3) + f);
+inline constexpr Square fileRankSquare(File f, Rank r) {
+    return static_cast<Square>((static_cast<int>(r) << 3) + f);
 }
 
 /// @brief distance between two squares
 /// @param a
 /// @param b
 /// @return
-inline uint8_t square_distance(Square a, Square b)
-{
-    return std::max(std::abs(square_file(a) - square_file(b)), std::abs(square_rank(a) - square_rank(b)));
+inline constexpr uint8_t squareDistance(Square a, Square b) {
+    return std::max(std::abs(static_cast<int>(squareFile(a) - squareFile(b))),
+                    std::abs(static_cast<int>(squareRank(a) - squareRank(b))));
 }
 
-inline uint8_t diagonal_of(Square sq)
-{
-    return 7 + square_rank(sq) - square_file(sq);
-}
+inline constexpr uint8_t diagonalOf(Square sq) { return 7 + squareRank(sq) - squareFile(sq); }
 
-inline uint8_t anti_diagonal_of(Square sq)
-{
-    return square_rank(sq) + square_file(sq);
+inline constexpr uint8_t antiDiagonalOf(Square sq) {
+    return static_cast<uint8_t>(squareRank(sq) + squareFile(sq));
 }
 
 /// @brief manhatten distance between two squares
 /// @param sq1
 /// @param sq2
 /// @return
-inline uint8_t manhatten_distance(Square sq1, Square sq2)
-{
-    return std::abs(square_file(sq1) - square_file(sq2)) + std::abs(square_rank(sq1) - square_rank(sq2));
+inline constexpr uint8_t manhattenDistance(Square sq1, Square sq2) {
+    return std::abs(static_cast<int>(squareFile(sq1) - squareFile(sq2))) +
+           std::abs(static_cast<int>(squareRank(sq1) - squareRank(sq2)));
 }
 
 /// @brief color of a square, has nothing to do with whose piece is on that square
 /// @param square
 /// @return
-inline Color get_square_color(Square square)
-{
-    if ((square % 8) % 2 == (square / 8) % 2)
-    {
-        return Black;
-    }
-    else
-    {
-        return White;
+inline constexpr Color getSquareColor(Square square) {
+    if ((square % 8) % 2 == (square / 8) % 2) {
+        return Color::BLACK;
+    } else {
+        return Color::WHITE;
     }
 }
 
-/// @brief get the piecetype of a piece
-/// @param piece
-/// @return the piecetype
-inline PieceType type_of_piece(Piece piece)
-{
-    return PieceToPieceType[piece];
+inline constexpr Square relativeSquare(Color c, Square s) {
+    return Square(s ^ (static_cast<int>(c) * 56));
 }
 
-/// @brief makes a piece out of a PieceType and Color
-/// @param type
-/// @param c
-/// @return
-inline Piece makePiece(PieceType type, Color c)
-{
-    if (type == NONETYPE)
-        return None;
-    return Piece(type + 6 * c);
+inline constexpr Piece makePiece(Color c, PieceType pt) {
+    return static_cast<Piece>(static_cast<int>(c) * 6 + static_cast<int>(pt));
 }
 
-/// @brief prints any bitboard
-/// @param bb
-inline void printBitboard(U64 bb)
-{
+inline constexpr PieceType typeOfPiece(Piece piece) {
+    return static_cast<PieceType>(static_cast<int>(piece) % 6);
+}
+
+bool sameColor(Square sq1, Square sq2) { return ((9 * (sq1 ^ sq2)) & 8) == 0; }
+
+void printBitboard(U64 bb) {
     std::bitset<64> b(bb);
     std::string str_bitset = b.to_string();
-    for (int i = 0; i < MAX_SQ; i += 8)
-    {
+    for (int i = 0; i < Square::NO_SQ; i += 8) {
         std::string x = str_bitset.substr(i, 8);
         reverse(x.begin(), x.end());
         std::cout << x << std::endl;
@@ -833,376 +783,252 @@ inline void printBitboard(U64 bb)
     std::cout << '\n' << std::endl;
 }
 
-inline U64 PawnAttacks(Square sq, Color c)
-{
-    return PAWN_ATTACKS_TABLE[c][sq];
+namespace {
+auto init_squares_between = []() constexpr {
+    // initialize squares between table
+    std::array<std::array<U64, 64>, 64> squares_between_bb{};
+    U64 sqs = 0;
+    for (Square sq1 = SQ_A1; sq1 <= SQ_H8; ++sq1) {
+        for (Square sq2 = SQ_A1; sq2 <= SQ_H8; ++sq2) {
+            sqs = (1ULL << sq1) | (1ULL << sq2);
+            if (sq1 == sq2)
+                squares_between_bb[sq1][sq2] = 0ull;
+            else if (squareFile(sq1) == squareFile(sq2) || squareRank(sq1) == squareRank(sq2))
+                squares_between_bb[sq1][sq2] = Attacks::ROOK(sq1, sqs) & Attacks::ROOK(sq2, sqs);
+            else if (diagonalOf(sq1) == diagonalOf(sq2) ||
+                     antiDiagonalOf(sq1) == antiDiagonalOf(sq2))
+                squares_between_bb[sq1][sq2] =
+                    Attacks::BISHOP(sq1, sqs) & Attacks::BISHOP(sq2, sqs);
+        }
+    }
+    return squares_between_bb;
+};
 }
 
-inline U64 KnightAttacks(Square sq)
-{
-    return KNIGHT_ATTACKS_TABLE[sq];
+static const std::array<std::array<U64, 64>, 64> SQUARES_BETWEEN_BB = init_squares_between();
+
+std::vector<std::string> splitString(const std::string &string, const char &delimiter) {
+    std::stringstream string_stream(string);
+    std::string segment;
+    std::vector<std::string> seglist;
+
+    while (std::getline(string_stream, segment, delimiter)) seglist.emplace_back(segment);
+
+    return seglist;
 }
 
-inline U64 KingAttacks(Square sq)
-{
-    return KING_ATTACKS_TABLE[sq];
-}
+// *******************
+// BOARD
+// *******************
 
-class Board
-{
-  public:
-    Color sideToMove;
+class Board {
+   public:
+    Board();
 
-    // NO_SQ when enpassant is not possible
-    Square enPassantSquare;
+    explicit Board(const std::string &fen);
 
-    // castling right is encoded in 8bit
-    // wk = 1
-    // wq = 2
-    // bk = 4
-    // bq = 8
-    // 0  0  0  0  0  0  0  0
-    // wk wq bk bq
-    uint8_t castlingRights;
+    void loadFen(const std::string &fen);
+    [[nodiscard]] std::string getFen() const;
 
-    // halfmoves start at 0
-    uint8_t halfMoveClock;
-
-    // full moves start at 1
-    uint16_t fullMoveNumber;
-
-    // current hashkey
-    U64 hashKey;
-
-    U64 piecesBB[12] = {};
-    Piece board[MAX_SQ];
-
-    // keeps track on how many checks there currently are
-    // 2 = only king moves are valid
-    // 1 = king move, block/capture
-    uint8_t doubleCheck;
-
-    // the path between horizontal/vertical pinners and
-    // the pinned is set
-    U64 pinHV;
-
-    // the path between diagonal pinners and
-    // the pinned is set
-    U64 pinD;
-
-    // all bits set if we are not in check
-    // otherwise the path between the king and the checker
-    // in case of knights giving check only the knight square
-    // is checked
-    U64 checkMask = DEFAULT_CHECKMASK;
-
-    // all squares that are seen by an enemy piece
-    U64 seen;
-
-    // Occupation piecesBB
-    U64 occEnemy;
-    U64 occUs;
-    U64 occAll;
-    U64 enemyEmptyBB;
-
-    U64 SQUARES_BETWEEN_BB[MAX_SQ][MAX_SQ];
-
-  private:
-    // keeps track of previous hashes, used for
-    // repetition detection
-    std::vector<U64> hashHistory;
-
-    std::vector<State> stateHistory;
-
-  public:
-    /// @brief constructor for the board, loads startpos and initializes SQUARES_BETWEEN_BB array
-    Board(std::string fen = DEFAULT_POS);
-
-    /// @brief Finds what piece is on the square using bitboards (slow)
-    /// @param sq
-    /// @return found piece otherwise None
-    Piece pieceAtBB(Square sq);
-
-    /// @brief Finds what piecetype is on the square
-    /// @param sq
-    /// @return found piece otherwise None
-    PieceType pieceTypeAtB(Square sq) const;
-
-    /// @brief Finds what piece is on the square using the board (more performant)
-    /// @param sq
-    /// @return found piece otherwise None
-    Piece pieceAtB(Square sq) const;
-
-    /// @brief applys a new Fen to the board
-    /// @param fen
-    void applyFen(const std::string &fen);
-
-    /// @brief returns a Fen string of the current board
-    /// @return fen string
-    std::string getFen() const;
-
-    /// @brief detects if the position is a repetition by default 1, fide would be 2
-    /// @param draw
-    /// @return true for repetition otherwise false
-    bool isRepetition(int draw = 2) const;
-
-    /// @brief false if only pawns on the board
-    bool nonPawnMat(Color c) const;
-
-    Square KingSQ(Color c) const;
-
-    U64 Enemy(Color c) const;
-    U64 EnemyEmpty(Color c) const;
-    U64 Us(Color c) const;
-
-    template <Color c> U64 Us() const
-    {
-        return piecesBB[PAWN + c * 6] | piecesBB[KNIGHT + c * 6] | piecesBB[BISHOP + c * 6] | piecesBB[ROOK + c * 6] |
-               piecesBB[QUEEN + c * 6] | piecesBB[KING + c * 6];
-    }
-
-    inline U64 All() const
-    {
-        return Us<White>() | Us<Black>();
-    }
-
-    // Gets individual piece bitboards
-
-    template <Piece p> constexpr U64 pieces() const
-    {
-        return piecesBB[p];
-    }
-
-    template <PieceType p, Color c> constexpr U64 pieces() const
-    {
-        return piecesBB[p + c * 6];
-    }
-
-    inline constexpr U64 pieces(PieceType p, Color c) const
-    {
-        return piecesBB[p + c * 6];
-    }
-
-    /// @brief returns the color of a piece at a square
-    /// @param loc
-    /// @return
-    Color colorOf(Square loc) const;
-
-    /// @brief is square attacked by color c
-    /// @param c
-    /// @param sq
-    /// @return
-    bool isSquareAttacked(Color c, Square sq) const;
-
-    void updateHash(Move move, bool isCastling, bool ep);
-
-    /// @brief plays the move on the internal board
-    /// @param move
-    void makeMove(Move move);
-
-    /// @brief unmake a move played on the internal board
-    /// @param move
-    void unmakeMove(Move move);
-
-    /// @brief make a nullmove
+    void makeMove(const Move &move);
+    void unmakeMove(const Move &move);
     void makeNullMove();
-
-    /// @brief unmake a nullmove
     void unmakeNullMove();
 
-    /// @brief Remove a Piece from the board
-    /// @param piece
-    /// @param sq
+    [[nodiscard]] U64 us(Color c) const;
+    [[nodiscard]] U64 them(Color c) const;
+
+    [[nodiscard]] U64 all() const;
+
+    [[nodiscard]] Square kingSq(Color c) const;
+
+    template <PieceType type, Color color>
+    [[nodiscard]] U64 pieces() const;
+
+    template <Color color>
+    [[nodiscard]] U64 pieces(PieceType type) const;
+
+    template <PieceType type>
+    [[nodiscard]] U64 pieces(Color color) const;
+
+    [[nodiscard]] constexpr U64 pieces(PieceType type, Color color) const;
+
+    [[nodiscard]] constexpr Piece pieceAt(Square square) const;
+    [[nodiscard]] static constexpr Color colorOfPiece(Piece piece) {
+        return static_cast<Color>(static_cast<int>(piece) / 6);
+    }
+
+    [[nodiscard]] constexpr Color colorOfPiece(Square square) const;
+
+    [[nodiscard]] uint64_t hash() const { return hash_key_; };
+    [[nodiscard]] Color sideToMove() const { return side_to_move_; }
+    [[nodiscard]] Square enpassantSquare() const { return enpassant_square_; }
+    [[nodiscard]] uint8_t castlingRights() const { return castling_rights_; }
+    /// TODO
+    /// @return
+    [[nodiscard]] bool chess960() const { return chess960_; }
+    [[nodiscard]] U64 occ() const {
+        assert((us(Color::WHITE) | us(Color::BLACK)) == occ_all_);
+        return occ_all_;
+    }
+
+    /// @brief every position has at least occured once, so a game will be drawn if its seen 2 times
+    /// after the intial one
+    /// @param count
+    /// @return
+    [[nodiscard]] bool isRepetition(int count = 2) const;
+    GameResult isGameOver();
+
+    /// Is the square attacked by color c?
+    /// @param square
+    /// @param c
+    /// @return
+    [[nodiscard]] bool isSquareAttacked(Square square, Color c) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const Board &b);
+
+    [[nodiscard]] std::string uci(const Move &move) const;
+    [[nodiscard]] Move uciToMove(const std::string &uci) const;
+
+   protected:
+   private:
+    void updateKeyPiece(Piece piece, Square sq);
+    void updateKeyEnPassant(Square sq);
+    void updateKeyCastling();
+    void updateKeySideToMove();
+
+    void removeCastlingRight(CastlingRight cr) { castling_rights_ &= ~cr; }
+
+    void placePiece(Piece piece, Square sq);
     void removePiece(Piece piece, Square sq);
 
-    /// @brief Place a Piece on the board
-    /// @param piece
-    /// @param sq
-    void placePiece(Piece piece, Square sq);
+    Piece removePiece(Square sq);
 
-    /// @brief Move a piece on the board
-    /// @param piece
-    /// @param fromSq
-    /// @param toSq
-    void movePiece(Piece piece, Square fromSq, Square toSq);
+    void zobristHash();
 
-    U64 attacksByPiece(PieceType pt, Square sq, Color c) const;
+    //    std::vector<U64> hash_history_;
+    std::vector<State> prev_states_;
 
-    friend inline std::ostream &operator<<(std::ostream &os, const Board &b);
+    Color side_to_move_;
+    Square enpassant_square_;
 
-  private:
-    /// @brief calculate the current zobrist hash from scratch
-    /// @return
-    U64 zobristHash() const;
+    uint8_t castling_rights_ = 15;
 
-    /// @brief initialize SQUARES_BETWEEN_BB array
-    void initializeLookupTables();
+    // halfmoves start at 0
+    uint8_t half_moves_;
 
-    // update the hash
+    // full moves start at 1
+    uint16_t full_moves_;
 
-    U64 updateKeyPiece(Piece piece, Square sq) const;
-    U64 updateKeyCastling() const;
-    U64 updateKeyEnPassant(Square sq) const;
-    U64 updateKeySideToMove() const;
+    U64 hash_key_;
 
-    void removeCastlingRightsAll(Color c);
-    void removeCastlingRightsRook(Square sq);
+    U64 pieces_bb_[2][6] = {};
+    U64 occ_all_;
+
+    std::array<Piece, 64> board_ = {};
+
+    bool chess960_ = false;
 };
 
-inline Board::Board(std::string fen)
-{
-    initializeLookupTables();
-    stateHistory.reserve(MAX_PLY);
-    hashHistory.reserve(512);
+inline Board::Board() {
+    side_to_move_ = Color::WHITE;
+    enpassant_square_ = Square::NO_SQ;
+    castling_rights_ = WK | WQ | BK | BQ;
+    half_moves_ = 0;
+    full_moves_ = 1;
 
-    sideToMove = White;
-    enPassantSquare = NO_SQ;
-    castlingRights = wk | wq | bk | bq;
-    halfMoveClock = 0;
-    fullMoveNumber = 1;
+    std::fill(std::begin(board_), std::end(board_), Piece::NONE);
 
-    pinHV = 0;
-    pinD = 0;
-    doubleCheck = 0;
-    checkMask = DEFAULT_CHECKMASK;
-    seen = 0;
+    loadFen(STARTPOS);
 
-    std::fill(std::begin(board), std::end(board), None);
-
-    applyFen(fen);
-
-    occEnemy = Enemy(sideToMove);
-    occUs = Us(sideToMove);
-    occAll = All();
-    enemyEmptyBB = EnemyEmpty(sideToMove);
+    occ_all_ = all();
+    hash_key_ = 0ULL;
 }
+// Board::Board(const std::string &fen) {}
+inline void Board::loadFen(const std::string &fen) {
+    std::fill(std::begin(board_), std::end(board_), Piece::NONE);
+    occ_all_ = 0ULL;
 
-inline Piece Board::pieceAtBB(Square sq)
-{
-    for (Piece p = WhitePawn; p < None; p++)
-    {
-        if (piecesBB[p] & (1ULL << sq))
-            return p;
-    }
-    return None;
-}
-
-inline Piece Board::pieceAtB(Square sq) const
-{
-    return board[sq];
-}
-
-inline PieceType Board::pieceTypeAtB(Square sq) const
-{
-    return type_of_piece(board[sq]);
-}
-
-inline void Board::applyFen(const std::string &fen)
-{
-    for (Piece p = WhitePawn; p < None; p++)
-    {
-        piecesBB[p] = 0ULL;
+    for (const auto c : {Color::WHITE, Color::BLACK}) {
+        for (PieceType p = PieceType::PAWN; p < PieceType::NONE; p++) {
+            pieces_bb_[static_cast<int>(c)][static_cast<int>(p)] = 0ULL;
+        }
     }
 
-    const std::vector<std::string> params = splitInput(fen);
+    const std::vector<std::string> params = splitString(fen, ' ');
 
-    const std::string position = params[0];
-    const std::string move_right = params[1];
-    const std::string castling = params[2];
-    const std::string en_passant = params[3];
+    const std::string &position = params[0];
+    const std::string &move_right = params[1];
+    const std::string &castling = params[2];
+    const std::string &en_passant = params[3];
 
-    const std::string half_move_clock = params.size() > 4 ? params[4] : "0";
-    const std::string full_move_counter = params.size() > 4 ? params[5] : "1";
+    half_moves_ = std::stoi(params.size() > 4 ? params[4] : "0");
+    full_moves_ = std::stoi(params.size() > 4 ? params[5] : "1") * 2;
 
-    sideToMove = (move_right == "w") ? White : Black;
+    side_to_move_ = (move_right == "w") ? Color::WHITE : Color::BLACK;
 
-    std::fill(std::begin(board), std::end(board), None);
-
-    Square square = Square(56);
-    for (int index = 0; index < static_cast<int>(position.size()); index++)
-    {
-        char curr = position[index];
-        if (charToPiece.find(curr) != charToPiece.end())
-        {
+    auto square = Square(56);
+    for (char curr : position) {
+        if (charToPiece.find(curr) != charToPiece.end()) {
             const Piece piece = charToPiece[curr];
             placePiece(piece, square);
 
             square = Square(square + 1);
-        }
-        else if (curr == '/')
+        } else if (curr == '/')
             square = Square(square - 16);
-        else if (isdigit(curr))
+        else if (isdigit(curr)) {
             square = Square(square + (curr - '0'));
+        }
     }
 
-    removeCastlingRightsAll(White);
-    removeCastlingRightsAll(Black);
+    castling_rights_ = 0;
 
-    for (size_t i = 0; i < castling.size(); i++)
-    {
-        if (readCastleString.find(castling[i]) != readCastleString.end())
-            castlingRights |= readCastleString[castling[i]];
+    for (char i : castling) {
+        if (charToCR.find(i) != charToCR.end()) castling_rights_ |= static_cast<int>(charToCR[i]);
     }
 
-    if (en_passant == "-")
-    {
-        enPassantSquare = NO_SQ;
-    }
-    else
-    {
-        char letter = en_passant[0];
-        int file = letter - 96;
-        int rank = en_passant[1] - 48;
-        enPassantSquare = Square((rank - 1) * 8 + file - 1);
+    if (en_passant == "-") {
+        enpassant_square_ = NO_SQ;
+    } else {
+        const char letter = en_passant[0];
+        const int file = letter - 96;
+        const int rank = en_passant[1] - 48;
+        enpassant_square_ = Square((rank - 1) * 8 + file - 1);
     }
 
-    halfMoveClock = std::stoi(half_move_clock);
+    zobristHash();
+    occ_all_ = all();
 
-    // full_move_counter actually half moves
-    fullMoveNumber = std::stoi(full_move_counter) * 2;
-
-    hashKey = zobristHash();
-
-    hashHistory.clear();
-    stateHistory.clear();
-
-    hashHistory.push_back(hashKey);
+    prev_states_.clear();
+    prev_states_.reserve(150);
 }
-
-inline std::string Board::getFen() const
-{
+inline std::string Board::getFen() const {
     std::stringstream ss;
 
     // Loop through the ranks of the board in reverse order
-    for (int rank = 7; rank >= 0; rank--)
-    {
+    for (int rank = 7; rank >= 0; rank--) {
         int free_space = 0;
 
         // Loop through the files of the board
-        for (int file = 0; file < 8; file++)
-        {
+        for (int file = 0; file < 8; file++) {
             // Calculate the square index
-            int sq = rank * 8 + file;
+            const int sq = rank * 8 + file;
 
             // Get the piece at the current square
-            Piece piece = pieceAtB(Square(sq));
+            const Piece piece = pieceAt(Square(sq));
 
             // If there is a piece at the current square
-            if (piece != None)
-            {
+            if (piece != Piece::NONE) {
                 // If there were any empty squares before this piece,
                 // append the number of empty squares to the FEN string
-                if (free_space)
-                {
+                if (free_space) {
                     ss << free_space;
                     free_space = 0;
                 }
 
                 // Append the character representing the piece to the FEN string
                 ss << pieceToChar[piece];
-            }
-            else
-            {
+            } else {
                 // If there is no piece at the current square, increment the
                 // counter for the number of empty squares
                 free_space++;
@@ -1211,8 +1037,7 @@ inline std::string Board::getFen() const
 
         // If there are any empty squares at the end of the rank,
         // append the number of empty squares to the FEN string
-        if (free_space != 0)
-        {
+        if (free_space != 0) {
             ss << free_space;
         }
 
@@ -1221,549 +1046,396 @@ inline std::string Board::getFen() const
     }
 
     // Append " w " or " b " to the FEN string, depending on which player's turn it is
-    ss << (sideToMove == White ? " w " : " b ");
+    ss << (side_to_move_ == Color::WHITE ? " w " : " b ");
 
     // Append the appropriate characters to the FEN string to indicate
-    // whether or not castling is allowed for each player
-    if (castlingRights & wk)
-        ss << "K";
-    if (castlingRights & wq)
-        ss << "Q";
-    if (castlingRights & bk)
-        ss << "k";
-    if (castlingRights & bq)
-        ss << "q";
-    if (castlingRights == 0)
-        ss << "-";
+    // whether castling is allowed for each player
+    if (castling_rights_ & WK) ss << "K";
+    if (castling_rights_ & WQ) ss << "Q";
+    if (castling_rights_ & BK) ss << "k";
+    if (castling_rights_ & BQ) ss << "q";
+    if (castling_rights_ == 0) ss << "-";
 
     // Append information about the en passant square (if any)
-    // and the halfmove clock and fullmove number to the FEN string
-    if (enPassantSquare == NO_SQ)
+    // and the half-move clock and full move number to the FEN string
+    if (enpassant_square_ == NO_SQ)
         ss << " - ";
     else
-        ss << " " << squareToString[enPassantSquare] << " ";
+        ss << " " << squareToString[enpassant_square_] << " ";
 
-    ss << int(halfMoveClock) << " " << int(fullMoveNumber / 2);
+    ss << int(half_moves_) << " " << int(full_moves_ / 2);
 
     // Return the resulting FEN string
     return ss.str();
 }
 
-inline bool Board::isRepetition(int draw) const
-{
+inline U64 Board::us(Color c) const {
+    return pieces_bb_[static_cast<int>(c)][static_cast<int>(PieceType::PAWN)] |
+           pieces_bb_[static_cast<int>(c)][static_cast<int>(PieceType::KNIGHT)] |
+           pieces_bb_[static_cast<int>(c)][static_cast<int>(PieceType::BISHOP)] |
+           pieces_bb_[static_cast<int>(c)][static_cast<int>(PieceType::ROOK)] |
+           pieces_bb_[static_cast<int>(c)][static_cast<int>(PieceType::QUEEN)] |
+           pieces_bb_[static_cast<int>(c)][static_cast<int>(PieceType::KING)];
+}
+
+inline U64 Board::them(Color c) const { return us(~c); }
+inline U64 Board::all() const { return us(Color::WHITE) | us(Color::BLACK); }
+
+template <PieceType type, Color color>
+U64 Board::pieces() const {
+    return pieces_bb_[static_cast<int>(color)][static_cast<int>(type)];
+}
+
+template <Color color>
+U64 Board::pieces(PieceType type) const {
+    return pieces_bb_[static_cast<int>(color)][static_cast<int>(type)];
+}
+
+template <PieceType type>
+U64 Board::pieces(Color color) const {
+    return pieces_bb_[static_cast<int>(color)][static_cast<int>(type)];
+}
+
+inline constexpr U64 Board::pieces(PieceType type, Color color) const {
+    return pieces_bb_[static_cast<int>(color)][static_cast<int>(type)];
+}
+
+inline Square Board::kingSq(Color c) const {
+    assert(pieces<PieceType::KING>(c) != 0);
+    return lsb(pieces<PieceType::KING>(c));
+}
+
+inline constexpr Piece Board::pieceAt(Square square) const { return board_[square]; }
+
+inline constexpr Color Board::colorOfPiece(Square square) const {
+    return static_cast<Color>(static_cast<int>(pieceAt(square)) / 6);
+}
+
+bool Board::isRepetition(int count) const {
     uint8_t c = 0;
 
-    for (int i = static_cast<int>(hashHistory.size()) - 2;
-         i >= 0 && i >= static_cast<int>(hashHistory.size()) - halfMoveClock - 1; i -= 2)
-    {
-        if (hashHistory[i] == hashKey)
-            c++;
-        if (c == draw)
-            return true;
+    for (int i = static_cast<int>(prev_states_.size()) - 2;
+         i >= 0 && i >= static_cast<int>(prev_states_.size()) - half_moves_ - 1; i -= 2) {
+        if (prev_states_[i].hash == hash_key_) c++;
+
+        if (c == count) return true;
     }
 
     return false;
 }
 
-inline bool Board::nonPawnMat(Color c) const
-{
-    return pieces(KNIGHT, c) | pieces(BISHOP, c) | pieces(ROOK, c) | pieces(QUEEN, c);
-}
+bool Board::isSquareAttacked(Square square, Color c) const {
+    if (Attacks::PAWN(~c, square) & pieces<PieceType::PAWN>(c)) return true;
+    if (Attacks::KNIGHT(square) & pieces<PieceType::KNIGHT>(c)) return true;
+    if (Attacks::KING(square) & pieces<PieceType::KING>(c)) return true;
 
-inline Square Board::KingSQ(Color c) const
-{
-    return lsb(pieces(KING, c));
-}
-
-inline U64 Board::Enemy(Color c) const
-{
-    return Us(~c);
-}
-
-inline U64 Board::Us(Color c) const
-{
-    return piecesBB[PAWN + c * 6] | piecesBB[KNIGHT + c * 6] | piecesBB[BISHOP + c * 6] | piecesBB[ROOK + c * 6] |
-           piecesBB[QUEEN + c * 6] | piecesBB[KING + c * 6];
-}
-
-inline U64 Board::EnemyEmpty(Color c) const
-{
-    return ~Us(c);
-}
-
-inline Color Board::colorOf(Square loc) const
-{
-    return Color((pieceAtB(loc) / 6));
-}
-
-inline bool Board::isSquareAttacked(Color c, Square sq) const
-{
-    if (pieces(PAWN, c) & PawnAttacks(sq, ~c))
+    if (Attacks::BISHOP(square, all()) &
+        (pieces<PieceType::BISHOP>(c) | pieces<PieceType::QUEEN>(c)))
         return true;
-    if (pieces(KNIGHT, c) & KnightAttacks(sq))
-        return true;
-
-    const U64 bb = All();
-
-    if ((pieces(BISHOP, c) | pieces(QUEEN, c)) & BishopAttacks(sq, bb))
-        return true;
-    if ((pieces(ROOK, c) | pieces(QUEEN, c)) & RookAttacks(sq, bb))
-        return true;
-    if (pieces(KING, c) & KingAttacks(sq))
+    if (Attacks::ROOK(square, all()) & (pieces<PieceType::ROOK>(c) | pieces<PieceType::QUEEN>(c)))
         return true;
     return false;
 }
 
-inline void Board::updateHash(Move move, bool isCastling, bool ep)
-{
-    PieceType pt = piece(move);
-    Piece p = makePiece(pt, sideToMove);
-    Square from_sq = from(move);
-    Square to_sq = to(move);
-    Piece capture = board[to_sq];
-
-    hashHistory.emplace_back(hashKey);
-
-    if (enPassantSquare != NO_SQ)
-        hashKey ^= updateKeyEnPassant(enPassantSquare);
-
-    hashKey ^= updateKeyCastling();
-
-    enPassantSquare = NO_SQ;
-
-    if (pt == KING)
-    {
-        removeCastlingRightsAll(sideToMove);
-
-        if (isCastling)
-        {
-            const Piece rook = sideToMove == White ? WhiteRook : BlackRook;
-            const Square rookSQ = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
-            const Square kingToSq = file_rank_square(to_sq > from_sq ? FILE_G : FILE_C, square_rank(from_sq));
-
-            assert(type_of_piece(pieceAtB(to_sq)) == ROOK);
-
-            hashKey ^= updateKeyPiece(rook, to_sq);
-            hashKey ^= updateKeyPiece(rook, rookSQ);
-            hashKey ^= updateKeyPiece(p, from_sq);
-            hashKey ^= updateKeyPiece(p, kingToSq);
-
-            hashKey ^= updateKeySideToMove();
-            hashKey ^= updateKeyCastling();
-
-            return;
-        }
-    }
-    else if (pt == ROOK)
-    {
-        removeCastlingRightsRook(from_sq);
-    }
-    else if (pt == PAWN)
-    {
-        halfMoveClock = 0;
-        if (ep)
-        {
-            hashKey ^= updateKeyPiece(makePiece(PAWN, ~sideToMove), Square(to_sq ^ 8));
-        }
-        else if (std::abs(from_sq - to_sq) == 16)
-        {
-            U64 epMask = PawnAttacks(Square(to_sq ^ 8), sideToMove);
-            if (epMask & pieces(PAWN, ~sideToMove))
-            {
-                enPassantSquare = Square(to_sq ^ 8);
-                hashKey ^= updateKeyEnPassant(enPassantSquare);
-
-                assert(pieceAtB(enPassantSquare) == None);
-            }
-        }
-    }
-
-    if (capture != None)
-    {
-        halfMoveClock = 0;
-        hashKey ^= updateKeyPiece(capture, to_sq);
-        if (type_of_piece(capture) == ROOK)
-            removeCastlingRightsRook(to_sq);
-    }
-
-    if (promoted(move))
-    {
-        halfMoveClock = 0;
-
-        hashKey ^= updateKeyPiece(makePiece(PAWN, sideToMove), from_sq);
-        hashKey ^= updateKeyPiece(p, to_sq);
-    }
-    else
-    {
-        hashKey ^= updateKeyPiece(p, from_sq);
-        hashKey ^= updateKeyPiece(p, to_sq);
-    }
-
-    hashKey ^= updateKeySideToMove();
-    hashKey ^= updateKeyCastling();
-}
-
-inline void Board::makeMove(Move move)
-{
-    PieceType pt = piece(move);
-    Piece p = makePiece(pt, sideToMove);
-    Square from_sq = from(move);
-    Square to_sq = to(move);
-    Piece capture = board[to_sq];
-
-    assert(from_sq >= 0 && from_sq < MAX_SQ);
-    assert(to_sq >= 0 && to_sq < MAX_SQ);
-    assert(type_of_piece(capture) != KING);
-    assert(p != None);
-    assert((promoted(move) && (pt != PAWN && pt != KING)) || !promoted(move));
-
-    // *****************************
-    // STORE STATE HISTORY
-    // *****************************
-
-    stateHistory.emplace_back(State(enPassantSquare, castlingRights, halfMoveClock, capture));
-
-    halfMoveClock++;
-    fullMoveNumber++;
-
-    bool ep = to_sq == enPassantSquare;
-    const bool isCastling = pt == KING && type_of_piece(capture) == ROOK && colorOf(from_sq) == colorOf(to_sq);
-
-    // *****************************
-    // UPDATE HASH
-    // *****************************
-
-    updateHash(move, isCastling, ep);
-
-    // *****************************
-    // UPDATE PIECES
-    // *****************************
-
-    if (isCastling)
-    {
-        const Piece rook = sideToMove == White ? WhiteRook : BlackRook;
-        Square rookToSq = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
-        Square kingToSq = file_rank_square(to_sq > from_sq ? FILE_G : FILE_C, square_rank(from_sq));
-
-        removePiece(p, from_sq);
-        removePiece(rook, to_sq);
-
-        placePiece(p, kingToSq);
-        placePiece(rook, rookToSq);
-
-        sideToMove = ~sideToMove;
-        return;
-    }
-    else if (pt == PAWN && ep)
-    {
-        assert(pieceAtB(Square(to_sq ^ 8)) != None);
-
-        removePiece(makePiece(PAWN, ~sideToMove), Square(to_sq ^ 8));
-    }
-    else if (capture != None)
-    {
-        assert(pieceAtB(to_sq) != None);
-
-        removePiece(capture, to_sq);
-    }
-
-    if (promoted(move))
-    {
-        assert(pieceAtB(to_sq) == None);
-
-        removePiece(makePiece(PAWN, sideToMove), from_sq);
-        placePiece(p, to_sq);
-    }
-    else
-    {
-        assert(pieceAtB(to_sq) == None);
-
-        movePiece(p, from_sq, to_sq);
-    }
-
-    sideToMove = ~sideToMove;
-}
-
-inline void Board::unmakeMove(Move move)
-{
-    const State restore = stateHistory.back();
-    stateHistory.pop_back();
-
-    hashKey = hashHistory.back();
-    hashHistory.pop_back();
-
-    enPassantSquare = restore.enPassant;
-    castlingRights = restore.castling;
-    halfMoveClock = restore.halfMove;
-    Piece capture = restore.capturedPiece;
-
-    fullMoveNumber--;
-
-    Square from_sq = from(move);
-    Square to_sq = to(move);
-    bool promotion = promoted(move);
-
-    sideToMove = ~sideToMove;
-    PieceType pt = piece(move);
-    Piece p = makePiece(pt, sideToMove);
-
-    const bool isCastling = (p == WhiteKing && capture == WhiteRook) || (p == BlackKing && capture == BlackRook);
-
-    if (isCastling)
-    {
-        Square rookToSq = to_sq;
-        Piece rook = sideToMove == White ? WhiteRook : BlackRook;
-        Square rookFromSq = file_rank_square(to_sq > from_sq ? FILE_F : FILE_D, square_rank(from_sq));
-        to_sq = file_rank_square(to_sq > from_sq ? FILE_G : FILE_C, square_rank(from_sq));
-
-        // We need to remove both pieces first and then place them back.
-        removePiece(rook, rookFromSq);
-        removePiece(p, to_sq);
-
-        placePiece(p, from_sq);
-        placePiece(rook, rookToSq);
-    }
-    else if (promotion)
-    {
-        removePiece(p, to_sq);
-        placePiece(makePiece(PAWN, sideToMove), from_sq);
-        if (capture != None)
-            placePiece(capture, to_sq);
-        return;
-    }
-    else
-    {
-        movePiece(p, to_sq, from_sq);
-    }
-
-    if (to_sq == enPassantSquare && pt == PAWN)
-    {
-        int8_t offset = sideToMove == White ? -8 : 8;
-        placePiece(makePiece(PAWN, ~sideToMove), Square(enPassantSquare + offset));
-    }
-    else if (capture != None && !isCastling)
-    {
-        placePiece(capture, to_sq);
-    }
-}
-
-inline void Board::makeNullMove()
-{
-    stateHistory.emplace_back(State(enPassantSquare, castlingRights, halfMoveClock, None));
-    sideToMove = ~sideToMove;
-
-    hashKey ^= updateKeySideToMove();
-    if (enPassantSquare != NO_SQ)
-        hashKey ^= updateKeyEnPassant(enPassantSquare);
-
-    enPassantSquare = NO_SQ;
-    fullMoveNumber++;
-}
-
-inline void Board::unmakeNullMove()
-{
-    const State restore = stateHistory.back();
-    stateHistory.pop_back();
-
-    enPassantSquare = restore.enPassant;
-    castlingRights = restore.castling;
-    halfMoveClock = restore.halfMove;
-
-    hashKey ^= updateKeySideToMove();
-    if (enPassantSquare != NO_SQ)
-        hashKey ^= updateKeyEnPassant(enPassantSquare);
-
-    fullMoveNumber--;
-    sideToMove = ~sideToMove;
-}
-
-inline void Board::removePiece(Piece piece, Square sq)
-{
-    piecesBB[piece] &= ~(1ULL << sq);
-    board[sq] = None;
-}
-
-inline void Board::placePiece(Piece piece, Square sq)
-{
-    piecesBB[piece] |= (1ULL << sq);
-    board[sq] = piece;
-}
-
-inline void Board::movePiece(Piece piece, Square fromSq, Square toSq)
-{
-    piecesBB[piece] &= ~(1ULL << fromSq);
-    piecesBB[piece] |= (1ULL << toSq);
-    board[fromSq] = None;
-    board[toSq] = piece;
-}
-
-inline U64 Board::attacksByPiece(PieceType pt, Square sq, Color c) const
-{
-    switch (pt)
-    {
-    case PAWN:
-        return PawnAttacks(sq, c);
-    case KNIGHT:
-        return KnightAttacks(sq);
-    case BISHOP:
-        return BishopAttacks(sq, All());
-    case ROOK:
-        return RookAttacks(sq, All());
-    case QUEEN:
-        return QueenAttacks(sq, All());
-    case KING:
-        return KingAttacks(sq);
-    case NONETYPE:
-        return 0ULL;
-    default:
-        return 0ULL;
-    }
-}
-
-inline std::ostream &operator<<(std::ostream &os, const Board &b)
-{
-    for (int i = 63; i >= 0; i -= 8)
-    {
-        os << " " << pieceToChar[b.board[i - 7]] << " " << pieceToChar[b.board[i - 6]] << " "
-           << pieceToChar[b.board[i - 5]] << " " << pieceToChar[b.board[i - 4]] << " " << pieceToChar[b.board[i - 3]]
-           << " " << pieceToChar[b.board[i - 2]] << " " << pieceToChar[b.board[i - 1]] << " " << pieceToChar[b.board[i]]
-           << " \n";
+inline std::ostream &operator<<(std::ostream &os, const Board &b) {
+    for (int i = 63; i >= 0; i -= 8) {
+        os << " " << pieceToChar[b.board_[i - 7]] << " " << pieceToChar[b.board_[i - 6]] << " "
+           << pieceToChar[b.board_[i - 5]] << " " << pieceToChar[b.board_[i - 4]] << " "
+           << pieceToChar[b.board_[i - 3]] << " " << pieceToChar[b.board_[i - 2]] << " "
+           << pieceToChar[b.board_[i - 1]] << " " << pieceToChar[b.board_[i]] << " \n";
     }
     os << "\n\n";
-    os << "Fen: " << b.getFen() << "\n";
-    os << "Side to move: " << static_cast<int>(b.sideToMove) << "\n";
-    os << "Castling rights: " << static_cast<int>(b.castlingRights) << "\n";
-    os << "Halfmoves: " << static_cast<int>(b.halfMoveClock) << "\n";
-    os << "Fullmoves: " << static_cast<int>(b.fullMoveNumber) / 2 << "\n";
-    os << "EP: " << static_cast<int>(b.enPassantSquare) << "\n";
-    os << "Hash: " << b.hashKey << "\n";
+    os << "Side to move: " << static_cast<int>(b.side_to_move_) << "\n";
+    os << "Castling rights: " << static_cast<int>(b.castling_rights_) << "\n";
+    os << "Halfmoves: " << static_cast<int>(b.half_moves_) << "\n";
+    os << "Fullmoves: " << static_cast<int>(b.full_moves_) / 2 << "\n";
+    os << "EP: " << static_cast<int>(b.enpassant_square_) << "\n";
 
     os << std::endl;
     return os;
 }
 
-// ***************************
-// PRIVATE BOARD FUNCTION DECLARTION
-// ***************************
-
-inline U64 Board::zobristHash() const
-{
-    U64 hash = 0ULL;
-    U64 wPieces = Us(White);
-    U64 bPieces = Us(Black);
-
-    // Piece hashes
-    while (wPieces)
-    {
-        Square sq = poplsb(wPieces);
-        hash ^= updateKeyPiece(pieceAtB(sq), sq);
-    }
-    while (bPieces)
-    {
-        Square sq = poplsb(bPieces);
-        hash ^= updateKeyPiece(pieceAtB(sq), sq);
-    }
-
-    U64 ep_hash = 0ULL;
-
-    if (enPassantSquare != NO_SQ)
-        ep_hash = updateKeyEnPassant(enPassantSquare);
-
-    U64 turn_hash = sideToMove == White ? RANDOM_ARRAY[780] : 0;
-
-    U64 cast_hash = updateKeyCastling();
-
-    return hash ^ cast_hash ^ turn_hash ^ ep_hash;
+inline void Board::updateKeyPiece(Piece piece, Square sq) {
+    hash_key_ ^= RANDOM_ARRAY[64 * MAP_HASH_PIECE[static_cast<int>(piece)] + sq];
 }
 
-inline void Board::initializeLookupTables()
-{
-    // initialize squares between table
-    U64 sqs;
-    for (Square sq1 = SQ_A1; sq1 <= SQ_H8; ++sq1)
-    {
-        for (Square sq2 = SQ_A1; sq2 <= SQ_H8; ++sq2)
-        {
-            sqs = (1ULL << sq1) | (1ULL << sq2);
-            if (sq1 == sq2)
-                SQUARES_BETWEEN_BB[sq1][sq2] = 0ull;
-            else if (square_file(sq1) == square_file(sq2) || square_rank(sq1) == square_rank(sq2))
-                SQUARES_BETWEEN_BB[sq1][sq2] = RookAttacks(sq1, sqs) & RookAttacks(sq2, sqs);
-            else if (diagonal_of(sq1) == diagonal_of(sq2) || anti_diagonal_of(sq1) == anti_diagonal_of(sq2))
-                SQUARES_BETWEEN_BB[sq1][sq2] = BishopAttacks(sq1, sqs) & BishopAttacks(sq2, sqs);
+inline void Board::updateKeyEnPassant(Square sq) {
+    hash_key_ ^= RANDOM_ARRAY[772 + squareFile(sq)];
+}
+
+inline void Board::updateKeyCastling() { hash_key_ ^= castlingKey[castling_rights_]; }
+
+inline void Board::updateKeySideToMove() { hash_key_ ^= RANDOM_ARRAY[780]; }
+
+inline void Board::removePiece(Piece piece, Square sq) {
+    updateKeyPiece(piece, sq);
+    pieces_bb_[static_cast<int>(colorOfPiece(piece))][static_cast<int>(typeOfPiece(piece))] &=
+        ~(1ULL << sq);
+    board_[sq] = Piece::NONE;
+
+    occ_all_ &= ~(1ULL << sq);
+}
+
+inline void Board::placePiece(Piece piece, Square sq) {
+    updateKeyPiece(piece, sq);
+    pieces_bb_[static_cast<int>(colorOfPiece(piece))][static_cast<int>(typeOfPiece(piece))] |=
+        (1ULL << sq);
+    board_[sq] = piece;
+
+    occ_all_ |= (1ULL << sq);
+}
+
+inline Piece Board::removePiece(Square sq) {
+    auto piece = board_[sq];
+    assert(piece != Piece::NONE);
+
+    updateKeyPiece(piece, sq);
+
+    pieces_bb_[static_cast<int>(colorOfPiece(piece))][static_cast<int>(typeOfPiece(piece))] &=
+        ~(1ULL << sq);
+    board_[sq] = Piece::NONE;
+
+    occ_all_ &= ~(1ULL << sq);
+
+    return piece;
+}
+
+inline void Board::zobristHash() {
+    hash_key_ = 0ULL;
+
+    U64 wPieces = us(Color::WHITE);
+    U64 bPieces = us(Color::BLACK);
+
+    while (wPieces) {
+        const Square sq = poplsb(wPieces);
+        updateKeyPiece(pieceAt(sq), sq);
+    }
+    while (bPieces) {
+        const Square sq = poplsb(bPieces);
+        updateKeyPiece(pieceAt(sq), sq);
+    }
+
+    if (enpassant_square_ != NO_SQ) updateKeyEnPassant(enpassant_square_);
+    if (side_to_move_ == Color::WHITE) updateKeySideToMove();
+
+    // Castle hash
+    updateKeyCastling();
+}
+
+inline Board::Board(const std::string &fen) {
+    side_to_move_ = Color::WHITE;
+    enpassant_square_ = Square::NO_SQ;
+    castling_rights_ = WK | WQ | BK | BQ;
+    half_moves_ = 0;
+    full_moves_ = 1;
+
+    loadFen(fen);
+
+    occ_all_ = all();
+    hash_key_ = 0ULL;
+}
+
+inline void Board::makeMove(const Move &move) {
+    auto capture = pieceAt(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
+    auto captured = pieceAt(move.to());
+    const auto pt = typeOfPiece(pieceAt(move.from()));
+
+    prev_states_.emplace_back(hash_key_, enpassant_square_, castling_rights_, half_moves_,
+                              captured);
+
+    half_moves_++;
+    full_moves_++;
+
+    if (enpassant_square_ != NO_SQ) updateKeyEnPassant(enpassant_square_);
+
+    enpassant_square_ = NO_SQ;
+
+    updateKeyCastling();
+
+    if (capture) {
+        half_moves_ = 0;
+
+        removePiece(captured, move.to());
+
+        const auto rank = squareRank(move.to());
+
+        if (typeOfPiece(captured) == PieceType::ROOK &&
+            (rank == Rank::RANK_1 || rank == Rank::RANK_8)) {
+            const auto king_sq = kingSq(~side_to_move_);
+
+            if (rank == Rank::RANK_8 && side_to_move_ == Color::WHITE) {
+                castling_rights_ &= ~(move.to() > king_sq ? BK : BQ);
+            } else if (rank == Rank::RANK_1 && side_to_move_ == Color::BLACK) {
+                castling_rights_ &= ~(move.to() > king_sq ? WK : WQ);
+            }
         }
     }
-}
 
-inline U64 Board::updateKeyPiece(Piece piece, Square sq) const
-{
-    return RANDOM_ARRAY[64 * hash_piece[piece] + sq];
-}
+    if (pt == PieceType::KING) {
+        castling_rights_ &= ~(side_to_move_ == Color::WHITE ? (WK | WQ) : (BK | BQ));
+    } else if (pt == PieceType::ROOK) {
+        const auto rank = squareRank(move.from());
+        const auto king_sq = kingSq(side_to_move_);
 
-inline U64 Board::updateKeyEnPassant(Square sq) const
-{
-    return RANDOM_ARRAY[772 + square_file(sq)];
-}
+        if (rank == Rank::RANK_8 && side_to_move_ == Color::BLACK) {
+            castling_rights_ &= ~(move.from() > king_sq ? BK : BQ);
+        } else if (rank == Rank::RANK_1 && side_to_move_ == Color::WHITE) {
+            castling_rights_ &= ~(move.from() > king_sq ? WK : WQ);
+        }
+    } else if (pt == PieceType::PAWN) {
+        half_moves_ = 0;
 
-inline U64 Board::updateKeyCastling() const
-{
-    return castlingKey[castlingRights];
-}
+        const auto possible_ep = static_cast<Square>(move.to() ^ 8);
+        if (move.typeOf() == Move::EN_PASSANT) {
+            updateKeyPiece(makePiece(~side_to_move_, PieceType::PAWN), possible_ep);
+        } else if (std::abs(static_cast<int>(move.to()) - static_cast<int>(move.from())) == 16) {
+            U64 ep_mask = Attacks::PAWN(side_to_move_, possible_ep);
 
-inline U64 Board::updateKeySideToMove() const
-{
-    return RANDOM_ARRAY[780];
-}
+            if (ep_mask & pieces(PieceType::PAWN, ~side_to_move_)) {
+                enpassant_square_ = possible_ep;
 
-inline void Board::removeCastlingRightsAll(Color c)
-{
-    if (c == White)
-    {
-        castlingRights &= ~(wk | wq);
+                updateKeyEnPassant(enpassant_square_);
+                assert(pieceAt(enpassant_square_) == Piece::NONE);
+            }
+        }
     }
-    else if (c == Black)
-    {
-        castlingRights &= ~(bk | bq);
+
+    if (move.typeOf() == Move::CASTLING) {
+        assert(typeOfPiece(pieceAt(move.from())) == PieceType::KING);
+        assert(typeOfPiece(pieceAt(move.to())) == PieceType::ROOK);
+
+        bool king_side = move.to() > move.from();
+        auto rookTo = relativeSquare(side_to_move_, king_side ? Square::SQ_F1 : Square::SQ_D1);
+        auto kingTo = relativeSquare(side_to_move_, king_side ? Square::SQ_G1 : Square::SQ_C1);
+
+        assert(typeOfPiece(pieceAt(move.from())) == PieceType::KING);
+        assert(typeOfPiece(pieceAt(move.to())) == PieceType::ROOK);
+
+        auto king = removePiece(move.from());
+        auto rook = removePiece(move.to());
+        placePiece(king, kingTo);
+        placePiece(rook, rookTo);
+    } else if (move.typeOf() == Move::PROMOTION) {
+        removePiece(makePiece(side_to_move_, PieceType::PAWN), move.from());
+        placePiece(makePiece(side_to_move_, move.promotionType()), move.to());
+    } else {
+        assert(pieceAt(move.from()) != Piece::NONE);
+
+        auto piece = removePiece(move.from());
+        placePiece(piece, move.to());
+    }
+
+    if (move.typeOf() == Move::EN_PASSANT) {
+        assert(pieceAt(static_cast<Square>(move.to() ^ 8)) != Piece::NONE);
+        removePiece(makePiece(~side_to_move_, PieceType::PAWN), static_cast<Square>(move.to() ^ 8));
+    }
+
+    updateKeySideToMove();
+    updateKeyCastling();
+
+    side_to_move_ = ~side_to_move_;
+}
+
+void Board::unmakeMove(const Move &move) {
+    const auto &prev = prev_states_.back();
+    prev_states_.pop_back();
+
+    enpassant_square_ = prev.enpassant;
+    castling_rights_ = prev.castling;
+    half_moves_ = prev.half_moves;
+
+    full_moves_--;
+
+    side_to_move_ = ~side_to_move_;
+
+    if (move.typeOf() == Move::CASTLING) {
+        const bool king_side = move.to() > move.from();
+
+        const auto rook_from_sq =
+            fileRankSquare(king_side ? File::FILE_F : File::FILE_D, squareRank(move.from()));
+        const auto king_to_sq =
+            fileRankSquare(king_side ? File::FILE_G : File::FILE_C, squareRank(move.from()));
+
+        assert(typeOfPiece(pieceAt(rook_from_sq)) == PieceType::ROOK);
+        assert(typeOfPiece(pieceAt(king_to_sq)) == PieceType::KING);
+
+        const auto rook = removePiece(rook_from_sq);
+        const auto king = removePiece(king_to_sq);
+
+        placePiece(king, move.from());
+        placePiece(rook, move.to());
+    } else if (move.typeOf() == Move::PROMOTION) {
+        const auto pawn = makePiece(side_to_move_, PieceType::PAWN);
+        const auto piece = pieceAt(move.to());
+
+        removePiece(piece, move.to());
+        placePiece(pawn, move.from());
+
+        if (prev.captured_piece != Piece::NONE) {
+            placePiece(prev.captured_piece, move.to());
+        }
+
+        return;
+    } else {
+        assert(pieceAt(move.to()) != Piece::NONE);
+
+        const auto piece = removePiece(move.to());
+        placePiece(piece, move.from());
+    }
+
+    if (move.typeOf() == Move::EN_PASSANT) {
+        const auto pawn = makePiece(~side_to_move_, PieceType::PAWN);
+        const auto pawnTo = static_cast<Square>(enpassant_square_ ^ 8);
+
+        placePiece(pawn, pawnTo);
+    } else if (prev.captured_piece != Piece::NONE) {
+        placePiece(prev.captured_piece, move.to());
     }
 }
 
-inline void Board::removeCastlingRightsRook(Square sq)
-{
-    if (castlingMapRook.find(sq) != castlingMapRook.end())
-    {
-        castlingRights &= ~castlingMapRook[sq];
-    }
+void Board::makeNullMove() {
+    prev_states_.emplace_back(hash_key_, enpassant_square_, castling_rights_, half_moves_,
+                              Piece::NONE);
+
+    enpassant_square_ = NO_SQ;
+    side_to_move_ = ~side_to_move_;
+
+    full_moves_++;
 }
 
-/// @brief uci representation of a move
-/// @param move
-/// @return
-inline std::string convertMoveToUci(Move move)
-{
+void Board::unmakeNullMove() {
+    const auto &prev = prev_states_.back();
+
+    enpassant_square_ = prev.enpassant;
+    castling_rights_ = prev.castling;
+    half_moves_ = prev.half_moves;
+    hash_key_ = prev.hash;
+
+    full_moves_--;
+
+    prev_states_.pop_back();
+}
+
+std::string Board::uci(const Move &move) const {
     std::stringstream ss;
 
-    // Get the from and to squares
-    Square from_sq = from(move);
-    Square to_sq = to(move);
+    auto from = move.from();
+    auto to = move.to();
 
-    // Add the from and to squares to the string stream
-    ss << squareToString[from_sq];
-    ss << squareToString[to_sq];
+    if (!chess960_ && move.typeOf() == Move::CASTLING) {
+        to = fileRankSquare(to > from ? File::FILE_G : File::FILE_C, squareRank(to));
+    }
 
-    // If the move is a promotion, add the promoted piece to the string stream
-    if (promoted(move))
-    {
-        ss << PieceTypeToPromPiece[piece(move)];
+    ss << squareToString[from] << squareToString[to];
+
+    if (move.typeOf() == Move::PROMOTION) {
+        ss << PieceTypeToPromPiece[move.promotionType()];
     }
 
     return ss.str();
 }
 
-/// @brief helper function
-/// @param squareStr
-/// @return
-inline Square extractSquare(std::string_view squareStr)
-{
+inline Square extractSquare(std::string_view squareStr) {
     char letter = squareStr[0];
     int file = letter - 96;
     int rank = squareStr[1] - 48;
@@ -1771,652 +1443,583 @@ inline Square extractSquare(std::string_view squareStr)
     return Square(index);
 }
 
-/// @brief Convert a string move to an internal move
-/// @param board
-/// @param input
-/// @return
-inline Move convertUciToMove(const Board &board, const std::string &input)
-{
-    Square source = extractSquare(input.substr(0, 2));
-    Square target = extractSquare(input.substr(2, 2));
-    PieceType piece = board.pieceTypeAtB(source);
+Move Board::uciToMove(const std::string &uci) const {
+    Square source = extractSquare(uci.substr(0, 2));
+    Square target = extractSquare(uci.substr(2, 2));
+    PieceType piece = typeOfPiece(pieceAt(source));
 
     // convert to king captures rook
-    if (piece == KING && square_distance(target, source) == 2)
-    {
-        target = file_rank_square(target > source ? FILE_H : FILE_A, square_rank(source));
+    // in chess960 the move should be sent as king captures rook already!
+    if (piece == PieceType::KING && squareDistance(target, source) == 2) {
+        target = fileRankSquare(target > source ? File::FILE_H : File::FILE_A, squareRank(source));
     }
 
-    switch (input.length())
-    {
-    case 4:
-        return make(piece, source, target, false);
-    case 5:
-        return make(pieceToInt[input.at(4)], source, target, true);
-    default:
-        std::cout << "FALSE INPUT" << std::endl;
-        return make(NONETYPE, NO_SQ, NO_SQ, false);
+    switch (uci.length()) {
+        case 4:
+            return Move::make(source, target);
+        case 5:
+            return Move::make(source, target, pieceToInt[uci.at(4)]);
+        default:
+            std::cout << "FALSE INPUT" << std::endl;
+            return Move(Move::NO_MOVE);
     }
 }
 
-} // namespace Chess
+namespace Movegen {
 
-namespace Movegen
-{
-using namespace Chess;
-
-template <Color c> U64 pawnLeftAttacks(const U64 pawns)
-{
-    return c == White ? (pawns << 7) & ~MASK_FILE[FILE_H] : (pawns >> 7) & ~MASK_FILE[FILE_A];
+template <Color c>
+U64 pawnLeftAttacks(const U64 pawns) {
+    return c == Color::WHITE ? (pawns << 7) & ~MASK_FILE[static_cast<int>(File::FILE_H)]
+                             : (pawns >> 7) & ~MASK_FILE[static_cast<int>(File::FILE_A)];
 }
 
-template <Color c> U64 pawnRightAttacks(const U64 pawns)
-{
-    return c == White ? (pawns << 9) & ~MASK_FILE[FILE_A] : (pawns >> 9) & ~MASK_FILE[FILE_H];
+template <Color c>
+U64 pawnRightAttacks(const U64 pawns) {
+    return c == Color::WHITE ? (pawns << 9) & ~MASK_FILE[static_cast<int>(File::FILE_A)]
+                             : (pawns >> 9) & ~MASK_FILE[static_cast<int>(File::FILE_H)];
 }
 
-/********************
- * Creates the checkmask.
- * A checkmask is the path from the enemy checker to our king.
- * Knight and pawns get themselves added to the checkmask, otherwise the path is added.
- * When there is no check at all all bits are set (DEFAULT_CHECKMASK)
- *******************/
-template <Color c> U64 DoCheckmask(Board &board, Square sq)
-{
-    U64 Occ = board.occAll;
-    U64 checks = 0ULL;
-    U64 pawn_mask = board.pieces<PAWN, ~c>() & PawnAttacks(sq, c);
-    U64 knight_mask = board.pieces<KNIGHT, ~c>() & KnightAttacks(sq);
-    U64 bishop_mask = (board.pieces<BISHOP, ~c>() | board.pieces<QUEEN, ~c>()) & BishopAttacks(sq, Occ);
-    U64 rook_mask = (board.pieces<ROOK, ~c>() | board.pieces<QUEEN, ~c>()) & RookAttacks(sq, Occ);
+template <Color c>
+U64 checkMask(const Board &board, Square sq, int &double_check) {
+    U64 mask = 0;
+    double_check = 0;
 
-    /********************
-     * We keep track of the amount of checks, in case there are
-     * two checks on the board only the king can move!
-     *******************/
-    board.doubleCheck = 0;
+    const auto opp_knight = board.pieces<PieceType::KNIGHT, ~c>();
+    const auto opp_bishop = board.pieces<PieceType::BISHOP, ~c>();
+    const auto opp_rook = board.pieces<PieceType::ROOK, ~c>();
+    const auto opp_queen = board.pieces<PieceType::QUEEN, ~c>();
 
-    if (pawn_mask)
-    {
-        checks |= pawn_mask;
-        board.doubleCheck++;
-    }
-    if (knight_mask)
-    {
-        checks |= knight_mask;
-        board.doubleCheck++;
-    }
-    if (bishop_mask)
-    {
-        int8_t index = lsb(bishop_mask);
+    const auto opp_pawns = board.pieces<PieceType::PAWN, ~c>();
 
-        // Now we add the path!
-        checks |= board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
-        board.doubleCheck++;
+    // check for knight checks
+    U64 knight_attacks = Attacks::KNIGHT(sq) & opp_knight;
+    double_check += bool(knight_attacks);
+
+    mask |= knight_attacks;
+
+    // check for pawn checks
+    U64 pawn_attacks = Attacks::PAWN(board.sideToMove(), sq) & opp_pawns;
+    mask |= pawn_attacks;
+    double_check += bool(pawn_attacks);
+
+    // check for bishop checks
+    U64 bishop_attacks = Attacks::BISHOP(sq, board.occ()) & (opp_bishop | opp_queen);
+
+    if (bishop_attacks) {
+        const auto index = lsb(bishop_attacks);
+
+        mask |= SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
+        double_check++;
     }
-    if (rook_mask)
-    {
-        /********************
-         * 3nk3/4P3/8/8/8/8/8/2K1R3 w - - 0 1, pawn promotes to queen or rook and
-         * suddenly the same piecetype gives check two times
-         * in that case we have a double check and can return early
-         * because king moves dont require the checkmask.
-         *******************/
-        if (popcount(rook_mask) > 1)
-        {
-            board.doubleCheck = 2;
-            return checks;
+
+    U64 rook_attacks = Attacks::ROOK(sq, board.occ()) & (opp_rook | opp_queen);
+    if (rook_attacks) {
+        if (popcount(rook_attacks) > 1) {
+            double_check = 2;
+            return mask;
         }
 
-        int8_t index = lsb(rook_mask);
+        const auto index = lsb(rook_attacks);
 
-        // Now we add the path!
-        checks |= board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
-        board.doubleCheck++;
+        mask |= SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
+        double_check++;
     }
 
-    if (!checks)
+    if (!mask) {
         return DEFAULT_CHECKMASK;
-
-    return checks;
-}
-
-/********************
- * Create the pinmask
- * We define the pin mask as the path from the enemy pinner
- * through the pinned piece to our king.
- * We assume that the king can do rook and bishop moves and generate the attacks
- * for these in case we hit an enemy rook/bishop/queen we might have a possible pin.
- * We need to confirm the pin because there could be 2 or more pieces from our king to
- * the possible pinner. We do this by simply using the popcount
- * of our pieces that lay on the pin mask, if it is only 1 piece then that piece is pinned.
- *******************/
-template <Color c> U64 DoPinMaskRooks(Board &board, Square sq)
-{
-    U64 rook_mask = (board.pieces<ROOK, ~c>() | board.pieces<QUEEN, ~c>()) & RookAttacks(sq, board.occEnemy);
-
-    U64 pinHV = 0ULL;
-    while (rook_mask)
-    {
-        const Square index = poplsb(rook_mask);
-        const U64 possible_pin = (board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index));
-        if (popcount(possible_pin & board.occUs) == 1)
-            pinHV |= possible_pin;
-    }
-    return pinHV;
-}
-
-template <Color c> U64 DoPinMaskBishops(Board &board, Square sq)
-{
-    U64 bishop_mask = (board.pieces<BISHOP, ~c>() | board.pieces<QUEEN, ~c>()) & BishopAttacks(sq, board.occEnemy);
-
-    U64 pinD = 0ULL;
-
-    while (bishop_mask)
-    {
-        const Square index = poplsb(bishop_mask);
-        const U64 possible_pin = (board.SQUARES_BETWEEN_BB[sq][index] | (1ULL << index));
-        if (popcount(possible_pin & board.occUs) == 1)
-            pinD |= possible_pin;
     }
 
-    return pinD;
+    return mask;
 }
 
-/********************
- * Seen squares
- * We keep track of all attacked squares by the enemy
- * this is used for king move generation.
- *******************/
-template <Color c> U64 seenSquares(Board &board)
-{
-    const Square kSq = board.KingSQ(~c);
+template <Color c>
+U64 pinMaskRooks(const Board &board, Square sq, U64 occ_enemy, U64 occ_us) {
+    U64 pin_hv = 0;
 
-    U64 pawns = board.pieces<PAWN, c>();
-    U64 knights = board.pieces<KNIGHT, c>();
-    U64 queens = board.pieces<QUEEN, c>();
-    U64 bishops = board.pieces<BISHOP, c>() | queens;
-    U64 rooks = board.pieces<ROOK, c>() | queens;
+    const auto opp_rook = board.pieces<PieceType::ROOK, ~c>();
+    const auto opp_queen = board.pieces<PieceType::QUEEN, ~c>();
 
-    // Remove our king
-    board.occAll &= ~(1ULL << kSq);
+    U64 rook_attacks = Attacks::ROOK(sq, occ_enemy) & (opp_rook | opp_queen);
+
+    while (rook_attacks) {
+        const auto index = poplsb(rook_attacks);
+
+        const U64 possible_pin = SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
+        if (popcount(possible_pin & occ_us) == 1) pin_hv |= possible_pin;
+    }
+
+    return pin_hv;
+}
+
+template <Color c>
+U64 pinMaskBishops(const Board &board, Square sq, U64 occ_enemy, U64 occ_us) {
+    U64 pin_diag = 0;
+
+    const auto opp_bishop = board.pieces<PieceType::BISHOP, ~c>();
+    const auto opp_queen = board.pieces<PieceType::QUEEN, ~c>();
+
+    U64 bishop_attacks = Attacks::BISHOP(sq, occ_enemy) & (opp_bishop | opp_queen);
+
+    while (bishop_attacks) {
+        const auto index = poplsb(bishop_attacks);
+
+        const U64 possible_pin = SQUARES_BETWEEN_BB[sq][index] | (1ULL << index);
+        if (popcount(possible_pin & occ_us) == 1) pin_diag |= possible_pin;
+    }
+
+    return pin_diag;
+}
+
+template <Color c>
+U64 seenSquares(const Board &board, U64 enemy_empty) {
+    const auto king_sq = board.kingSq(~c);
+
+    const auto queens = board.pieces<PieceType::QUEEN, c>();
+    auto pawns = board.pieces<PieceType::PAWN, c>();
+    auto knights = board.pieces<PieceType::KNIGHT, c>();
+    auto bishops = board.pieces<PieceType::BISHOP, c>() | queens;
+    auto rooks = board.pieces<PieceType::ROOK, c>() | queens;
+
+    auto occ = board.occ();
+
+    U64 map_king_atk = Attacks::KING(king_sq) & enemy_empty;
+
+    if (map_king_atk == 0ull) {
+        return 0ull;
+    }
+
+    occ &= ~(1ULL << king_sq);
 
     U64 seen = pawnLeftAttacks<c>(pawns) | pawnRightAttacks<c>(pawns);
 
-    while (knights)
-    {
-        Square index = poplsb(knights);
-        seen |= KnightAttacks(index);
-    }
-    while (bishops)
-    {
-        Square index = poplsb(bishops);
-        seen |= BishopAttacks(index, board.occAll);
-    }
-    while (rooks)
-    {
-        Square index = poplsb(rooks);
-        seen |= RookAttacks(index, board.occAll);
+    while (knights) {
+        const auto index = poplsb(knights);
+        seen |= Attacks::KNIGHT(index);
     }
 
-    Square index = lsb(board.pieces<KING, c>());
-    seen |= KingAttacks(index);
+    while (bishops) {
+        const auto index = poplsb(bishops);
+        seen |= Attacks::BISHOP(index, occ);
+    }
 
-    // Place our King back
-    board.occAll |= (1ULL << kSq);
+    while (rooks) {
+        const auto index = poplsb(rooks);
+        seen |= Attacks::ROOK(index, occ);
+    }
+
+    const Square index = board.kingSq(c);
+    seen |= Attacks::KING(index);
 
     return seen;
 }
 
-/********************
- * Creates the pinmask and checkmask
- * setup important variables that we use for move generation.
- *******************/
-template <Color c> void init(Board &board, Square sq)
-{
-    board.occUs = board.Us<c>();
-    board.occEnemy = board.Us<~c>();
-    board.occAll = board.occUs | board.occEnemy;
-    board.enemyEmptyBB = ~board.occUs;
-
-    board.seen = seenSquares<~c>(board);
-    board.checkMask = DoCheckmask<c>(board, sq);
-    board.pinHV = DoPinMaskRooks<c>(board, sq);
-    board.pinD = DoPinMaskBishops<c>(board, sq);
-}
-
-/// @brief shift a mask in a direction
-/// @tparam direction
-/// @param b
-/// @return
-template <Direction direction> constexpr U64 shift(const U64 b)
-{
-    switch (direction)
-    {
-    case NORTH:
-        return b << 8;
-    case SOUTH:
-        return b >> 8;
-    case NORTH_WEST:
-        return (b & ~MASK_FILE[0]) << 7;
-    case WEST:
-        return (b & ~MASK_FILE[0]) >> 1;
-    case SOUTH_WEST:
-        return (b & ~MASK_FILE[0]) >> 9;
-    case NORTH_EAST:
-        return (b & ~MASK_FILE[7]) << 9;
-    case EAST:
-        return (b & ~MASK_FILE[7]) << 1;
-    case SOUTH_EAST:
-        return (b & ~MASK_FILE[7]) >> 7;
+template <Direction direction>
+constexpr U64 shift(const U64 b) {
+    switch (direction) {
+        case Direction::NORTH:
+            return b << 8;
+        case Direction::SOUTH:
+            return b >> 8;
+        case Direction::NORTH_WEST:
+            return (b & ~MASK_FILE[0]) << 7;
+        case Direction::WEST:
+            return (b & ~MASK_FILE[0]) >> 1;
+        case Direction::SOUTH_WEST:
+            return (b & ~MASK_FILE[0]) >> 9;
+        case Direction::NORTH_EAST:
+            return (b & ~MASK_FILE[7]) << 9;
+        case Direction::EAST:
+            return (b & ~MASK_FILE[7]) << 1;
+        case Direction::SOUTH_EAST:
+            return (b & ~MASK_FILE[7]) >> 7;
     }
+    assert(false);
+    return 0;
 }
 
-// all legal moves for each piece
+template <typename T, Color c>
+void generatePawnMoves(const Board &board, Movelist<T> &moves, U64 pin_d, U64 pin_hv, U64 checkmask,
+                       U64 occ_enemy, U64 occ_us) {
+    const auto pawns = board.pieces<PieceType::PAWN, c>();
 
-/// @brief all legal pawn moves, generated at once
-/// @tparam c
-/// @tparam mt
-/// @param board
-/// @param movelist
-template <Color c, Movetype mt> void LegalPawnMovesAll(Board &board, Movelist &movelist)
-{
-    const U64 pawns_mask = board.pieces(PAWN, c);
+    constexpr Direction UP = c == Color::WHITE ? Direction::NORTH : Direction::SOUTH;
+    constexpr Direction DOWN = c == Color::WHITE ? Direction::SOUTH : Direction::NORTH;
+    constexpr Direction DOWN_LEFT =
+        c == Color::WHITE ? Direction::SOUTH_WEST : Direction::NORTH_EAST;
+    constexpr Direction DOWN_RIGHT =
+        c == Color::WHITE ? Direction::SOUTH_EAST : Direction::NORTH_WEST;
 
-    constexpr Direction UP = c == White ? NORTH : SOUTH;
-    constexpr Direction DOWN = c == Black ? NORTH : SOUTH;
-    constexpr Direction DOWN_LEFT = c == Black ? NORTH_EAST : SOUTH_WEST;
-    constexpr Direction DOWN_RIGHT = c == Black ? NORTH_WEST : SOUTH_EAST;
-    constexpr U64 RANK_BEFORE_PROMO = c == White ? MASK_RANK[RANK_7] : MASK_RANK[RANK_2];
-    constexpr U64 RANK_PROMO = c == White ? MASK_RANK[RANK_8] : MASK_RANK[RANK_1];
-    constexpr U64 doublePushRank = c == White ? MASK_RANK[RANK_3] : MASK_RANK[RANK_6];
+    constexpr U64 RANK_B_PROMO = c == Color::WHITE ? MASK_RANK[static_cast<int>(Rank::RANK_7)]
+                                                   : MASK_RANK[static_cast<int>(Rank::RANK_2)];
+    constexpr U64 RANK_PROMO = c == Color::WHITE ? MASK_RANK[static_cast<int>(Rank::RANK_8)]
+                                                 : MASK_RANK[static_cast<int>(Rank::RANK_1)];
+    constexpr U64 DOUBLE_PUSH_RANK = c == Color::WHITE ? MASK_RANK[static_cast<int>(Rank::RANK_3)]
+                                                       : MASK_RANK[static_cast<int>(Rank::RANK_6)];
 
     // These pawns can maybe take Left or Right
-    const U64 pawnsLR = pawns_mask & ~board.pinHV;
+    const U64 pawns_lr = pawns & ~pin_hv;
 
-    const U64 unpinnedpawnsLR = pawnsLR & ~board.pinD;
-    const U64 pinnedpawnsLR = pawnsLR & board.pinD;
+    const U64 unpinnedpawns_lr = pawns_lr & ~pin_d;
+    const U64 pinnedpawns_lr = pawns_lr & pin_d;
 
-    U64 Lpawns = (pawnLeftAttacks<c>(unpinnedpawnsLR)) | (pawnLeftAttacks<c>(pinnedpawnsLR) & board.pinD);
-    U64 Rpawns = (pawnRightAttacks<c>(unpinnedpawnsLR)) | (pawnRightAttacks<c>(pinnedpawnsLR) & board.pinD);
+    U64 l_pawns =
+        (pawnLeftAttacks<c>(unpinnedpawns_lr)) | (pawnLeftAttacks<c>(pinnedpawns_lr) & pin_d);
 
-    // Prune moves that dont capture a piece and are not on the checkmask.
-    Lpawns &= board.occEnemy & board.checkMask;
-    Rpawns &= board.occEnemy & board.checkMask;
+    U64 r_pawns =
+        (pawnRightAttacks<c>(unpinnedpawns_lr)) | (pawnRightAttacks<c>(pinnedpawns_lr) & pin_d);
+
+    // Prune moves that don't capture a piece and are not on the checkmask.
+    l_pawns &= occ_enemy & checkmask;
+    r_pawns &= occ_enemy & checkmask;
 
     // These pawns can walk Forward
-    const U64 pawnsHV = pawns_mask & ~board.pinD;
+    const U64 pawns_hv = pawns & ~pin_d;
 
-    const U64 pawnsPinnedHV = pawnsHV & board.pinHV;
-    const U64 pawnsUnPinnedHV = pawnsHV & ~board.pinHV;
+    const U64 pawns_pinned_hv = pawns_hv & pin_hv;
+    const U64 pawns_unpinned_hv = pawns_hv & ~pin_hv;
 
     // Prune moves that are blocked by a piece
-    const U64 singlePushUnpinned = shift<UP>(pawnsUnPinnedHV) & ~board.occAll;
-    const U64 singlePushPinned = shift<UP>(pawnsPinnedHV) & board.pinHV & ~board.occAll;
+    const U64 single_push_unpinned = shift<UP>(pawns_unpinned_hv) & ~board.occ();
+    const U64 single_push_pinned = shift<UP>(pawns_pinned_hv) & pin_hv & ~board.occ();
 
     // Prune moves that are not on the checkmask.
-    U64 singlePush = (singlePushUnpinned | singlePushPinned) & board.checkMask;
+    U64 single_push = (single_push_unpinned | single_push_pinned) & checkmask;
 
-    U64 doublePush = ((shift<UP>(singlePushUnpinned & doublePushRank) & ~board.occAll) |
-                      (shift<UP>(singlePushPinned & doublePushRank) & ~board.occAll)) &
-                     board.checkMask;
+    U64 double_push = ((shift<UP>(single_push_unpinned & DOUBLE_PUSH_RANK) & ~board.occ()) |
+                       (shift<UP>(single_push_pinned & DOUBLE_PUSH_RANK) & ~board.occ())) &
+                      checkmask;
 
-    /********************
-     * Add promotion moves.
-     * These are always generated unless we only want quiet moves.
-     *******************/
-    if ((mt != Movetype::QUIET) && pawns_mask & RANK_BEFORE_PROMO)
-    {
-        U64 Promote_Left = Lpawns & RANK_PROMO;
-        U64 Promote_Right = Rpawns & RANK_PROMO;
-        U64 Promote_Move = singlePush & RANK_PROMO;
+    if (pawns & RANK_B_PROMO) {
+        U64 promo_left = l_pawns & RANK_PROMO;
+        U64 promo_right = r_pawns & RANK_PROMO;
+        U64 promo_push = single_push & RANK_PROMO;
 
-        while (Promote_Move)
-        {
-            Square to = poplsb(Promote_Move);
-            movelist.Add(make<QUEEN, true>(to + DOWN, to));
-            movelist.Add(make<ROOK, true>(to + DOWN, to));
-            movelist.Add(make<KNIGHT, true>(to + DOWN, to));
-            movelist.Add(make<BISHOP, true>(to + DOWN, to));
+        while (promo_left) {
+            const auto index = poplsb(promo_left);
+            moves.add(
+                T::template make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::QUEEN));
+            moves.add(
+                T::template make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::ROOK));
+            moves.add(
+                T::template make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::BISHOP));
+            moves.add(
+                T::template make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::KNIGHT));
         }
 
-        while (Promote_Right)
-        {
-            Square to = poplsb(Promote_Right);
-            movelist.Add(make<QUEEN, true>(to + DOWN_LEFT, to));
-            movelist.Add(make<ROOK, true>(to + DOWN_LEFT, to));
-            movelist.Add(make<KNIGHT, true>(to + DOWN_LEFT, to));
-            movelist.Add(make<BISHOP, true>(to + DOWN_LEFT, to));
+        while (promo_right) {
+            const auto index = poplsb(promo_right);
+            moves.add(
+                T::template make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::QUEEN));
+            moves.add(T::template make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::ROOK));
+            moves.add(
+                T::template make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::BISHOP));
+            moves.add(
+                T::template make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::KNIGHT));
         }
 
-        while (Promote_Left)
-        {
-            Square to = poplsb(Promote_Left);
-            movelist.Add(make<QUEEN, true>(to + DOWN_RIGHT, to));
-            movelist.Add(make<ROOK, true>(to + DOWN_RIGHT, to));
-            movelist.Add(make<KNIGHT, true>(to + DOWN_RIGHT, to));
-            movelist.Add(make<BISHOP, true>(to + DOWN_RIGHT, to));
+        while (promo_push) {
+            const auto index = poplsb(promo_push);
+            moves.add(T::template make<Move::PROMOTION>(index + DOWN, index, PieceType::QUEEN));
+            moves.add(T::template make<Move::PROMOTION>(index + DOWN, index, PieceType::ROOK));
+            moves.add(T::template make<Move::PROMOTION>(index + DOWN, index, PieceType::BISHOP));
+            moves.add(T::template make<Move::PROMOTION>(index + DOWN, index, PieceType::KNIGHT));
         }
     }
 
-    // Remove the promotion pawns
-    singlePush &= ~RANK_PROMO;
-    Lpawns &= ~RANK_PROMO;
-    Rpawns &= ~RANK_PROMO;
+    single_push &= ~RANK_PROMO;
+    l_pawns &= ~RANK_PROMO;
+    r_pawns &= ~RANK_PROMO;
 
-    /********************
-     * Add single pushs.
-     *******************/
-    while (mt != Movetype::CAPTURE && singlePush)
-    {
-        Square to = poplsb(singlePush);
-        movelist.Add(make<PAWN, false>(to + DOWN, to));
+    while (l_pawns) {
+        const auto index = poplsb(l_pawns);
+        moves.add(T::template make<Move::NORMAL>(index + DOWN_RIGHT, index));
     }
 
-    /********************
-     * Add double pushs.
-     *******************/
-    while (mt != Movetype::CAPTURE && doublePush)
-    {
-        Square to = poplsb(doublePush);
-        movelist.Add(make<PAWN, false>(to + DOWN + DOWN, to));
+    while (r_pawns) {
+        const auto index = poplsb(r_pawns);
+        moves.add(T::template make<Move::NORMAL>(index + DOWN_LEFT, index));
     }
 
-    /********************
-     * Add right pawn captures.
-     *******************/
-    while (mt != Movetype::QUIET && Rpawns)
-    {
-        Square to = poplsb(Rpawns);
-        movelist.Add(make<PAWN, false>(to + DOWN_LEFT, to));
+    while (single_push) {
+        const auto index = poplsb(single_push);
+        moves.add(T::template make<Move::NORMAL>(index + DOWN, index));
     }
 
-    /********************
-     * Add left pawn captures.
-     *******************/
-    while (mt != Movetype::QUIET && Lpawns)
-    {
-        Square to = poplsb(Lpawns);
-        movelist.Add(make<PAWN, false>(to + DOWN_RIGHT, to));
+    while (double_push) {
+        const auto index = poplsb(double_push);
+        moves.add(T::template make<Move::NORMAL>(index + DOWN + DOWN, index));
     }
 
-    /********************
-     * Add en passant captures.
-     *******************/
-    if (mt != Movetype::QUIET && board.enPassantSquare != NO_SQ)
-    {
-        const Square ep = board.enPassantSquare;
+    const Square ep = board.enpassantSquare();
+    if (ep != NO_SQ) {
         const Square epPawn = ep + DOWN;
 
-        U64 epMask = (1ull << epPawn) | (1ull << ep);
+        const U64 ep_mask = (1ull << epPawn) | (1ull << ep);
 
-        /********************
-         * In case the en passant square and the enemy pawn
-         * that just moved are not on the checkmask
-         * en passant is not available.
-         *******************/
-        if ((board.checkMask & epMask) == 0)
-            return;
+        /*
+         In case the en passant square and the enemy pawn
+         that just moved are not on the checkmask
+         en passant is not available.
+        */
+        if ((checkmask & ep_mask) == 0) return;
 
-        const Square kSQ = board.KingSQ(c);
-        const U64 kingMask = (1ull << kSQ) & MASK_RANK[square_rank(epPawn)];
-        const U64 enemyQueenRook = board.pieces(ROOK, ~c) | board.pieces(QUEEN, ~c);
+        const Square kSQ = board.kingSq(c);
+        const U64 kingMask = (1ull << kSQ) & MASK_RANK[static_cast<int>(squareRank(epPawn))];
+        const U64 enemyQueenRook =
+            board.pieces<PieceType::ROOK, ~c>() | board.pieces<PieceType::QUEEN, ~c>();
 
         const bool isPossiblePin = kingMask && enemyQueenRook;
-        U64 epBB = PawnAttacks(ep, ~c) & pawnsLR;
+        U64 epBB = Attacks::PAWN(~c, ep) & pawns_lr;
 
-        /********************
-         * For one en passant square two pawns could potentially take there.
-         *******************/
-        while (epBB)
-        {
-            Square from = poplsb(epBB);
-            Square to = ep;
+        // For one en passant square two pawns could potentially take there.
 
-            /********************
-             * If the pawn is pinned but the en passant square is not on the
-             * pin mask then the move is illegal.
-             *******************/
-            if ((1ULL << from) & board.pinD && !(board.pinD & (1ull << ep)))
-                continue;
+        while (epBB) {
+            const Square from = poplsb(epBB);
+            const Square to = ep;
+
+            /*
+             If the pawn is pinned but the en passant square is not on the
+             pin mask then the move is illegal.
+            */
+            if ((1ULL << from) & pin_d && !(pin_d & (1ull << ep))) continue;
 
             const U64 connectingPawns = (1ull << epPawn) | (1ull << from);
 
-            /********************
-             * 7k/4p3/8/2KP3r/8/8/8/8 b - - 0 1
-             * If e7e5 there will be a potential ep square for us on e6.
-             * However we cannot take en passant because that would put our king
-             * in check. For this scenario we check if theres an enemy rook/queen
-             * that would give check if the two pawns were removed.
-             * If thats the case then the move is illegal and we can break immediately.
-             *******************/
-            if (isPossiblePin && (RookAttacks(kSQ, board.occAll & ~connectingPawns) & enemyQueenRook) != 0)
+            /*
+             7k/4p3/8/2KP3r/8/8/8/8 b - - 0 1
+             If e7e5 there will be a potential ep square for us on e6.
+             However, we cannot take en passant because that would put our king
+             in check. For this scenario we check if there's an enemy rook/queen
+             that would give check if the two pawns were removed.
+             If that's the case then the move is illegal and we can break immediately.
+            */
+            if (isPossiblePin &&
+                (Attacks::ROOK(kSQ, board.occ() & ~connectingPawns) & enemyQueenRook) != 0)
                 break;
 
-            movelist.Add(make<PAWN, false>(from, to));
+            moves.add(T::template make<Move::EN_PASSANT>(from, to));
         }
     }
 }
 
-inline U64 LegalKnightMoves(Square sq, U64 movableSquare)
-{
-    return KnightAttacks(sq) & movableSquare;
-}
+inline U64 generateKnightMoves(Square sq, U64 movable) { return Attacks::KNIGHT(sq) & movable; }
 
-inline U64 LegalBishopMoves(const Board &board, Square sq, U64 movableSquare)
-{
+inline U64 generateBishopMoves(Square sq, U64 movable, U64 pin_d, U64 occ_all) {
     // The Bishop is pinned diagonally thus can only move diagonally.
-    if (board.pinD & (1ULL << sq))
-        return BishopAttacks(sq, board.occAll) & movableSquare & board.pinD;
-    return BishopAttacks(sq, board.occAll) & movableSquare;
+    if (pin_d & (1ULL << sq)) return Attacks::BISHOP(sq, occ_all) & movable & pin_d;
+    return Attacks::BISHOP(sq, occ_all) & movable;
 }
 
-inline U64 LegalRookMoves(const Board &board, Square sq, U64 movableSquare)
-{
+inline U64 generateRookMoves(Square sq, U64 movable, U64 pin_hv, U64 occ_all) {
     // The Rook is pinned horizontally thus can only move horizontally.
-    if (board.pinHV & (1ULL << sq))
-        return RookAttacks(sq, board.occAll) & movableSquare & board.pinHV;
-    return RookAttacks(sq, board.occAll) & movableSquare;
+    if (pin_hv & (1ULL << sq)) return Attacks::ROOK(sq, occ_all) & movable & pin_hv;
+    return Attacks::ROOK(sq, occ_all) & movable;
 }
 
-inline U64 LegalQueenMoves(const Board &board, Square sq, U64 movableSquare)
-{
+inline U64 generateQueenMoves(Square sq, U64 movable, U64 pin_d, U64 pin_hv, U64 occ_all) {
     U64 moves = 0ULL;
-
-    if (board.pinD & (1ULL << sq))
-        moves |= BishopAttacks(sq, board.occAll) & movableSquare & board.pinD;
-    else if (board.pinHV & (1ULL << sq))
-        moves |= RookAttacks(sq, board.occAll) & movableSquare & board.pinHV;
-    else
-    {
-        moves |= RookAttacks(sq, board.occAll) & movableSquare;
-        moves |= BishopAttacks(sq, board.occAll) & movableSquare;
+    if (pin_d & (1ULL << sq))
+        moves |= Attacks::BISHOP(sq, occ_all) & movable & pin_d;
+    else if (pin_hv & (1ULL << sq))
+        moves |= Attacks::ROOK(sq, occ_all) & movable & pin_hv;
+    else {
+        moves |= Attacks::ROOK(sq, occ_all) & movable;
+        moves |= Attacks::BISHOP(sq, occ_all) & movable;
     }
 
     return moves;
 }
 
-template <Movetype mt> U64 LegalKingMoves(const Board &board, Square sq)
-{
-    U64 bb;
-
-    if (mt == Movetype::ALL)
-        bb = board.enemyEmptyBB;
-    else if (mt == Movetype::CAPTURE)
-        bb = board.occEnemy;
-    else
-        bb = ~board.occAll;
-
-    return KingAttacks(sq) & bb & ~board.seen;
+inline U64 generateKingMoves(Square sq, U64 _seen, U64 _enemy_emptyBB) {
+    return Attacks::KING(sq) & _enemy_emptyBB & ~_seen;
 }
 
-template <Color c, Movetype mt> U64 LegalKingMovesCastling(const Board &board, Square sq)
-{
-    U64 bb;
+template <Color c>
+inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen, U64 enemy_empty) {
+    U64 moves = 0ull;
+    const U64 empty_not_attacked = ~seen & ~board.occ();
 
-    if (mt == Movetype::ALL)
-        bb = board.enemyEmptyBB;
-    else
-        bb = ~board.occAll;
+    const auto king_side = c == Color::WHITE ? WK : BK;
+    const auto queen_side = c == Color::WHITE ? WQ : BQ;
 
-    U64 moves = KingAttacks(sq) & bb & ~board.seen;
-    U64 emptyAndNotAttacked = ~board.seen & ~board.occAll;
+    const auto rights = board.castlingRights();
+    for (const auto cr : {king_side, queen_side}) {
+        if (!(rights & cr)) continue;
 
-    // clang-format off
-    switch (c)
-    {
-    case White:
-        if (    board.castlingRights & wk 
-            &&  emptyAndNotAttacked & (1ULL << SQ_F1) 
-            &&  emptyAndNotAttacked & (1ull << SQ_G1))
-            moves |= (1ULL << SQ_H1);
-        if (    board.castlingRights & wq 
-            &&  emptyAndNotAttacked & (1ULL << SQ_D1) 
-            &&  emptyAndNotAttacked & (1ull << SQ_C1) 
-            &&  (1ull << SQ_B1) & ~board.occAll)
-            moves |= (1ULL << SQ_A1);
-        break;
-    case Black:
-        if (    board.castlingRights & bk 
-            &&  emptyAndNotAttacked & (1ULL << SQ_F8) 
-            &&  emptyAndNotAttacked & (1ull << SQ_G8))
-            moves |= (1ULL << SQ_H8);
-        if (    board.castlingRights & bq 
-            &&  emptyAndNotAttacked & (1ULL << SQ_D8) 
-            &&  emptyAndNotAttacked & (1ull << SQ_C8) 
-            &&  (1ull << SQ_B8) & ~board.occAll)
-            moves |= (1ULL << SQ_A8);
-        break;
-    default:
-        return moves;
+        const auto end_sq = relativeSquare(c, cr == king_side ? Square::SQ_G1 : Square::SQ_C1);
+        const auto to_sq = relativeSquare(c, cr == king_side ? Square::SQ_H1 : Square::SQ_A1);
+
+        const auto not_occ_path = SQUARES_BETWEEN_BB[sq][to_sq];
+        const auto not_attacked_path = SQUARES_BETWEEN_BB[sq][end_sq] | (1ull << end_sq);
+
+        if ((empty_not_attacked & not_attacked_path) == not_attacked_path &&
+            (not_occ_path & ~board.occ()) == not_occ_path) {
+            moves |= (1ull << to_sq);
+        }
     }
-    // clang-format on
 
     return moves;
 }
 
 // all legal moves for a position
-template <Color c, Movetype mt> void legalmoves(Board &board, Movelist &movelist)
-{
-    init<c>(board, board.KingSQ(c));
+template <typename T, Color c, MoveGenType mt>
+void genLegalmoves(Movelist<T> &movelist, const Board &board) {
+    /*
+     The size of the movelist might not
+     be 0! This is done on purpose since it enables
+     you to append new move types to any movelist.
+    */
+    auto king_sq = board.kingSq(c);
 
-    assert(board.doubleCheck <= 2);
+    int _doubleCheck = 0;
 
-    /********************
-     * Moves have to be on the checkmask
-     *******************/
-    U64 movableSquare = board.checkMask;
+    U64 _occ_us = board.us(c);
+    U64 _occ_enemy = board.us(~c);
+    U64 _occ_all = _occ_us | _occ_enemy;
+    U64 _enemy_emptyBB = ~_occ_us;
 
-    /********************
-     * Slider, Knights and King moves can only go to enemy or empty squares.
-     *******************/
-    if (mt == Movetype::ALL)
-        movableSquare &= board.enemyEmptyBB;
-    else if (mt == Movetype::CAPTURE)
-        movableSquare &= board.occEnemy;
-    else // QUIET moves
-        movableSquare &= ~board.occAll;
+    U64 _seen = seenSquares<~c>(board, _enemy_emptyBB);
+    U64 _checkMask = checkMask<c>(board, king_sq, _doubleCheck);
+    U64 _pinHV = pinMaskRooks<c>(board, king_sq, _occ_enemy, _occ_us);
+    U64 _pinD = pinMaskBishops<c>(board, king_sq, _occ_enemy, _occ_us);
 
-    Square from = board.KingSQ(c);
+    assert(_doubleCheck <= 2);
+
+    // Moves have to be on the checkmask
+    U64 movable_square = _checkMask;
+
+    // Slider, Knights and King moves can only go to enemy or empty squares.
+    movable_square &= _enemy_emptyBB;
+
     U64 moves;
 
-    if (mt == Movetype::CAPTURE || !board.castlingRights || board.checkMask != DEFAULT_CHECKMASK)
-        moves = LegalKingMoves<mt>(board, from);
-    else
-        moves = LegalKingMovesCastling<c, mt>(board, from);
+    moves = generateKingMoves(king_sq, _seen, _enemy_emptyBB);
 
-    while (moves)
-    {
+    while (moves) {
         Square to = poplsb(moves);
-        movelist.Add(make<KING, false>(from, to));
+        movelist.add(T::template make<Move::NORMAL>(king_sq, to));
     }
 
-    /********************
-     * Early return for double check as described earlier
-     *******************/
-    if (board.doubleCheck == 2)
-        return;
+    if (squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
+        (board.castlingRights() && _checkMask == DEFAULT_CHECKMASK)) {
+        moves = generateCastleMoves<c>(board, king_sq, _seen, _enemy_emptyBB);
 
-    /********************
-     * Prune knights that are pinned since these cannot move.
-     *******************/
-    U64 knights_mask = board.pieces(KNIGHT, c) & ~(board.pinD | board.pinHV);
-
-    /********************
-     * Prune horizontally pinned bishops
-     *******************/
-    U64 bishops_mask = board.pieces(BISHOP, c) & ~board.pinHV;
-
-    /********************
-     * Prune diagonally pinned rooks
-     *******************/
-    U64 rooks_mask = board.pieces(ROOK, c) & ~board.pinD;
-
-    /********************
-     * Prune double pinned queens
-     *******************/
-    U64 queens_mask = board.pieces(QUEEN, c) & ~(board.pinD & board.pinHV);
-
-    /********************
-     * Add the moves to the movelist.
-     *******************/
-    LegalPawnMovesAll<c, mt>(board, movelist);
-
-    while (knights_mask)
-    {
-        Square from = poplsb(knights_mask);
-        U64 moves = LegalKnightMoves(from, movableSquare);
-        while (moves)
-        {
+        while (moves) {
             Square to = poplsb(moves);
-            movelist.Add(make<KNIGHT, false>(from, to));
+            movelist.add(T::template make<Move::CASTLING>(king_sq, to));
         }
     }
 
-    while (bishops_mask)
-    {
-        Square from = poplsb(bishops_mask);
-        U64 moves = LegalBishopMoves(board, from, movableSquare);
-        while (moves)
-        {
-            Square to = poplsb(moves);
-            movelist.Add(make<BISHOP, false>(from, to));
+    // Early return for double check as described earlier
+    if (_doubleCheck == 2) return;
+
+    // Prune knights that are pinned since these cannot move.
+    U64 knights_mask = board.pieces<PieceType::KNIGHT, c>() & ~(_pinD | _pinHV);
+
+    // Prune horizontally pinned bishops
+    U64 bishops_mask = board.pieces<PieceType::BISHOP, c>() & ~_pinHV;
+
+    //  Prune diagonally pinned rooks
+    U64 rooks_mask = board.pieces<PieceType::ROOK, c>() & ~_pinD;
+
+    // Prune double pinned queens
+    U64 queens_mask = board.pieces<PieceType::QUEEN, c>() & ~(_pinD & _pinHV);
+
+    // Add the moves to the movelist.
+    generatePawnMoves<T, c>(board, movelist, _pinD, _pinHV, _checkMask, _occ_enemy, _occ_us);
+
+    while (knights_mask) {
+        const Square from = poplsb(knights_mask);
+        moves = generateKnightMoves(from, movable_square);
+        while (moves) {
+            const Square to = poplsb(moves);
+            movelist.add(T::template make<Move::NORMAL>(from, to));
         }
     }
 
-    while (rooks_mask)
-    {
-        Square from = poplsb(rooks_mask);
-        U64 moves = LegalRookMoves(board, from, movableSquare);
-        while (moves)
-        {
-            Square to = poplsb(moves);
-            movelist.Add(make<ROOK, false>(from, to));
+    while (bishops_mask) {
+        const Square from = poplsb(bishops_mask);
+        moves = generateBishopMoves(from, movable_square, _pinD, _occ_all);
+        while (moves) {
+            const Square to = poplsb(moves);
+            movelist.add(T::template make<Move::NORMAL>(from, to));
         }
     }
 
-    while (queens_mask)
-    {
-        Square from = poplsb(queens_mask);
-        U64 moves = LegalQueenMoves(board, from, movableSquare);
-        while (moves)
-        {
-            Square to = poplsb(moves);
-            movelist.Add(make<QUEEN, false>(from, to));
+    while (rooks_mask) {
+        const Square from = poplsb(rooks_mask);
+        moves = generateRookMoves(from, movable_square, _pinHV, _occ_all);
+        while (moves) {
+            const Square to = poplsb(moves);
+            movelist.add(T::template make<Move::NORMAL>(from, to));
+        }
+    }
+
+    while (queens_mask) {
+        const Square from = poplsb(queens_mask);
+        moves = generateQueenMoves(from, movable_square, _pinD, _pinHV, _occ_all);
+        while (moves) {
+            const Square to = poplsb(moves);
+            movelist.add(T::template make<Move::NORMAL>(from, to));
         }
     }
 }
 
-/********************
- * Entry function for the
- * Color template.
- *******************/
-template <Movetype mt> void legalmoves(Board &board, Movelist &movelist, int start_index = 0)
-{
-    movelist.size = start_index;
-    if (board.sideToMove == White)
-        legalmoves<White, mt>(board, movelist);
+template <typename T, MoveGenType mt>
+inline void legalmoves(Movelist<T> &movelist, const Board &board) {
+    movelist.clear();
+
+    if (board.sideToMove() == Color::WHITE)
+        genLegalmoves<T, Color::WHITE, mt>(movelist, board);
     else
-        legalmoves<Black, mt>(board, movelist);
+        genLegalmoves<T, Color::BLACK, mt>(movelist, board);
 }
-} // namespace Movegen
+
+}  // namespace Movegen
+
+GameResult Board::isGameOver() {
+    if (half_moves_ >= 100) {
+        const Board &board = *this;
+
+        Movelist<Move> movelist;
+        Movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
+        if (isSquareAttacked(kingSq(side_to_move_), ~side_to_move_) && movelist.size() == 0)
+            return GameResult::LOSE;
+        return GameResult::DRAW;
+    }
+
+    const auto count = popcount(all());
+
+    if (count == 2) return GameResult::DRAW;
+
+    if (count == 3) {
+        if (pieces<PieceType::BISHOP, Color::WHITE>() || pieces<PieceType::BISHOP, Color::BLACK>())
+            return GameResult::DRAW;
+        if (pieces<PieceType::KNIGHT, Color::WHITE>() || pieces<PieceType::KNIGHT, Color::BLACK>())
+            return GameResult::DRAW;
+    }
+
+    if (count == 4) {
+        if (pieces<PieceType::BISHOP, Color::WHITE>() &&
+            pieces<PieceType::BISHOP, Color::BLACK>() &&
+            sameColor(lsb(pieces<PieceType::BISHOP, Color::WHITE>()),
+                      lsb(pieces<PieceType::BISHOP, Color::BLACK>())))
+            return GameResult::DRAW;
+    }
+
+    if (isRepetition()) return GameResult::DRAW;
+
+    const Board &board = *this;
+
+    Movelist<Move> movelist;
+    Movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
+
+    if (movelist.size() == 0) {
+        if (isSquareAttacked(kingSq(side_to_move_), ~side_to_move_)) return GameResult::LOSE;
+        return GameResult::DRAW;
+    }
+
+    return GameResult::NONE;
+}
+
+}  // namespace Chess
