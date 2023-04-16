@@ -202,7 +202,8 @@ struct Move {
         return static_cast<PieceType>(((move_ >> 12) & 3) + static_cast<int>(PieceType::KNIGHT));
     }
 
-    [[nodiscard]] inline constexpr uint16_t move() const { return move_; }
+    [[nodiscard]] inline constexpr const uint16_t move() const { return move_; }
+    [[nodiscard]] inline constexpr uint16_t &move() { return move_; }
 
     inline constexpr bool operator==(const Move &right) const { return move_ == right.move(); }
     inline constexpr bool operator!=(const Move &right) const { return move_ != right.move(); }
@@ -232,6 +233,16 @@ inline std::ostream &operator<<(std::ostream &os, const Move &m) {
 struct ExtMove : public Move {
    public:
     ExtMove() = default;
+
+    explicit ExtMove(uint16_t move) : Move(move){};
+
+    template <uint16_t MoveType = 0>
+    static ExtMove make(Square source, Square target, PieceType pt = PieceType::KNIGHT) {
+        return ExtMove(
+            MoveType +
+            ((static_cast<uint16_t>(pt) - static_cast<uint16_t>(PieceType::KNIGHT)) << 12) +
+            static_cast<uint16_t>(source << 6) + static_cast<uint16_t>(target));
+    }
 
     [[nodiscard]] inline constexpr int score() const { return score_; }
 
@@ -972,6 +983,9 @@ inline void Board::loadFen(const std::string &fen) {
 
     zobristHash();
     occ_all_ = all();
+
+    prev_states_.clear();
+    prev_states_.reserve(150);
 }
 inline std::string Board::getFen() const {
     std::stringstream ss;
@@ -1883,8 +1897,6 @@ void legalmoves(Movelist<T> &movelist, const Board &board) {
             movelist.add(T::template make<Move::CASTLING>(king_sq, to));
         }
     }
-
-    T moveType;
 
     // Early return for double check as described earlier
     if (_doubleCheck == 2) return;
