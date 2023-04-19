@@ -18,12 +18,12 @@ nodes 4528287989 nps 412976560
 
 ## Usage
 
-This is a single/two header library.  
+This is a single/two header library.
 
 You only need to include `chess.hpp` header and have the `sliders.hpp` header in the same directory.
-Aftewards you can access the chess logic over the `Chess::` namespace. 
+Aftewards you can access the chess logic over the `Chess::` namespace.
 
-__Currenlty MoveGenType and chess960 are not fully implemented!__
+**Currenlty MoveGenType and chess960 are not fully implemented!**
 
 ## Types:
 
@@ -63,26 +63,26 @@ struct Move {
     template <uint16_t MoveType = 0>
     static Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT);
 
-    inline constexpr Square from() const;
+    constexpr Square from() const;
 
-    inline constexpr Square to() const;
-    inline constexpr uint16_t typeOf() const;
+    constexpr Square to() const;
+    constexpr uint16_t typeOf() const;
 
-    inline constexpr PieceType promotionType() const;
+    constexpr PieceType promotionType() const;
 
-    inline constexpr const uint16_t move() const ;
-    inline constexpr uint16_t &move();
+    constexpr const uint16_t move() const ;
+    constexpr uint16_t &move();
 
-    inline constexpr bool operator==(const Move &right) const;
-    inline constexpr bool operator!=(const Move &right) const;
+    constexpr bool operator==(const Move &right) const;
+    constexpr bool operator!=(const Move &right) const;
 
-    inline static constexpr uint16_t NO_MOVE = 0;
-    inline static constexpr uint16_t NULL_MOVE = 65;
+    static constexpr uint16_t NO_MOVE = 0;
+    static constexpr uint16_t NULL_MOVE = 65;
 
-    inline static constexpr uint16_t NORMAL;
-    inline static constexpr uint16_t PROMOTION;
-    inline static constexpr uint16_t EN_PASSANT;
-    inline static constexpr uint16_t CASTLING ;
+    static constexpr uint16_t NORMAL;
+    static constexpr uint16_t PROMOTION;
+    static constexpr uint16_t EN_PASSANT;
+    static constexpr uint16_t CASTLING ;
 
     friend std::ostream &operator<<(std::ostream &os, const Move &m);
 };
@@ -108,11 +108,11 @@ struct ExtMove : public Move {
     template <uint16_t MoveType = 0>
     static ExtMove make(Square source, Square target, PieceType pt = PieceType::KNIGHT);
 
-    inline constexpr int score() const;
-    inline constexpr void setScore(int score);
+    constexpr int score() const;
+    constexpr void setScore(int score);
 
-    inline constexpr bool operator<(const ExtMove &right) const;
-    inline constexpr bool operator>(const ExtMove &right) const;
+    constexpr bool operator<(const ExtMove &right) const;
+    constexpr bool operator>(const ExtMove &right) const;
 };
 ```
 
@@ -123,12 +123,12 @@ struct ExtMove : public Move {
 template <typename T>
 struct Movelist {
    public:
-    inline constexpr void add(T move);
+    constexpr void add(T move);
     // returns the index of the move in the list, or -1 if not found
-    inline constexpr int find(T m);
+    constexpr int find(T m);
 
-    inline constexpr void clear();
-    inline constexpr int size() const;
+    constexpr void clear();
+    constexpr int size() const;
 };
 ```
 
@@ -136,16 +136,16 @@ struct Movelist {
 
 ```c++
 // returns the index of the least significant bit
-inline constexpr int lsb(U64 bb);
+constexpr int lsb(U64 bb);
 
 // returns the index of the most significant bit
-inline constexpr int msb(U64 bb);
+constexpr int msb(U64 bb);
 
 // returns the number of set bits
-inline constexpr int popcount(U64 bb);
+constexpr int popcount(U64 bb);
 
 // returns the lsb and pop it
-inline constexpr int poplsb(U64 &bb);
+constexpr int poplsb(U64 &bb);
 ```
 
 ## Attacks
@@ -153,12 +153,12 @@ inline constexpr int poplsb(U64 &bb);
 ```c++
 namespace Attacks {
 
-static inline constexpr U64 PAWN(Color c, Square sq);
-static inline constexpr U64 KNIGHT(Square sq);
-static inline constexpr U64 BISHOP(Square sq, U64 occ);
-static inline constexpr U64 ROOK(Square sq, U64 occ);
-static inline constexpr U64 QUEEN(Square sq, U64 occ);
-static inline constexpr U64 KING(Square sq);
+static constexpr U64 PAWN(Color c, Square sq);
+static constexpr U64 KNIGHT(Square sq);
+static constexpr U64 BISHOP(Square sq, U64 occ);
+static constexpr U64 ROOK(Square sq, U64 occ);
+static constexpr U64 QUEEN(Square sq, U64 occ);
+static constexpr U64 KING(Square sq);
 
 }
 ```
@@ -170,45 +170,45 @@ static inline constexpr U64 KING(Square sq);
 /// @brief Gets the file index of the square where 0 is the a-file
 /// @param sq
 /// @return the file of the square
-inline constexpr File squareFile(Square sq);
+constexpr File squareFile(Square sq);
 
 /// @brief Gets the rank index of the square where 0 is the first rank.
 /// @param sq
 /// @return the rank of the square
-inline constexpr Rank squareRank(Square sq);
+constexpr Rank squareRank(Square sq);
 
 /// @brief makes a square out of rank and file
 /// @param f
 /// @param r
 /// @return
-inline constexpr Square fileRankSquare(File f, Rank r);
+constexpr Square fileRankSquare(File f, Rank r);
 
 /// @brief distance between two squares
 /// @param a
 /// @param b
 /// @return
-inline constexpr uint8_t squareDistance(Square a, Square b);
+constexpr uint8_t squareDistance(Square a, Square b);
 
-inline constexpr uint8_t diagonalOf(Square sq);
+constexpr uint8_t diagonalOf(Square sq);
 
-inline constexpr uint8_t antiDiagonalOf(Square sq);
+constexpr uint8_t antiDiagonalOf(Square sq);
 
 /// @brief manhatten distance between two squares
 /// @param sq1
 /// @param sq2
 /// @return
-inline constexpr uint8_t manhattenDistance(Square sq1, Square sq2);
+constexpr uint8_t manhattenDistance(Square sq1, Square sq2);
 
 /// @brief color of a square, has nothing to do with whose piece is on that square
 /// @param square
 /// @return
-inline constexpr Color getSquareColor(Square square);
+constexpr Color getSquareColor(Square square);
 
-inline constexpr Square relativeSquare(Color c, Square s);
+constexpr Square relativeSquare(Color c, Square s);
 
-inline constexpr Piece makePiece(Color c, PieceType pt);
+constexpr Piece makePiece(Color c, PieceType pt);
 
-inline constexpr PieceType typeOfPiece(Piece piece);
+constexpr PieceType typeOfPiece(Piece piece);
 
 /// checks if the squares have the same color
 bool sameColor(Square sq1, Square sq2);
@@ -294,7 +294,7 @@ class Board {
 ```c++
 namespace MoveGen {
     template <typename T, MoveGenType mt>
-    inline void legalmoves(Movelist<T> &movelist, const Board &board);
+     void legalmoves(Movelist<T> &movelist, const Board &board);
 }
 ```
 
