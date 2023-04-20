@@ -604,11 +604,6 @@ INCR_OP_ON(File)
 
 BASE_OP_ON(Square, Direction)
 BASE_OP_ON(Square, Square)
-BASE_OP_ON(int, File)
-BASE_OP_ON(File, File)
-BASE_OP_ON(int, Rank)
-BASE_OP_ON(Rank, Rank)
-BASE_OP_ON(Rank, File)
 BASE_OP_ON(PieceType, PieceType)
 
 #undef BASE_OP_ON
@@ -716,7 +711,7 @@ constexpr Rank squareRank(Square sq) { return Rank(sq >> 3); }
 /// @param r
 /// @return
 constexpr Square fileRankSquare(File f, Rank r) {
-    return static_cast<Square>((static_cast<int>(r) << 3) + f);
+    return static_cast<Square>((static_cast<int>(r) << 3) + static_cast<int>(f));
 }
 
 /// @brief distance between two squares
@@ -724,14 +719,19 @@ constexpr Square fileRankSquare(File f, Rank r) {
 /// @param b
 /// @return
 constexpr uint8_t squareDistance(Square a, Square b) {
-    return std::max(std::abs(static_cast<int>(squareFile(a) - squareFile(b))),
-                    std::abs(static_cast<int>(squareRank(a) - squareRank(b))));
+    return std::max(std::abs(static_cast<int>(static_cast<int>(squareFile(a)) -
+                                              static_cast<int>(squareFile(b)))),
+                    std::abs(static_cast<int>(static_cast<int>(squareRank(a)) -
+                                              static_cast<int>(squareRank(b)))));
 }
 
-constexpr uint8_t diagonalOf(Square sq) { return 7 + squareRank(sq) - squareFile(sq); }
+constexpr uint8_t diagonalOf(Square sq) {
+    return 7 + static_cast<int>(squareRank(sq)) - static_cast<int>(squareFile(sq));
+}
 
 constexpr uint8_t antiDiagonalOf(Square sq) {
-    return static_cast<uint8_t>(squareRank(sq) + squareFile(sq));
+    return static_cast<uint8_t>(static_cast<int>(squareRank(sq)) +
+                                static_cast<int>(squareFile(sq)));
 }
 
 /// @brief manhatten distance between two squares
@@ -739,8 +739,10 @@ constexpr uint8_t antiDiagonalOf(Square sq) {
 /// @param sq2
 /// @return
 constexpr uint8_t manhattenDistance(Square sq1, Square sq2) {
-    return std::abs(static_cast<int>(squareFile(sq1) - squareFile(sq2))) +
-           std::abs(static_cast<int>(squareRank(sq1) - squareRank(sq2)));
+    return std::abs(static_cast<int>(static_cast<int>(squareFile(sq1)) -
+                                     static_cast<int>(squareFile(sq2)))) +
+           std::abs(static_cast<int>(static_cast<int>(squareRank(sq1)) -
+                                     static_cast<int>(squareRank(sq2))));
 }
 
 /// @brief color of a square, has nothing to do with whose piece is on that square
@@ -1156,7 +1158,7 @@ inline void Board::updateKeyPiece(Piece piece, Square sq) {
 }
 
 inline void Board::updateKeyEnPassant(Square sq) {
-    hash_key_ ^= RANDOM_ARRAY[772 + squareFile(sq)];
+    hash_key_ ^= RANDOM_ARRAY[772 + static_cast<int>(squareFile(sq))];
 }
 
 inline void Board::updateKeyCastling() { hash_key_ ^= castlingKey[castling_rights_]; }
@@ -1448,13 +1450,23 @@ inline Move Board::uciToMove(const std::string &uci) const {
     // in chess960 the move should be sent as king captures rook already!
     if (piece == PieceType::KING && squareDistance(target, source) == 2) {
         target = fileRankSquare(target > source ? File::FILE_H : File::FILE_A, squareRank(source));
+        return Move::make<Move::CASTLING>(source, target);
+    }
+
+    // en passant
+    if (piece == PieceType::PAWN && target == enpassant_square_) {
+        return Move::make<Move::EN_PASSANT>(source, target);
+    }
+
+    // promotion
+    if (piece == PieceType::PAWN &&
+        squareRank(target) == (side_to_move_ == Color::WHITE ? Rank::RANK_8 : Rank::RANK_1)) {
+        return Move::make<Move::PROMOTION>(source, target, pieceToInt[uci.at(4)]);
     }
 
     switch (uci.length()) {
         case 4:
-            return Move::make(source, target);
-        case 5:
-            return Move::make(source, target, pieceToInt[uci.at(4)]);
+            return Move::make<Move::NORMAL>(source, target);
         default:
             std::cout << "FALSE INPUT" << std::endl;
             return Move(Move::NO_MOVE);
