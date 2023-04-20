@@ -768,7 +768,7 @@ constexpr PieceType typeOfPiece(Piece piece) {
 
 constexpr bool sameColor(Square sq1, Square sq2) { return ((9 * (sq1 ^ sq2)) & 8) == 0; }
 
-void printBitboard(U64 bb) {
+inline void printBitboard(U64 bb) {
     std::bitset<64> b(bb);
     std::string str_bitset = b.to_string();
     for (int i = 0; i < Square::NO_SQ; i += 8) {
@@ -803,7 +803,7 @@ auto init_squares_between = []() constexpr {
 
 static const std::array<std::array<U64, 64>, 64> SQUARES_BETWEEN_BB = init_squares_between();
 
-std::vector<std::string> splitString(const std::string &string, const char &delimiter) {
+inline std::vector<std::string> splitString(const std::string &string, const char &delimiter) {
     std::stringstream string_stream(string);
     std::string segment;
     std::vector<std::string> seglist;
