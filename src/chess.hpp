@@ -207,7 +207,7 @@ struct Move {
         return static_cast<PieceType>(((move_ >> 12) & 3) + static_cast<int>(PieceType::KNIGHT));
     }
 
-    [[nodiscard]] constexpr const uint16_t move() const { return move_; }
+    [[nodiscard]] constexpr uint16_t move() const { return move_; }
     [[nodiscard]] constexpr uint16_t &move() { return move_; }
 
     constexpr bool operator==(const Move &right) const { return move_ == right.move(); }
@@ -582,7 +582,7 @@ static constexpr U64 MASK_RANK[8] = {
         p = static_cast<T>(static_cast<int>(p) + 1); \
         return p;                                    \
     }                                                \
-    const constexpr T operator++(T &p, int) {        \
+    constexpr T operator++(T &p, int) {              \
         auto old = p;                                \
         ++p;                                         \
         return old;                                  \
@@ -1647,7 +1647,7 @@ constexpr U64 shift(const U64 b) {
 
 template <typename T, Color c>
 void generatePawnMoves(const Board &board, Movelist<T> &moves, U64 pin_d, U64 pin_hv, U64 checkmask,
-                       U64 occ_enemy, U64 occ_us) {
+                       U64 occ_enemy) {
     const auto pawns = board.pieces<PieceType::PAWN, c>();
 
     constexpr Direction UP = c == Color::WHITE ? Direction::NORTH : Direction::SOUTH;
@@ -1843,7 +1843,7 @@ inline U64 generateKingMoves(Square sq, U64 _seen, U64 _enemy_emptyBB) {
 }
 
 template <Color c>
-inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen, U64 enemy_empty) {
+inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen) {
     U64 moves = 0ull;
     const U64 empty_not_attacked = ~seen & ~board.occ();
 
@@ -1910,7 +1910,7 @@ void genLegalmoves(Movelist<T> &movelist, const Board &board) {
 
     if (squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
         (board.castlingRights() && _checkMask == DEFAULT_CHECKMASK)) {
-        moves = generateCastleMoves<c>(board, king_sq, _seen, _enemy_emptyBB);
+        moves = generateCastleMoves<c>(board, king_sq, _seen);
 
         while (moves) {
             Square to = poplsb(moves);
@@ -1934,7 +1934,7 @@ void genLegalmoves(Movelist<T> &movelist, const Board &board) {
     U64 queens_mask = board.pieces<PieceType::QUEEN, c>() & ~(_pinD & _pinHV);
 
     // Add the moves to the movelist.
-    generatePawnMoves<T, c>(board, movelist, _pinD, _pinHV, _checkMask, _occ_enemy, _occ_us);
+    generatePawnMoves<T, c>(board, movelist, _pinD, _pinHV, _checkMask, _occ_enemy);
 
     while (knights_mask) {
         const Square from = poplsb(knights_mask);
