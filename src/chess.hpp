@@ -696,6 +696,22 @@ static constexpr U64 KING(Square sq) { return KING_ATTACKS_TABLE[sq]; }
 // HELPERS
 // *******************
 
+static inline void ltrim(std::string &s) {
+    s.erase(s.begin(),
+            std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+}
+
+static inline void rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); })
+                .base(),
+            s.end());
+}
+
+static inline void trim(std::string &s) {
+    rtrim(s);
+    ltrim(s);
+}
+
 /// @brief Gets the file index of the square where 0 is the a-file
 /// @param sq
 /// @return the file of the square
@@ -825,7 +841,7 @@ class Board {
 
     explicit Board(const std::string &fen);
 
-    void loadFen(const std::string &fen);
+    void loadFen(std::string fen);
     [[nodiscard]] std::string getFen() const;
 
     void makeMove(const Move &move);
@@ -947,7 +963,9 @@ inline Board::Board() {
     hash_key_ = 0ULL;
 }
 // Board::Board(const std::string &fen) {}
-inline void Board::loadFen(const std::string &fen) {
+inline void Board::loadFen(std::string fen) {
+    trim(fen);
+
     std::fill(std::begin(board_), std::end(board_), Piece::NONE);
     occ_all_ = 0ULL;
 
