@@ -883,6 +883,10 @@ class Board {
     /// @return
     [[nodiscard]] bool isSquareAttacked(Square square, Color c) const;
 
+    /// Is the current sidetomoves king attacked?
+    /// @return
+    [[nodiscard]] bool isKingAttacked() const;
+
     friend std::ostream &operator<<(std::ostream &os, const Board &b);
 
     [[nodiscard]] std::string uci(const Move &move) const;
@@ -1133,6 +1137,10 @@ inline bool Board::isSquareAttacked(Square square, Color c) const {
     if (Attacks::ROOK(square, all()) & (pieces<PieceType::ROOK>(c) | pieces<PieceType::QUEEN>(c)))
         return true;
     return false;
+}
+
+inline bool Board::isKingAttacked() const {
+    return isSquareAttacked(kingSq(side_to_move_), ~side_to_move_);
 }
 
 inline std::ostream &operator<<(std::ostream &os, const Board &b) {

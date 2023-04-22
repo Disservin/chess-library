@@ -283,6 +283,10 @@ class Board {
     /// @return
     bool isSquareAttacked(Square square, Color c) const;
 
+    /// Is the current sidetomoves king attacked?
+    /// @return
+    bool isKingAttacked() const;
+
     std::string uci(const Move &move) const;
 
     Move uciToMove(const std::string &uci) const;
