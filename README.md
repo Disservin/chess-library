@@ -23,7 +23,7 @@ This is a single/two header library.
 You only need to include `chess.hpp` header and have the `sliders.hpp` header in the same directory.
 Aftewards you can access the chess logic over the `Chess::` namespace.
 
-**Currenlty MoveGenType and chess960 are not fully implemented!**
+**Currenlty chess960 is not fully implemented!**
 
 ## Types:
 

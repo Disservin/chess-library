@@ -1671,7 +1671,7 @@ constexpr U64 shift(const U64 b) {
     return 0;
 }
 
-template <typename T, Color c>
+template <typename T, Color c, MoveGenType mt>
 void generatePawnMoves(const Board &board, Movelist<T> &moves, U64 pin_d, U64 pin_hv, U64 checkmask,
                        U64 occ_enemy) {
     const auto pawns = board.pieces<PieceType::PAWN, c>();
@@ -1723,7 +1723,7 @@ void generatePawnMoves(const Board &board, Movelist<T> &moves, U64 pin_d, U64 pi
                        (shift<UP>(single_push_pinned & DOUBLE_PUSH_RANK) & ~board.occ())) &
                       checkmask;
 
-    if (pawns & RANK_B_PROMO) {
+    if (mt != MoveGenType::QUIET && (pawns & RANK_B_PROMO)) {
         U64 promo_left = l_pawns & RANK_PROMO;
         U64 promo_right = r_pawns & RANK_PROMO;
         U64 promo_push = single_push & RANK_PROMO;
@@ -1764,28 +1764,28 @@ void generatePawnMoves(const Board &board, Movelist<T> &moves, U64 pin_d, U64 pi
     l_pawns &= ~RANK_PROMO;
     r_pawns &= ~RANK_PROMO;
 
-    while (l_pawns) {
+    while (mt != MoveGenType::QUIET && l_pawns) {
         const auto index = poplsb(l_pawns);
         moves.add(T::template make<Move::NORMAL>(index + DOWN_RIGHT, index));
     }
 
-    while (r_pawns) {
+    while (mt != MoveGenType::QUIET && r_pawns) {
         const auto index = poplsb(r_pawns);
         moves.add(T::template make<Move::NORMAL>(index + DOWN_LEFT, index));
     }
 
-    while (single_push) {
+    while (mt != MoveGenType::CAPTURE && single_push) {
         const auto index = poplsb(single_push);
         moves.add(T::template make<Move::NORMAL>(index + DOWN, index));
     }
 
-    while (double_push) {
+    while (mt != MoveGenType::CAPTURE && double_push) {
         const auto index = poplsb(double_push);
         moves.add(T::template make<Move::NORMAL>(index + DOWN + DOWN, index));
     }
 
     const Square ep = board.enpassantSquare();
-    if (ep != NO_SQ) {
+    if (mt != MoveGenType::QUIET && ep != NO_SQ) {
         const Square epPawn = ep + DOWN;
 
         const U64 ep_mask = (1ull << epPawn) | (1ull << ep);
@@ -1864,12 +1864,14 @@ inline U64 generateQueenMoves(Square sq, U64 movable, U64 pin_d, U64 pin_hv, U64
     return moves;
 }
 
-inline U64 generateKingMoves(Square sq, U64 _seen, U64 _enemy_emptyBB) {
-    return Attacks::KING(sq) & _enemy_emptyBB & ~_seen;
+inline U64 generateKingMoves(Square sq, U64 _seen, U64 movable_square) {
+    return Attacks::KING(sq) & movable_square & ~_seen;
 }
 
-template <Color c>
+template <Color c, MoveGenType mt>
 inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen) {
+    if constexpr (mt == MoveGenType::CAPTURE) return 0ull;
+
     U64 moves = 0ull;
     const U64 empty_not_attacked = ~seen & ~board.occ();
 
@@ -1920,14 +1922,19 @@ void genLegalmoves(Movelist<T> &movelist, const Board &board) {
     assert(_doubleCheck <= 2);
 
     // Moves have to be on the checkmask
-    U64 movable_square = _checkMask;
+    U64 movable_square;
 
     // Slider, Knights and King moves can only go to enemy or empty squares.
-    movable_square &= _enemy_emptyBB;
+    if (mt == MoveGenType::ALL)
+        movable_square = _enemy_emptyBB;
+    else if (mt == MoveGenType::CAPTURE)
+        movable_square = _occ_enemy;
+    else  // QUIET moves
+        movable_square = ~_occ_all;
 
-    U64 moves;
+    U64 moves = generateKingMoves(king_sq, _seen, movable_square);
 
-    moves = generateKingMoves(king_sq, _seen, _enemy_emptyBB);
+    movable_square &= _checkMask;
 
     while (moves) {
         Square to = poplsb(moves);
@@ -1936,7 +1943,7 @@ void genLegalmoves(Movelist<T> &movelist, const Board &board) {
 
     if (squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
         (board.castlingRights() && _checkMask == DEFAULT_CHECKMASK)) {
-        moves = generateCastleMoves<c>(board, king_sq, _seen);
+        moves = generateCastleMoves<c, mt>(board, king_sq, _seen);
 
         while (moves) {
             Square to = poplsb(moves);
@@ -1960,7 +1967,7 @@ void genLegalmoves(Movelist<T> &movelist, const Board &board) {
     U64 queens_mask = board.pieces<PieceType::QUEEN, c>() & ~(_pinD & _pinHV);
 
     // Add the moves to the movelist.
-    generatePawnMoves<T, c>(board, movelist, _pinD, _pinHV, _checkMask, _occ_enemy);
+    generatePawnMoves<T, c, mt>(board, movelist, _pinD, _pinHV, _checkMask, _occ_enemy);
 
     while (knights_mask) {
         const Square from = poplsb(knights_mask);
