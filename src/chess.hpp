@@ -109,11 +109,20 @@ enum class Direction : int8_t {
 };
 
 enum class Color : uint8_t { WHITE, BLACK, NO_COLOR };
-
-enum class GameResult { WIN, LOSE, DRAW, NONE };
-
 constexpr Color operator~(const Color &c) {
     return static_cast<Color>(static_cast<int>(c) ^ static_cast<int>(Color::BLACK));
+}
+
+enum class GameResult { WIN, LOSE, DRAW, NONE };
+constexpr GameResult operator~(GameResult gm) {
+    if (gm == GameResult::WIN)
+        return GameResult::LOSE;
+    else if (gm == GameResult::LOSE)
+        return GameResult::WIN;
+    else if (gm == GameResult::DRAW)
+        return GameResult::DRAW;
+    else
+        return GameResult::NONE;
 }
 
 // *******************
