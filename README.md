@@ -288,8 +288,11 @@ class Board {
     bool isKingAttacked() const;
 
     std::string uci(const Move &move) const;
-
     Move uciToMove(const std::string &uci) const;
+
+    // convert a move to san/lan notation
+    std::string san(const Move &move);
+    std::string lan(const Move &move);
 };
 ```
 
