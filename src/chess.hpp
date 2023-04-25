@@ -2040,6 +2040,13 @@ inline void legalmoves(Movelist<T> &movelist, const Board &board) {
         genLegalmoves<T, Color::BLACK, mt>(movelist, board);
 }
 
+template <typename T>
+inline bool isLegal(const Board &board, const T &move) {
+    Movelist<T> movelist;
+    legalmoves<T, MoveGenType::ALL>(movelist, board);
+
+    return movelist.find(move) != -1;
+}
 }  // namespace Movegen
 
 inline GameResult Board::isGameOver() {

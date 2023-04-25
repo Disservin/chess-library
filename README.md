@@ -298,7 +298,10 @@ class Board {
 ```c++
 namespace MoveGen {
     template <typename T, MoveGenType mt>
-     void legalmoves(Movelist<T> &movelist, const Board &board);
+    void legalmoves(Movelist<T> &movelist, const Board &board);
+
+    template <typename T>
+    bool isLegal(const Board &board, const T &move);
 }
 ```
 
