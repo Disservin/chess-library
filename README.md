@@ -45,7 +45,7 @@ enum class GameResult;
 ```c++
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 static constexpr int MAX_SQ = 64;
-static constexpr int MAX_MOVES = 128;
+static constexpr int MAX_MOVES = 218;
 ```
 
 ## The Move Object
