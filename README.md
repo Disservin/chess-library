@@ -275,7 +275,11 @@ class Board {
     /// @return
     bool isRepetition(int count = 2) const;
 
-    GameResult isGameOver();
+    /// @brief first = reason why the game is over, "" if not over
+    /// @param os
+    /// @param b
+    /// @return
+    std::pair<std::string, GameResult> isGameOver() const;
 
     /// Is the square attacked by color c?
     /// @param square
