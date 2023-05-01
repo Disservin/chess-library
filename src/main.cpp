@@ -45,17 +45,20 @@ uint64_t perft_thread(Board& board) {
     }
 }
 
+uint64_t evaluate(Board& board, int n);
+
 int main() {
 #ifdef PGO_DEPTH
     constexpr int kDepth = PGO_DEPTH;
     Board board = Board();
 #else
-    constexpr int kDepth = 7;
+    int kDepth = 7;
+    std::cin >> kDepth;
     Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 #endif  // DEPTH
 
     const auto t0 = std::chrono::high_resolution_clock::now();
-    uint64_t nodes = perft_thread<kDepth>(board);
+    uint64_t nodes = evaluate(board, kDepth);
     for (auto& future : futures) {
         nodes += future.get();
     }
@@ -68,34 +71,23 @@ int main() {
     return 0;
 }
 
-// template instantiation
-template uint64_t perft_thread<1>(Board&);
-template uint64_t perft_thread<2>(Board&);
-template uint64_t perft_thread<3>(Board&);
-template uint64_t perft_thread<4>(Board&);
-template uint64_t perft_thread<5>(Board&);
-template uint64_t perft_thread<6>(Board&);
-template uint64_t perft_thread<7>(Board&);
-template uint64_t perft_thread<8>(Board&);
-template uint64_t perft_thread<9>(Board&);
-template uint64_t perft_thread<10>(Board&);
-template uint64_t perft_thread<11>(Board&);
-template uint64_t perft_thread<12>(Board&);
-template uint64_t perft_thread<13>(Board&);
-template uint64_t perft_thread<14>(Board&);
-template uint64_t perft_thread<15>(Board&);
-template uint64_t perft_thread<16>(Board&);
-template uint64_t perft_thread<17>(Board&);
-template uint64_t perft_thread<18>(Board&);
-template uint64_t perft_thread<19>(Board&);
-template uint64_t perft_thread<20>(Board&);
-template uint64_t perft_thread<21>(Board&);
-template uint64_t perft_thread<22>(Board&);
-template uint64_t perft_thread<23>(Board&);
-template uint64_t perft_thread<24>(Board&);
-template uint64_t perft_thread<25>(Board&);
-template uint64_t perft_thread<26>(Board&);
-template uint64_t perft_thread<27>(Board&);
-template uint64_t perft_thread<28>(Board&);
-template uint64_t perft_thread<29>(Board&);
-template uint64_t perft_thread<30>(Board&);
+template <int N>
+constexpr uint64_t evaluateHelper(Board& board) {
+    return perft_thread<N>(board);
+}
+
+template <int N>
+constexpr uint64_t evaluateSwitch(Board& board, int n) {
+    if (n == N) {
+        return evaluateHelper<N>(board);
+    } else {
+        return evaluateSwitch<N - 1>(board, n);
+    }
+}
+
+template <>
+constexpr uint64_t evaluateSwitch<0>(Board& board, int n) {
+    return 0;
+}
+
+uint64_t evaluate(Board& board, int n) { return evaluateSwitch<30>(board, n); }
