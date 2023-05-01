@@ -8,7 +8,7 @@ Tested on Ryzen 9 5950X:
 TESTED ON A RYZEN 5 5950X IT ACHIEVES THE FOLLOWING SPEED:**
 
 ```
-nodes 3195901860 time 585ms nps 5.453.757.440
+nodes 3195901860 time 521ms nps 6.122.417.356
 ```
 
 This is without a transposition table.

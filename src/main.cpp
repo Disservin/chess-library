@@ -1,3 +1,6 @@
+#pragma GCC diagnostic ignored "-Wmissing-profile"
+#pragma GCC diagnostic ignored "-Wcoverage-mismatch"
+
 #include <iomanip>
 #include <sstream>
 #include <thread>
