@@ -34,9 +34,3 @@ debug:
 	
 clean:
 	rm *.o *.exe
-
-pgo:
-	$(CXX) -DNDEBUG -DPGO_DEPTH=7 $(CXXFLAGS) $(PGO_GEN) main.cpp -o out
-	./out
-	$(PGO_MERGE)
-	$(CXX) -DNDEBUG $(CXXFLAGS) $(PGO_USE) main.cpp -o out

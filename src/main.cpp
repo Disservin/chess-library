@@ -48,14 +48,9 @@ uint64_t perft_thread(Board& board) {
 uint64_t evaluate(Board& board, int n);
 
 int main() {
-#ifdef PGO_DEPTH
-    constexpr int kDepth = PGO_DEPTH;
-    Board board = Board();
-#else
     int kDepth = 7;
     std::cin >> kDepth;
     Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-#endif  // DEPTH
 
     const auto t0 = std::chrono::high_resolution_clock::now();
     uint64_t nodes = evaluate(board, kDepth);
