@@ -62,7 +62,7 @@ int main() {
     const auto t1 = std::chrono::high_resolution_clock::now();
 
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
-    std::cout << "nodes " << nodes << " time " << elapsed << " nps "
+    std::cout << "nodes " << nodes << " time " << elapsed << "ms nps "
               << (nodes * 1000) / (elapsed + 1) << std::endl;
 
     return 0;
