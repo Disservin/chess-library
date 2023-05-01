@@ -1,5 +1,5 @@
 CXX      := g++
-CXXFLAGS := -O3 -flto -march=native -std=c++17 -Wall
+CXXFLAGS := -O3 -flto -march=native -std=c++17 -Wall  -Wno-error=coverage-mismatch
 FLAGS    := -pthread
 
 # Detect Windows
@@ -16,7 +16,7 @@ endif
 endif
 
 # PGO
-ifneq ($(findstring gcc, $(CXX)),)
+ifneq ($(findstring g++, $(CXX)),)
 	PGO_GEN = -fprofile-generate
 	PGO_USE = -fprofile-use
 else ifneq ($(findstring clang, $(CXX)),)
@@ -36,7 +36,7 @@ clean:
 	rm *.o *.exe
 
 pgo:
-	$(CXX) -DNDEBUG -DPGO_DEPTH=7 $(CXXFLAGS) $(PGO_GEN) main.cpp -o out
+	$(CXX) -DNDEBUG -DPGO_DEPTH=7 -DPGO_THREADS=1 $(CXXFLAGS) $(PGO_GEN) main.cpp -o out
 	./out
 	$(PGO_MERGE)
 	$(CXX) -DNDEBUG $(CXXFLAGS) $(PGO_USE) main.cpp -o out

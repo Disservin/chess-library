@@ -7,8 +7,10 @@
 
 using namespace Chess;
 
+#ifndef PGO_THREADS
 ThreadPool pool(std::thread::hardware_concurrency());
 std::vector<std::future<uint64_t>> futures;
+#endif  // PGO_THREADS
 
 template <int DEPTH>
 uint64_t perft_thread(Board& board);
@@ -32,11 +34,15 @@ uint64_t perft_thread(Board& board) {
             const auto move = moves[i];
             board.makeMove(move);
 
+#ifdef PGO_THREADS
+            nodes += perft_thread<DEPTH - 1>(board);
+#else
             if constexpr (DEPTH == 5) {
                 futures.emplace_back(pool.enqueue(perft_thread_start<DEPTH - 1>, board));
             } else {
                 nodes += perft_thread<DEPTH - 1>(board);
             }
+#endif  // PGO_THREADS
 
             board.unmakeMove(move);
         }
@@ -59,9 +65,12 @@ int main() {
 
     const auto t0 = std::chrono::high_resolution_clock::now();
     uint64_t nodes = evaluate(board, kDepth);
+#ifndef PGO_THREADS
     for (auto& future : futures) {
         nodes += future.get();
     }
+#endif  // !PGO_THREADS
+
     const auto t1 = std::chrono::high_resolution_clock::now();
 
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
