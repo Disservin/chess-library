@@ -16,6 +16,13 @@ averaged:
 nodes 4528287989 nps 412976560
 ```
 
+**There are also parallel implementations of perft, you can find these in the [parallel](https://github.com/Disservin/chess-library/tree/parallel) and [parallel-pgo](https://github.com/Disservin/chess-library/tree/parallel-pgo) branches.**
+
+```
+Parallel     : nodes 3195901860 time 585ms nps 5.453.757.440
+Parallel-Pgo : nodes 3195901860 time 521ms nps 6.122.417.356
+```
+
 ## Usage
 
 This is a single/two header library.
