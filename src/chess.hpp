@@ -2264,6 +2264,14 @@ inline Move Board::parseSan(std::string san) {
         throw std::runtime_error("illegal san, step 2: " + san);
     }
 
+    /*
+    group | description
+    1     | ^([NBKRQ])? match moving piecetype (optional)
+    2     | ([a-h])? match from file (optional)
+    3     | ([1-8])?[\\-x]? match from rank (optional), castle - or capture x
+    4     | ([a-h][1-8]) match to square, always present
+    5     | (=?[nbrqkNBRQK])?[\\+#]? match promotion (optional), check + or checkmate #
+    */
     const auto match =
         regex(san, "^([NBKRQ])?([a-h])?([1-8])?[\\-x]?([a-h][1-8])(=?[nbrqkNBRQK])?[\\+#]?");
 
