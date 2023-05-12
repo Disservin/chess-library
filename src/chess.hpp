@@ -32,11 +32,11 @@ SOFTWARE.
 #include <cctype>
 #include <chrono>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <regex>
 
 namespace Chess {
 
@@ -226,6 +226,7 @@ struct Move {
 
     template <uint16_t MoveType = 0>
     static Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT) {
+        static_assert(sizeof(Move) == sizeof(uint16_t));
         return Move(MoveType +
                     ((static_cast<uint16_t>(pt) - static_cast<uint16_t>(PieceType::KNIGHT)) << 12) +
                     static_cast<uint16_t>(source << 6) + static_cast<uint16_t>(target));
@@ -860,7 +861,7 @@ auto init_squares_between = []() constexpr {
     }
     return squares_between_bb;
 };
-}
+}  // namespace
 
 static const std::array<std::array<U64, 64>, 64> SQUARES_BETWEEN_BB = init_squares_between();
 
