@@ -96,7 +96,7 @@ enum class Rank : uint8_t { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK
 
 enum class File : uint8_t { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NONE };
 
-enum CastlingRight : uint8_t { WK = 1, WQ = 2, BK = 4, BQ = 8 };
+enum class CastleSide : uint8_t { KING_SIDE, QUEEN_SIDE };
 
 enum class Direction : int8_t {
     NORTH = 8,
@@ -133,12 +133,6 @@ constexpr GameResult operator~(GameResult gm) {
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 static constexpr int MAX_SQ = 64;
 static constexpr int MAX_MOVES = 218;
-
-static constexpr U64 WK_CASTLE_MASK = (1ULL << SQ_F1) | (1ULL << SQ_G1);
-static constexpr U64 WQ_CASTLE_MASK = (1ULL << SQ_D1) | (1ULL << SQ_C1) | (1ULL << SQ_B1);
-
-static constexpr U64 BK_CASTLE_MASK = (1ULL << SQ_F8) | (1ULL << SQ_G8);
-static constexpr U64 BQ_CASTLE_MASK = (1ULL << SQ_D8) | (1ULL << SQ_C8) | (1ULL << SQ_B8);
 
 // all 64 bits set
 static constexpr U64 DEFAULT_CHECKMASK = 0xffffffffffffffffull;
@@ -182,9 +176,6 @@ static std::unordered_map<Piece, char> pieceToChar({{Piece::WHITEPAWN, 'P'},
                                                     {Piece::BLACKKING, 'k'},
                                                     {Piece::NONE, '.'}});
 
-static std::unordered_map<char, CastlingRight> charToCR(
-    {{'K', WK}, {'k', BK}, {'Q', WQ}, {'q', BQ}});
-
 static std::unordered_map<PieceType, char> PieceTypeToPromPiece({{PieceType::KNIGHT, 'n'},
                                                                  {PieceType::BISHOP, 'b'},
                                                                  {PieceType::ROOK, 'r'},
@@ -201,14 +192,108 @@ const std::string squareToString[64] = {
 //
 // *******************
 
+// *******************
+// CASTLING
+// *******************
+class BitField16 {
+   public:
+    BitField16() : value_(0) {}
+
+    // Sets the value of the specified group to the given value
+    void setGroupValue(uint16_t group_index, uint16_t group_value) {
+        assert(group_value < 16 && "group_value must be less than 16");
+        assert(group_index < 4 && "group_index must be less than 4");
+
+        // calculate the bit position of the start of the group you want to set
+        uint16_t startBit = group_index * group_size_;
+        uint16_t setMask = static_cast<uint16_t>(group_value << startBit);
+
+        // clear the bits in the group
+        value_ &= ~(0xF << startBit);
+
+        // set the bits in the group
+        value_ |= setMask;
+    }
+
+    uint16_t getGroup(uint16_t group_index) const {
+        assert(group_index < 4 && "group_index must be less than 4");
+        uint16_t startBit = group_index * group_size_;
+        return (value_ >> startBit) & 0xF;
+    }
+
+    void clear() { value_ = 0; }
+    uint16_t get() const { return value_; }
+
+   private:
+    static constexpr uint16_t group_size_ = 4;  // size of each group
+    uint16_t value_;
+};
+
+class CastlingRights {
+   public:
+    template <Color color, CastleSide castle, File rook_file>
+    void setCastlingRight() {
+        int file = static_cast<uint16_t>(rook_file) + 1;
+
+        castling_rights.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle),
+                                      static_cast<uint16_t>(file));
+    }
+
+    void clearAllCastlingRights() { castling_rights.clear(); }
+
+    void clearCastlingRight(Color color, CastleSide castle) {
+        castling_rights.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle), 0);
+    }
+
+    void clearCastlingRight(Color color) {
+        castling_rights.setGroupValue(2 * static_cast<int>(color), 0);
+        castling_rights.setGroupValue(2 * static_cast<int>(color) + 1, 0);
+    }
+
+    bool isEmpty() const { return castling_rights.get() == 0; }
+
+    bool hasCastlingRight(Color color) const {
+        return castling_rights.getGroup(2 * static_cast<int>(color)) != 0 ||
+               castling_rights.getGroup(2 * static_cast<int>(color) + 1) != 0;
+    }
+
+    bool hasCastlingRight(Color color, CastleSide castle) const {
+        return castling_rights.getGroup(2 * static_cast<int>(color) + static_cast<int>(castle)) !=
+               0;
+    }
+
+    File getRookFile(Color color, CastleSide castle) const {
+        assert(hasCastlingRight(color, castle) && "Castling right does not exist");
+        return static_cast<File>(
+            castling_rights.getGroup(2 * static_cast<int>(color) + static_cast<int>(castle)) - 1);
+    }
+
+    int getHashIndex() const {
+        return hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE) +
+               2 * hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE) +
+               4 * hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE) +
+               8 * hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE);
+    }
+
+   private:
+    /*
+     denotes the file of the rook that we castle to
+     1248 1248 1248 1248
+     0000 0000 0000 0000
+     bq   bk   wq   wk
+     3    2    1    0
+     */
+    BitField16 castling_rights;
+};
+
 struct State {
     U64 hash;
     Square enpassant;
-    uint8_t castling;
+    CastlingRights castling;
     uint8_t half_moves;
     Piece captured_piece;
 
-    State(U64 _hash, Square _enpassant, uint8_t _castling, uint8_t _half_move,
+    State(U64 _hash, Square _enpassant, CastlingRights _castling, uint8_t _half_move,
           Piece _captured_piece) {
         hash = _hash;
         enpassant = _enpassant;
@@ -921,7 +1006,7 @@ class Board {
     [[nodiscard]] uint64_t hash() const { return hash_key_; };
     [[nodiscard]] Color sideToMove() const { return side_to_move_; }
     [[nodiscard]] Square enpassantSquare() const { return enpassant_square_; }
-    [[nodiscard]] uint8_t castlingRights() const { return castling_rights_; }
+    [[nodiscard]] CastlingRights castlingRights() const { return castling_rights_; }
     /// TODO
     /// @return
     [[nodiscard]] bool chess960() const { return chess960_; }
@@ -969,8 +1054,6 @@ class Board {
     void updateKeyCastling();
     void updateKeySideToMove();
 
-    void removeCastlingRight(CastlingRight cr) { castling_rights_ &= ~cr; }
-
     void placePiece(Piece piece, Square sq);
     void removePiece(Piece piece, Square sq);
 
@@ -984,7 +1067,7 @@ class Board {
     Color side_to_move_;
     Square enpassant_square_;
 
-    uint8_t castling_rights_ = 15;
+    CastlingRights castling_rights_;
 
     // halfmoves start at 0
     uint8_t half_moves_;
@@ -1005,7 +1088,6 @@ class Board {
 inline Board::Board() {
     side_to_move_ = Color::WHITE;
     enpassant_square_ = Square::NO_SQ;
-    castling_rights_ = WK | WQ | BK | BQ;
     half_moves_ = 0;
     full_moves_ = 1;
 
@@ -1055,10 +1137,23 @@ inline void Board::loadFen(std::string fen) {
         }
     }
 
-    castling_rights_ = 0;
+    castling_rights_.clearAllCastlingRights();
 
     for (char i : castling) {
-        if (charToCR.find(i) != charToCR.end()) castling_rights_ |= static_cast<int>(charToCR[i]);
+        if (!chess960_) {
+            if (i == 'K')
+                castling_rights_
+                    .setCastlingRight<Color::WHITE, CastleSide::KING_SIDE, File::FILE_H>();
+            if (i == 'Q')
+                castling_rights_
+                    .setCastlingRight<Color::WHITE, CastleSide::QUEEN_SIDE, File::FILE_A>();
+            if (i == 'k')
+                castling_rights_
+                    .setCastlingRight<Color::BLACK, CastleSide::KING_SIDE, File::FILE_H>();
+            if (i == 'q')
+                castling_rights_
+                    .setCastlingRight<Color::BLACK, CastleSide::QUEEN_SIDE, File::FILE_A>();
+        }
     }
 
     if (en_passant == "-") {
@@ -1124,11 +1219,11 @@ inline std::string Board::getFen() const {
 
     // Append the appropriate characters to the FEN string to indicate
     // whether castling is allowed for each player
-    if (castling_rights_ & WK) ss << "K";
-    if (castling_rights_ & WQ) ss << "Q";
-    if (castling_rights_ & BK) ss << "k";
-    if (castling_rights_ & BQ) ss << "q";
-    if (castling_rights_ == 0) ss << "-";
+    if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE)) ss << "K";
+    if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE)) ss << "Q";
+    if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE)) ss << "k";
+    if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE)) ss << "q";
+    if (castling_rights_.isEmpty()) ss << "-";
 
     // Append information about the en passant square (if any)
     // and the half-move clock and full move number to the FEN string
@@ -1224,7 +1319,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     }
     os << "\n\n";
     os << "Side to move: " << static_cast<int>(b.side_to_move_) << "\n";
-    os << "Castling rights: " << static_cast<int>(b.castling_rights_) << "\n";
+    // os << "Castling rights: " << static_cast<int>(b.castling_rights_) << "\n";
     os << "Halfmoves: " << static_cast<int>(b.half_moves_) << "\n";
     os << "Fullmoves: " << static_cast<int>(b.full_moves_) / 2 << "\n";
     os << "EP: " << static_cast<int>(b.enpassant_square_) << "\n";
@@ -1241,7 +1336,9 @@ inline void Board::updateKeyEnPassant(Square sq) {
     hash_key_ ^= RANDOM_ARRAY[772 + static_cast<int>(squareFile(sq))];
 }
 
-inline void Board::updateKeyCastling() { hash_key_ ^= castlingKey[castling_rights_]; }
+inline void Board::updateKeyCastling() {
+    hash_key_ ^= castlingKey[castling_rights_.getHashIndex()];
+}
 
 inline void Board::updateKeySideToMove() { hash_key_ ^= RANDOM_ARRAY[780]; }
 
@@ -1303,7 +1400,6 @@ inline void Board::zobristHash() {
 inline Board::Board(const std::string &fen) {
     side_to_move_ = Color::WHITE;
     enpassant_square_ = Square::NO_SQ;
-    castling_rights_ = WK | WQ | BK | BQ;
     half_moves_ = 0;
     full_moves_ = 1;
     hash_key_ = 0ULL;
@@ -1338,28 +1434,25 @@ inline void Board::makeMove(const Move &move) {
         const auto rank = squareRank(move.to());
 
         if (typeOfPiece(captured) == PieceType::ROOK &&
-            (rank == Rank::RANK_1 || rank == Rank::RANK_8)) {
+            ((rank == Rank::RANK_1 && side_to_move_ == Color::BLACK) ||
+             (rank == Rank::RANK_8 && side_to_move_ == Color::WHITE))) {
             const auto king_sq = kingSq(~side_to_move_);
 
-            if (rank == Rank::RANK_8 && side_to_move_ == Color::WHITE) {
-                castling_rights_ &= ~(move.to() > king_sq ? BK : BQ);
-            } else if (rank == Rank::RANK_1 && side_to_move_ == Color::BLACK) {
-                castling_rights_ &= ~(move.to() > king_sq ? WK : WQ);
-            }
+            castling_rights_.clearCastlingRight(~side_to_move_, move.to() > king_sq
+                                                                    ? CastleSide::KING_SIDE
+                                                                    : CastleSide::QUEEN_SIDE);
         }
     }
 
     if (pt == PieceType::KING) {
-        castling_rights_ &= ~(side_to_move_ == Color::WHITE ? (WK | WQ) : (BK | BQ));
-    } else if (pt == PieceType::ROOK) {
-        const auto rank = squareRank(move.from());
+        castling_rights_.clearCastlingRight(side_to_move_);
+    } else if (pt == PieceType::ROOK &&
+               ((squareRank(move.from()) == Rank::RANK_8 && side_to_move_ == Color::BLACK) ||
+                (squareRank(move.from()) == Rank::RANK_1 && side_to_move_ == Color::WHITE))) {
         const auto king_sq = kingSq(side_to_move_);
 
-        if (rank == Rank::RANK_8 && side_to_move_ == Color::BLACK) {
-            castling_rights_ &= ~(move.from() > king_sq ? BK : BQ);
-        } else if (rank == Rank::RANK_1 && side_to_move_ == Color::WHITE) {
-            castling_rights_ &= ~(move.from() > king_sq ? WK : WQ);
-        }
+        castling_rights_.clearCastlingRight(
+            side_to_move_, move.from() > king_sq ? CastleSide::KING_SIDE : CastleSide::QUEEN_SIDE);
     } else if (pt == PieceType::PAWN) {
         half_moves_ = 0;
 
@@ -1929,15 +2022,14 @@ inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen) {
     U64 moves = 0ull;
     const U64 empty_not_attacked = ~seen & ~board.occ();
 
-    const auto king_side = c == Color::WHITE ? WK : BK;
-    const auto queen_side = c == Color::WHITE ? WQ : BQ;
-
     const auto rights = board.castlingRights();
-    for (const auto cr : {king_side, queen_side}) {
-        if (!(rights & cr)) continue;
 
-        const auto end_sq = relativeSquare(c, cr == king_side ? Square::SQ_G1 : Square::SQ_C1);
-        const auto to_sq = relativeSquare(c, cr == king_side ? Square::SQ_H1 : Square::SQ_A1);
+    for (const auto side : {CastleSide::KING_SIDE, CastleSide::QUEEN_SIDE}) {
+        if (!rights.hasCastlingRight(c, side)) continue;
+
+        const auto end_sq =
+            relativeSquare(c, side == CastleSide::KING_SIDE ? Square::SQ_G1 : Square::SQ_C1);
+        const auto to_sq = fileRankSquare(rights.getRookFile(c, side), squareRank(sq));
 
         const auto not_occ_path = SQUARES_BETWEEN_BB[sq][to_sq];
         const auto not_attacked_path = SQUARES_BETWEEN_BB[sq][end_sq] | (1ull << end_sq);
@@ -1996,7 +2088,7 @@ void genLegalmoves(Movelist<T> &movelist, const Board &board) {
     }
 
     if (squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
-        (board.castlingRights() && _checkMask == DEFAULT_CHECKMASK)) {
+        (board.castlingRights().hasCastlingRight(c) && _checkMask == DEFAULT_CHECKMASK)) {
         moves = generateCastleMoves<c, mt>(board, king_sq, _seen);
 
         while (moves) {
