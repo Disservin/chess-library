@@ -1,7 +1,8 @@
 ## Overview:
 
 A chess library for C++, with reasonably fast move generation for all purposes.  
-Also supports FRC/DFRC.  
+Also supports FRC/DFRC. Make sure that these are correct and include the file of the rook  
+not K/Q/k/q or other annotations. Only a,b,c,d,e,f,g,h and uppercase variants are valid.
 Tested on Ryzen 9 5950X:
 
 ```
