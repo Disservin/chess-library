@@ -1161,11 +1161,11 @@ inline void Board::loadFen(std::string fen) {
                 castling_rights_
                     .setCastlingRight<Color::BLACK, CastleSide::QUEEN_SIDE, File::FILE_A>();
         } else {
-            const Color color = isupper(i) ? Color::WHITE : Color::BLACK;
+            const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
             const auto king_sq = kingSq(color);
-            const File file = static_cast<File>(tolower(i) - 97);
-            const CastleSide side = int(file) > int(squareFile(king_sq)) ? CastleSide::KING_SIDE
-                                                                         : CastleSide::QUEEN_SIDE;
+            const auto file = static_cast<File>(tolower(i) - 97);
+            const auto side = int(file) > int(squareFile(king_sq)) ? CastleSide::KING_SIDE
+                                                                   : CastleSide::QUEEN_SIDE;
             castling_rights_.setCastlingRight(color, side, file);
         }
     }
