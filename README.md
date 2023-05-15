@@ -1,7 +1,7 @@
 ## Overview:
 
-A chess library for C++.<br>
-Reasonably fast move generation for all purposes.<br>
+A chess library for C++, with reasonably fast move generation for all purposes.  
+Also supports FRC/DFRC.  
 Tested on Ryzen 9 5950X:
 
 ```
@@ -50,7 +50,7 @@ enum class GameResult;
 ```c++
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 static constexpr int MAX_SQ = 64;
-static constexpr int MAX_MOVES = 218;
+static constexpr int MAX_MOVES = 350;
 ```
 
 ## The Move Object
