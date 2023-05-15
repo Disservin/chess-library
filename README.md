@@ -30,8 +30,6 @@ This is a single/two header library.
 You only need to include `chess.hpp` header and have the `sliders.hpp` header in the same directory.
 Aftewards you can access the chess logic over the `Chess::` namespace.
 
-**Currenlty chess960 is not fully implemented!**
-
 ## Types:
 
 ```c++
@@ -270,8 +268,7 @@ class Board {
     Square enpassantSquare() const;
     uint8_t castlingRights() const;
 
-    /// TODO
-    /// @return
+    void setChess960(bool chess960);
     bool chess960() const;
 
     U64 occ() const;
