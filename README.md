@@ -39,7 +39,7 @@ enum class Piece;
 enum class PieceType;
 enum class Rank;
 enum class File;
-enum CastlingRight;
+enum class CastleSide;
 enum class Direction;
 enum class Color;
 enum class GameResult;
@@ -316,7 +316,7 @@ namespace MoveGen {
 }
 ```
 
-### Creation
+### Movelist Usage
 
 ```c++
 Movelist<Move> movelist;
