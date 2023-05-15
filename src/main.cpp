@@ -61,6 +61,7 @@ class PerftTest {
 
 int main() {
     Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    std::cout << board.hash() << std::endl;
     PerftTest perft = PerftTest();
 
     U64 totalNodes = 0;
