@@ -132,7 +132,7 @@ constexpr GameResult operator~(GameResult gm) {
 
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 static constexpr int MAX_SQ = 64;
-static constexpr int MAX_MOVES = 218;
+static constexpr int MAX_MOVES = 350;
 
 // all 64 bits set
 static constexpr U64 DEFAULT_CHECKMASK = 0xffffffffffffffffull;
@@ -180,7 +180,6 @@ static std::unordered_map<PieceType, char> PieceTypeToPromPiece({{PieceType::KNI
                                                                  {PieceType::BISHOP, 'b'},
                                                                  {PieceType::ROOK, 'r'},
                                                                  {PieceType::QUEEN, 'q'}});
-
 const std::string squareToString[64] = {
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1", "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
     "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3", "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
@@ -233,6 +232,13 @@ class CastlingRights {
    public:
     template <Color color, CastleSide castle, File rook_file>
     void setCastlingRight() {
+        int file = static_cast<uint16_t>(rook_file) + 1;
+
+        castling_rights.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle),
+                                      static_cast<uint16_t>(file));
+    }
+
+    void setCastlingRight(Color color, CastleSide castle, File rook_file) {
         int file = static_cast<uint16_t>(rook_file) + 1;
 
         castling_rights.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle),
@@ -1007,9 +1013,10 @@ class Board {
     [[nodiscard]] Color sideToMove() const { return side_to_move_; }
     [[nodiscard]] Square enpassantSquare() const { return enpassant_square_; }
     [[nodiscard]] CastlingRights castlingRights() const { return castling_rights_; }
-    /// TODO
-    /// @return
+
+    void setChess960(bool chess960) { chess960_ = chess960; }
     [[nodiscard]] bool chess960() const { return chess960_; }
+
     [[nodiscard]] U64 occ() const {
         assert((us(Color::WHITE) | us(Color::BLACK)) == occ_all_);
         return occ_all_;
@@ -1098,7 +1105,7 @@ inline Board::Board() {
     occ_all_ = all();
     hash_key_ = 0ULL;
 }
-// Board::Board(const std::string &fen) {}
+
 inline void Board::loadFen(std::string fen) {
     trim(fen);
 
@@ -1153,6 +1160,13 @@ inline void Board::loadFen(std::string fen) {
             if (i == 'q')
                 castling_rights_
                     .setCastlingRight<Color::BLACK, CastleSide::QUEEN_SIDE, File::FILE_A>();
+        } else {
+            const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
+            const auto king_sq = kingSq(color);
+            const auto file = static_cast<File>(tolower(i) - 97);
+            const auto side = int(file) > int(squareFile(king_sq)) ? CastleSide::KING_SIDE
+                                                                   : CastleSide::QUEEN_SIDE;
+            castling_rights_.setCastlingRight(color, side, file);
         }
     }
 
@@ -1343,6 +1357,8 @@ inline void Board::updateKeyCastling() {
 inline void Board::updateKeySideToMove() { hash_key_ ^= RANDOM_ARRAY[780]; }
 
 inline void Board::removePiece(Piece piece, Square sq) {
+    assert(board_[sq] == piece && piece != Piece::NONE);
+
     updateKeyPiece(piece, sq);
     pieces_bb_[static_cast<int>(colorOfPiece(piece))][static_cast<int>(typeOfPiece(piece))] &=
         ~(1ULL << sq);
@@ -1352,6 +1368,7 @@ inline void Board::removePiece(Piece piece, Square sq) {
 }
 
 inline void Board::placePiece(Piece piece, Square sq) {
+    assert(board_[sq] == Piece::NONE);
     updateKeyPiece(piece, sq);
     pieces_bb_[static_cast<int>(colorOfPiece(piece))][static_cast<int>(typeOfPiece(piece))] |=
         (1ULL << sq);
@@ -1484,13 +1501,18 @@ inline void Board::makeMove(const Move &move) {
 
         auto king = removePiece(move.from());
         auto rook = removePiece(move.to());
+        assert(king == makePiece(side_to_move_, PieceType::KING));
+        assert(rook == makePiece(side_to_move_, PieceType::ROOK));
+
         placePiece(king, kingTo);
         placePiece(rook, rookTo);
+
     } else if (move.typeOf() == Move::PROMOTION) {
         removePiece(makePiece(side_to_move_, PieceType::PAWN), move.from());
         placePiece(makePiece(side_to_move_, move.promotionType()), move.to());
     } else {
         assert(pieceAt(move.from()) != Piece::NONE);
+        assert(pieceAt(move.to()) == Piece::NONE);
 
         auto piece = removePiece(move.from());
         placePiece(piece, move.to());
@@ -1532,17 +1554,25 @@ inline void Board::unmakeMove(const Move &move) {
 
         const auto rook = removePiece(rook_from_sq);
         const auto king = removePiece(king_to_sq);
+        assert(king == makePiece(side_to_move_, PieceType::KING));
+        assert(rook == makePiece(side_to_move_, PieceType::ROOK));
 
         placePiece(king, move.from());
         placePiece(rook, move.to());
+        return;
     } else if (move.typeOf() == Move::PROMOTION) {
         const auto pawn = makePiece(side_to_move_, PieceType::PAWN);
         const auto piece = pieceAt(move.to());
+        assert(typeOfPiece(piece) == move.promotionType());
+        assert(typeOfPiece(piece) != PieceType::PAWN);
+        assert(typeOfPiece(piece) != PieceType::KING);
+        assert(typeOfPiece(piece) != PieceType::NONE);
 
         removePiece(piece, move.to());
         placePiece(pawn, move.from());
 
         if (prev.captured_piece != Piece::NONE) {
+            assert(pieceAt(move.to()) == Piece::NONE);
             placePiece(prev.captured_piece, move.to());
         }
 
@@ -1551,6 +1581,7 @@ inline void Board::unmakeMove(const Move &move) {
         assert(pieceAt(move.to()) != Piece::NONE);
 
         const auto piece = removePiece(move.to());
+        assert(pieceAt(move.from()) == Piece::NONE);
         placePiece(piece, move.from());
     }
 
@@ -1558,8 +1589,10 @@ inline void Board::unmakeMove(const Move &move) {
         const auto pawn = makePiece(~side_to_move_, PieceType::PAWN);
         const auto pawnTo = static_cast<Square>(enpassant_square_ ^ 8);
 
+        assert(pieceAt(pawnTo) == Piece::NONE);
         placePiece(pawn, pawnTo);
     } else if (prev.captured_piece != Piece::NONE) {
+        assert(pieceAt(move.to()) == Piece::NONE);
         placePiece(prev.captured_piece, move.to());
     }
 }
@@ -1765,7 +1798,7 @@ U64 seenSquares(const Board &board, U64 enemy_empty) {
 
     U64 map_king_atk = Attacks::KING(king_sq) & enemy_empty;
 
-    if (map_king_atk == 0ull) {
+    if (map_king_atk == 0ull && !board.chess960()) {
         return 0ull;
     }
 
@@ -2016,27 +2049,33 @@ inline U64 generateKingMoves(Square sq, U64 _seen, U64 movable_square) {
 }
 
 template <Color c, MoveGenType mt>
-inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen) {
+inline U64 generateCastleMoves(const Board &board, Square sq, U64 seen, U64 pinHV) {
     if constexpr (mt == MoveGenType::CAPTURE) return 0ull;
+    const auto rights = board.castlingRights();
 
     U64 moves = 0ull;
-    const U64 empty_not_attacked = ~seen & ~board.occ();
-
-    const auto rights = board.castlingRights();
 
     for (const auto side : {CastleSide::KING_SIDE, CastleSide::QUEEN_SIDE}) {
         if (!rights.hasCastlingRight(c, side)) continue;
 
-        const auto end_sq =
+        const auto end_king_sq =
             relativeSquare(c, side == CastleSide::KING_SIDE ? Square::SQ_G1 : Square::SQ_C1);
-        const auto to_sq = fileRankSquare(rights.getRookFile(c, side), squareRank(sq));
+        const auto end_rook_sq =
+            relativeSquare(c, side == CastleSide::KING_SIDE ? Square::SQ_F1 : Square::SQ_D1);
 
-        const auto not_occ_path = SQUARES_BETWEEN_BB[sq][to_sq];
-        const auto not_attacked_path = SQUARES_BETWEEN_BB[sq][end_sq] | (1ull << end_sq);
+        const auto from_rook_sq = fileRankSquare(rights.getRookFile(c, side), squareRank(sq));
 
-        if ((empty_not_attacked & not_attacked_path) == not_attacked_path &&
-            (not_occ_path & ~board.occ()) == not_occ_path) {
-            moves |= (1ull << to_sq);
+        const U64 not_occ_path = SQUARES_BETWEEN_BB[sq][from_rook_sq];
+        const U64 not_attacked_path = SQUARES_BETWEEN_BB[sq][end_king_sq];
+        const U64 empty_not_attacked = ~seen & ~(board.occ() & ~(1ull << from_rook_sq));
+        const U64 withoutRook = board.occ() & ~(1ull << from_rook_sq);
+
+        if ((not_attacked_path & empty_not_attacked) == not_attacked_path &&
+            ((not_occ_path & ~board.occ()) == not_occ_path) &&
+            !((1ull << from_rook_sq) & pinHV & MASK_RANK[static_cast<int>(squareRank(sq))]) &&
+            !((1ull << end_rook_sq) & withoutRook) &&
+            !((1ull << end_king_sq) & (seen | (withoutRook & ~(1ull << sq))))) {
+            moves |= (1ull << from_rook_sq);
         }
     }
 
@@ -2089,7 +2128,7 @@ void genLegalmoves(Movelist<T> &movelist, const Board &board) {
 
     if (squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
         (board.castlingRights().hasCastlingRight(c) && _checkMask == DEFAULT_CHECKMASK)) {
-        moves = generateCastleMoves<c, mt>(board, king_sq, _seen);
+        moves = generateCastleMoves<c, mt>(board, king_sq, _seen, _pinHV);
 
         while (moves) {
             Square to = poplsb(moves);

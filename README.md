@@ -1,7 +1,8 @@
 ## Overview:
 
-A chess library for C++.<br>
-Reasonably fast move generation for all purposes.<br>
+A chess library for C++, with reasonably fast move generation for all purposes.  
+Also supports FRC/DFRC. Make sure that these are correct and include the file of the rook  
+not K/Q/k/q or other annotations. Only a,b,c,d,e,f,g,h and uppercase variants are valid.
 Tested on Ryzen 9 5950X:
 
 ```
@@ -30,8 +31,6 @@ This is a single/two header library.
 You only need to include `chess.hpp` header and have the `sliders.hpp` header in the same directory.
 Aftewards you can access the chess logic over the `Chess::` namespace.
 
-**Currenlty chess960 is not fully implemented!**
-
 ## Types:
 
 ```c++
@@ -41,7 +40,7 @@ enum class Piece;
 enum class PieceType;
 enum class Rank;
 enum class File;
-enum CastlingRight;
+enum class CastleSide;
 enum class Direction;
 enum class Color;
 enum class GameResult;
@@ -52,7 +51,7 @@ enum class GameResult;
 ```c++
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 static constexpr int MAX_SQ = 64;
-static constexpr int MAX_MOVES = 218;
+static constexpr int MAX_MOVES = 350;
 ```
 
 ## The Move Object
@@ -270,8 +269,7 @@ class Board {
     Square enpassantSquare() const;
     uint8_t castlingRights() const;
 
-    /// TODO
-    /// @return
+    void setChess960(bool chess960);
     bool chess960() const;
 
     U64 occ() const;
@@ -319,7 +317,7 @@ namespace MoveGen {
 }
 ```
 
-### Creation
+### Movelist Usage
 
 ```c++
 Movelist<Move> movelist;
