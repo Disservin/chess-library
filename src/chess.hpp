@@ -1306,11 +1306,11 @@ inline Board::Board(const std::string &fen) {
     castling_rights_ = WK | WQ | BK | BQ;
     half_moves_ = 0;
     full_moves_ = 1;
+    hash_key_ = 0ULL;
 
     loadFen(fen);
 
     occ_all_ = all();
-    hash_key_ = 0ULL;
 }
 
 inline void Board::makeMove(const Move &move) {
