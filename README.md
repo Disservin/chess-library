@@ -193,7 +193,7 @@ constexpr Square fileRankSquare(File f, Rank r);
 /// @param a
 /// @param b
 /// @return
-inline uint8_t squareDistance(Square a, Square b);
+uint8_t squareDistance(Square a, Square b);
 
 constexpr uint8_t diagonalOf(Square sq);
 
@@ -203,7 +203,7 @@ constexpr uint8_t antiDiagonalOf(Square sq);
 /// @param sq1
 /// @param sq2
 /// @return
-inline uint8_t manhattenDistance(Square sq1, Square sq2);
+uint8_t manhattenDistance(Square sq1, Square sq2);
 
 /// @brief color of a square, has nothing to do with whose piece is on that square
 /// @param square
