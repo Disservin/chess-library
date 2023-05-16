@@ -1017,6 +1017,8 @@ class Board {
     void setChess960(bool chess960) { chess960_ = chess960; }
     [[nodiscard]] bool chess960() const { return chess960_; }
 
+    std::string getCastleString() const;
+
     [[nodiscard]] U64 occ() const {
         assert((us(Color::WHITE) | us(Color::BLACK)) == occ_all_);
         return occ_all_;
@@ -1093,17 +1095,9 @@ class Board {
 };
 
 inline Board::Board() {
-    side_to_move_ = Color::WHITE;
-    enpassant_square_ = Square::NO_SQ;
-    half_moves_ = 0;
-    full_moves_ = 1;
-
     std::fill(std::begin(board_), std::end(board_), Piece::NONE);
 
     loadFen(STARTPOS);
-
-    occ_all_ = all();
-    hash_key_ = 0ULL;
 }
 
 inline void Board::loadFen(std::string fen) {
@@ -1233,10 +1227,7 @@ inline std::string Board::getFen() const {
 
     // Append the appropriate characters to the FEN string to indicate
     // whether castling is allowed for each player
-    if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE)) ss << "K";
-    if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE)) ss << "Q";
-    if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE)) ss << "k";
-    if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE)) ss << "q";
+    ss << getCastleString();
     if (castling_rights_.isEmpty()) ss << "-";
 
     // Append information about the en passant square (if any)
@@ -1294,6 +1285,29 @@ constexpr Color Board::colorOfPiece(Square square) const {
     return static_cast<Color>(static_cast<int>(pieceAt(square)) / 6);
 }
 
+inline std::string Board::getCastleString() const {
+    std::stringstream ss;
+
+    if (chess960_) {
+        // loop to cleanup
+        if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE))
+            ss << char(char(castling_rights_.getRookFile(Color::WHITE, CastleSide::KING_SIDE)) + 65);
+        if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE))
+            ss << char(char(castling_rights_.getRookFile(Color::WHITE, CastleSide::QUEEN_SIDE)) + 65);
+        if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE))
+            ss << char(char(castling_rights_.getRookFile(Color::BLACK, CastleSide::KING_SIDE)) + 97);
+        if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE))
+            ss << char(char(castling_rights_.getRookFile(Color::BLACK, CastleSide::QUEEN_SIDE)) + 97);
+    } else {
+        if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE)) ss << "K";
+        if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE)) ss << "Q";
+        if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE)) ss << "k";
+        if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE)) ss << "q";
+    }
+
+    return ss.str();
+}
+
 inline bool Board::isRepetition(int count) const {
     uint8_t c = 0;
 
@@ -1333,7 +1347,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     }
     os << "\n\n";
     os << "Side to move: " << static_cast<int>(b.side_to_move_) << "\n";
-    // os << "Castling rights: " << static_cast<int>(b.castling_rights_) << "\n";
+    os << "Castling rights: " << b.getCastleString() << "\n";
     os << "Halfmoves: " << static_cast<int>(b.half_moves_) << "\n";
     os << "Fullmoves: " << static_cast<int>(b.full_moves_) / 2 << "\n";
     os << "EP: " << static_cast<int>(b.enpassant_square_) << "\n";
