@@ -1048,16 +1048,15 @@ class Board {
 
     friend std::ostream &operator<<(std::ostream &os, const Board &b);
 
-    [[nodiscard]] std::string uci(const Move &move) const;
+    [[nodiscard]] std::string moveToUci(const Move &move) const;
     [[nodiscard]] Move uciToMove(const std::string &uci) const;
 
-    [[nodiscard]] std::string san(const Move &move);
-    [[nodiscard]] std::string lan(const Move &move);
+    [[nodiscard]] std::string moveToSan(const Move &move);
+    [[nodiscard]] std::string moveToLan(const Move &move);
 
     [[nodiscard]] Move parseSan(std::string san);
 
    protected:
-   private:
     void updateKeyPiece(Piece piece, Square sq);
     void updateKeyEnPassant(Square sq);
     void updateKeyCastling();
@@ -1634,7 +1633,7 @@ inline void Board::unmakeNullMove() {
     prev_states_.pop_back();
 }
 
-inline std::string Board::uci(const Move &move) const {
+inline std::string Board::moveToUci(const Move &move) const {
     std::stringstream ss;
 
     auto from = move.from();
@@ -2271,7 +2270,7 @@ inline std::pair<std::string, GameResult> Board::isGameOver() const {
     return {"", GameResult::NONE};
 }
 
-inline std::string Board::san(const Move &move) {
+inline std::string Board::moveToSan(const Move &move) {
     static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
     static const std::string repFile[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
 
@@ -2336,7 +2335,7 @@ inline std::string Board::san(const Move &move) {
     return san;
 }
 
-inline std::string Board::lan(const Move &move) {
+inline std::string Board::moveToLan(const Move &move) {
     static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
     static const std::string repFile[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
 
