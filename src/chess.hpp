@@ -340,6 +340,8 @@ struct Move {
 
     constexpr bool operator==(const Move &right) const { return move_ == right.move(); }
     constexpr bool operator!=(const Move &right) const { return move_ != right.move(); }
+    constexpr bool operator==(const uint16_t &right) const { return move_ == right; }
+    constexpr bool operator!=(const uint16_t &right) const { return move_ != right; }
 
     inline static constexpr uint16_t NO_MOVE = 0;
     inline static constexpr uint16_t NULL_MOVE = 65;
@@ -1290,13 +1292,17 @@ inline std::string Board::getCastleString() const {
     if (chess960_) {
         // loop to cleanup
         if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE))
-            ss << char(char(castling_rights_.getRookFile(Color::WHITE, CastleSide::KING_SIDE)) + 65);
+            ss << char(char(castling_rights_.getRookFile(Color::WHITE, CastleSide::KING_SIDE)) +
+                       65);
         if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE))
-            ss << char(char(castling_rights_.getRookFile(Color::WHITE, CastleSide::QUEEN_SIDE)) + 65);
+            ss << char(char(castling_rights_.getRookFile(Color::WHITE, CastleSide::QUEEN_SIDE)) +
+                       65);
         if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE))
-            ss << char(char(castling_rights_.getRookFile(Color::BLACK, CastleSide::KING_SIDE)) + 97);
+            ss << char(char(castling_rights_.getRookFile(Color::BLACK, CastleSide::KING_SIDE)) +
+                       97);
         if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE))
-            ss << char(char(castling_rights_.getRookFile(Color::BLACK, CastleSide::QUEEN_SIDE)) + 97);
+            ss << char(char(castling_rights_.getRookFile(Color::BLACK, CastleSide::QUEEN_SIDE)) +
+                       97);
     } else {
         if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE)) ss << "K";
         if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE)) ss << "Q";
