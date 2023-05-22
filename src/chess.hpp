@@ -1438,7 +1438,6 @@ inline Board::Board(const std::string &fen) {
     enpassant_square_ = Square::NO_SQ;
     half_moves_ = 0;
     full_moves_ = 1;
-    hash_key_ = 0ULL;
 
     loadFen(fen);
 
@@ -1578,6 +1577,9 @@ inline void Board::unmakeMove(const Move &move) {
 
         placePiece(king, move.from());
         placePiece(rook, move.to());
+
+        hash_key_ = prev.hash;
+
         return;
     } else if (move.typeOf() == Move::PROMOTION) {
         const auto pawn = makePiece(side_to_move_, PieceType::PAWN);
@@ -1595,6 +1597,7 @@ inline void Board::unmakeMove(const Move &move) {
             placePiece(prev.captured_piece, move.to());
         }
 
+        hash_key_ = prev.hash;
         return;
     } else {
         assert(pieceAt(move.to()) != Piece::NONE);
@@ -1614,13 +1617,18 @@ inline void Board::unmakeMove(const Move &move) {
         assert(pieceAt(move.to()) == Piece::NONE);
         placePiece(prev.captured_piece, move.to());
     }
+
+    hash_key_ = prev.hash;
 }
 
 inline void Board::makeNullMove() {
     prev_states_.emplace_back(hash_key_, enpassant_square_, castling_rights_, half_moves_,
                               Piece::NONE);
 
+    updateKeySideToMove();
+    if (enpassant_square_ != NO_SQ) updateKeyEnPassant(enpassant_square_);
     enpassant_square_ = NO_SQ;
+
     side_to_move_ = ~side_to_move_;
 
     full_moves_++;
