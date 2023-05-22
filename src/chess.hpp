@@ -38,7 +38,7 @@ SOFTWARE.
 #include <unordered_map>
 #include <vector>
 
-namespace Chess {
+namespace chess {
 
 // *******************
 // TYPE ALIAS
@@ -509,6 +509,7 @@ static constexpr U64 KING_ATTACKS_TABLE[MAX_SQ] = {
     0x2838000000000000, 0x5070000000000000, 0xA0E0000000000000, 0x40C0000000000000};
 
 // used for hash generation
+namespace zobrist {
 static constexpr U64 RANDOM_ARRAY[781] = {
     0x9D39247E33776D41, 0x2AF7398005AAA5C7, 0x44DB015024623547, 0x9C15F73E62A76AE2, 0x75834465489C0C89,
     0x3290AC3A203001BF, 0x0FBBAD1F61042279, 0xE83A908FF2FB60CA, 0x0D7E765D58755C10, 0x1A083822CEAFE02D,
@@ -688,6 +689,16 @@ static constexpr U64 castlingKey[16] = {0,
 
 static constexpr int MAP_HASH_PIECE[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 
+inline uint64_t piece(Piece piece, Square square) {
+    return RANDOM_ARRAY[64 * MAP_HASH_PIECE[static_cast<int>(piece)] + square];
+}
+
+inline uint64_t enpassant(File file) { return RANDOM_ARRAY[772 + static_cast<int>(file)]; }
+
+inline uint64_t castling(int castling) { return castlingKey[castling]; }
+
+inline uint64_t sideToMove() { return RANDOM_ARRAY[780]; }
+}  // namespace zobrist
 // file masks
 
 /// @brief U64 of all squares
@@ -1058,18 +1069,13 @@ class Board {
 
     [[nodiscard]] Move parseSan(std::string san);
 
-   protected:
-    void updateKeyPiece(Piece piece, Square sq);
-    void updateKeyEnPassant(Square sq);
-    void updateKeyCastling();
-    void updateKeySideToMove();
+    [[nodiscard]] uint64_t zobristHash();
 
+   protected:
     void placePiece(Piece piece, Square sq);
     void removePiece(Piece piece, Square sq);
 
-    Piece removePiece(Square sq);
-
-    void zobristHash();
+    [[nodiscard]] Piece removePiece(Square sq);
 
     //    std::vector<U64> hash_history_;
     std::vector<State> prev_states_;
@@ -1174,7 +1180,7 @@ inline void Board::loadFen(std::string fen) {
         enpassant_square_ = Square((rank - 1) * 8 + file - 1);
     }
 
-    zobristHash();
+    hash_key_ = zobristHash();
     occ_all_ = all();
 
     prev_states_.clear();
@@ -1361,24 +1367,10 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return os;
 }
 
-inline void Board::updateKeyPiece(Piece piece, Square sq) {
-    hash_key_ ^= RANDOM_ARRAY[64 * MAP_HASH_PIECE[static_cast<int>(piece)] + sq];
-}
-
-inline void Board::updateKeyEnPassant(Square sq) {
-    hash_key_ ^= RANDOM_ARRAY[772 + static_cast<int>(squareFile(sq))];
-}
-
-inline void Board::updateKeyCastling() {
-    hash_key_ ^= castlingKey[castling_rights_.getHashIndex()];
-}
-
-inline void Board::updateKeySideToMove() { hash_key_ ^= RANDOM_ARRAY[780]; }
-
 inline void Board::removePiece(Piece piece, Square sq) {
     assert(board_[sq] == piece && piece != Piece::NONE);
 
-    updateKeyPiece(piece, sq);
+    hash_key_ ^= zobrist::piece(piece, sq);
     pieces_bb_[static_cast<int>(colorOfPiece(piece))][static_cast<int>(typeOfPiece(piece))] &=
         ~(1ULL << sq);
     board_[sq] = Piece::NONE;
@@ -1388,7 +1380,7 @@ inline void Board::removePiece(Piece piece, Square sq) {
 
 inline void Board::placePiece(Piece piece, Square sq) {
     assert(board_[sq] == Piece::NONE);
-    updateKeyPiece(piece, sq);
+    hash_key_ ^= zobrist::piece(piece, sq);
     pieces_bb_[static_cast<int>(colorOfPiece(piece))][static_cast<int>(typeOfPiece(piece))] |=
         (1ULL << sq);
     board_[sq] = piece;
@@ -1400,7 +1392,7 @@ inline Piece Board::removePiece(Square sq) {
     auto piece = board_[sq];
     assert(piece != Piece::NONE);
 
-    updateKeyPiece(piece, sq);
+    hash_key_ ^= zobrist::piece(piece, sq);
 
     pieces_bb_[static_cast<int>(colorOfPiece(piece))][static_cast<int>(typeOfPiece(piece))] &=
         ~(1ULL << sq);
@@ -1411,33 +1403,37 @@ inline Piece Board::removePiece(Square sq) {
     return piece;
 }
 
-inline void Board::zobristHash() {
-    hash_key_ = 0ULL;
+inline uint64_t Board::zobristHash() {
+    uint64_t hash_key = 0ULL;
 
     U64 wPieces = us(Color::WHITE);
     U64 bPieces = us(Color::BLACK);
 
     while (wPieces) {
         const Square sq = poplsb(wPieces);
-        updateKeyPiece(pieceAt(sq), sq);
+        hash_key ^= zobrist::piece(pieceAt(sq), sq);
     }
     while (bPieces) {
         const Square sq = poplsb(bPieces);
-        updateKeyPiece(pieceAt(sq), sq);
+        hash_key ^= zobrist::piece(pieceAt(sq), sq);
     }
 
-    if (enpassant_square_ != NO_SQ) updateKeyEnPassant(enpassant_square_);
-    if (side_to_move_ == Color::WHITE) updateKeySideToMove();
+    uint64_t ep_hash = 0ULL;
+    if (enpassant_square_ != NO_SQ) ep_hash ^= zobrist::enpassant(squareFile(enpassant_square_));
+
+    uint64_t side_to_move_hash = 0ULL;
+    if (side_to_move_ == Color::WHITE) side_to_move_hash ^= zobrist::sideToMove();
 
     // Castle hash
-    updateKeyCastling();
+
+    uint64_t castling_hash = 0ULL;
+    castling_hash ^= zobrist::castling(castling_rights_.getHashIndex());
+
+    return hash_key ^ ep_hash ^ side_to_move_hash ^ castling_hash;
 }
 
 inline Board::Board(const std::string &fen) {
     side_to_move_ = Color::WHITE;
-    enpassant_square_ = Square::NO_SQ;
-    half_moves_ = 0;
-    full_moves_ = 1;
 
     loadFen(fen);
 
@@ -1455,11 +1451,11 @@ inline void Board::makeMove(const Move &move) {
     half_moves_++;
     full_moves_++;
 
-    if (enpassant_square_ != NO_SQ) updateKeyEnPassant(enpassant_square_);
+    if (enpassant_square_ != NO_SQ) hash_key_ ^= zobrist::enpassant(squareFile(enpassant_square_));
 
     enpassant_square_ = NO_SQ;
 
-    updateKeyCastling();
+    hash_key_ ^= zobrist::castling(castling_rights_.getHashIndex());
 
     if (capture) {
         half_moves_ = 0;
@@ -1493,14 +1489,14 @@ inline void Board::makeMove(const Move &move) {
 
         const auto possible_ep = static_cast<Square>(move.to() ^ 8);
         if (move.typeOf() == Move::EN_PASSANT) {
-            updateKeyPiece(makePiece(~side_to_move_, PieceType::PAWN), possible_ep);
+            hash_key_ ^= zobrist::piece(makePiece(~side_to_move_, PieceType::PAWN), possible_ep);
         } else if (std::abs(static_cast<int>(move.to()) - static_cast<int>(move.from())) == 16) {
             U64 ep_mask = Attacks::PAWN(side_to_move_, possible_ep);
 
             if (ep_mask & pieces(PieceType::PAWN, ~side_to_move_)) {
                 enpassant_square_ = possible_ep;
 
-                updateKeyEnPassant(enpassant_square_);
+                hash_key_ ^= zobrist::enpassant(squareFile(enpassant_square_));
                 assert(pieceAt(enpassant_square_) == Piece::NONE);
             }
         }
@@ -1541,8 +1537,8 @@ inline void Board::makeMove(const Move &move) {
         removePiece(makePiece(~side_to_move_, PieceType::PAWN), static_cast<Square>(move.to() ^ 8));
     }
 
-    updateKeySideToMove();
-    updateKeyCastling();
+    hash_key_ ^= zobrist::sideToMove();
+    hash_key_ ^= zobrist::castling(castling_rights_.getHashIndex());
 
     side_to_move_ = ~side_to_move_;
 }
@@ -1625,8 +1621,8 @@ inline void Board::makeNullMove() {
     prev_states_.emplace_back(hash_key_, enpassant_square_, castling_rights_, half_moves_,
                               Piece::NONE);
 
-    updateKeySideToMove();
-    if (enpassant_square_ != NO_SQ) updateKeyEnPassant(enpassant_square_);
+    hash_key_ ^= zobrist::sideToMove();
+    if (enpassant_square_ != NO_SQ) hash_key_ ^= zobrist::enpassant(squareFile(enpassant_square_));
     enpassant_square_ = NO_SQ;
 
     side_to_move_ = ~side_to_move_;
@@ -1706,7 +1702,7 @@ inline Move Board::uciToMove(const std::string &uci) const {
     }
 }
 
-namespace Movegen {
+namespace movegen {
 
 template <Color c>
 U64 pawnLeftAttacks(const U64 pawns) {
@@ -2235,14 +2231,14 @@ inline bool isLegal(const Board &board, const T &move) {
 
     return movelist.find(move) != -1;
 }
-}  // namespace Movegen
+}  // namespace movegen
 
 inline std::pair<std::string, GameResult> Board::isGameOver() const {
     if (half_moves_ >= 100) {
         const Board &board = *this;
 
         Movelist<Move> movelist;
-        Movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
+        movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
         if (isSquareAttacked(kingSq(side_to_move_), ~side_to_move_) && movelist.size() == 0) {
             return {"checkmate", GameResult::LOSE};
         }
@@ -2273,7 +2269,7 @@ inline std::pair<std::string, GameResult> Board::isGameOver() const {
     const Board &board = *this;
 
     Movelist<Move> movelist;
-    Movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
+    movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
 
     if (movelist.size() == 0) {
         if (isSquareAttacked(kingSq(side_to_move_), ~side_to_move_))
@@ -2303,7 +2299,7 @@ inline std::string Board::moveToSan(const Move &move) {
     }
 
     Movelist<Move> moves;
-    Movegen::legalmoves<Move>(moves, *this);
+    movegen::legalmoves<Move>(moves, *this);
 
     for (const auto &m : moves) {
         if (pt != PieceType::PAWN && m != move && pieceAt(m.from()) == pieceAt(move.from()) &&
@@ -2403,7 +2399,7 @@ inline std::string Board::moveToLan(const Move &move) {
 
 inline Move Board::parseSan(std::string san) {
     Movelist<Move> moves;
-    Movegen::legalmoves<Move>(moves, *this);
+    movegen::legalmoves<Move>(moves, *this);
     if (san == "0-0" || san == "0-0+" || san == "0-0#" || san == "O-O" || san == "O-O+" ||
         san == "O-O#") {
         for (auto move : moves) {
@@ -2486,4 +2482,4 @@ inline Move Board::parseSan(std::string san) {
 
     throw std::runtime_error("illegal san, step 5: " + san);
 }
-}  // namespace Chess
+}  // namespace chess

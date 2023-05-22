@@ -29,7 +29,7 @@ Parallel-Pgo : nodes 3195901860 time 521ms nps 6.122.417.356
 This is a single/two header library.
 
 You only need to include `chess.hpp` header and have the `sliders.hpp` header in the same directory.
-Aftewards you can access the chess logic over the `Chess::` namespace.
+Aftewards you can access the chess logic over the `chess::` namespace.
 
 ## Types:
 
@@ -321,7 +321,7 @@ namespace MoveGen {
 
 ```c++
 Movelist<Move> movelist;
-MoveGen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
+movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
 
 for (const auto &move : movelist) {
     // do something with move
