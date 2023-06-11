@@ -17,18 +17,11 @@ averaged:
 nodes 4528287989 nps 412976560
 ```
 
-**There are also parallel implementations of perft, you can find these in the [parallel](https://github.com/Disservin/chess-library/tree/parallel) and [parallel-pgo](https://github.com/Disservin/chess-library/tree/parallel-pgo) branches.**
-
-```
-Parallel     : nodes 3195901860 time 585ms nps 5.453.757.440
-Parallel-Pgo : nodes 3195901860 time 521ms nps 6.122.417.356
-```
-
 ## Usage
 
 This is a single/two header library.
 
-You only need to include `chess.hpp` header and have the `sliders.hpp` header in the same directory.
+You only need to include `chess.hpp` header!
 Aftewards you can access the chess logic over the `chess::` namespace.
 
 ## Types:
@@ -49,9 +42,13 @@ enum class GameResult;
 ## Constants
 
 ```c++
+constexpr int MAX_SQ = 64;
+constexpr int MAX_PIECE = 12;
+constexpr int MAX_MOVES = 256;
+constexpr Bitboard DEFAULT_CHECKMASK = 18446744073709551615ULL;
+
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-static constexpr int MAX_SQ = 64;
-static constexpr int MAX_MOVES = 350;
+
 ```
 
 ## The Move Object
@@ -63,34 +60,38 @@ before checking for captures.
 struct Move {
    public:
     Move() = default;
-
-    explicit Move(uint16_t move) : move_(move){};
+    Move(uint16_t move) : move_(move), score_(0) {}
 
     template <uint16_t MoveType = 0>
-    static Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT);
+    static constexpr Move make(Square source, Square target,
+                                             PieceType pt = PieceType::KNIGHT);
 
-    constexpr Square from() const;
+    Square from() const;
 
-    constexpr Square to() const;
-    constexpr uint16_t typeOf() const;
+    Square to() const;
 
-    constexpr PieceType promotionType() const;
+    uint16_t typeOf() const;
 
-    constexpr const uint16_t move() const ;
-    constexpr uint16_t &move();
+    PieceType promotionType() const;
 
-    constexpr bool operator==(const Move &right) const;
-    constexpr bool operator!=(const Move &right) const;
+    uint16_t move() const;
+    int16_t score() const;
+
+    bool operator==(const Move& rhs) const { return move_ == rhs.move_; }
+    bool operator!=(const Move& rhs) const { return move_ != rhs.move_; }
 
     static constexpr uint16_t NO_MOVE = 0;
     static constexpr uint16_t NULL_MOVE = 65;
+    static constexpr uint16_t NORMAL = 0;
+    static constexpr uint16_t PROMOTION = 1 << 14;
+    static constexpr uint16_t ENPASSANT = 2 << 14;
+    static constexpr uint16_t CASTLING = 3 << 14;
 
-    static constexpr uint16_t NORMAL;
-    static constexpr uint16_t PROMOTION;
-    static constexpr uint16_t EN_PASSANT;
-    static constexpr uint16_t CASTLING ;
+    friend std::ostream& operator<<(std::ostream& os, const Move& move);
 
-    friend std::ostream &operator<<(std::ostream &os, const Move &m);
+   private:
+    uint16_t move_;
+    int16_t score_;
 };
 ```
 
@@ -100,127 +101,93 @@ struct Move {
 Move m = Move::make<Move::NORMAL>(Square::SQ_E2, Square::SQ_E4);
 ```
 
-## ExtMove Object
-
-This is more or less the same as the Move object, but it has a score field.
-
-```c++
-struct ExtMove : public Move {
-   public:
-    ExtMove() = default;
-
-    explicit ExtMove(uint16_t move) : Move(move){};
-
-    template <uint16_t MoveType = 0>
-    static ExtMove make(Square source, Square target, PieceType pt = PieceType::KNIGHT);
-
-    constexpr int score() const;
-    constexpr void setScore(int score);
-
-    constexpr bool operator<(const ExtMove &right) const;
-    constexpr bool operator>(const ExtMove &right) const;
-};
-```
-
 ## The Movelist Object
 
 ```c++
 
-template <typename T>
 struct Movelist {
    public:
-    constexpr void add(T move);
-    // returns the index of the move in the list, or -1 if not found
-    constexpr int find(T m);
+    constexpr void add(Move move);
 
-    constexpr void clear();
+    // returns -1 if not found
+    constexpr int find(Move move);
+
     constexpr int size() const;
+    constexpr void clear();
+    inline void sort(int index = 0);
+
+    constexpr Move operator[](int index) const;
+    constexpr Move& operator[](int index);
+
+   private:
+    Move moves_[MAX_MOVES];
+    uint8_t size_ = 0;
 };
 ```
 
 ## Intrinsic Functions
 
 ```c++
+namespace builtin {
 // returns the index of the least significant bit
-constexpr int lsb(U64 bb);
+constexpr int lsb(Bitboard bb);
 
 // returns the index of the most significant bit
-constexpr int msb(U64 bb);
+constexpr int msb(Bitboard bb);
 
 // returns the number of set bits
-constexpr int popcount(U64 bb);
+constexpr int popcount(Bitboard bb);
 
 // returns the lsb and pop it
-constexpr int poplsb(U64 &bb);
+constexpr int poplsb(Bitboard &bb);
+}
+
 ```
 
 ## Attacks
 
 ```c++
-namespace Attacks {
-
-static constexpr U64 PAWN(Color c, Square sq);
-static constexpr U64 KNIGHT(Square sq);
-static constexpr U64 BISHOP(Square sq, U64 occ);
-static constexpr U64 ROOK(Square sq, U64 occ);
-static constexpr U64 QUEEN(Square sq, U64 occ);
-static constexpr U64 KING(Square sq);
-
+namespace movegen {
+    namespace attacks {
+        static constexpr Bitboard pawn(Color c, Square sq);
+        static constexpr Bitboard knight(Square sq);
+        static constexpr Bitboard bishop(Square sq, Bitboard occ);
+        static constexpr Bitboard rook(Square sq, Bitboard occ);
+        static constexpr Bitboard queen(Square sq, Bitboard occ);
+        static constexpr Bitboard king(Square sq);
+    }
 }
 ```
 
 ## Helper Functions
 
 ```c++
+namespace utils {
+    void printBitboard(Bitboard bb);
 
-/// @brief Gets the file index of the square where 0 is the a-file
-/// @param sq
-/// @return the file of the square
-constexpr File squareFile(Square sq);
+    std::vector<std::string> splitString(const std::string& string,
+                                                          const char& delimiter);
+    File squareFile(Square sq);
+    Rank squareRank(Square sq);
 
-/// @brief Gets the rank index of the square where 0 is the first rank.
-/// @param sq
-/// @return the rank of the square
-constexpr Rank squareRank(Square sq);
+    int squareDistance(Square a, Square b);
 
-/// @brief makes a square out of rank and file
-/// @param f
-/// @param r
-/// @return
-constexpr Square fileRankSquare(File f, Rank r);
+    int diagonalOf(Square sq);
 
-/// @brief distance between two squares
-/// @param a
-/// @param b
-/// @return
-uint8_t squareDistance(Square a, Square b);
+    int antiDiagonalOf(Square sq);
 
-constexpr uint8_t diagonalOf(Square sq);
+    void trim(std::string& s);
 
-constexpr uint8_t antiDiagonalOf(Square sq);
+    PieceType typeOfPiece(Piece piece);
 
-/// @brief manhatten distance between two squares
-/// @param sq1
-/// @param sq2
-/// @return
-uint8_t manhattenDistance(Square sq1, Square sq2);
+    Square relativeSquare(Color c, Square s);
 
-/// @brief color of a square, has nothing to do with whose piece is on that square
-/// @param square
-/// @return
-constexpr Color getSquareColor(Square square);
+    Piece makePiece(Color c, PieceType pt);
 
-constexpr Square relativeSquare(Color c, Square s);
+    Square fileRankSquare(File f, Rank r);
 
-constexpr Piece makePiece(Color c, PieceType pt);
-
-constexpr PieceType typeOfPiece(Piece piece);
-
-/// checks if the squares have the same color
-bool sameColor(Square sq1, Square sq2);
-
-/// prints a bitboard to the console
-void printBitboard(U64 bb);
+    bool sameColor(Square sq1, Square sq2);
+}
 ```
 
 ## The Position Object
@@ -228,80 +195,32 @@ void printBitboard(U64 bb);
 ```c++
 
 class Board {
-   public:
-    explicit Board(const std::string &fen);
+    public:
+        Board::Board(const std::string fen)
 
-    void loadFen(const std::string &fen);
-    std::string getFen() const;
+        void Board::setFen(std::string fen)
+        std::string Board::getFen();
 
-    void makeMove(const Move &move);
-    void unmakeMove(const Move &move);
-    void makeNullMove();
-    void unmakeNullMove();
+        U64 Board::zobrist();
 
-    U64 us(Color c) const;
+        std::string Board::getCastleString();
 
-    U64 them(Color c) const;
+        bool Board::isRepetition(int count);
 
-    U64 all() const;
+        std::pair<std::string, GameResult> Board::isGameOver();
 
-    Square kingSq(Color c) const;
+        bool Board::isAttacked(Square square, Color color);
+        bool Board::isKingAttacked();
 
-    template <PieceType type, Color color>
-    U64 pieces() const;
+        void Board::placePiece(Piece piece, Square sq);
+        void Board::removePiece(Piece piece, Square sq);
+        Piece Board::removePiece(Square sq);
 
-    template <Color color>
-    U64 pieces(PieceType type) const;
+        void Board::makeMove(const Move& move);
+        void Board::unmakeMove(const Move& move);
 
-    template <PieceType type>
-    U64 pieces(Color color) const;
-
-    constexpr U64 pieces(PieceType type, Color color) const;
-
-    constexpr Piece pieceAt(Square square) const;
-
-    static constexpr Color colorOfPiece(Piece piece);
-
-    constexpr Color colorOfPiece(Square square) const;
-
-    uint64_t hash() const;
-    Color sideToMove() const;
-    Square enpassantSquare() const;
-    uint8_t castlingRights() const;
-
-    void setChess960(bool chess960);
-    bool chess960() const;
-
-    U64 occ() const;
-
-    /// @brief every position has at least occured once, so a game will be drawn if its seen 2 times
-    /// after the intial one
-    /// @param count
-    /// @return
-    bool isRepetition(int count = 2) const;
-
-    /// @brief first = reason why the game is over, "" if not over
-    /// @param os
-    /// @param b
-    /// @return
-    std::pair<std::string, GameResult> isGameOver() const;
-
-    /// Is the square attacked by color c?
-    /// @param square
-    /// @param c
-    /// @return
-    bool isSquareAttacked(Square square, Color c) const;
-
-    /// Is the current sidetomoves king attacked?
-    /// @return
-    bool isKingAttacked() const;
-
-    std::string moveToUci(const Move &move) const;
-    Move uciToMove(const std::string &uci) const;
-
-    // convert a move to san/lan notation
-    std::string moveToSan(const Move &move);
-    std::string moveToLan(const Move &move);
+        void Board::makeNullMove();
+        void Board::unmakeNullMove();
 };
 ```
 
@@ -309,19 +228,16 @@ class Board {
 
 ```c++
 namespace MoveGen {
-    template <typename T, MoveGenType mt>
-    void legalmoves(Movelist<T> &movelist, const Board &board);
-
-    template <typename T>
-    bool isLegal(const Board &board, const T &move);
+    template <MoveGenType mt>
+    void legalmoves(Movelist& movelist, const Board& board);
 }
 ```
 
 ### Movelist Usage
 
 ```c++
-Movelist<Move> movelist;
-movegen::legalmoves<Move, MoveGenType::ALL>(movelist, board);
+Movelist movelist;
+movegen::legalmoves(movelist, board)
 
 for (const auto &move : movelist) {
     // do something with move
