@@ -210,7 +210,7 @@ class Board {
         std::pair<std::string, GameResult> Board::isGameOver();
 
         bool Board::isAttacked(Square square, Color color);
-        bool Board::isKingAttacked();
+        bool Board::inCheck();
 
         void Board::placePiece(Piece piece, Square sq);
         void Board::removePiece(Piece piece, Square sq);

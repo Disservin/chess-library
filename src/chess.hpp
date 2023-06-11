@@ -913,7 +913,7 @@ class Board {
 
     [[nodiscard]] bool isAttacked(Square square, Color color) const;
 
-    [[nodiscard]] bool isKingAttacked() const;
+    [[nodiscard]] bool inCheck() const;
 
     [[nodiscard]] Move parseSan(std::string san) const;
 
@@ -1242,7 +1242,7 @@ inline std::ostream& operator<<(std::ostream& os, const Board& b) {
     return false;
 }
 
-[[nodiscard]] inline bool Board::isKingAttacked() const {
+[[nodiscard]] inline bool Board::inCheck() const {
     return isAttacked(kingSq(side_to_move_), ~side_to_move_);
 }
 
@@ -2437,7 +2437,7 @@ namespace uci {
 
     board.makeMove(move);
 
-    if (board.isKingAttacked()) {
+    if (board.inCheck()) {
         if (board.isGameOver().second == GameResult::LOSE) {
             san += "#";
         } else {
@@ -2487,7 +2487,7 @@ namespace uci {
 
     board.makeMove(move);
 
-    if (board.isKingAttacked()) {
+    if (board.inCheck()) {
         if (board.isGameOver().second == GameResult::LOSE) {
             lan += "#";
         } else {
