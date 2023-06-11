@@ -38,9 +38,6 @@ enum Square : uint8_t {
     SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
     NO_SQ
 };
-constexpr Square operator-(Square sq, Square i) {
-    return static_cast<Square>(static_cast<uint8_t>(sq) - static_cast<uint8_t>(i));
-}
 constexpr Square operator++(Square& sq) {
     sq = static_cast<Square>(static_cast<uint8_t>(sq) + 1);
     return sq;
@@ -295,7 +292,7 @@ class CastlingRights {
      1248 1248 1248 1248
      0000 0000 0000 0000
      bq   bk   wq   wk
-     3    2    1    0
+     3    2    1    0    // group index
      */
     BitField16 castling_rights;
 };
@@ -1139,6 +1136,7 @@ inline std::ostream& operator<<(std::ostream& os, const Board& b) {
     os << "Halfmoves: " << static_cast<int>(b.half_moves_) << "\n";
     os << "Fullmoves: " << static_cast<int>(b.full_moves_) / 2 << "\n";
     os << "EP: " << static_cast<int>(b.enpassant_sq_) << "\n";
+    os << "Hash: " << b.hash_key_ << "\n";
 
     os << std::endl;
     return os;
@@ -1328,10 +1326,7 @@ inline void Board::makeMove(const Move& move) {
         half_moves_ = 0;
 
         const auto possible_ep = static_cast<Square>(move.to() ^ 8);
-        if (move.typeOf() == Move::ENPASSANT) {
-            hash_key_ ^=
-                zobrist::piece(utils::makePiece(~side_to_move_, PieceType::PAWN), possible_ep);
-        } else if (std::abs(move.to() - move.from()) == 16) {
+        if (std::abs(int(move.to()) - int(move.from())) == 16) {
             U64 ep_mask = movegen::attacks::pawn(side_to_move_, possible_ep);
 
             if (ep_mask & pieces(PieceType::PAWN, ~side_to_move_)) {
@@ -1376,8 +1371,8 @@ inline void Board::makeMove(const Move& move) {
     }
 
     if (move.typeOf() == Move::ENPASSANT) {
-        assert(at(move.to() ^ 8) != Piece::NONE);
-        removePiece(utils::makePiece(~side_to_move_, PieceType::PAWN), move.to() ^ 8);
+        assert(utils::typeOfPiece(at(move.to() ^ 8)) == PieceType::PAWN);
+        removePiece(utils::makePiece(~side_to_move_, PieceType::PAWN), Square(int(move.to()) ^ 8));
     }
 
     hash_key_ ^= zobrist::sideToMove();
