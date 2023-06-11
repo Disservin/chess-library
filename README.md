@@ -227,7 +227,7 @@ class Board {
 ## Move Generation
 
 ```c++
-namespace MoveGen {
+namespace movegen {
     template <MoveGenType mt>
     void legalmoves(Movelist& movelist, const Board& board);
 }
