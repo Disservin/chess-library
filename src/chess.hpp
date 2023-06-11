@@ -944,7 +944,7 @@ class Board {
     Square enpassant_sq_;
     uint8_t half_moves_;
 
-    bool chess960_;
+    bool chess960_ = false;
 };
 
 inline Board::Board(const std::string fen) { setFen(fen); }
