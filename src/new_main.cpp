@@ -28,13 +28,11 @@ U64 perft(Board &board, int depth) {
 
 int main(int argc, char const *argv[]) {
     Board board;
-    // std::cout << board << std::endl;
+    std::cout << board << std::endl;
 
-    // utils::printBitboard(movegen::attacks::bishop(Square::SQ_D4, 0x80000004000420c0));
-
-    // for (size_t i = 0; i < 7; i++) {
-    //     std::cout << perft(board, i) << std::endl;
-    // }
+    for (size_t i = 0; i < 7; i++) {
+        std::cout << perft(board, i) << std::endl;
+    }
 
     std::cout << board.isAttacked(Square::SQ_E4, Color::WHITE) << std::endl;
 
