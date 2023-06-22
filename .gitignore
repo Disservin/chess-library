@@ -79,3 +79,7 @@ fabric.properties
 .vscode/
 *.o
 *.exe
+
+node_modules/
+docs/.vitepress/cache
+docs/.vitepress/dist
