@@ -17,6 +17,10 @@ averaged:
 nodes 4528287989 nps 412976560
 ```
 
+## Documentation
+
+You can find the docs [here](https://disservin.github.io/chess-library/)
+
 ## Usage
 
 This is a single/two header library.
