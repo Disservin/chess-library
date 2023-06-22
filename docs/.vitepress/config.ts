@@ -4,6 +4,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
 	title: "C++ Chess",
 	description: "Documentation for chess-library",
+	base: "/chess-library/",
 	themeConfig: {
 		search: {
 			provider: "local",
