@@ -229,10 +229,31 @@ static std::unordered_map<char, PieceType> charToPieceType({{'n', PieceType::KNI
 class Board;
 
 namespace utils {
+/// @brief Converts a string to a square
+/// @param squareStr
+/// @return
 [[nodiscard]] Square extractSquare(std::string_view squareStr);
+
+/// @brief Makes a square from a file and rank
+/// @param f
+/// @param r
+/// @return
 [[nodiscard]] constexpr Square fileRankSquare(File f, Rank r);
+
+/// @brief Get the rank of a square
+/// @param sq
+/// @return
 [[nodiscard]] constexpr Rank squareRank(Square sq);
+
+/// @brief Get the file of a square
+/// @param a
+/// @param b
+/// @return
 [[nodiscard]] int squareDistance(Square a, Square b);
+
+/// @brief Get the PieceType of a piece
+/// @param piece
+/// @return
 [[nodiscard]] constexpr PieceType typeOfPiece(Piece piece);
 }  // namespace utils
 
@@ -351,6 +372,14 @@ struct Move {
     Move() = default;
     constexpr Move(uint16_t move) : move_(move), score_(0) {}
 
+    /// @brief Creates a move from a source and target square.
+    /// pt is the promotion piece, when you want to create a promotion move you must also
+    /// pass PROMOTION as the MoveType template parameter.
+    /// @tparam MoveType
+    /// @param source
+    /// @param target
+    /// @param pt
+    /// @return
     template <uint16_t MoveType = 0>
     [[nodiscard]] static constexpr Move make(Square source, Square target,
                                              PieceType pt = PieceType::KNIGHT) {
@@ -358,18 +387,29 @@ struct Move {
                     uint16_t(source << 6) + uint16_t(target));
     }
 
+    /// @brief Get the source square of the move.
+    /// @return
     [[nodiscard]] constexpr Square from() const { return static_cast<Square>((move_ >> 6) & 0x3F); }
 
+    /// @brief Get the target square of the move.
+    /// @return
     [[nodiscard]] constexpr Square to() const { return static_cast<Square>(move_ & 0x3F); }
 
+    /// @brief Get the type of the move. Can be NORMAL, PROMOTION, ENPASSANT or CASTLING.
+    /// @return
     [[nodiscard]] constexpr uint16_t typeOf() const {
         return static_cast<uint16_t>(move_ & (3 << 14));
     }
 
+    /// @brief Get the promotion piece of the move, should only be used if typeOf() returns
+    /// PROMOTION.
+    /// @return
     [[nodiscard]] constexpr PieceType promotionType() const {
         return static_cast<PieceType>(((move_ >> 12) & 3) + static_cast<int>(PieceType::KNIGHT));
     }
 
+    /// @brief Set the score for a move. Useful if you later want to sort the moves.
+    /// @param score
     constexpr void setScore(int16_t score) { score_ = score; }
 
     [[nodiscard]] constexpr uint16_t move() const { return move_; }
@@ -406,11 +446,17 @@ inline std::ostream &operator<<(std::ostream &os, const Move &move) {
 
 struct Movelist {
    public:
+    /// @brief Add a move to the end of the movelist.
+    /// @param move
     constexpr void add(Move move) {
         assert(size_ < MAX_MOVES);
         moves_[size_++] = move;
     }
 
+    /// @brief Checks if a move is in the movelist, returns the index of the move if it is found,
+    /// otherwise -1.
+    /// @param move
+    /// @return
     constexpr int find(Move move) {
         for (int i = 0; i < size_; ++i) {
             if (moves_[i] == move) {
@@ -420,11 +466,18 @@ struct Movelist {
         return -1;
     }
 
+    /// @brief Return the number of moves in the movelist.
+    /// @return
     constexpr int size() const { return size_; }
+
+    /// @brief Checks if the movelist is empty.
+    /// @return
     constexpr bool empty() const { return size_ == 0; }
 
+    /// @brief Clears the movelist.
     constexpr void clear() { size_ = 0; }
 
+    /// @brief Sorts the movelist by score in descending order. Uses std::stable_sort.
     inline void sort(int index = 0) {
         std::stable_sort(moves_ + index, moves_ + size_,
                          [](const Move &a, const Move &b) { return a.score() > b.score(); });
@@ -453,6 +506,8 @@ struct Movelist {
 
 namespace utils {
 
+/// @brief Print a bitboard to the console.
+/// @param bb
 inline void printBitboard(Bitboard bb) {
     std::bitset<MAX_SQ> b(bb);
     std::string str_bitset = b.to_string();
@@ -464,6 +519,10 @@ inline void printBitboard(Bitboard bb) {
     std::cout << '\n' << std::endl;
 }
 
+/// @brief Split a string into a vector of strings, using a delimiter.
+/// @param string
+/// @param delimiter
+/// @return
 [[nodiscard]] inline std::vector<std::string> splitString(const std::string &string,
                                                           const char &delimiter) {
     std::stringstream string_stream(string);
@@ -475,7 +534,14 @@ inline void printBitboard(Bitboard bb) {
     return seglist;
 }
 
+/// @brief Get the file of a square.
+/// @param sq
+/// @return
 [[nodiscard]] constexpr File squareFile(Square sq) { return File(sq & 7); }
+
+/// @brief Get the rank of a square.
+/// @param sq
+/// @return
 [[nodiscard]] constexpr Rank squareRank(Square sq) { return Rank(sq >> 3); }
 
 [[nodiscard]] inline int squareDistance(Square a, Square b) {
@@ -514,6 +580,10 @@ static inline void trim(std::string &s) {
     return Square(s ^ (static_cast<int>(c) * 56));
 }
 
+/// @brief Make a piece from a color and a piece type.
+/// @param c
+/// @param pt
+/// @return
 [[nodiscard]] constexpr Piece makePiece(Color c, PieceType pt) {
     return static_cast<Piece>(static_cast<int>(c) * 6 + static_cast<int>(pt));
 }
@@ -522,6 +592,10 @@ static inline void trim(std::string &s) {
     return static_cast<Square>((static_cast<int>(r) << 3) + static_cast<int>(f));
 }
 
+/// @brief Checks if two squares have the same color. I.e light or dark.
+/// @param sq1
+/// @param sq2
+/// @return
 [[nodiscard]] constexpr bool sameColor(Square sq1, Square sq2) {
     return ((9 * (sq1 ^ sq2)) & 8) == 0;
 }
@@ -555,6 +629,15 @@ static inline void trim(std::string &s) {
 \****************************************************************************/
 
 namespace builtin {
+/// @brief Get the least significant bit of a U64.
+/// @param b
+/// @return
+inline Square lsb(U64 b);
+
+/// @brief Get the most significant bit of a U64.
+/// @param b
+/// @return
+inline Square msb(U64 b);
 
 #if defined(__GNUC__)  // GCC, Clang, ICC
 inline Square lsb(U64 b) {
@@ -617,6 +700,9 @@ inline Square msb(U64 b) {
 
 #endif
 
+/// @brief Count the number of set bits in a U64.
+/// @param mask
+/// @return
 inline int popcount(U64 mask) {
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 
@@ -629,6 +715,9 @@ inline int popcount(U64 mask) {
 #endif
 }
 
+/// @brief Get the least significant bit of a U64 and pop it.
+/// @param mask
+/// @return
 inline Square poplsb(Bitboard &mask) {
     int8_t s = lsb(mask);
     mask &= mask - 1;  // compiler optimizes this to _blsr_u64
@@ -955,6 +1044,8 @@ class Board {
         return static_cast<Color>(static_cast<int>(piece) / 6);
     }
 
+    /// @brief Get the current hash key of the board
+    /// @return
     [[nodiscard]] U64 hash() const { return hash_key_; }
     [[nodiscard]] Color sideToMove() const { return side_to_move_; }
     [[nodiscard]] Square enpassantSq() const { return enpassant_sq_; }
@@ -971,10 +1062,16 @@ class Board {
 
     [[nodiscard]] std::pair<std::string, GameResult> isGameOver() const;
 
+    /// @brief Checks if a square is attacked by the given color.
+    /// @param square
+    /// @param color
+    /// @return
     [[nodiscard]] bool isAttacked(Square square, Color color) const;
 
     [[nodiscard]] bool inCheck() const;
 
+    /// @brief Regenerates the zobrist hash key
+    /// @return
     [[nodiscard]] U64 zobrist() const;
 
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
@@ -2381,7 +2478,10 @@ inline void legalmoves(Movelist &movelist, const Board &board) {
 }  // namespace movegen
 
 namespace uci {
-
+/// @brief Converts an internal move to a UCI string
+/// @param move
+/// @param chess960
+/// @return
 [[nodiscard]] inline std::string moveToUci(const Move &move, bool chess960 = false) {
     std::stringstream ss;
 
@@ -2408,6 +2508,10 @@ namespace uci {
     return ss.str();
 }
 
+/// @brief Converts a UCI string to an internal move.
+/// @param board
+/// @param uci
+/// @return
 [[nodiscard]] inline Move uciToMove(const Board &board, const std::string &uci) {
     Square source = utils::extractSquare(uci.substr(0, 2));
     Square target = utils::extractSquare(uci.substr(2, 2));
@@ -2442,6 +2546,10 @@ namespace uci {
     }
 }
 
+/// @brief Converts a move to a SAN string
+/// @param board
+/// @param move
+/// @return
 [[nodiscard]] inline std::string moveToSan(Board board, const Move &move) {
     static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
     static const std::string repFile[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
@@ -2505,6 +2613,10 @@ namespace uci {
     return san;
 }
 
+/// @brief Converts a move to a LAN string
+/// @param board
+/// @param move
+/// @return
 [[nodiscard]] inline std::string moveToLan(Board board, const Move &move) {
     static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
     static const std::string repFile[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
@@ -2555,6 +2667,10 @@ namespace uci {
     return lan;
 }
 
+/// @brief Converts a SAN string to a move
+/// @param board
+/// @param san
+/// @return
 [[nodiscard]] inline Move parseSan(const Board &board, std::string san) {
     Movelist moves;
     movegen::legalmoves(moves, board);
