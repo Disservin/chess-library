@@ -52,7 +52,7 @@ using Bitboard = std::uint64_t;  // clear distinction between bitboard and U64
  * Enumerations                                                              *
 \****************************************************************************/
 
-enum MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
+enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 
 // clang-format off
 enum Square : uint8_t {
