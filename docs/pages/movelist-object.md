@@ -17,6 +17,6 @@ struct Movelist {
 
    private:
     Move moves_[MAX_MOVES];
-    uint8_t size_ = 0;
+    int size_ = 0;
 };
 ```
