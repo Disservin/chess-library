@@ -354,6 +354,8 @@ struct Move {
         return static_cast<PieceType>(((move_ >> 12) & 3) + static_cast<int>(PieceType::KNIGHT));
     }
 
+    constexpr void setScore(int16_t score) { score_ = score; }
+
     [[nodiscard]] constexpr uint16_t move() const { return move_; }
     [[nodiscard]] constexpr int16_t score() const { return score_; }
 
@@ -407,7 +409,7 @@ struct Movelist {
     constexpr void clear() { size_ = 0; }
 
     inline void sort(int index = 0) {
-        std::sort(moves_ + index, moves_ + size_,
+        std::stable_sort(moves_ + index, moves_ + size_,
                   [](const Move& a, const Move& b) { return a.score() > b.score(); });
     }
 
@@ -1689,7 +1691,7 @@ inline void initAttacks() {
 }
 
 // force initialization of attacks
-static auto init = []() constexpr {
+static auto init = []() {
     initAttacks();
     return 0;
 }();

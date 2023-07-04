@@ -26,6 +26,8 @@ struct Move {
 
     PieceType promotionType() const;
 
+    constexpr void setScore(int16_t score) { score_ = score; }
+
     uint16_t move() const;
     int16_t score() const;
 
