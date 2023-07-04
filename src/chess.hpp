@@ -33,11 +33,11 @@ Source: https://github.com/Disservin/chess-library
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <regex>
 
 namespace chess {
 
@@ -93,11 +93,11 @@ enum class File { NO_FILE = -1, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, 
 enum class Rank { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NO_RANK };
 
 enum class PieceType : uint8_t { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
-constexpr PieceType operator++(PieceType& pt) {
+constexpr PieceType operator++(PieceType &pt) {
     pt = static_cast<PieceType>(static_cast<uint8_t>(pt) + 1);
     return pt;
 }
-constexpr PieceType operator++(PieceType& pt, int) {
+constexpr PieceType operator++(PieceType &pt, int) {
     PieceType result = pt;
     ++pt;
     return result;
@@ -118,7 +118,7 @@ enum class Piece : uint8_t {
     BLACKKING,
     NONE
 };
-constexpr Piece operator++(Piece& p) {
+constexpr Piece operator++(Piece &p) {
     p = static_cast<Piece>(static_cast<uint8_t>(p) + 1);
     return p;
 }
@@ -362,8 +362,8 @@ struct Move {
     [[nodiscard]] constexpr uint16_t move() const { return move_; }
     [[nodiscard]] constexpr int16_t score() const { return score_; }
 
-    bool operator==(const Move& rhs) const { return move_ == rhs.move_; }
-    bool operator!=(const Move& rhs) const { return move_ != rhs.move_; }
+    bool operator==(const Move &rhs) const { return move_ == rhs.move_; }
+    bool operator!=(const Move &rhs) const { return move_ != rhs.move_; }
 
     static constexpr uint16_t NO_MOVE = 0;
     static constexpr uint16_t NULL_MOVE = 65;
@@ -372,14 +372,14 @@ struct Move {
     static constexpr uint16_t ENPASSANT = 2 << 14;
     static constexpr uint16_t CASTLING = 3 << 14;
 
-    friend std::ostream& operator<<(std::ostream& os, const Move& move);
+    friend std::ostream &operator<<(std::ostream &os, const Move &move);
 
    private:
     uint16_t move_;
     int16_t score_;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Move& move) {
+inline std::ostream &operator<<(std::ostream &os, const Move &move) {
     Square from_sq = move.from();
     Square to_sq = move.to();
 
@@ -413,14 +413,14 @@ struct Movelist {
 
     inline void sort(int index = 0) {
         std::stable_sort(moves_ + index, moves_ + size_,
-                  [](const Move& a, const Move& b) { return a.score() > b.score(); });
+                         [](const Move &a, const Move &b) { return a.score() > b.score(); });
     }
 
     constexpr Move operator[](int index) const { return moves_[index]; }
-    constexpr Move& operator[](int index) { return moves_[index]; }
+    constexpr Move &operator[](int index) { return moves_[index]; }
 
-    typedef Move* iterator;
-    typedef const Move* const_iterator;
+    typedef Move *iterator;
+    typedef const Move *const_iterator;
 
     constexpr iterator begin() { return moves_; }
     constexpr iterator end() { return moves_ + size_; }
@@ -439,7 +439,7 @@ struct Movelist {
 
 namespace utils {
 
-void printBitboard(Bitboard bb) {
+inline void printBitboard(Bitboard bb) {
     std::bitset<MAX_SQ> b(bb);
     std::string str_bitset = b.to_string();
     for (int i = 0; i < MAX_SQ; i += 8) {
@@ -450,8 +450,8 @@ void printBitboard(Bitboard bb) {
     std::cout << '\n' << std::endl;
 }
 
-[[nodiscard]] inline std::vector<std::string> splitString(const std::string& string,
-                                                          const char& delimiter) {
+[[nodiscard]] inline std::vector<std::string> splitString(const std::string &string,
+                                                          const char &delimiter) {
     std::stringstream string_stream(string);
     std::string segment;
     std::vector<std::string> seglist;
@@ -476,18 +476,18 @@ void printBitboard(Bitboard bb) {
     return int(squareRank(sq)) + int(squareFile(sq));
 }
 
-static inline void ltrim(std::string& s) {
+static inline void ltrim(std::string &s) {
     s.erase(s.begin(),
             std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
 }
 
-static inline void rtrim(std::string& s) {
+static inline void rtrim(std::string &s) {
     s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); })
                 .base(),
             s.end());
 }
 
-static inline void trim(std::string& s) {
+static inline void trim(std::string &s) {
     rtrim(s);
     ltrim(s);
 }
@@ -512,7 +512,7 @@ static inline void trim(std::string& s) {
     return ((9 * (sq1 ^ sq2)) & 8) == 0;
 }
 
-[[nodiscard]] inline std::smatch regex(const std::string& str, const std::string& reg) {
+[[nodiscard]] inline std::smatch regex(const std::string &str, const std::string &reg) {
     std::regex re(reg);
     std::smatch match;
     std::regex_search(str, match, re);
@@ -615,7 +615,7 @@ inline int popcount(U64 mask) {
 #endif
 }
 
-inline Square poplsb(Bitboard& mask) {
+inline Square poplsb(Bitboard &mask) {
     int8_t s = lsb(mask);
     mask &= mask - 1;  // compiler optimizes this to _blsr_u64
     return Square(s);
@@ -873,7 +873,7 @@ Bitboard king(Square sq);
 }  // namespace attacks
 
 template <MoveGenType mt = MoveGenType::ALL>
-void legalmoves(Movelist& movelist, const Board& board);
+void legalmoves(Movelist &movelist, const Board &board);
 
 }  // namespace movegen
 
@@ -887,8 +887,8 @@ class Board {
     void setFen(std::string fen);
     [[nodiscard]] std::string getFen() const;
 
-    void makeMove(const Move& move);
-    void unmakeMove(const Move& move);
+    void makeMove(const Move &move);
+    void unmakeMove(const Move &move);
 
     void makeNullMove();
     void unmakeNullMove();
@@ -949,7 +949,7 @@ class Board {
 
     [[nodiscard]] U64 zobrist() const;
 
-    friend std::ostream& operator<<(std::ostream& os, const Board& board);
+    friend std::ostream &operator<<(std::ostream &os, const Board &board);
 
    protected:
     void placePiece(Piece piece, Square sq);
@@ -994,10 +994,10 @@ inline void Board::setFen(std::string fen) {
 
     const std::vector<std::string> params = utils::splitString(fen, ' ');
 
-    const std::string& position = params[0];
-    const std::string& move_right = params[1];
-    const std::string& castling = params[2];
-    const std::string& en_passant = params[3];
+    const std::string &position = params[0];
+    const std::string &move_right = params[1];
+    const std::string &castling = params[2];
+    const std::string &en_passant = params[3];
 
     half_moves_ = std::stoi(params.size() > 4 ? params[4] : "0");
     full_moves_ = std::stoi(params.size() > 4 ? params[5] : "1") * 2;
@@ -1153,7 +1153,7 @@ inline void Board::setFen(std::string fen) {
     return hash_key ^ ep_hash ^ side_to_move_hash ^ castling_hash;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Board& b) {
+inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     for (int i = 63; i >= 0; i -= 8) {
         os << " " << pieceToChar[b.board_[i - 7]] << " " << pieceToChar[b.board_[i - 6]] << " "
            << pieceToChar[b.board_[i - 5]] << " " << pieceToChar[b.board_[i - 4]] << " "
@@ -1214,7 +1214,7 @@ inline std::ostream& operator<<(std::ostream& os, const Board& b) {
 
 [[nodiscard]] inline std::pair<std::string, GameResult> Board::isGameOver() const {
     if (half_moves_ >= 100) {
-        const Board& board = *this;
+        const Board &board = *this;
 
         Movelist movelist;
         movegen::legalmoves<MoveGenType::ALL>(movelist, board);
@@ -1244,7 +1244,7 @@ inline std::ostream& operator<<(std::ostream& os, const Board& b) {
 
     if (isRepetition()) return {"threefold repetition", GameResult::DRAW};
 
-    const Board& board = *this;
+    const Board &board = *this;
 
     Movelist movelist;
     movegen::legalmoves<MoveGenType::ALL>(movelist, board);
@@ -1310,7 +1310,7 @@ inline void Board::removePiece(Piece piece, Square sq) {
     return piece;
 }
 
-inline void Board::makeMove(const Move& move) {
+inline void Board::makeMove(const Move &move) {
     auto capture = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
     auto captured = at(move.to());
     const auto pt = utils::typeOfPiece(at(move.from()));
@@ -1388,7 +1388,6 @@ inline void Board::makeMove(const Move& move) {
 
         placePiece(king, kingTo);
         placePiece(rook, rookTo);
-
     } else if (move.typeOf() == Move::PROMOTION) {
         removePiece(utils::makePiece(side_to_move_, PieceType::PAWN), move.from());
         placePiece(utils::makePiece(side_to_move_, move.promotionType()), move.to());
@@ -1411,7 +1410,7 @@ inline void Board::makeMove(const Move& move) {
     side_to_move_ = ~side_to_move_;
 }
 
-inline void Board::unmakeMove(const Move& move) {
+inline void Board::unmakeMove(const Move &move) {
     const auto prev = prev_states_.back();
     prev_states_.pop_back();
 
@@ -1499,7 +1498,7 @@ inline void Board::makeNullMove() {
 }
 
 inline void Board::unmakeNullMove() {
-    const auto& prev = prev_states_.back();
+    const auto &prev = prev_states_.back();
 
     enpassant_sq_ = prev.enpassant;
     castling_rights_ = prev.castling;
@@ -1529,13 +1528,13 @@ static constexpr Bitboard MASK_FILE[8] = {
 struct Magic {
     Bitboard mask;
     U64 magic;
-    U64* attacks;
+    U64 *attacks;
     U64 shift;
 
     U64 operator()(U64 b) const { return ((b & mask) * magic) >> shift; }
 };
 
-Bitboard RookMagics[MAX_SQ] = {
+constexpr Bitboard RookMagics[MAX_SQ] = {
     0x8a80104000800020ULL, 0x140002000100040ULL,  0x2801880a0017001ULL,  0x100081001000420ULL,
     0x200020010080420ULL,  0x3001c0002010008ULL,  0x8480008002000100ULL, 0x2080088004402900ULL,
     0x800098204000ULL,     0x2024401000200040ULL, 0x100802000801000ULL,  0x120800800801000ULL,
@@ -1553,7 +1552,7 @@ Bitboard RookMagics[MAX_SQ] = {
     0x280001040802101ULL,  0x2100190040002085ULL, 0x80c0084100102001ULL, 0x4024081001000421ULL,
     0x20030a0244872ULL,    0x12001008414402ULL,   0x2006104900a0804ULL,  0x1004081002402ULL};
 
-Bitboard BishopMagics[MAX_SQ] = {
+constexpr Bitboard BishopMagics[MAX_SQ] = {
     0x40040844404084ULL,   0x2004208a004208ULL,   0x10190041080202ULL,   0x108060845042010ULL,
     0x581104180800210ULL,  0x2112080446200010ULL, 0x1080820820060210ULL, 0x3c0808410220200ULL,
     0x4050404440404ULL,    0x21001420088ULL,      0x24d0080801082102ULL, 0x1020a0a020400ULL,
@@ -1571,11 +1570,11 @@ Bitboard BishopMagics[MAX_SQ] = {
     0xa010109502200ULL,    0x4a02012000ULL,       0x500201010098b028ULL, 0x8040002811040900ULL,
     0x28000010020204ULL,   0x6000020202d0240ULL,  0x8918844842082200ULL, 0x4010011029020020ULL};
 
-Bitboard RookAttacks[0x19000];
-Bitboard BishopAttacks[0x1480];
+inline Bitboard RookAttacks[0x19000] = {};
+inline Bitboard BishopAttacks[0x1480] = {};
 
-Magic RookTable[MAX_SQ];
-Magic BishopTable[MAX_SQ];
+inline Magic RookTable[MAX_SQ] = {};
+inline Magic BishopTable[MAX_SQ] = {};
 
 [[nodiscard]] inline int validSq(Rank r, File f) {
     return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
@@ -1861,7 +1860,7 @@ template <Color c>
 }
 
 template <Color c>
-[[nodiscard]] Bitboard checkMask(const Board& board, Square sq, int& double_check) {
+[[nodiscard]] Bitboard checkMask(const Board &board, Square sq, int &double_check) {
     Bitboard mask = 0;
     double_check = 0;
 
@@ -1914,7 +1913,7 @@ template <Color c>
 }
 
 template <Color c>
-[[nodiscard]] Bitboard pinMaskRooks(const Board& board, Square sq, Bitboard occ_enemy,
+[[nodiscard]] Bitboard pinMaskRooks(const Board &board, Square sq, Bitboard occ_enemy,
                                     Bitboard occ_us) {
     Bitboard pin_hv = 0;
 
@@ -1934,7 +1933,7 @@ template <Color c>
 }
 
 template <Color c>
-[[nodiscard]] Bitboard pinMaskBishops(const Board& board, Square sq, Bitboard occ_enemy,
+[[nodiscard]] Bitboard pinMaskBishops(const Board &board, Square sq, Bitboard occ_enemy,
                                       Bitboard occ_us) {
     Bitboard pin_diag = 0;
 
@@ -1954,7 +1953,7 @@ template <Color c>
 }
 
 template <Color c>
-[[nodiscard]] Bitboard seenSquares(const Board& board, Bitboard enemy_empty) {
+[[nodiscard]] Bitboard seenSquares(const Board &board, Bitboard enemy_empty) {
     auto king_sq = board.kingSq(~c);
 
     auto queens = board.pieces(PieceType::QUEEN, c);
@@ -1997,7 +1996,7 @@ template <Color c>
 }
 
 template <Color c, MoveGenType mt>
-void generatePawnMoves(const Board& board, Movelist& moves, Bitboard pin_d, Bitboard pin_hv,
+void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
                        Bitboard checkmask, Bitboard occ_enemy) {
     const auto pawns = board.pieces(PieceType::PAWN, c);
 
@@ -2196,7 +2195,7 @@ void generatePawnMoves(const Board& board, Movelist& moves, Bitboard pin_d, Bitb
 }
 
 template <Color c, MoveGenType mt>
-[[nodiscard]] inline Bitboard generateCastleMoves(const Board& board, Square sq, Bitboard seen,
+[[nodiscard]] inline Bitboard generateCastleMoves(const Board &board, Square sq, Bitboard seen,
                                                   Bitboard pinHV) {
     if constexpr (mt == MoveGenType::CAPTURE) return 0ull;
     const auto rights = board.castlingRights();
@@ -2234,7 +2233,7 @@ template <Color c, MoveGenType mt>
 
 // all legal moves for a position
 template <Color c, MoveGenType mt>
-void legalmoves(Movelist& movelist, const Board& board) {
+void legalmoves(Movelist &movelist, const Board &board) {
     /*
      The size of the movelist might not
      be 0! This is done on purpose since it enables
@@ -2342,7 +2341,7 @@ void legalmoves(Movelist& movelist, const Board& board) {
 }
 
 template <MoveGenType mt>
-inline void legalmoves(Movelist& movelist, const Board& board) {
+inline void legalmoves(Movelist &movelist, const Board &board) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
@@ -2355,7 +2354,7 @@ inline void legalmoves(Movelist& movelist, const Board& board) {
 
 namespace uci {
 
-[[nodiscard]] inline std::string moveToUci(const Move& move, bool chess960 = false) {
+[[nodiscard]] inline std::string moveToUci(const Move &move, bool chess960 = false) {
     std::stringstream ss;
 
     // Get the from and to squares
@@ -2381,7 +2380,7 @@ namespace uci {
     return ss.str();
 }
 
-[[nodiscard]] inline Move uciToMove(const Board& board, const std::string& uci) {
+[[nodiscard]] inline Move uciToMove(const Board &board, const std::string &uci) {
     Square source = utils::extractSquare(uci.substr(0, 2));
     Square target = utils::extractSquare(uci.substr(2, 2));
     PieceType piece = utils::typeOfPiece(board.at(source));
@@ -2415,7 +2414,7 @@ namespace uci {
     }
 }
 
-[[nodiscard]] inline std::string moveToSan(Board board, const Move& move) {
+[[nodiscard]] inline std::string moveToSan(Board board, const Move &move) {
     static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
     static const std::string repFile[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
 
@@ -2436,7 +2435,7 @@ namespace uci {
     Movelist moves;
     movegen::legalmoves(moves, board);
 
-    for (const auto& m : moves) {
+    for (const auto &m : moves) {
         if (pt != PieceType::PAWN && m != move && board.at(m.from()) == board.at(move.from()) &&
             m.to() == move.to()) {
             if (utils::squareFile(m.from()) == utils::squareFile(move.from())) {
@@ -2478,7 +2477,7 @@ namespace uci {
     return san;
 }
 
-[[nodiscard]] inline std::string moveToLan(Board board, const Move& move) {
+[[nodiscard]] inline std::string moveToLan(Board board, const Move &move) {
     static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
     static const std::string repFile[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
 
@@ -2528,7 +2527,7 @@ namespace uci {
     return lan;
 }
 
-[[nodiscard]] inline Move parseSan(const Board& board, std::string san) {
+[[nodiscard]] inline Move parseSan(const Board &board, std::string san) {
     Movelist moves;
     movegen::legalmoves(moves, board);
     if (san == "0-0" || san == "0-0+" || san == "0-0#" || san == "O-O" || san == "O-O+" ||
@@ -2539,7 +2538,6 @@ namespace uci {
             }
         }
         throw std::runtime_error("illegal san, step 1: " + san);
-
     } else if (san == "0-0-0" || san == "0-0-0+" || san == "0-0-0#" || san == "O-O-O" ||
                san == "O-O-O+" || san == "O-O-O#") {
         for (auto move : moves) {
