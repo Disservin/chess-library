@@ -23,6 +23,9 @@ SOFTWARE.
 
 Source: https://github.com/Disservin/chess-library
 */
+
+#pragma once
+
 #include <algorithm>
 #include <array>
 #include <bitset>
