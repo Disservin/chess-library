@@ -920,7 +920,19 @@ class Board {
         return pieces(type, Color::WHITE) | pieces(type, Color::BLACK);
     }
 
-    [[nodiscard]] Piece at(Square square) const { return board_[static_cast<int>(square)]; }
+    /// @brief Returns either the piece or the piece type on a square
+    /// @tparam T
+    /// @param sq
+    /// @return
+    template <typename T = Piece>
+    [[nodiscard]] T at(Square sq) const {
+        if constexpr (std::is_same_v<T, PieceType>) {
+            return utils::typeOfPiece(board_[sq]);
+        } else {
+            return board_[sq];
+        }
+    }
+
     [[nodiscard]] Color color(Piece piece) const {
         return static_cast<Color>(static_cast<int>(piece) / 6);
     }
@@ -944,8 +956,6 @@ class Board {
     [[nodiscard]] bool isAttacked(Square square, Color color) const;
 
     [[nodiscard]] bool inCheck() const;
-
-    [[nodiscard]] Move parseSan(std::string san) const;
 
     [[nodiscard]] U64 zobrist() const;
 
@@ -1313,7 +1323,7 @@ inline void Board::removePiece(Piece piece, Square sq) {
 inline void Board::makeMove(const Move &move) {
     auto capture = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
     auto captured = at(move.to());
-    const auto pt = utils::typeOfPiece(at(move.from()));
+    const auto pt = at<PieceType>(move.from());
 
     // captured);
     prev_states_.emplace_back(
@@ -1369,17 +1379,14 @@ inline void Board::makeMove(const Move &move) {
     }
 
     if (move.typeOf() == Move::CASTLING) {
-        assert(utils::typeOfPiece(at(move.from())) == PieceType::KING);
-        assert(utils::typeOfPiece(at(move.to())) == PieceType::ROOK);
+        assert(at<PieceType>(move.from()) == PieceType::KING);
+        assert(at<PieceType>(move.to()) == PieceType::ROOK);
 
         bool king_side = move.to() > move.from();
         auto rookTo =
             utils::relativeSquare(side_to_move_, king_side ? Square::SQ_F1 : Square::SQ_D1);
         auto kingTo =
             utils::relativeSquare(side_to_move_, king_side ? Square::SQ_G1 : Square::SQ_C1);
-
-        assert(utils::typeOfPiece(at(move.from())) == PieceType::KING);
-        assert(utils::typeOfPiece(at(move.to())) == PieceType::ROOK);
 
         auto king = removePiece(move.from());
         auto rook = removePiece(move.to());
@@ -1400,7 +1407,7 @@ inline void Board::makeMove(const Move &move) {
     }
 
     if (move.typeOf() == Move::ENPASSANT) {
-        assert(utils::typeOfPiece(at(move.to() ^ 8)) == PieceType::PAWN);
+        assert(at<PieceType>(move.to() ^ 8) == PieceType::PAWN);
         removePiece(utils::makePiece(~side_to_move_, PieceType::PAWN), Square(int(move.to()) ^ 8));
     }
 
@@ -1430,8 +1437,8 @@ inline void Board::unmakeMove(const Move &move) {
         const auto king_to_sq = utils::fileRankSquare(king_side ? File::FILE_G : File::FILE_C,
                                                       utils::squareRank(move.from()));
 
-        assert(utils::typeOfPiece(at(rook_from_sq)) == PieceType::ROOK);
-        assert(utils::typeOfPiece(at(king_to_sq)) == PieceType::KING);
+        assert(at<PieceType>(rook_from_sq) == PieceType::ROOK);
+        assert(at<PieceType>(king_to_sq) == PieceType::KING);
 
         const auto rook = removePiece(rook_from_sq);
         const auto king = removePiece(king_to_sq);

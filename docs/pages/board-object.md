@@ -5,28 +5,57 @@ class Board {
     public:
         Board::Board(const std::string fen)
 
-        void Board::setFen(std::string fen)
-        std::string Board::getFen();
+        void setFen(std::string fen);
+        std::string getFen();
 
-        U64 Board::zobrist();
+        void makeMove(const Move &move);
+        void unmakeMove(const Move &move);
 
-        std::string Board::getCastleString();
+        void makeNullMove();
+        void unmakeNullMove();
 
-        bool Board::isRepetition(int count);
+        Bitboard us(Color color);
+        Bitboard them(Color color);
+        Bitboard occ();
 
-        std::pair<std::string, GameResult> Board::isGameOver();
+        // recalculate all bitboards
+        Bitboard all();
 
-        bool Board::isAttacked(Square square, Color color);
-        bool Board::inCheck();
+        Square kingSq(Color color);
 
-        void Board::placePiece(Piece piece, Square sq);
-        void Board::removePiece(Piece piece, Square sq);
-        Piece Board::removePiece(Square sq);
+        Bitboard pieces(PieceType type, Color color);
 
-        void Board::makeMove(const Move& move);
-        void Board::unmakeMove(const Move& move);
+        Bitboard pieces(PieceType type);
 
-        void Board::makeNullMove();
-        void Board::unmakeNullMove();
+        /// @brief Returns either the piece or the piece type on a square
+        /// @tparam T
+        /// @param sq
+        /// @return
+        template <typename T = Piece>
+        T at(Square sq);
+
+        Color color(Piece piece);
+
+        U64 hash();
+        Color sideToMove();
+        Square enpassantSq();
+        CastlingRights castlingRights();
+        int halfMoveClock();
+        int fullMoveNumber();
+
+        void set960(bool is960);
+        bool chess960();
+
+        std::string getCastleString();
+
+        bool isRepetition(int count = 2);
+
+        std::pair<std::string, GameResult> isGameOver();
+
+        bool isAttacked(Square square, Color color);
+
+        bool inCheck();
+
+        U64 zobrist();
 };
 ```
