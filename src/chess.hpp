@@ -899,12 +899,16 @@ class Board {
                pieces(PieceType::QUEEN, color) | pieces(PieceType::KING, color);
     }
     [[nodiscard]] Bitboard them(Color color) const { return us(~color); }
+
+    /// @brief
+    /// @return
     [[nodiscard]] Bitboard occ() const {
         assert(occ_all_ == all());
         return occ_all_;
     }
 
-    // recalculate all bitboards
+    /// @brief recalculate all bitboards
+    /// @return
     [[nodiscard]] Bitboard all() const { return us(Color::WHITE) | us(Color::BLACK); }
 
     [[nodiscard]] Square kingSq(Color color) const {

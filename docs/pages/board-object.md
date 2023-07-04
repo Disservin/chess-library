@@ -16,10 +16,16 @@ class Board {
 
         Bitboard us(Color color);
         Bitboard them(Color color);
-        Bitboard occ();
 
-        // recalculate all bitboards
+
+
+        /// @brief recalculate all bitboards
+        /// @return
         Bitboard all();
+
+        /// @brief more efficient version of all(), which is incremental
+        /// @return
+        Bitboard occ();
 
         Square kingSq(Color color);
 
