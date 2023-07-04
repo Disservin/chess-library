@@ -52,8 +52,6 @@ using Bitboard = std::uint64_t;  // clear distinction between bitboard and U64
  * Enumerations                                                              *
 \****************************************************************************/
 
-enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
-
 // clang-format off
 enum Square : uint8_t {
     SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
@@ -66,14 +64,9 @@ enum Square : uint8_t {
     SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
     NO_SQ
 };
-constexpr Square operator++(Square& sq) {
-    sq = static_cast<Square>(static_cast<uint8_t>(sq) + 1);
-    return sq;
-}
-constexpr Square operator^(Square sq, int i) {
-    return static_cast<Square>(static_cast<uint8_t>(sq) ^ static_cast<uint8_t>(i));
-}
 // clang-format on
+
+enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 
 enum class Direction : int8_t {
     NORTH = 8,
@@ -85,23 +78,12 @@ enum class Direction : int8_t {
     SOUTH_WEST = -9,
     SOUTH_EAST = -7
 };
-constexpr Square operator+(Square sq, Direction dir) {
-    return static_cast<Square>(static_cast<int8_t>(sq) + static_cast<int8_t>(dir));
-}
 
 enum class File { NO_FILE = -1, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H };
+
 enum class Rank { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NO_RANK };
 
 enum class PieceType : uint8_t { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
-constexpr PieceType operator++(PieceType &pt) {
-    pt = static_cast<PieceType>(static_cast<uint8_t>(pt) + 1);
-    return pt;
-}
-constexpr PieceType operator++(PieceType &pt, int) {
-    PieceType result = pt;
-    ++pt;
-    return result;
-}
 
 enum class Piece : uint8_t {
     WHITEPAWN,
@@ -118,17 +100,44 @@ enum class Piece : uint8_t {
     BLACKKING,
     NONE
 };
-constexpr Piece operator++(Piece &p) {
-    p = static_cast<Piece>(static_cast<uint8_t>(p) + 1);
-    return p;
-}
 
 enum class Color : uint8_t { WHITE, BLACK, NONE };
-constexpr Color operator~(Color c) { return Color(static_cast<uint8_t>(c) ^ 1); }
 
 enum class CastleSide : uint8_t { KING_SIDE, QUEEN_SIDE };
 
 enum class GameResult { WIN, LOSE, DRAW, NONE };
+
+/****************************************************************************\
+ * Enum Overloads                                                            *
+\****************************************************************************/
+
+#define ADD_BASE_OPERATORS_FOR(T)                                                        \
+    constexpr T operator+(T vv_1, int vv_2) { return static_cast<T>(int(vv_1) + vv_2); } \
+    constexpr T operator-(T vv_1, int vv_2) { return static_cast<T>(int(vv_1) - vv_2); } \
+    constexpr T operator-(T vv) { return static_cast<T>(-int(vv)); }                     \
+    constexpr T &operator+=(T &vv_1, int vv_2) { return vv_1 = vv_1 + vv_2; }            \
+    constexpr T &operator-=(T &vv_1, int vv_2) { return vv_1 = vv_1 - vv_2; }
+
+#define ADD_INCR_OPERATORS_FOR(T)                                               \
+    constexpr T &operator++(T &vv) { return vv = static_cast<T>(int(vv) + 1); } \
+    constexpr T &operator--(T &vv) { return vv = static_cast<T>(int(vv) - 1); } \
+    constexpr T operator++(T &vv, int) {                                        \
+        T result = vv;                                                          \
+        ++vv;                                                                   \
+        return result;                                                          \
+    }                                                                           \
+    constexpr T operator--(T &vv, int) {                                        \
+        T result = vv;                                                          \
+        --vv;                                                                   \
+        return result;                                                          \
+    }
+
+constexpr Square operator+(Square sq, Direction dir) {
+    return static_cast<Square>(static_cast<int8_t>(sq) + static_cast<int8_t>(dir));
+}
+
+constexpr Color operator~(Color c) { return Color(static_cast<uint8_t>(c) ^ 1); }
+
 constexpr GameResult operator~(GameResult gm) {
     if (gm == GameResult::WIN)
         return GameResult::LOSE;
@@ -138,6 +147,10 @@ constexpr GameResult operator~(GameResult gm) {
         return GameResult::DRAW;
     else
         return GameResult::NONE;
+}
+
+constexpr Square operator^(Square sq, int i) {
+    return static_cast<Square>(static_cast<uint8_t>(sq) ^ static_cast<uint8_t>(i));
 }
 
 /****************************************************************************\
@@ -153,8 +166,8 @@ static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 
 // clang-format off
 const std::string squareToString[64] = {
-    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a1", "b1", "c1", "vv_1 ", "e1", "f1", "g1", "h1",
+    "a2", "b2", "c2", "vv_2", "e2", "f2", "g2", "h2",
     "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
     "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
     "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
@@ -1002,8 +1015,8 @@ inline void Board::setFen(std::string fen) {
     occ_all_ = 0ULL;
 
     for (const auto c : {Color::WHITE, Color::BLACK}) {
-        for (PieceType p = PieceType::PAWN; p < PieceType::NONE; p++) {
-            pieces_bb_[static_cast<int>(c)][static_cast<int>(p)] = 0ULL;
+        for (int i = 0; i < 6; i++) {
+            pieces_bb_[static_cast<int>(c)][i] = 0ULL;
         }
     }
 
@@ -1840,20 +1853,23 @@ static auto init_squares_between = []() constexpr {
     // initialize squares between table
     std::array<std::array<U64, MAX_SQ>, MAX_SQ> squares_between_bb{};
     U64 sqs = 0;
-    for (Square sq1 = Square::SQ_A1; sq1 <= Square::SQ_H8; ++sq1) {
-        for (Square sq2 = Square::SQ_A1; sq2 <= Square::SQ_H8; ++sq2) {
+
+    for (int sq1 = 0; sq1 < MAX_SQ; ++sq1) {
+        for (int sq2 = 0; sq2 < MAX_SQ; ++sq2) {
             sqs = (1ULL << sq1) | (1ULL << sq2);
             if (sq1 == sq2)
                 squares_between_bb[sq1][sq2] = 0ull;
-            else if (utils::squareFile(sq1) == utils::squareFile(sq2) ||
-                     utils::squareRank(sq1) == utils::squareRank(sq2))
-                squares_between_bb[sq1][sq2] = attacks::rook(sq1, sqs) & attacks::rook(sq2, sqs);
-            else if (utils::diagonalOf(sq1) == utils::diagonalOf(sq2) ||
-                     utils::antiDiagonalOf(sq1) == utils::antiDiagonalOf(sq2))
+            else if (utils::squareFile(Square(sq1)) == utils::squareFile(Square(sq2)) ||
+                     utils::squareRank(Square(sq1)) == utils::squareRank(Square(sq2)))
                 squares_between_bb[sq1][sq2] =
-                    attacks::bishop(sq1, sqs) & attacks::bishop(sq2, sqs);
+                    attacks::rook(Square(sq1), sqs) & attacks::rook(Square(sq2), sqs);
+            else if (utils::diagonalOf(Square(sq1)) == utils::diagonalOf(Square(sq2)) ||
+                     utils::antiDiagonalOf(Square(sq1)) == utils::antiDiagonalOf(Square(sq2)))
+                squares_between_bb[sq1][sq2] =
+                    attacks::bishop(Square(sq1), sqs) & attacks::bishop(Square(sq2), sqs);
         }
     }
+
     return squares_between_bb;
 };
 
