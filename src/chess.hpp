@@ -408,6 +408,7 @@ struct Movelist {
     }
 
     constexpr int size() const { return size_; }
+    constexpr bool empty() const { return size_ == 0; }
 
     constexpr void clear() { size_ = 0; }
 
