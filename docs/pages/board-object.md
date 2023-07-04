@@ -17,8 +17,6 @@ class Board {
         Bitboard us(Color color);
         Bitboard them(Color color);
 
-
-
         /// @brief recalculate all bitboards
         /// @return
         Bitboard all();
