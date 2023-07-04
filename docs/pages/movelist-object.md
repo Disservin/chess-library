@@ -9,6 +9,7 @@ struct Movelist {
     constexpr int find(Move move);
 
     constexpr int size() const;
+    constexpr bool empty() const;
     constexpr void clear();
     inline void sort(int index = 0);
 
