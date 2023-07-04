@@ -3,7 +3,7 @@
 Here's a list of all commonly used enums
 
 ```cpp
-enum MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
+enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 ```
 
 ```cpp
