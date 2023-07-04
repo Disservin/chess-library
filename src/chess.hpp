@@ -70,6 +70,20 @@ constexpr Square operator++(Square& sq) {
     sq = static_cast<Square>(static_cast<uint8_t>(sq) + 1);
     return sq;
 }
+constexpr Square operator++(Square& sq, int) {
+    Square result = sq;
+    ++sq;
+    return result;
+}
+constexpr Square operator--(Square& sq) {
+    sq = static_cast<Square>(static_cast<uint8_t>(sq) - 1);
+    return sq;
+}
+constexpr Square operator--(Square& sq, int) {
+    Square result = sq;
+    --sq;
+    return result;
+}
 constexpr Square operator^(Square sq, int i) {
     return static_cast<Square>(static_cast<uint8_t>(sq) ^ static_cast<uint8_t>(i));
 }
@@ -89,17 +103,63 @@ constexpr Square operator+(Square sq, Direction dir) {
     return static_cast<Square>(static_cast<int8_t>(sq) + static_cast<int8_t>(dir));
 }
 
-enum class File { NO_FILE = -1, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H };
 enum class Rank { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NO_RANK };
+constexpr Rank operator++(Rank& rank) {
+    rank = static_cast<Rank>(static_cast<int>(rank) + 1);
+    return rank;
+}
+constexpr Rank operator++(Rank& rank, int) {
+    Rank result = rank;
+    ++rank;
+    return result;
+}
+constexpr Rank operator--(Rank& rank) {
+    rank = static_cast<Rank>(static_cast<int>(rank) - 1);
+    return rank;
+}
+constexpr Rank operator--(Rank& rank, int) {
+    Rank result = rank;
+    --rank;
+    return result;
+}
+
+enum class File { NO_FILE = -1, FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H };
+constexpr File operator++(File& file) {
+    file = static_cast<File>(static_cast<int>(file) + 1);
+    return file;
+}
+constexpr File operator++(File& file, int) {
+    File result = file;
+    ++file;
+    return result;
+}
+constexpr File operator--(File& file) {
+    file = static_cast<File>(static_cast<int>(file) - 1);
+    return file;
+}
+constexpr File operator--(File& file, int) {
+    File result = file;
+    --file;
+    return result;
+}
 
 enum class PieceType : uint8_t { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
-constexpr PieceType operator++(PieceType &pt) {
+constexpr PieceType operator++(PieceType& pt) {
     pt = static_cast<PieceType>(static_cast<uint8_t>(pt) + 1);
     return pt;
 }
-constexpr PieceType operator++(PieceType &pt, int) {
+constexpr PieceType operator++(PieceType& pt, int) {
     PieceType result = pt;
     ++pt;
+    return result;
+}
+constexpr PieceType operator--(PieceType& pt) {
+    pt = static_cast<PieceType>(static_cast<uint8_t>(pt) - 1);
+    return pt;
+}
+constexpr PieceType operator--(PieceType& pt, int) {
+    PieceType result = pt;
+    --pt;
     return result;
 }
 
