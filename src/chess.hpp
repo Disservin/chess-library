@@ -1643,6 +1643,8 @@ inline void Board::unmakeNullMove() {
 
     full_moves_--;
 
+    side_to_move_ = ~side_to_move_;
+
     prev_states_.pop_back();
 }
 
