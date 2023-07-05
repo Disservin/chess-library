@@ -1080,8 +1080,6 @@ class Board {
     void placePiece(Piece piece, Square sq);
     void removePiece(Piece piece, Square sq);
 
-    [[nodiscard]] Piece removePiece(Square sq);
-
     std::vector<State> prev_states_;
 
     U64 pieces_bb_[2][6];
@@ -1421,20 +1419,6 @@ inline void Board::removePiece(Piece piece, Square sq) {
     occ_all_ &= ~(1ULL << sq);
 }
 
-[[nodiscard]] inline Piece Board::removePiece(Square sq) {
-    assert(board_[sq] != Piece::NONE);
-    auto piece = board_[sq];
-
-    hash_key_ ^= zobrist::piece(piece, sq);
-
-    pieces_bb_[int(color(piece))][int(utils::typeOfPiece(piece))] &= ~(1ULL << sq);
-    board_[sq] = Piece::NONE;
-
-    occ_all_ &= ~(1ULL << sq);
-
-    return piece;
-}
-
 inline void Board::makeMove(const Move &move) {
     auto capture = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
     auto captured = at(move.to());
@@ -1503,8 +1487,12 @@ inline void Board::makeMove(const Move &move) {
         auto kingTo =
             utils::relativeSquare(side_to_move_, king_side ? Square::SQ_G1 : Square::SQ_C1);
 
-        auto king = removePiece(move.from());
-        auto rook = removePiece(move.to());
+        const auto king = at(move.from());
+        const auto rook = at(move.to());
+
+        removePiece(king, move.from());
+        removePiece(rook, move.to());
+
         assert(king == utils::makePiece(side_to_move_, PieceType::KING));
         assert(rook == utils::makePiece(side_to_move_, PieceType::ROOK));
 
@@ -1516,8 +1504,9 @@ inline void Board::makeMove(const Move &move) {
     } else {
         assert(at(move.from()) != Piece::NONE);
         assert(at(move.to()) == Piece::NONE);
+        const auto piece = at(move.from());
 
-        auto piece = removePiece(move.from());
+        removePiece(piece, move.from());
         placePiece(piece, move.to());
     }
 
@@ -1555,8 +1544,11 @@ inline void Board::unmakeMove(const Move &move) {
         assert(at<PieceType>(rook_from_sq) == PieceType::ROOK);
         assert(at<PieceType>(king_to_sq) == PieceType::KING);
 
-        const auto rook = removePiece(rook_from_sq);
-        const auto king = removePiece(king_to_sq);
+        const auto rook = at(rook_from_sq);
+        const auto king = at(king_to_sq);
+
+        removePiece(rook, rook_from_sq);
+        removePiece(king, king_to_sq);
         assert(king == utils::makePiece(side_to_move_, PieceType::KING));
         assert(rook == utils::makePiece(side_to_move_, PieceType::ROOK));
 
@@ -1587,8 +1579,10 @@ inline void Board::unmakeMove(const Move &move) {
     } else {
         assert(at(move.to()) != Piece::NONE);
 
-        const auto piece = removePiece(move.to());
+        const auto piece = at(move.to());
         assert(at(move.from()) == Piece::NONE);
+
+        removePiece(piece, move.to());
         placePiece(piece, move.from());
     }
 
