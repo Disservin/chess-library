@@ -1053,7 +1053,11 @@ class Board {
     [[nodiscard]] int halfMoveClock() const { return half_moves_; }
     [[nodiscard]] int fullMoveNumber() const { return full_moves_; }
 
-    void set960(bool is960) { chess960_ = is960; }
+    void set960(bool is960) {
+        chess960_ = is960;
+        setFen(original_fen_);
+    }
+
     [[nodiscard]] bool chess960() const { return chess960_; }
 
     [[nodiscard]] std::string getCastleString() const;
@@ -1098,11 +1102,16 @@ class Board {
     uint8_t half_moves_;
 
     bool chess960_ = false;
+
+   private:
+    std::string original_fen_;
 };
 
 inline Board::Board(const std::string fen) { setFen(fen); }
 
 inline void Board::setFen(std::string fen) {
+    original_fen_ = fen;
+
     std::fill(std::begin(board_), std::end(board_), Piece::NONE);
 
     utils::trim(fen);
