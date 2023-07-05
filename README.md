@@ -32,7 +32,7 @@ nodes 5093903769 nps 360349728
 
 ### Usage
 
-This is a single/two header library.
+This is a single header library.
 
 You only need to include `chess.hpp` header!
 Aftewards you can access the chess logic over the `chess::` namespace.
