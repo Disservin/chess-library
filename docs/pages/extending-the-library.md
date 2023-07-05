@@ -49,12 +49,12 @@ class W_Board : public Board {
    protected:
     void placePiece(Piece piece, Square sq) {
         Board::placePiece(piece, sq);
-        inc += 1;
+        inc++;
     }
 
     void removePiece(Piece piece, Square sq) {
         Board::removePiece(piece, sq);
-        inc -= 1;
+        inc--;
     }
 };
 
