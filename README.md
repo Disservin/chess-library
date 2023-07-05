@@ -27,9 +27,6 @@ depth 6  time 2434  nodes 924181432    nps 379540629 fen rbbqn1kr/pp2p1pp/6n1/2p
 depth 6  time 927   nodes 308553169    nps 332492639 fen rqbbknr1/1ppp2pp/p5n1/4pp2/P7/1PP5/1Q1PPPPP/R1BBKNRN w GAga - 0 9
 depth 6  time 2165  nodes 872323796    nps 402734901 fen 4rrb1/1kp3b1/1p1p4/pP1Pn2p/5p2/1PR2P2/2P1NB1P/2KR1B2 w D - 0 21
 depth 6  time 6382  nodes 2678022813   nps 419555508 fen 1rkr3b/1ppn3p/3pB1n1/6q1/R2P4/4N1P1/1P5P/2KRQ1B1 b Ddb - 0 14
-
-averaged:
-nodes 5093903769 nps 360349728
 ```
 
 ### Usage
