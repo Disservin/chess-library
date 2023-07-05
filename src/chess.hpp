@@ -1424,7 +1424,6 @@ inline void Board::makeMove(const Move &move) {
     auto captured = at(move.to());
     const auto pt = at<PieceType>(move.from());
 
-    // captured);
     prev_states_.emplace_back(
         State{hash_key_, castling_rights_, enpassant_sq_, half_moves_, captured});
 
