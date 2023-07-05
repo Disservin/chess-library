@@ -987,7 +987,7 @@ class Board {
    public:
     explicit Board(const std::string fen = STARTPOS);
 
-    void setFen(std::string fen);
+    virtual void setFen(std::string fen);
     [[nodiscard]] std::string getFen() const;
 
     void makeMove(const Move &move);
@@ -1081,8 +1081,8 @@ class Board {
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
 
    protected:
-    void placePiece(Piece piece, Square sq);
-    void removePiece(Piece piece, Square sq);
+    virtual void placePiece(Piece piece, Square sq);
+    virtual void removePiece(Piece piece, Square sq);
 
     std::vector<State> prev_states_;
 
@@ -1429,8 +1429,8 @@ inline void Board::removePiece(Piece piece, Square sq) {
 }
 
 inline void Board::makeMove(const Move &move) {
-    auto capture = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
-    auto captured = at(move.to());
+    const auto capture = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
+    const auto captured = at(move.to());
     const auto pt = at<PieceType>(move.from());
 
     prev_states_.emplace_back(
