@@ -34,6 +34,10 @@ export default defineConfig({
 					{ text: "Attacks", link: "/pages/attacks" },
 					{ text: "Helper Functions", link: "/pages/helpers" },
 					{ text: "Move Generation", link: "/pages/move-gen" },
+					{
+						text: "Extending the library",
+						link: "/pages/extending-the-library",
+					},
 				],
 			},
 		],
@@ -41,5 +45,6 @@ export default defineConfig({
 		socialLinks: [
 			{ icon: "github", link: "https://github.com/Disservin/chess-library" },
 		],
+		outline: "deep",
 	},
 });
