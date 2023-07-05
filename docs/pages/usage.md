@@ -12,7 +12,7 @@ using namespace chess;
 ## Operator Overloads
 
 ::: danger
-The usage of `enum class`'s' provides more type safety compared to plain enums because they prohibit implicit conversion to integers.
+The usage of `enum classes` provides more type safety compared to plain enums because they prohibit implicit conversion to integers.
 
 If you know what you are doing, you can make use of the `ADD_BASE_OPERATORS_FOR` and `ADD_INCR_OPERATORS_FOR` macros. Which will overload the enum class with the following operators.
 :::
