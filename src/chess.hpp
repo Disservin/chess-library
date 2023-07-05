@@ -1116,6 +1116,9 @@ class Board {
     std::string original_fen_;
 };
 
+/****************************************************************************\
+ * Board Implementations                                                     *
+\****************************************************************************/
 inline Board::Board(const std::string fen) { setFen(fen); }
 
 inline void Board::setFen(std::string fen) {
@@ -2487,6 +2490,10 @@ inline void legalmoves(Movelist &movelist, const Board &board) {
 }
 
 }  // namespace movegen
+
+/****************************************************************************\
+ * uci utility functions                                                     *
+\****************************************************************************/
 
 namespace uci {
 /// @brief Converts an internal move to a UCI string
