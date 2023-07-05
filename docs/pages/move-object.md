@@ -12,7 +12,7 @@ struct Move {
     Move(uint16_t move) : move_(move), score_(0) {}
 
     template <uint16_t MoveType = 0>
-    static constexpr Move make(
+    Move make(
         Square source,
         Square target,
         PieceType pt = PieceType::KNIGHT
@@ -26,7 +26,7 @@ struct Move {
 
     PieceType promotionType() const;
 
-    constexpr void setScore(int16_t score) { score_ = score; }
+    void setScore(int16_t score) { score_ = score; }
 
     uint16_t move() const;
     int16_t score() const;
@@ -34,12 +34,12 @@ struct Move {
     bool operator==(const Move& rhs) const { return move_ == rhs.move_; }
     bool operator!=(const Move& rhs) const { return move_ != rhs.move_; }
 
-    static constexpr uint16_t NO_MOVE = 0;
-    static constexpr uint16_t NULL_MOVE = 65;
-    static constexpr uint16_t NORMAL = 0;
-    static constexpr uint16_t PROMOTION = 1 << 14;
-    static constexpr uint16_t ENPASSANT = 2 << 14;
-    static constexpr uint16_t CASTLING = 3 << 14;
+    uint16_t NO_MOVE = 0;
+    uint16_t NULL_MOVE = 65;
+    uint16_t NORMAL = 0;
+    uint16_t PROMOTION = 1 << 14;
+    uint16_t ENPASSANT = 2 << 14;
+    uint16_t CASTLING = 3 << 14;
 
     friend std::ostream& operator<<(std::ostream& os, const Move& move);
 

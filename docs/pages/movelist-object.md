@@ -3,18 +3,18 @@
 ```cpp
 struct Movelist {
    public:
-    constexpr void add(Move move);
+    void add(Move move);
 
     // returns -1 if not found
-    constexpr int find(Move move);
+    int find(Move move);
 
-    constexpr int size() const;
-    constexpr bool empty() const;
-    constexpr void clear();
-    inline void sort(int index = 0);
+    int size() const;
+    bool empty() const;
+    void clear();
+    void sort(int index = 0);
 
-    constexpr Move operator[](int index) const;
-    constexpr Move& operator[](int index);
+    Move operator[](int index) const;
+    Move& operator[](int index);
 
    private:
     Move moves_[MAX_MOVES];
