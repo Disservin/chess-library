@@ -719,7 +719,7 @@ inline int popcount(U64 mask) {
 /// @param mask
 /// @return
 inline Square poplsb(Bitboard &mask) {
-    int8_t s = lsb(mask);
+    Square s = lsb(mask);
     mask &= mask - 1;  // compiler optimizes this to _blsr_u64
     return Square(s);
 }
