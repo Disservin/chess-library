@@ -107,6 +107,15 @@ enum class CastleSide : uint8_t { KING_SIDE, QUEEN_SIDE };
 
 enum class GameResult { WIN, LOSE, DRAW, NONE };
 
+enum class GameResultReason {
+    CHECKMATE,
+    STALEMATE,
+    INSUFFICIENT_MATERIAL,
+    FIFTY_MOVE_RULE,
+    THREEFOLD_REPETITION,
+    NONE
+};
+
 /****************************************************************************\
  * Enum Overloads                                                            *
 \****************************************************************************/
@@ -1064,7 +1073,7 @@ class Board {
 
     [[nodiscard]] bool isRepetition(int count = 2) const;
 
-    [[nodiscard]] std::pair<std::string, GameResult> isGameOver() const;
+    [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const;
 
     /// @brief Checks if a square is attacked by the given color.
     /// @param square
@@ -1344,37 +1353,37 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return false;
 }
 
-[[nodiscard]] inline std::pair<std::string, GameResult> Board::isGameOver() const {
+[[nodiscard]] inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
     if (half_moves_ >= 100) {
         const Board &board = *this;
 
         Movelist movelist;
         movegen::legalmoves<MoveGenType::ALL>(movelist, board);
-        if (isAttacked(kingSq(side_to_move_), ~side_to_move_) && movelist.size() == 0) {
-            return {"checkmate", GameResult::LOSE};
+        if (movelist.size() == 0 && isAttacked(kingSq(side_to_move_), ~side_to_move_)) {
+            return {GameResultReason::CHECKMATE, GameResult::LOSE};
         }
-        return {"50 move rule", GameResult::DRAW};
+        return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
     }
 
     const auto count = builtin::popcount(occ());
 
-    if (count == 2) return {"insufficient material", GameResult::DRAW};
+    if (count == 2) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
 
     if (count == 3) {
         if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK))
-            return {"insufficient material", GameResult::DRAW};
+            return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
         if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK))
-            return {"insufficient material", GameResult::DRAW};
+            return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
     }
 
     if (count == 4) {
         if (pieces(PieceType::BISHOP, Color::WHITE) && pieces(PieceType::BISHOP, Color::BLACK) &&
             utils::sameColor(builtin::lsb(pieces(PieceType::BISHOP, Color::WHITE)),
                              builtin::lsb(pieces(PieceType::BISHOP, Color::BLACK))))
-            return {"insufficient material", GameResult::DRAW};
+            return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
     }
 
-    if (isRepetition()) return {"threefold repetition", GameResult::DRAW};
+    if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
 
     const Board &board = *this;
 
@@ -1383,11 +1392,11 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
 
     if (movelist.size() == 0) {
         if (isAttacked(kingSq(side_to_move_), ~side_to_move_))
-            return {"checkmate", GameResult::LOSE};
-        return {"stalemate", GameResult::DRAW};
+            return {GameResultReason::CHECKMATE, GameResult::LOSE};
+        return {GameResultReason::STALEMATE, GameResult::DRAW};
     }
 
-    return {"", GameResult::NONE};
+    return {GameResultReason::NONE, GameResult::NONE};
 }
 
 [[nodiscard]] inline bool Board::isAttacked(Square square, Color color) const {

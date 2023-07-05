@@ -54,7 +54,7 @@ class Board {
 
         bool isRepetition(int count = 2);
 
-        std::pair<std::string, GameResult> isGameOver();
+        std::pair<GameResultReason, GameResult> isGameOver();
 
         bool isAttacked(Square square, Color color);
 

@@ -2,9 +2,13 @@
 
 Here's a list of all commonly used enums
 
+## MoveGenType
+
 ```cpp
 enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 ```
+
+## Square
 
 ```cpp
 enum Square : uint8_t {
@@ -19,6 +23,8 @@ enum Square : uint8_t {
     NO_SQ
 };
 ```
+
+## Piece
 
 ```cpp
 enum class Piece : uint8_t {
@@ -38,6 +44,8 @@ enum class Piece : uint8_t {
 };
 ```
 
+## PieceType
+
 ```cpp
 enum class PieceType : uint8_t {
     PAWN,
@@ -50,6 +58,8 @@ enum class PieceType : uint8_t {
 };
 
 ```
+
+## Rank
 
 ```cpp
 enum class Rank {
@@ -66,6 +76,8 @@ enum class Rank {
 
 ```
 
+## File
+
 ```cpp
 enum class File {
     NO_FILE = -1,
@@ -81,10 +93,14 @@ enum class File {
 
 ```
 
+## CastleSide
+
 ```cpp
 enum class CastleSide : uint8_t { KING_SIDE, QUEEN_SIDE };
 
 ```
+
+## Direction
 
 ```cpp
 enum class Direction : int8_t {
@@ -99,11 +115,32 @@ enum class Direction : int8_t {
 };
 ```
 
+## Color
+
 ```cpp
 enum class Color : uint8_t { WHITE, BLACK, NONE };
-
 ```
+
+## GameResult
+
+Results are from the current players perspective.
 
 ```cpp
 enum class GameResult { WIN, LOSE, DRAW, NONE };
+```
+
+## GameResultReason
+
+You have access to this information when calling `isGameOver()`.  
+`NONE` simply means that the game is not over yet.
+
+```cpp
+enum class GameResultReason {
+    CHECKMATE,
+    STALEMATE,
+    INSUFFICIENT_MATERIAL,
+    FIFTY_MOVE_RULE,
+    THREEFOLD_REPETITION,
+    NONE
+};
 ```

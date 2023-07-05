@@ -5,9 +5,18 @@ and include in the necessary files.
 
 The entire library is behind the `chess` namespace so for easy usage just say
 
+## Example
+
 ```cpp
+#include "chess.hpp"
+
 using namespace chess;
+
 ```
+
+That's it!
+
+Also see [my examples.](/pages/example)
 
 ## Operator Overloads
 
@@ -34,14 +43,3 @@ ADD_INCR_OPERATORS_FOR(Piece)
 ::: tip
 Only `Square` is currenlty implemented without an enum class. So you dont need to overload any operators for this.
 :::
-
-## Example
-
-```cpp
-#include "chess.hpp"
-
-using namespace chess;
-
-```
-
-Also see [my examples.](/pages/example)
