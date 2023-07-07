@@ -24,7 +24,8 @@ SOFTWARE.
 Source: https://github.com/Disservin/chess-library
 */
 
-#pragma once
+#ifndef CHESS_HPP
+#define CHESS_HPP
 
 #include <algorithm>
 #include <array>
@@ -2780,3 +2781,5 @@ namespace uci {
 }  // namespace uci
 
 }  // namespace chess
+
+#endif  // CHESS_HPP
