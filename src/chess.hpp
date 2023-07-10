@@ -32,6 +32,7 @@ Source: https://github.com/Disservin/chess-library
 #include <bitset>
 #include <cassert>
 #include <cstdint>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <regex>
@@ -515,6 +516,40 @@ struct Movelist {
 \****************************************************************************/
 
 namespace utils {
+
+/// @brief https://stackoverflow.com/questions/6089231/getting-std-ifstream-to-handle-lf-cr-and-crlf
+/// @param is
+/// @param t
+/// @return
+std::istream &safeGetline(std::istream &is, std::string &t) {
+    t.clear();
+
+    // The characters in the stream are read one-by-one using a std::streambuf.
+    // That is faster than reading them one-by-one using the std::istream.
+    // Code that uses streambuf this way must be guarded by a sentry object.
+    // The sentry object performs various tasks,
+    // such as thread synchronization and updating the stream state.
+
+    std::istream::sentry se(is, true);
+    std::streambuf *sb = is.rdbuf();
+
+    for (;;) {
+        int c = sb->sbumpc();
+        switch (c) {
+            case '\n':
+                return is;
+            case '\r':
+                if (sb->sgetc() == '\n') sb->sbumpc();
+                return is;
+            case std::streambuf::traits_type::eof():
+                // Also handle the case when the last line has no line ending
+                if (t.empty()) is.setstate(std::ios::eofbit);
+                return is;
+            default:
+                t += (char)c;
+        }
+    }
+}
 
 /// @brief Print a bitboard to the console.
 /// @param bb
@@ -2779,6 +2814,88 @@ namespace uci {
 }
 
 }  // namespace uci
+
+struct Game {
+   public:
+    Game(const std::unordered_map<std::string, std::string> &headers,
+         const std::vector<Move> &moves)
+        : headers_(headers), moves_(moves) {}
+
+    [[nodiscard]] const std::unordered_map<std::string, std::string> &headers() const {
+        return headers_;
+    }
+
+    [[nodiscard]] const std::vector<Move> &moves() const { return moves_; }
+
+   private:
+    std::unordered_map<std::string, std::string> headers_;
+    std::vector<Move> moves_;
+};
+
+namespace pgn {
+
+std::vector<Move> extractMoves(Board &board, std::string line) {
+    // Define the regular expression
+    std::regex pattern(
+        "(?:[PNBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:\\=[PNBRQK])?|O(-?O){1,2})[\\+#]?(\\s*[\\!\\?]+)?");
+
+    // Use std::regex_search to check if the input matches the pattern
+    std::smatch match;
+
+    std::vector<Move> moves;
+
+    while (std::regex_search(line, match, pattern)) {
+        const auto move = uci::parseSan(board, match.str(0));
+
+        moves.push_back(move);
+        board.makeMove(move);
+
+        // Remove the matched substring from the input
+        line = match.suffix().str();
+    }
+
+    return moves;
+}
+
+/// @brief Read the next game from a file
+/// @param file
+/// @return
+inline std::optional<Game> readGame(std::ifstream &file) {
+    std::unordered_map<std::string, std::string> headers;
+    std::vector<Move> moves;
+
+    std::string line;
+
+    bool readingMoves = false;
+
+    Board board;
+
+    while (!utils::safeGetline(file, line).eof()) {
+        if (line[0] == '[') {
+            if (readingMoves) {
+                return Game(headers, moves);
+            }
+
+            // Parse the header
+            const auto match = utils::regex(line, "\\[([A-Za-z0-9]+)\\s+\"(.*)\"\\]");
+            headers[match.str(1)] = match.str(2);
+
+            if (match.str(1) == "FEN") {
+                board.setFen(match.str(2));
+            }
+        } else {
+            // Parse the moves
+            const auto line_moves = extractMoves(board, line);
+            moves.insert(moves.end(), line_moves.begin(), line_moves.end());
+
+            readingMoves = true;
+        }
+    }
+
+    return std::nullopt;
+}
+
+}  // namespace pgn
 
 }  // namespace chess
 
