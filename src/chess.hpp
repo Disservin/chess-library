@@ -35,6 +35,7 @@ Source: https://github.com/Disservin/chess-library
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -521,7 +522,7 @@ namespace utils {
 /// @param is
 /// @param t
 /// @return
-std::istream &safeGetline(std::istream &is, std::string &t) {
+inline std::istream &safeGetline(std::istream &is, std::string &t) {
     t.clear();
 
     // The characters in the stream are read one-by-one using a std::streambuf.
@@ -2843,7 +2844,7 @@ namespace pgn {
 /// @param board
 /// @param line
 /// @return
-std::vector<PgnMove> extractMoves(Board &board, std::string_view line) {
+inline std::vector<PgnMove> extractMoves(Board &board, std::string_view line) {
     std::vector<PgnMove> moves;
 
     std::string move;
