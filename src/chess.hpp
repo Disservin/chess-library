@@ -512,6 +512,11 @@ struct Movelist {
     int size_ = 0;
 };
 
+struct PgnMove {
+    Move move;
+    std::string comment;
+};
+
 /****************************************************************************\
  * Various utility functions used across the codebase                        *
 \****************************************************************************/
@@ -2829,7 +2834,12 @@ namespace uci {
         rank_from = Rank::NO_RANK;
     }
 
+    Square from_sq = NO_SQ;
     Square to_sq = utils::fileRankSquare(file_to, rank_to);
+
+    if (file_from != File::NO_FILE && rank_from != Rank::NO_RANK) {
+        from_sq = utils::fileRankSquare(file_from, rank_from);
+    }
 
     for (const auto move : moves) {
         if (pt != board.at<PieceType>(move.from()) || move.to() != to_sq) {
@@ -2854,6 +2864,13 @@ namespace uci {
             return move;
         }
 
+        if (from_sq != NO_SQ) {
+            if (move.from() == from_sq) {
+                return move;
+            }
+            continue;
+        }
+
         if ((utils::squareFile(move.from()) == file_from) ||
             (utils::squareRank(move.from()) == rank_from)) {
             return move;
@@ -2872,11 +2889,6 @@ namespace uci {
 }
 
 }  // namespace uci
-
-struct PgnMove {
-    Move move;
-    std::string comment;
-};
 
 struct Game {
    public:
