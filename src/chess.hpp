@@ -2731,6 +2731,7 @@ namespace uci {
 [[nodiscard]] inline Move parseSan(const Board &board, std::string san) {
     Movelist moves;
     movegen::legalmoves(moves, board);
+
     if (san == "0-0" || san == "0-0+" || san == "0-0#" || san == "O-O" || san == "O-O+" ||
         san == "O-O#") {
         for (auto move : moves) {
@@ -2738,7 +2739,8 @@ namespace uci {
                 return move;
             }
         }
-        throw std::runtime_error("illegal san, step 1: " + san);
+
+        throw std::runtime_error("Illegal San, Step 1: " + san);
     } else if (san == "0-0-0" || san == "0-0-0+" || san == "0-0-0#" || san == "O-O-O" ||
                san == "O-O-O+" || san == "O-O-O#") {
         for (auto move : moves) {
@@ -2746,72 +2748,124 @@ namespace uci {
                 return move;
             }
         }
-        throw std::runtime_error("illegal san, step 2: " + san);
+
+        throw std::runtime_error("Illegal San, Step 2: " + san);
     }
 
-    /*
-    group | description
-    1     | ^([NBKRQ])? match moving piecetype (optional)
-    2     | ([a-h])? match from file (optional)
-    3     | ([1-8])?[\\-x]? match from rank (optional), castle - or capture x
-    4     | ([a-h][1-8]) match to square, always present
-    5     | (=?[nbrqkNBRQK])?[\\+#]? match promotion (optional), check + or checkmate #
-    */
-    const auto match =
-        utils::regex(san, "^([NBKRQ])?([a-h])?([1-8])?[\\-x]?([a-h][1-8])(=?[nbrqkNBRQK])?[\\+#]?");
+    // A move looks like this:
 
-    Square to = utils::extractSquare(match.str(4));
+    // [NBKRQ]? ([a-h])? ([1-8])? x? [a-h] [1-8] (=[nbrqkNBRQK])?
 
-    PieceType moving = PieceType::PAWN;
-    PieceType promotionType =
-        !match.str(5).empty() ? charToPieceType[match.str(5)[1]] : PieceType::NONE;
-
-    File from_file = File::NO_FILE;
-    Rank from_rank = Rank::NO_RANK;
-
-    if (!match.str(2).empty()) {
-        from_file = File(match.str(2)[0] - 'a');
-    }
-    if (!match.str(3).empty()) {
-        from_rank = Rank(match.str(3)[0] - '1');
+    if (san.size() < 2) {
+        throw std::runtime_error("Illegal San, Step 3: " + san);
     }
 
-    if (!match.str(1).empty()) {
-        moving = charToPieceType[match.str(1)[0]];
-    } else if (!match.str(2).empty() && !match.str(3).empty()) {
-        for (auto move : moves) {
-            if (move.from() == utils::fileRankSquare(from_file, from_rank) && move.to() == to &&
-                utils::typeOfPiece(board.at(move.from())) == moving) {
-                if (move.typeOf() == Move::PROMOTION) {
-                    if (move.promotionType() == promotionType)
-                        return move;
-                    else
-                        throw std::runtime_error("illegal san, step 3: " + san);
-                }
-                return move;
-            }
+    PieceType pt = PieceType::NONE;
+
+    PieceType promotion = PieceType::NONE;
+
+    File file_from = File::NO_FILE;
+    Rank rank_from = Rank::NO_RANK;
+
+    File file_to = File::NO_FILE;
+    Rank rank_to = Rank::NO_RANK;
+
+    // check if san starts with file
+    if (san[0] == 'N' || san[0] == 'B' || san[0] == 'R' || san[0] == 'Q' || san[0] == 'K') {
+        pt = charToPieceType[san[0]];
+        san.erase(0, 1);
+    }
+
+    if (san[0] >= 'a' && san[0] <= 'h') {
+        file_from = File(int(san[0] - 97));
+
+        if (pt == PieceType::NONE) {
+            pt = PieceType::PAWN;
         }
-        throw std::runtime_error("illegal san, step 4: " + san);
+
+        san.erase(0, 1);
     }
 
-    for (auto move : moves) {
-        if (utils::typeOfPiece(board.at(move.from())) == moving && to == move.to()) {
-            if (move.typeOf() == Move::PROMOTION) {
-                if (promotionType == move.promotionType()) {
-                    return move;
-                }
-            } else {
-                if (from_file == File::NO_FILE && from_rank == Rank::NO_RANK) {
-                    return move;
-                } else if ((utils::squareFile(move.from()) == from_file) ||
-                           (utils::squareRank(move.from()) == from_rank)) {
-                    return move;
-                }
-            }
+    if (san[0] >= '1' && san[0] <= '8') {
+        rank_from = Rank(int(san[0] - 49));
+
+        san.erase(0, 1);
+    }
+
+    // skip capture sign
+    if (san[0] == 'x') {
+        san.erase(0, 1);
+    }
+
+    if (san[0] >= 'a' && san[0] <= 'h') {
+        file_to = File(int(san[0] - 97));
+
+        if (pt == PieceType::NONE) {
+            pt = PieceType::PAWN;
+        }
+
+        san.erase(0, 1);
+    }
+
+    if (san[0] >= '1' && san[0] <= '8') {
+        rank_to = Rank(int(san[0] - 49));
+
+        san.erase(0, 1);
+    }
+
+    if (san[0] == '=') {
+        san.erase(0, 1);
+
+        promotion = charToPieceType[san[0]];
+    }
+
+    // the from is actually the to
+    if (file_to == File::NO_FILE && rank_to == Rank::NO_RANK) {
+        file_to = file_from;
+        rank_to = rank_from;
+        file_from = File::NO_FILE;
+        rank_from = Rank::NO_RANK;
+    }
+
+    Square to_sq = utils::fileRankSquare(file_to, rank_to);
+
+    for (const auto move : moves) {
+        if (pt != board.at<PieceType>(move.from()) || move.to() != to_sq) {
+            continue;
+        }
+
+        if (promotion != PieceType::NONE && move.typeOf() == Move::PROMOTION &&
+            promotion == move.promotionType() && move.to() == to_sq) {
+            return move;
+        }
+
+        if (move.typeOf() == Move::PROMOTION) continue;
+
+        if (move.typeOf() == Move::ENPASSANT && pt == PieceType::PAWN && move.to() == to_sq) {
+            return move;
+        }
+
+        if (move.typeOf() == Move::ENPASSANT) continue;
+
+        if (rank_from == Rank::NO_RANK && file_from == File::NO_FILE) {
+            return move;
+        }
+
+        if ((utils::squareFile(move.from()) == file_from) ||
+            (utils::squareRank(move.from()) == rank_from)) {
+            return move;
         }
     }
 
-    throw std::runtime_error("illegal san, step 5: " + san);
+    std::cout << "pt " << int(pt) << std::endl;
+    std::cout << "file_from " << int(file_from) << std::endl;
+    std::cout << "rank_from " << int(rank_from) << std::endl;
+    std::cout << "file_to " << int(file_to) << std::endl;
+    std::cout << "rank_to " << int(rank_to) << std::endl;
+    std::cout << "promotion " << int(promotion) << std::endl;
+    std::cout << "to_sq " << squareToString[int(to_sq)] << std::endl;
+
+    throw std::runtime_error("Illegal San, Step 4: " + san);
 }
 
 }  // namespace uci

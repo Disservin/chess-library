@@ -9,7 +9,7 @@ int main() {
 
     std::cout << "board: " << board << std::endl;
 
-    std::ifstream file("../64a9d23002cd07745c613e27-0.pgn");
+    std::ifstream file("64a8ced102cd07745c612a6f-0.pgn");
 
     while (true) {
         auto game = pgn::readGame(file);
