@@ -20,6 +20,8 @@ int main() {
 
         std::cout << "Reading game" << std::endl;
 
+        std::cout << game.value().headers().at("Result") << "\n";
+
         for (auto move : game.value().moves()) {
             std::cout << move.move << "\n";
             std::cout << move.comment << "\n";
