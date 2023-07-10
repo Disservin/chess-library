@@ -21,7 +21,8 @@ int main() {
         std::cout << "Reading game" << std::endl;
 
         for (auto move : game.value().moves()) {
-            std::cout << move << "\n";
+            std::cout << move.move << "\n";
+            std::cout << move.comment << "\n";
         }
     }
 

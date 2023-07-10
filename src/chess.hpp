@@ -2815,43 +2815,86 @@ namespace uci {
 
 }  // namespace uci
 
+struct PgnMove {
+    Move move;
+    std::string comment;
+};
+
 struct Game {
    public:
     Game(const std::unordered_map<std::string, std::string> &headers,
-         const std::vector<Move> &moves)
+         const std::vector<PgnMove> &moves)
         : headers_(headers), moves_(moves) {}
 
     [[nodiscard]] const std::unordered_map<std::string, std::string> &headers() const {
         return headers_;
     }
 
-    [[nodiscard]] const std::vector<Move> &moves() const { return moves_; }
+    [[nodiscard]] const std::vector<PgnMove> &moves() const { return moves_; }
 
    private:
     std::unordered_map<std::string, std::string> headers_;
-    std::vector<Move> moves_;
+    std::vector<PgnMove> moves_;
 };
 
 namespace pgn {
 
-std::vector<Move> extractMoves(Board &board, std::string line) {
-    // Define the regular expression
-    std::regex pattern(
-        "(?:[PNBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:\\=[PNBRQK])?|O(-?O){1,2})[\\+#]?(\\s*[\\!\\?]+)?");
+/// @brief Extract and parse the move, plus any comments it might have.
+/// @param board
+/// @param line
+/// @return
+std::vector<PgnMove> extractMoves(Board &board, std::string line) {
+    std::vector<PgnMove> moves;
 
-    // Use std::regex_search to check if the input matches the pattern
-    std::smatch match;
+    std::string move;
+    std::string comment;
 
-    std::vector<Move> moves;
+    bool readingMove = false;
+    bool readingComment = false;
 
-    while (std::regex_search(line, match, pattern)) {
-        const auto move = uci::parseSan(board, match.str(0));
+    // Pgn are build up in the following way.
+    // {move_number} {move} {comment} {move} {comment} {move_number} ...
+    // So we need to skip the move_number then start reading the move, then save the comment
+    // then read the second move in the group. After that a move_number will follow again.
+    for (const auto c : line) {
+        if (readingMove && c == ' ') {
+            readingMove = false;
+        } else if (readingMove) {
+            move += c;
+        } else if (!readingComment && c == '{') {
+            readingComment = true;
+        } else if (readingComment && c == '}') {
+            readingComment = false;
 
-        moves.push_back(move);
-        board.makeMove(move);
+            if (!move.empty()) {
+                const auto move_internal = uci::parseSan(board, move);
+                moves.push_back({move_internal, comment});
 
-        // Remove the matched substring from the input
-        line = match.suffix().str();
+                board.makeMove(move_internal);
+
+                move.clear();
+                comment.clear();
+            }
+        } else if (!readingMove && !readingComment) {
+            if (!std::isalpha(c)) {
+                continue;
+            }
+
+            if (!move.empty()) {
+                const auto move_internal = uci::parseSan(board, move);
+                moves.push_back({move_internal, comment});
+
+                board.makeMove(move_internal);
+
+                move.clear();
+                comment.clear();
+            }
+
+            readingMove = true;
+            move += c;
+        } else if (readingComment) {
+            comment += c;
+        }
     }
 
     return moves;
@@ -2862,7 +2905,7 @@ std::vector<Move> extractMoves(Board &board, std::string line) {
 /// @return
 inline std::optional<Game> readGame(std::ifstream &file) {
     std::unordered_map<std::string, std::string> headers;
-    std::vector<Move> moves;
+    std::vector<PgnMove> moves;
 
     std::string line;
 
