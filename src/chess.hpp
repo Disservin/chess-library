@@ -2843,7 +2843,7 @@ namespace pgn {
 /// @param board
 /// @param line
 /// @return
-std::vector<PgnMove> extractMoves(Board &board, std::string line) {
+std::vector<PgnMove> extractMoves(Board &board, std::string_view line) {
     std::vector<PgnMove> moves;
 
     std::string move;
@@ -2907,11 +2907,13 @@ inline std::optional<Game> readGame(std::ifstream &file) {
     std::unordered_map<std::string, std::string> headers;
     std::vector<PgnMove> moves;
 
+    Board board;
+
     std::string line;
 
     bool readingMoves = false;
 
-    Board board;
+    bool hasBody = false;
 
     while (!utils::safeGetline(file, line).eof()) {
         if (line[0] == '[') {
@@ -2932,10 +2934,15 @@ inline std::optional<Game> readGame(std::ifstream &file) {
             moves.insert(moves.end(), line_moves.begin(), line_moves.end());
 
             readingMoves = true;
+            hasBody = true;
         }
     }
 
-    return std::nullopt;
+    if (!hasBody) {
+        return std::nullopt;
+    }
+
+    return Game(headers, moves);
 }
 
 }  // namespace pgn
