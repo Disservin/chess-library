@@ -2732,6 +2732,8 @@ namespace uci {
     Movelist moves;
     movegen::legalmoves(moves, board);
 
+    const auto original = san;
+
     if (san == "0-0" || san == "0-0+" || san == "0-0#" || san == "O-O" || san == "O-O+" ||
         san == "O-O#") {
         for (auto move : moves) {
@@ -2841,7 +2843,8 @@ namespace uci {
 
         if (move.typeOf() == Move::PROMOTION) continue;
 
-        if (move.typeOf() == Move::ENPASSANT && pt == PieceType::PAWN && move.to() == to_sq) {
+        if (move.typeOf() == Move::ENPASSANT && pt == PieceType::PAWN && move.to() == to_sq &&
+            utils::squareFile(move.from()) == file_from) {
             return move;
         }
 
@@ -2865,7 +2868,7 @@ namespace uci {
     std::cout << "promotion " << int(promotion) << std::endl;
     std::cout << "to_sq " << squareToString[int(to_sq)] << std::endl;
 
-    throw std::runtime_error("Illegal San, Step 4: " + san);
+    throw std::runtime_error("Illegal San, Step 4: " + original + " " + board.getFen());
 }
 
 }  // namespace uci
@@ -2893,6 +2896,30 @@ struct Game {
 };
 
 namespace pgn {
+
+inline std::pair<std::string, std::string> extractHeader(const std::string &line) {
+    std::string key;
+    std::string value;
+
+    bool readingKey = false;
+    bool readingValue = false;
+
+    for (const auto c : line) {
+        if (c == '[') {
+            readingKey = true;
+        } else if (c == '"') {
+            readingValue = !readingValue;
+        } else if (readingKey && c == ' ') {
+            readingKey = false;
+        } else if (readingKey) {
+            key += c;
+        } else if (readingValue) {
+            value += c;
+        }
+    }
+
+    return {key, value};
+}
 
 /// @brief Extract and parse the move, plus any comments it might have.
 /// @param board
@@ -2977,11 +3004,12 @@ inline std::optional<Game> readGame(std::ifstream &file) {
             }
 
             // Parse the header
-            const auto match = utils::regex(line, "\\[([A-Za-z0-9]+)\\s+\"(.*)\"\\]");
-            headers[match.str(1)] = match.str(2);
+            const auto header = extractHeader(line);
 
-            if (match.str(1) == "FEN") {
-                board.setFen(match.str(2));
+            headers[header.first] = header.second;
+
+            if (header.first == "FEN") {
+                board.setFen(header.second);
             }
         } else {
             // Parse the moves

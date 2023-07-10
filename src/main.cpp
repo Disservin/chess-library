@@ -18,16 +18,6 @@ int main() {
             return 0;
         }
 
-        std::cout << "Reading game" << std::endl;
-
-        std::cout << game.value().headers().at("GameStartTime") << "\n";
-        std::cout << game.value().headers().at("Result") << "\n";
-
-        for (auto move : game.value().moves()) {
-            std::cout << move.move << "\n";
-            std::cout << move.comment << "\n";
-        }
-
         if (game.value().moves().size() != std::stoi(game.value().headers().at("PlyCount"))) {
             std::cout << "Error: moves and result don't match" << std::endl;
         }
