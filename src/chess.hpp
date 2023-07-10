@@ -2880,6 +2880,8 @@ struct PgnMove {
 
 struct Game {
    public:
+    Game() = default;
+
     Game(const std::unordered_map<std::string, std::string> &headers,
          const std::vector<PgnMove> &moves)
         : headers_(headers), moves_(moves) {}
@@ -2889,6 +2891,9 @@ struct Game {
     }
 
     [[nodiscard]] const std::vector<PgnMove> &moves() const { return moves_; }
+    [[nodiscard]] std::vector<PgnMove> &moves() { return moves_; }
+
+    void set(const std::string &key, const std::string &value) { headers_[key] = value; }
 
    private:
     std::unordered_map<std::string, std::string> headers_;
@@ -2925,9 +2930,7 @@ inline std::pair<std::string, std::string> extractHeader(const std::string &line
 /// @param board
 /// @param line
 /// @return
-inline std::vector<PgnMove> extractMoves(Board &board, std::string_view line) {
-    std::vector<PgnMove> moves;
-
+inline void extractMoves(Board &board, std::vector<PgnMove> &moves, std::string_view line) {
     std::string move;
     std::string comment;
 
@@ -2978,18 +2981,15 @@ inline std::vector<PgnMove> extractMoves(Board &board, std::string_view line) {
             comment += c;
         }
     }
-
-    return moves;
 }
 
 /// @brief Read the next game from a file
 /// @param file
 /// @return
 inline std::optional<Game> readGame(std::ifstream &file) {
-    std::unordered_map<std::string, std::string> headers;
-    std::vector<PgnMove> moves;
-
     Board board;
+
+    Game game;
 
     std::string line;
 
@@ -3000,21 +3000,20 @@ inline std::optional<Game> readGame(std::ifstream &file) {
     while (!utils::safeGetline(file, line).eof()) {
         if (line[0] == '[') {
             if (readingMoves) {
-                return Game(headers, moves);
+                break;
             }
 
             // Parse the header
             const auto header = extractHeader(line);
 
-            headers[header.first] = header.second;
+            game.set(header.first, header.second);
 
             if (header.first == "FEN") {
                 board.setFen(header.second);
             }
         } else {
             // Parse the moves
-            const auto line_moves = extractMoves(board, line);
-            moves.insert(moves.end(), line_moves.begin(), line_moves.end());
+            extractMoves(board, game.moves(), line);
 
             readingMoves = true;
             hasBody = true;
@@ -3025,7 +3024,7 @@ inline std::optional<Game> readGame(std::ifstream &file) {
         return std::nullopt;
     }
 
-    return Game(headers, moves);
+    return game;
 }
 
 }  // namespace pgn
