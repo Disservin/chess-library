@@ -1221,12 +1221,48 @@ inline void Board::setFen(std::string fen) {
                 castling_rights_
                     .setCastlingRight<Color::BLACK, CastleSide::QUEEN_SIDE, File::FILE_A>();
         } else {
-            const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
-            const auto king_sq = kingSq(color);
-            const auto file = static_cast<File>(tolower(i) - 97);
-            const auto side = int(file) > int(utils::squareFile(king_sq)) ? CastleSide::KING_SIDE
-                                                                          : CastleSide::QUEEN_SIDE;
-            castling_rights_.setCastlingRight(color, side, file);
+            if (i == 'K' || i == 'k') {
+                // find rook on the right side of the king
+                const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
+                const auto king_sq = kingSq(color);
+
+                const auto sq_corner = color == Color::WHITE ? SQ_H1 : SQ_H8;
+
+                for (int sq = king_sq + 1; sq <= sq_corner; sq++) {
+                    if (at<PieceType>(Square(sq)) == PieceType::NONE) continue;
+                    if (at<PieceType>(Square(sq)) == PieceType::ROOK &&
+                        int(at(Square(sq))) / 6 == int(color)) {
+                        castling_rights_.setCastlingRight(color, CastleSide::KING_SIDE,
+                                                          utils::squareFile(Square(sq)));
+                        break;
+                    }
+                }
+
+            } else if (i == 'Q' || i == 'q') {
+                // find rook on the left side of the king
+                const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
+                const auto king_sq = kingSq(color);
+
+                const auto sq_corner = color == Color::WHITE ? SQ_A1 : SQ_A8;
+
+                for (int sq = king_sq - 1; sq >= sq_corner; sq--) {
+                    if (at<PieceType>(Square(sq)) == PieceType::NONE) continue;
+                    if (at<PieceType>(Square(sq)) == PieceType::ROOK &&
+                        int(at(Square(sq))) / 6 == int(color)) {
+                        castling_rights_.setCastlingRight(color, CastleSide::QUEEN_SIDE,
+                                                          utils::squareFile(Square(sq)));
+                        break;
+                    }
+                }
+            } else {
+                const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
+                const auto king_sq = kingSq(color);
+                const auto file = static_cast<File>(tolower(i) - 97);
+                const auto side = int(file) > int(utils::squareFile(king_sq))
+                                      ? CastleSide::KING_SIDE
+                                      : CastleSide::QUEEN_SIDE;
+                castling_rights_.setCastlingRight(color, side, file);
+            }
         }
     }
 
@@ -2400,12 +2436,13 @@ template <Color c, MoveGenType mt>
         const Bitboard not_attacked_path = SQUARES_BETWEEN_BB[sq][end_king_sq];
         const Bitboard empty_not_attacked = ~seen & ~(board.occ() & ~(1ull << from_rook_sq));
         const Bitboard withoutRook = board.occ() & ~(1ull << from_rook_sq);
+        const Bitboard withoutKing = board.occ() & ~(1ull << sq);
 
         if ((not_attacked_path & empty_not_attacked) == not_attacked_path &&
             ((not_occ_path & ~board.occ()) == not_occ_path) &&
             !((1ull << from_rook_sq) & pinHV &
               MASK_RANK[static_cast<int>(utils::squareRank(sq))]) &&
-            !((1ull << end_rook_sq) & withoutRook) &&
+            !((1ull << end_rook_sq) & (withoutRook & withoutKing)) &&
             !((1ull << end_king_sq) & (seen | (withoutRook & ~(1ull << sq))))) {
             moves |= (1ull << from_rook_sq);
         }
@@ -2748,6 +2785,7 @@ namespace uci {
         }
 
         throw std::runtime_error("Illegal San, Step 1: " + san);
+
     } else if (san == "0-0-0" || san == "0-0-0+" || san == "0-0-0#" || san == "O-O-O" ||
                san == "O-O-O+" || san == "O-O-O#") {
         for (auto move : moves) {
@@ -3022,6 +3060,10 @@ inline std::optional<Game> readGame(std::ifstream &file) {
 
             if (header.first == "FEN") {
                 board.setFen(header.second);
+            }
+
+            if (header.first == "Variant") {
+                board.set960(header.second == "fischerandom");
             }
         } else {
             // Parse the moves
