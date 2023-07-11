@@ -1206,6 +1206,7 @@ inline void Board::setFen(std::string fen) {
     castling_rights_.clearAllCastlingRights();
 
     for (char i : castling) {
+        if (i == '-') break;
         if (!chess960_) {
             if (i == 'K')
                 castling_rights_
@@ -3064,9 +3065,7 @@ inline std::optional<Game> readGame(std::ifstream &file) {
             }
 
             if (header.first == "Variant") {
-                if (header.second == "fischerandom") {
-                    board.set960(true);
-                }
+                board.set960(header.second == "fischerandom");
             }
         } else {
             // Parse the moves
