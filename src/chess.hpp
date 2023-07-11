@@ -3063,7 +3063,9 @@ inline std::optional<Game> readGame(std::ifstream &file) {
             }
 
             if (header.first == "Variant") {
-                board.set960(header.second == "fischerandom");
+                if (header.second == "fischerandom") {
+                    board.set960(true);
+                }
             }
         } else {
             // Parse the moves
