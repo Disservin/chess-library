@@ -85,3 +85,5 @@ docs/.vitepress/cache
 docs/.vitepress/dist
 
 src/out
+
+*.pgn
