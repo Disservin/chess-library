@@ -2887,7 +2887,9 @@ namespace uci {
         }
 
         if (promotion != PieceType::NONE && move.typeOf() == Move::PROMOTION &&
-            promotion == move.promotionType() && move.to() == to_sq) {
+            promotion == move.promotionType() && move.to() == to_sq &&
+            ((file_from == File::NO_FILE && utils::squareFile(move.from()) == file_to) ||
+             utils::squareFile(move.from()) == file_from)) {
             return move;
         }
 
