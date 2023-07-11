@@ -348,7 +348,6 @@ class CastlingRights {
     }
 
     File getRookFile(Color color, CastleSide castle) const {
-        assert(hasCastlingRight(color, castle) && "Castling right does not exist");
         return static_cast<File>(
             castling_rights_.getGroup(2 * static_cast<int>(color) + static_cast<int>(castle)) - 1);
     }
@@ -1556,9 +1555,11 @@ inline void Board::makeMove(const Move &move) {
         castling_rights_.clearCastlingRight(side_to_move_);
     } else if (pt == PieceType::ROOK && utils::ourBackRank(move.from(), side_to_move_)) {
         const auto king_sq = kingSq(side_to_move_);
+        const auto file = move.from() > king_sq ? CastleSide::KING_SIDE : CastleSide::QUEEN_SIDE;
 
-        castling_rights_.clearCastlingRight(
-            side_to_move_, move.from() > king_sq ? CastleSide::KING_SIDE : CastleSide::QUEEN_SIDE);
+        if (castling_rights_.getRookFile(side_to_move_, file) == utils::squareFile(move.from())) {
+            castling_rights_.clearCastlingRight(side_to_move_, file);
+        }
     } else if (pt == PieceType::PAWN) {
         half_moves_ = 0;
 
