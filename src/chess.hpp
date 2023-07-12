@@ -1545,10 +1545,12 @@ inline void Board::makeMove(const Move &move) {
             ((rank == Rank::RANK_1 && side_to_move_ == Color::BLACK) ||
              (rank == Rank::RANK_8 && side_to_move_ == Color::WHITE))) {
             const auto king_sq = kingSq(~side_to_move_);
+            const auto file = move.to() > king_sq ? CastleSide::KING_SIDE : CastleSide::QUEEN_SIDE;
 
-            castling_rights_.clearCastlingRight(~side_to_move_, move.to() > king_sq
-                                                                    ? CastleSide::KING_SIDE
-                                                                    : CastleSide::QUEEN_SIDE);
+            if (castling_rights_.getRookFile(~side_to_move_, file) ==
+                utils::squareFile(move.to())) {
+                castling_rights_.clearCastlingRight(~side_to_move_, file);
+            }
         }
     }
 
