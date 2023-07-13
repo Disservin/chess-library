@@ -1169,7 +1169,7 @@ class Board {
 \****************************************************************************/
 inline Board::Board(std::string fen) { setFenInternal(std::move(fen)); }
 
-void Board::setFenInternal(std::string fen) {
+inline void Board::setFenInternal(std::string fen) {
     original_fen_ = fen;
 
     std::fill(std::begin(board_), std::end(board_), Piece::NONE);
