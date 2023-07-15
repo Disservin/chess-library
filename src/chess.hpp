@@ -124,30 +124,26 @@ enum class GameResultReason {
  * Enum Overloads                                                            *
 \****************************************************************************/
 
-#define ADD_BASE_OPERATORS_FOR(T)                                                            \
-    (                                                                                        \
-        constexpr T operator+(T vv_1, int vv_2) {                                            \
-            return static_cast<T>(int(vv_1) + vv_2);                                         \
-        } constexpr T                                                                        \
-        operator-(T vv_1, int vv_2) { return static_cast<T>(int(vv_1) - vv_2); } constexpr T \
-        operator-(T vv) { return static_cast<T>(-int(vv)); } constexpr T &                   \
-        operator+=(T &vv_1, int vv_2) { return vv_1 = vv_1 + vv_2; } constexpr T &           \
-        operator-=(T &vv_1, int vv_2) { return vv_1 = vv_1 - vv_2; })
+#define ADD_BASE_OPERATORS_FOR(T)                                                        \
+    constexpr T operator+(T vv_1, int vv_2) { return static_cast<T>(int(vv_1) + vv_2); } \
+    constexpr T operator-(T vv_1, int vv_2) { return static_cast<T>(int(vv_1) - vv_2); } \
+    constexpr T operator-(T vv) { return static_cast<T>(-int(vv)); }                     \
+    constexpr T &operator+=(T &vv_1, int vv_2) { return vv_1 = vv_1 + vv_2; }            \
+    constexpr T &operator-=(T &vv_1, int vv_2) { return vv_1 = vv_1 - vv_2; }
 
-#define ADD_INCR_OPERATORS_FOR(T)                                                                  \
-    (                                                                                              \
-        constexpr T & operator++(T &vv) { return vv = static_cast<T>(int(vv) + 1); } constexpr T & \
-                      operator--(T &vv) { return vv = static_cast<T>(int(vv) - 1); } constexpr T   \
-                      operator++(T &vv, int) {                                                     \
-                          T result = vv;                                                           \
-                          ++vv;                                                                    \
-                          return result;                                                           \
-                      } constexpr T                                                                \
-                      operator--(T &vv, int) {                                                     \
-                          T result = vv;                                                           \
-                          --vv;                                                                    \
-                          return result;                                                           \
-                      })
+#define ADD_INCR_OPERATORS_FOR(T)                                               \
+    constexpr T &operator++(T &vv) { return vv = static_cast<T>(int(vv) + 1); } \
+    constexpr T &operator--(T &vv) { return vv = static_cast<T>(int(vv) - 1); } \
+    constexpr T operator++(T &vv, int) {                                        \
+        T result = vv;                                                          \
+        ++vv;                                                                   \
+        return result;                                                          \
+    }                                                                           \
+    constexpr T operator--(T &vv, int) {                                        \
+        T result = vv;                                                          \
+        --vv;                                                                   \
+        return result;                                                          \
+    }
 
 constexpr Square operator+(Square sq, Direction dir) {
     return static_cast<Square>(static_cast<int8_t>(sq) + static_cast<int8_t>(dir));
