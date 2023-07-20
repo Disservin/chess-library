@@ -190,33 +190,71 @@ const std::string squareToString[64] = {
 };
 // clang-format on
 
-static std::unordered_map<char, Piece> charToPiece({{'P', Piece::WHITEPAWN},
-                                                    {'N', Piece::WHITEKNIGHT},
-                                                    {'B', Piece::WHITEBISHOP},
-                                                    {'R', Piece::WHITEROOK},
-                                                    {'Q', Piece::WHITEQUEEN},
-                                                    {'K', Piece::WHITEKING},
-                                                    {'p', Piece::BLACKPAWN},
-                                                    {'n', Piece::BLACKKNIGHT},
-                                                    {'b', Piece::BLACKBISHOP},
-                                                    {'r', Piece::BLACKROOK},
-                                                    {'q', Piece::BLACKQUEEN},
-                                                    {'k', Piece::BLACKKING},
-                                                    {'.', Piece::NONE}});
+constexpr Piece charToPiece(char c) {
+    switch (c) {
+        case 'P':
+            return Piece::WHITEPAWN;
+        case 'N':
+            return Piece::WHITEKNIGHT;
+        case 'B':
+            return Piece::WHITEBISHOP;
+        case 'R':
+            return Piece::WHITEROOK;
+        case 'Q':
+            return Piece::WHITEQUEEN;
+        case 'K':
+            return Piece::WHITEKING;
+        case 'p':
+            return Piece::BLACKPAWN;
+        case 'n':
+            return Piece::BLACKKNIGHT;
+        case 'b':
+            return Piece::BLACKBISHOP;
+        case 'r':
+            return Piece::BLACKROOK;
+        case 'q':
+            return Piece::BLACKQUEEN;
+        case 'k':
+            return Piece::BLACKKING;
+        case '.':
+            return Piece::NONE;
+        default:
+            break;
+    }
+    return Piece::NONE;
+}
 
-static std::unordered_map<Piece, char> pieceToChar({{Piece::WHITEPAWN, 'P'},
-                                                    {Piece::WHITEKNIGHT, 'N'},
-                                                    {Piece::WHITEBISHOP, 'B'},
-                                                    {Piece::WHITEROOK, 'R'},
-                                                    {Piece::WHITEQUEEN, 'Q'},
-                                                    {Piece::WHITEKING, 'K'},
-                                                    {Piece::BLACKPAWN, 'p'},
-                                                    {Piece::BLACKKNIGHT, 'n'},
-                                                    {Piece::BLACKBISHOP, 'b'},
-                                                    {Piece::BLACKROOK, 'r'},
-                                                    {Piece::BLACKQUEEN, 'q'},
-                                                    {Piece::BLACKKING, 'k'},
-                                                    {Piece::NONE, '.'}});
+constexpr char pieceToChar(Piece piece) {
+    switch (piece) {
+        case Piece::WHITEPAWN:
+            return 'P';
+        case Piece::WHITEKNIGHT:
+            return 'N';
+        case Piece::WHITEBISHOP:
+            return 'B';
+        case Piece::WHITEROOK:
+            return 'R';
+        case Piece::WHITEQUEEN:
+            return 'Q';
+        case Piece::WHITEKING:
+            return 'K';
+        case Piece::BLACKPAWN:
+            return 'p';
+        case Piece::BLACKKNIGHT:
+            return 'n';
+        case Piece::BLACKBISHOP:
+            return 'b';
+        case Piece::BLACKROOK:
+            return 'r';
+        case Piece::BLACKQUEEN:
+            return 'q';
+        case Piece::BLACKKING:
+            return 'k';
+        case Piece::NONE:
+            break;
+    }
+    return '.';
+}
 
 static std::unordered_map<PieceType, char> PieceTypeToChar({{PieceType::PAWN, 'p'},
                                                             {PieceType::KNIGHT, 'n'},
@@ -1194,8 +1232,8 @@ inline void Board::setFenInternal(std::string fen) {
 
     auto square = Square(56);
     for (char curr : position) {
-        if (charToPiece.find(curr) != charToPiece.end()) {
-            const Piece piece = charToPiece[curr];
+        if (charToPiece(curr) != Piece::NONE) {
+            const Piece piece = charToPiece(curr);
             placePiece(piece, square);
 
             square = Square(square + 1);
@@ -1312,7 +1350,7 @@ inline void Board::setFen(const std::string &fen) { setFenInternal(fen); }
                 }
 
                 // Append the character representing the piece to the FEN string
-                ss << pieceToChar[piece];
+                ss << pieceToChar(piece);
             } else {
                 // If there is no piece at the current square, increment the
                 // counter for the number of empty squares
@@ -1382,10 +1420,10 @@ inline void Board::setFen(const std::string &fen) { setFenInternal(fen); }
 
 inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     for (int i = 63; i >= 0; i -= 8) {
-        os << " " << pieceToChar[b.board_[i - 7]] << " " << pieceToChar[b.board_[i - 6]] << " "
-           << pieceToChar[b.board_[i - 5]] << " " << pieceToChar[b.board_[i - 4]] << " "
-           << pieceToChar[b.board_[i - 3]] << " " << pieceToChar[b.board_[i - 2]] << " "
-           << pieceToChar[b.board_[i - 1]] << " " << pieceToChar[b.board_[i]] << " \n";
+        os << " " << pieceToChar(b.board_[i - 7]) << " " << pieceToChar(b.board_[i - 6]) << " "
+           << pieceToChar(b.board_[i - 5]) << " " << pieceToChar(b.board_[i - 4]) << " "
+           << pieceToChar(b.board_[i - 3]) << " " << pieceToChar(b.board_[i - 2]) << " "
+           << pieceToChar(b.board_[i - 1]) << " " << pieceToChar(b.board_[i]) << " \n";
     }
     os << "\n\n";
     os << "Side to move: " << static_cast<int>(b.side_to_move_) << "\n";
