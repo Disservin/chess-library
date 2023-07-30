@@ -415,6 +415,14 @@ struct State {
     Square enpassant;
     uint8_t half_moves;
     Piece captured_piece;
+
+    State(const U64 &hash, const CastlingRights &castling, const Square &enpassant,
+          const uint8_t &half_moves, const Piece &captured_piece)
+        : hash(hash),
+          castling(castling),
+          enpassant(enpassant),
+          half_moves(half_moves),
+          captured_piece(captured_piece) {}
 };
 
 struct Move {
@@ -1565,8 +1573,7 @@ inline void Board::makeMove(const Move &move) {
     const auto captured = at(move.to());
     const auto pt = at<PieceType>(move.from());
 
-    prev_states_.emplace_back(
-        State{hash_key_, castling_rights_, enpassant_sq_, half_moves_, captured});
+    prev_states_.emplace_back(hash_key_, castling_rights_, enpassant_sq_, half_moves_, captured);
 
     half_moves_++;
     full_moves_++;
@@ -1745,8 +1752,7 @@ inline void Board::unmakeMove(const Move &move) {
 }
 
 inline void Board::makeNullMove() {
-    prev_states_.emplace_back(
-        State{hash_key_, castling_rights_, enpassant_sq_, half_moves_, Piece::NONE});
+    prev_states_.emplace_back(hash_key_, castling_rights_, enpassant_sq_, half_moves_, Piece::NONE);
 
     hash_key_ ^= zobrist::sideToMove();
     if (enpassant_sq_ != NO_SQ) hash_key_ ^= zobrist::enpassant(utils::squareFile(enpassant_sq_));
