@@ -2676,7 +2676,7 @@ namespace uci {
     }
 
     // promotion
-    if (piece == PieceType::PAWN &&
+    if (piece == PieceType::PAWN && uci.length() == 5 &&
         utils::squareRank(target) ==
             (board.sideToMove() == Color::WHITE ? Rank::RANK_8 : Rank::RANK_1)) {
         return Move::make<Move::PROMOTION>(source, target, charToPieceType[uci.at(4)]);
@@ -2686,7 +2686,7 @@ namespace uci {
         case 4:
             return Move::make<Move::NORMAL>(source, target);
         default:
-            std::cout << "Warning: uci move cannot be converted to move!" << std::endl;
+            std::cout << "Warning; uci move cannot be converted to move!" << std::endl;
             return Move::make<Move::NORMAL>(source, target);
     }
 }
