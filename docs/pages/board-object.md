@@ -31,6 +31,11 @@ class Board {
 
         Bitboard pieces(PieceType type);
 
+        /// @brief Checks if a move is a capture, enpassant moves are also considered captures.
+        /// @param move
+        /// @return
+        bool isCapture(const Move &move);
+
         /// @brief Returns either the piece or the piece type on a square
         /// @tparam T
         /// @param sq
