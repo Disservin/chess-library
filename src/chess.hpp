@@ -24,6 +24,10 @@ SOFTWARE.
 Source: https://github.com/Disservin/chess-library
 */
 
+/*
+VERSION: 0.1.0
+*/
+
 #ifndef CHESS_HPP
 #define CHESS_HPP
 
