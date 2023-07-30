@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "C++ Chess"
   text: "Documentation for chess-library"
-  tagline: My great project tagline
+  tagline: A chess library for C++
   actions:
     - theme: brand
       text: Usage
