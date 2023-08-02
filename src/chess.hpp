@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.1.1
+VERSION: 0.1.2
 */
 
 #ifndef CHESS_HPP
@@ -74,7 +74,7 @@ enum Square : uint8_t {
 };
 // clang-format on
 
-enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
+enum class MoveGenType : uint8_t { ALL, NOISY, QUIET };
 
 enum class Direction : int8_t {
     NORTH = 8,
@@ -1152,6 +1152,13 @@ class Board {
     bool isCapture(const Move &move) const {
         return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) ||
                move.typeOf() == Move::ENPASSANT;
+    }
+
+    /// @brief Checks if a move is a noisy move. Captures, enpassants and promotion moves are noisy.
+    /// @param move
+    /// @return
+    bool isNoisy(const Move &move) const {
+        return isCapture(move) || move.typeOf() == Move::PROMOTION;
     }
 
     [[nodiscard]] static Color color(Piece piece) {
@@ -2378,12 +2385,12 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
         moves.add(Move::make<Move::NORMAL>(index + DOWN_LEFT, index));
     }
 
-    while (mt != MoveGenType::CAPTURE && single_push) {
+    while (mt != MoveGenType::NOISY && single_push) {
         const auto index = builtin::poplsb(single_push);
         moves.add(Move::make<Move::NORMAL>(index + DOWN, index));
     }
 
-    while (mt != MoveGenType::CAPTURE && double_push) {
+    while (mt != MoveGenType::NOISY && double_push) {
         const auto index = builtin::poplsb(double_push);
         moves.add(Move::make<Move::NORMAL>(index + DOWN + DOWN, index));
     }
@@ -2483,7 +2490,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 template <Color c, MoveGenType mt>
 [[nodiscard]] inline Bitboard generateCastleMoves(const Board &board, Square sq, Bitboard seen,
                                                   Bitboard pinHV) {
-    if constexpr (mt == MoveGenType::CAPTURE) return 0ull;
+    if constexpr (mt == MoveGenType::NOISY) return 0ull;
     const auto rights = board.castlingRights();
 
     Bitboard moves = 0ull;
@@ -2548,7 +2555,7 @@ void legalmoves(Movelist &movelist, const Board &board) {
     // Slider, Knights and King moves can only go to enemy or empty squares.
     if (mt == MoveGenType::ALL)
         movable_square = _enemy_emptyBB;
-    else if (mt == MoveGenType::CAPTURE)
+    else if (mt == MoveGenType::NOISY)
         movable_square = _occ_enemy;
     else  // QUIET moves
         movable_square = ~_occ_all;

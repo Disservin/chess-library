@@ -5,7 +5,7 @@ Here's a list of all commonly used enums
 ## MoveGenType
 
 ```cpp
-enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
+enum class MoveGenType : uint8_t { ALL, NOISY, QUIET };
 ```
 
 ## Square
