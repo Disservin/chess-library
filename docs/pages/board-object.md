@@ -36,11 +36,6 @@ class Board {
         /// @return
         bool isCapture(const Move &move);
 
-        /// @brief Checks if a move is a noisy move. Captures, enpassants and promotion moves are noisy.
-        /// @param move
-        /// @return
-        bool isNoisy(const Move &move);
-
         /// @brief Returns either the piece or the piece type on a square
         /// @tparam T
         /// @param sq
