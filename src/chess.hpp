@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.1.2
+VERSION: 0.1.3
 */
 
 #ifndef CHESS_HPP
@@ -432,7 +432,7 @@ struct State {
 struct Move {
    public:
     Move() = default;
-    constexpr explicit Move(uint16_t move) : move_(move), score_(0) {}
+    constexpr Move(uint16_t move) : move_(move), score_(0) {}
 
     /// @brief Creates a move from a source and target square.
     /// pt is the promotion piece, when you want to create a promotion move you must also
@@ -476,9 +476,6 @@ struct Move {
 
     [[nodiscard]] constexpr uint16_t move() const { return move_; }
     [[nodiscard]] constexpr int16_t score() const { return score_; }
-
-    // implicit conversion
-    operator uint16_t() const { return move_; }
 
     bool operator==(const Move &rhs) const { return move_ == rhs.move_; }
     bool operator!=(const Move &rhs) const { return move_ != rhs.move_; }
