@@ -477,6 +477,9 @@ struct Move {
     [[nodiscard]] constexpr uint16_t move() const { return move_; }
     [[nodiscard]] constexpr int16_t score() const { return score_; }
 
+    // implicit conversion
+    operator uint16_t() const { return move_; }
+
     bool operator==(const Move &rhs) const { return move_ == rhs.move_; }
     bool operator!=(const Move &rhs) const { return move_ != rhs.move_; }
 
