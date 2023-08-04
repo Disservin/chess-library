@@ -23,6 +23,13 @@ int main () {
 
 ```
 
+Then just compile the program using clang or gcc and run it.
+
+```bash
+$ g++ -std=c++17 -O3 -march=native -o example example.cpp
+$ ./example
+```
+
 ## Perft
 
 ```cpp
