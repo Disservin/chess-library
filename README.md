@@ -1,13 +1,71 @@
-# [Documentation](https://disservin.github.io/chess-library/)
+# An extensive chess library for C++
 
-### Overview:
+chess-library is a chess library for C++, with reasonably fast move generation for all purposes, written in c++17.
 
-A chess library for C++, with reasonably fast move generation for all purposes.  
-Also supports FRC/DFRC. Make sure that these are correct and include the file of the rook  
-not K/Q/k/q or other annotations. Only a,b,c,d,e,f,g,h and uppercase variants are valid.
+It can be used for any type of chess program, be it a chess engine, a chess GUI, or a chess data anaylsis tool.
+
+### Why this library?
+
+- **Fast**: This library is fast enough for pretty much any purpose in c++ and it is faster than most other chess libraries in c++.
+- **Documentation**: Easy to browse **documentation** at https://disservin.github.io/chess-library
+- **Robust**: Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/vondele/WLD_model).
+- **PGN Support**: Read basic PGN Files.
+- **Namespace**: Everything is in the `chess::` namespace, so it won't pollute your namespace.
+
+### Comparison to other chess libraries
+
+The 3 other big chess libraries that I know of in C++ are:
+
+- [surge](https://github.com/nkarve/surge)
+  Pros:
+
+  - relatively fast
+
+  Cons:
+
+  - Lacks documentation and utility functionality. Also no support for Chess960.
+
+- [THC](https://github.com/billforsternz/thc-chess-library)
+  Pros:
+
+  - Header and source file split, leading to faster compilation times.
+  - Position compression
+
+  Cons:
+
+  - Rather slow
+  - Lacks documentation
+  - No support for Chess960
+
+- [chessgen](https://github.com/markhc/chessgen)
+  Pros:
+
+  - Modern C++ (and still active)
+  - Header Only
+
+  Cons:
+
+  - No documentation
+  - Early Version (after 4 years)
+  - No support for Chess960 (I think)
+
+### People using this library:
+
+- Stockfish Winrate Model
+  https://github.com/vondele/WLD_model
+
+- CLI Tool for running chess engine matches
+  https://github.com/Disservin/fast-chess
+
+- GUI-based Chess Player as well as a Chess Engine
+  https://github.com/Orbital-Web/Raphael
+
+- UCI Chess Engine (~3.3k elo)
+  https://github.com/rafid-dev/rice (old version)
+
 Tested on Ryzen 9 5950X:
 
-### Standard
+### Standard Chess
 
 ```
 depth 7  time 8988  nodes 3195901860   nps 355534749 fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
