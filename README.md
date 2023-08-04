@@ -49,7 +49,7 @@ The 3 other big chess libraries that I know of in C++ are:
   - Early Version (after 4 years)
   - No support for Chess960 (I think)
 
-### People using this library:
+### Repositories using this library:
 
 - Stockfish Winrate Model
   https://github.com/vondele/WLD_model
