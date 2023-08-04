@@ -5,21 +5,24 @@
 using namespace chess;
 
 int main() {
-    Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-
-    std::cout << "board: " << board << std::endl;
-
-    std::ifstream file("64a8ced102cd07745c612a6f-0.pgn");
+    std::ifstream file("fishtest.pgn");
 
     while (true) {
         auto game = pgn::readGame(file);
 
         if (!game.has_value()) {
-            return 0;
+            break;
         }
 
-        if (game.value().moves().size() != std::stoi(game.value().headers().at("PlyCount"))) {
-            std::cout << "Error: moves and result don't match" << std::endl;
+        Board board = Board(game.value().headers().at("FEN"));
+
+        for (auto &&i : game.value().headers()) {
+            std::cout << i.first << ": " << i.second << std::endl;
+        }
+
+        for (auto &&[move, comment] : game.value().moves()) {
+            std::cout << uci::moveToSan(board, move) << std::endl;
+            board.makeMove(move);
         }
     }
 
