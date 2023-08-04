@@ -17,6 +17,7 @@ It can be used for any type of chess program, be it a chess engine, a chess GUI,
 The 3 other big chess libraries that I know of in C++ are:
 
 - [surge](https://github.com/nkarve/surge)
+
   Pros:
 
   - relatively fast
@@ -26,6 +27,7 @@ The 3 other big chess libraries that I know of in C++ are:
   - Lacks documentation and utility functionality. Also no support for Chess960.
 
 - [THC](https://github.com/billforsternz/thc-chess-library)
+
   Pros:
 
   - Header and source file split, leading to faster compilation times.
@@ -38,6 +40,7 @@ The 3 other big chess libraries that I know of in C++ are:
   - No support for Chess960
 
 - [chessgen](https://github.com/markhc/chessgen)
+
   Pros:
 
   - Modern C++ (and still active)
