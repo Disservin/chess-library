@@ -40,7 +40,6 @@ VERSION: 0.1.5
 #include <functional>
 #include <iostream>
 #include <optional>
-#include <regex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -706,13 +705,6 @@ static inline void trim(std::string &s) {
 /// @return
 [[nodiscard]] constexpr bool sameColor(Square sq1, Square sq2) {
     return ((9 * (sq1 ^ sq2)) & 8) == 0;
-}
-
-[[nodiscard]] inline std::smatch regex(const std::string &str, const std::string &reg) {
-    std::regex re(reg);
-    std::smatch match;
-    std::regex_search(str, match, re);
-    return match;
 }
 
 [[nodiscard]] inline Square extractSquare(std::string_view squareStr) {
