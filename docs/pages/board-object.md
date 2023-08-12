@@ -59,6 +59,11 @@ class Board {
 
         bool isRepetition(int count = 2);
 
+        bool isHalfMoveDraw();
+
+        bool isInsufficientMaterial();
+
+        /// This function calculates all legal moves for the current position to check if the game is over.
         std::pair<GameResultReason, GameResult> isGameOver();
 
         bool isAttacked(Square square, Color color);

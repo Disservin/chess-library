@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.1.4
+VERSION: 0.1.5
 */
 
 #ifndef CHESS_HPP
@@ -1237,6 +1237,14 @@ class Board {
     /// @return
     [[nodiscard]] bool isRepetition(int count = 2) const;
 
+    /// @brief Checks if the current position is a draw by 50 move rule.
+    /// @return
+    [[nodiscard]] bool isHalfMoveDraw() const { return half_moves_ >= 100; }
+
+    /// @brief Checks if the current position is a draw by insufficient material.
+    /// @return
+    [[nodiscard]] bool isInsufficientMaterial() const;
+
     /// @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
     /// @return
     [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const;
@@ -1523,7 +1531,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return os;
 }
 
-[[nodiscard]] inline std::string Board::getCastleString() const {
+inline std::string Board::getCastleString() const {
     std::stringstream ss;
 
     if (chess960_) {
@@ -1549,7 +1557,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return ss.str();
 }
 
-[[nodiscard]] inline bool Board::isRepetition(int count) const {
+inline bool Board::isRepetition(int count) const {
     uint8_t c = 0;
 
     for (int i = static_cast<int>(prev_states_.size()) - 2;
@@ -1562,35 +1570,44 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return false;
 }
 
-[[nodiscard]] inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
-    if (half_moves_ >= 100) {
-        const Board &board = *this;
-
-        Movelist movelist;
-        movegen::legalmoves<MoveGenType::ALL>(movelist, board);
-        if (movelist.empty() && isAttacked(kingSq(side_to_move_), ~side_to_move_)) {
-            return {GameResultReason::CHECKMATE, GameResult::LOSE};
-        }
-        return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
-    }
-
+inline bool Board::isInsufficientMaterial() const {
     const auto count = builtin::popcount(occ());
 
-    if (count == 2) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
+    if (count == 2) return true;
 
     if (count == 3) {
         if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK))
-            return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
+            return true;
         if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK))
-            return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
+            return true;
     }
 
     if (count == 4) {
         if (pieces(PieceType::BISHOP, Color::WHITE) && pieces(PieceType::BISHOP, Color::BLACK) &&
             utils::sameColor(builtin::lsb(pieces(PieceType::BISHOP, Color::WHITE)),
                              builtin::lsb(pieces(PieceType::BISHOP, Color::BLACK))))
-            return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
+            return true;
     }
+
+    return false;
+}
+
+inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
+    if (isHalfMoveDraw()) {
+        const Board &board = *this;
+
+        Movelist movelist;
+        movegen::legalmoves<MoveGenType::ALL>(movelist, board);
+
+        if (movelist.empty() && isAttacked(kingSq(side_to_move_), ~side_to_move_)) {
+            return {GameResultReason::CHECKMATE, GameResult::LOSE};
+        }
+
+        return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
+    }
+
+    if (isInsufficientMaterial())
+        return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
 
     if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
 
@@ -1608,7 +1625,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return {GameResultReason::NONE, GameResult::NONE};
 }
 
-[[nodiscard]] inline bool Board::isAttacked(Square square, Color color) const {
+inline bool Board::isAttacked(Square square, Color color) const {
     if (movegen::attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
     if (movegen::attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
     if (movegen::attacks::king(square) & pieces(PieceType::KING, color)) return true;
@@ -1622,9 +1639,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return false;
 }
 
-[[nodiscard]] inline bool Board::inCheck() const {
-    return isAttacked(kingSq(side_to_move_), ~side_to_move_);
-}
+inline bool Board::inCheck() const { return isAttacked(kingSq(side_to_move_), ~side_to_move_); }
 
 inline void Board::placePiece(Piece piece, Square sq) {
     assert(board_[sq] == Piece::NONE);
