@@ -375,8 +375,18 @@ class CastlingRights {
 
     void clearAllCastlingRights() { castling_rights_.clear(); }
 
-    void clearCastlingRight(Color color, CastleSide castle) {
+    int clearCastlingRight(Color color, CastleSide castle) {
         castling_rights_.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle), 0);
+
+        switch (castle) {
+            case CastleSide::KING_SIDE:
+                return color == Color::WHITE ? 0 : 2;
+            case CastleSide::QUEEN_SIDE:
+                return color == Color::WHITE ? 1 : 3;
+            default:
+                assert(false);
+                return -1;
+        }
     }
 
     void clearCastlingRight(Color color) {
@@ -1071,7 +1081,10 @@ inline U64 enpassant(File file) { return RANDOM_ARRAY[772 + static_cast<int>(fil
 inline U64 castling(int castling) { return castlingKey[castling]; }
 
 /// @brief [Internal Usage]
+/// @param idx
 /// @return
+inline U64 castlingIndex(int idx) { return RANDOM_ARRAY[768 + idx]; }
+
 inline U64 sideToMove() { return RANDOM_ARRAY[780]; }
 
 }  // namespace zobrist
@@ -1321,6 +1334,7 @@ inline void Board::setFenInternal(std::string fen) {
         if (charToPiece(curr) != Piece::NONE) {
             const Piece piece = charToPiece(curr);
             placePiece(piece, square);
+            hash_key_ ^= zobrist::piece(piece, square);
 
             square = Square(square + 1);
         } else if (curr == '/')
@@ -1635,7 +1649,7 @@ inline bool Board::inCheck() const { return isAttacked(kingSq(side_to_move_), ~s
 
 inline void Board::placePiece(Piece piece, Square sq) {
     assert(board_[sq] == Piece::NONE);
-    hash_key_ ^= zobrist::piece(piece, sq);
+
     pieces_bb_[static_cast<int>(color(piece))][static_cast<int>(utils::typeOfPiece(piece))] |=
         (1ULL << sq);
     board_[sq] = piece;
@@ -1646,9 +1660,9 @@ inline void Board::placePiece(Piece piece, Square sq) {
 inline void Board::removePiece(Piece piece, Square sq) {
     assert(board_[sq] == piece && piece != Piece::NONE);
 
-    hash_key_ ^= zobrist::piece(piece, sq);
-    pieces_bb_[int(color(piece))][int(utils::typeOfPiece(piece))] &= ~(1ULL << sq);
     board_[sq] = Piece::NONE;
+
+    pieces_bb_[int(color(piece))][int(utils::typeOfPiece(piece))] &= ~(1ULL << sq);
 
     occ_all_ &= ~(1ULL << sq);
 }
@@ -1666,11 +1680,10 @@ inline void Board::makeMove(const Move &move) {
     if (enpassant_sq_ != NO_SQ) hash_key_ ^= zobrist::enpassant(utils::squareFile(enpassant_sq_));
     enpassant_sq_ = NO_SQ;
 
-    hash_key_ ^= zobrist::castling(castling_rights_.getHashIndex());
-
     if (capture) {
         half_moves_ = 0;
 
+        hash_key_ ^= zobrist::piece(captured, move.to());
         removePiece(captured, move.to());
 
         const auto rank = utils::squareRank(move.to());
@@ -1683,19 +1696,26 @@ inline void Board::makeMove(const Move &move) {
 
             if (castling_rights_.getRookFile(~side_to_move_, file) ==
                 utils::squareFile(move.to())) {
-                castling_rights_.clearCastlingRight(~side_to_move_, file);
+                const auto idx = castling_rights_.clearCastlingRight(~side_to_move_, file);
+                hash_key_ ^= zobrist::castlingIndex(idx);
             }
         }
     }
 
-    if (pt == PieceType::KING) {
+    if (pt == PieceType::KING && castling_rights_.hasCastlingRight(side_to_move_)) {
+        hash_key_ ^= zobrist::castling(castling_rights_.getHashIndex());
+
         castling_rights_.clearCastlingRight(side_to_move_);
+
+        hash_key_ ^= zobrist::castling(castling_rights_.getHashIndex());
+
     } else if (pt == PieceType::ROOK && utils::ourBackRank(move.from(), side_to_move_)) {
         const auto king_sq = kingSq(side_to_move_);
         const auto file = move.from() > king_sq ? CastleSide::KING_SIDE : CastleSide::QUEEN_SIDE;
 
         if (castling_rights_.getRookFile(side_to_move_, file) == utils::squareFile(move.from())) {
-            castling_rights_.clearCastlingRight(side_to_move_, file);
+            const auto idx = castling_rights_.clearCastlingRight(side_to_move_, file);
+            hash_key_ ^= zobrist::castlingIndex(idx);
         }
     } else if (pt == PieceType::PAWN) {
         half_moves_ = 0;
@@ -1734,9 +1754,18 @@ inline void Board::makeMove(const Move &move) {
 
         placePiece(king, kingTo);
         placePiece(rook, rookTo);
+
+        hash_key_ ^= zobrist::piece(king, move.from()) ^ zobrist::piece(king, kingTo);
+        hash_key_ ^= zobrist::piece(rook, move.to()) ^ zobrist::piece(rook, rookTo);
     } else if (move.typeOf() == Move::PROMOTION) {
-        removePiece(utils::makePiece(side_to_move_, PieceType::PAWN), move.from());
-        placePiece(utils::makePiece(side_to_move_, move.promotionType()), move.to());
+        const auto piece_pawn = utils::makePiece(side_to_move_, PieceType::PAWN);
+        const auto piece_prom = utils::makePiece(side_to_move_, move.promotionType());
+
+        removePiece(piece_pawn, move.from());
+        placePiece(piece_prom, move.to());
+
+        hash_key_ ^=
+            zobrist::piece(piece_pawn, move.from()) ^ zobrist::piece(piece_prom, move.to());
     } else {
         assert(at(move.from()) != Piece::NONE);
         assert(at(move.to()) == Piece::NONE);
@@ -1744,15 +1773,21 @@ inline void Board::makeMove(const Move &move) {
 
         removePiece(piece, move.from());
         placePiece(piece, move.to());
+
+        hash_key_ ^= zobrist::piece(piece, move.from()) ^ zobrist::piece(piece, move.to());
     }
 
     if (move.typeOf() == Move::ENPASSANT) {
         assert(at<PieceType>(move.to() ^ 8) == PieceType::PAWN);
-        removePiece(utils::makePiece(~side_to_move_, PieceType::PAWN), Square(int(move.to()) ^ 8));
+
+        const auto piece = utils::makePiece(~side_to_move_, PieceType::PAWN);
+
+        removePiece(piece, Square(int(move.to()) ^ 8));
+
+        hash_key_ ^= zobrist::piece(piece, Square(int(move.to()) ^ 8));
     }
 
     hash_key_ ^= zobrist::sideToMove();
-    hash_key_ ^= zobrist::castling(castling_rights_.getHashIndex());
 
     side_to_move_ = ~side_to_move_;
 }
