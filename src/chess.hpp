@@ -3318,13 +3318,24 @@ inline void extractMoves(Board &board, std::vector<PgnMove> &moves, std::string_
             comment += c;
         }
     }
+
+    // add the remaining move
+    if (!move.empty()) {
+        const auto move_internal = uci::parseSan(board, move);
+        moves.push_back({move_internal, comment});
+
+        board.makeMove(move_internal);
+
+        move.clear();
+        comment.clear();
+    }
 }
 
 /// @brief Read the next game from a file
 /// @param file
 /// @return
 inline std::optional<Game> readGame(std::ifstream &file) {
-    Board board;
+    Board board = Board();
 
     Game game;
 
@@ -3332,16 +3343,20 @@ inline std::optional<Game> readGame(std::ifstream &file) {
 
     bool readingMoves = false;
 
+    bool hasHead = false;
     bool hasBody = false;
 
     while (!utils::safeGetline(file, line).eof()) {
-        if (line[0] == '[') {
-            if (readingMoves) {
-                break;
-            }
+        // We read the moves and we reached the end of the pgn, which is signaled by an empty line.
+        if (readingMoves && line.empty()) {
+            break;
+        }
 
+        if (line[0] == '[') {
             // Parse the header
             const auto header = extractHeader(line);
+
+            hasHead = true;
 
             game.setHeader(header.first, header.second);
 
@@ -3361,7 +3376,7 @@ inline std::optional<Game> readGame(std::ifstream &file) {
         }
     }
 
-    if (!hasBody) {
+    if (!hasBody && !hasHead) {
         return std::nullopt;
     }
 
