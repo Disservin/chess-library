@@ -1196,14 +1196,12 @@ class Board {
     /// @return 
     [[nodiscard]] Bitboard attackers(Color color, Square square, Bitboard occupied) {
         const auto queens = pieces(PieceType::QUEEN, color);
-        const auto bishops = pieces(PieceType::BISHOP, color);
-        const auto rooks = pieces(PieceType::ROOK, color);
 
         // using the fact that if we can attack PieceType from square, they can attack us back
         auto atks = (movegen::attacks::pawn(~color, square) & pieces(PieceType::PAWN, color));
         atks |= (movegen::attacks::knight(square) & pieces(PieceType::KNIGHT, color));
-        atks |= (movegen::attacks::bishop(square, occupied) & (bishops | queens));
-        atks |= (movegen::attacks::rook(square, occupied) & (rooks | queens));
+        atks |= (movegen::attacks::bishop(square, occupied) & (pieces(PieceType::BISHOP, color) | queens));
+        atks |= (movegen::attacks::rook(square, occupied) & (pieces(PieceType::ROOK, color) | queens));
         atks |= (movegen::attacks::king(square) & pieces(PieceType::KING, color));
 
         return atks & occupied;
