@@ -1189,9 +1189,9 @@ class Board {
         return pieces(type, Color::WHITE) | pieces(type, Color::BLACK);
     }
 
-    /// @brief Returns all attackers of a certain color on a certain square
-    /// @param color 
-    /// @param square 
+    /// @brief Returns a bitboard wiht the origin squares of the attacking pieces set
+    /// @param color Attacker Color
+    /// @param square Attacked Square
     /// @param occupied 
     /// @return 
     [[nodiscard]] Bitboard attackers(Color color, Square square, Bitboard occupied) {
