@@ -1605,7 +1605,7 @@ inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
         Movelist movelist;
         movegen::legalmoves<MoveGenType::ALL>(movelist, board);
 
-        if (movelist.empty() && isAttacked(kingSq(side_to_move_), ~side_to_move_)) {
+        if (movelist.empty() && inCheck()) {
             return {GameResultReason::CHECKMATE, GameResult::LOSE};
         }
 
@@ -1623,7 +1623,7 @@ inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
     movegen::legalmoves<MoveGenType::ALL>(movelist, board);
 
     if (movelist.empty()) {
-        if (isAttacked(kingSq(side_to_move_), ~side_to_move_))
+        if (inCheck())
             return {GameResultReason::CHECKMATE, GameResult::LOSE};
         return {GameResultReason::STALEMATE, GameResult::DRAW};
     }
