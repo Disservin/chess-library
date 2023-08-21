@@ -1206,7 +1206,7 @@ class Board {
         atks |= (movegen::attacks::rook(square, occupied) & (rooks | queens));
         atks |= (movegen::attacks::king(square) & pieces(PieceType::KING, color));
 
-        return atks;
+        return atks & occupied;
     }
 
     /// @brief Returns either the piece or the piece type on a square
