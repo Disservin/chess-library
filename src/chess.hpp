@@ -52,7 +52,7 @@ namespace chess {
  * Type aliases                                                              *
 \****************************************************************************/
 
-using U64 = std::uint64_t;
+using U64      = std::uint64_t;
 using Bitboard = std::uint64_t;  // clear distinction between bitboard and U64
 
 /****************************************************************************\
@@ -76,10 +76,10 @@ enum Square : uint8_t {
 enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 
 enum class Direction : int8_t {
-    NORTH = 8,
-    WEST = -1,
-    SOUTH = -8,
-    EAST = 1,
+    NORTH      = 8,
+    WEST       = -1,
+    SOUTH      = -8,
+    EAST       = 1,
     NORTH_EAST = 9,
     NORTH_WEST = 7,
     SOUTH_WEST = -9,
@@ -173,9 +173,9 @@ constexpr Square operator^(Square sq, int i) {
  * Constants                                                                 *
 \****************************************************************************/
 
-constexpr int MAX_SQ = 64;
-constexpr int MAX_PIECE = 12;
-constexpr int MAX_MOVES = 256;
+constexpr int MAX_SQ                 = 64;
+constexpr int MAX_PIECE              = 12;
+constexpr int MAX_MOVES              = 256;
 constexpr Bitboard DEFAULT_CHECKMASK = 18446744073709551615ULL;
 
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -333,7 +333,7 @@ class BitField16 {
 
         // calculate the bit position of the start of the group you want to set
         const uint16_t startBit = group_index * group_size_;
-        const auto setMask = static_cast<uint16_t>(group_value << startBit);
+        const auto setMask      = static_cast<uint16_t>(group_value << startBit);
 
         // clear the bits in the group
         value_ &= ~(0xF << startBit);
@@ -496,12 +496,12 @@ struct Move {
     bool operator==(const Move &rhs) const { return move_ == rhs.move_; }
     bool operator!=(const Move &rhs) const { return move_ != rhs.move_; }
 
-    static constexpr uint16_t NO_MOVE = 0;
+    static constexpr uint16_t NO_MOVE   = 0;
     static constexpr uint16_t NULL_MOVE = 65;
-    static constexpr uint16_t NORMAL = 0;
+    static constexpr uint16_t NORMAL    = 0;
     static constexpr uint16_t PROMOTION = 1 << 14;
     static constexpr uint16_t ENPASSANT = 2 << 14;
-    static constexpr uint16_t CASTLING = 3 << 14;
+    static constexpr uint16_t CASTLING  = 3 << 14;
 
     friend std::ostream &operator<<(std::ostream &os, const Move &move);
 
@@ -512,7 +512,7 @@ struct Move {
 
 inline std::ostream &operator<<(std::ostream &os, const Move &move) {
     Square from_sq = move.from();
-    Square to_sq = move.to();
+    Square to_sq   = move.to();
 
     os << squareToString[from_sq] << squareToString[to_sq];
     if (move.typeOf() == Move::PROMOTION) {
@@ -719,9 +719,9 @@ static inline void trim(std::string &s) {
 
 [[nodiscard]] inline Square extractSquare(std::string_view squareStr) {
     char letter = squareStr[0];
-    int file = letter - 96;
-    int rank = squareStr[1] - 48;
-    int index = (rank - 1) * 8 + file - 1;
+    int file    = letter - 96;
+    int rank    = squareStr[1] - 48;
+    int index   = (rank - 1) * 8 + file - 1;
     return Square(index);
 }
 
@@ -1306,9 +1306,9 @@ class Board {
     CastlingRights castling_rights_;
     uint16_t full_moves_ = 1;
 
-    Color side_to_move_ = Color::WHITE;
+    Color side_to_move_  = Color::WHITE;
     Square enpassant_sq_ = Square::NO_SQ;
-    uint8_t half_moves_ = 0;
+    uint8_t half_moves_  = 0;
 
     bool chess960_ = false;
 
@@ -1338,9 +1338,9 @@ inline void Board::setFenInternal(std::string fen) {
 
     const std::vector<std::string> params = utils::splitString(fen, ' ');
 
-    const std::string &position = params[0];
+    const std::string &position   = params[0];
     const std::string &move_right = params[1];
-    const std::string &castling = params[2];
+    const std::string &castling   = params[2];
     const std::string &en_passant = params[3];
 
     half_moves_ = std::stoi(params.size() > 4 ? params[4] : "0");
@@ -1383,7 +1383,7 @@ inline void Board::setFenInternal(std::string fen) {
         } else {
             if (i == 'K' || i == 'k') {
                 // find rook on the right side of the king
-                const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
+                const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
                 const auto king_sq = kingSq(color);
 
                 const auto sq_corner = color == Color::WHITE ? SQ_H1 : SQ_H8;
@@ -1400,7 +1400,7 @@ inline void Board::setFenInternal(std::string fen) {
 
             } else if (i == 'Q' || i == 'q') {
                 // find rook on the left side of the king
-                const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
+                const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
                 const auto king_sq = kingSq(color);
 
                 const auto sq_corner = color == Color::WHITE ? SQ_A1 : SQ_A8;
@@ -1415,12 +1415,12 @@ inline void Board::setFenInternal(std::string fen) {
                     }
                 }
             } else {
-                const auto color = isupper(i) ? Color::WHITE : Color::BLACK;
+                const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
                 const auto king_sq = kingSq(color);
-                const auto file = static_cast<File>(tolower(i) - 97);
-                const auto side = int(file) > int(utils::squareFile(king_sq))
-                                      ? CastleSide::KING_SIDE
-                                      : CastleSide::QUEEN_SIDE;
+                const auto file    = static_cast<File>(tolower(i) - 97);
+                const auto side    = int(file) > int(utils::squareFile(king_sq))
+                                         ? CastleSide::KING_SIDE
+                                         : CastleSide::QUEEN_SIDE;
                 castling_rights_.setCastlingRight(color, side, file);
             }
         }
@@ -1430,13 +1430,13 @@ inline void Board::setFenInternal(std::string fen) {
         enpassant_sq_ = NO_SQ;
     } else {
         const char letter = en_passant[0];
-        const int file = letter - 96;
-        const int rank = en_passant[1] - 48;
-        enpassant_sq_ = Square((rank - 1) * 8 + file - 1);
+        const int file    = letter - 96;
+        const int rank    = en_passant[1] - 48;
+        enpassant_sq_     = Square((rank - 1) * 8 + file - 1);
     }
 
     hash_key_ = zobrist();
-    occ_all_ = all();
+    occ_all_  = all();
 
     prev_states_.clear();
     prev_states_.reserve(150);
@@ -1686,9 +1686,9 @@ inline void Board::removePiece(Piece piece, Square sq) {
 }
 
 inline void Board::makeMove(const Move &move) {
-    const auto capture = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
+    const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
     const auto captured = at(move.to());
-    const auto pt = at<PieceType>(move.from());
+    const auto pt       = at<PieceType>(move.from());
 
     prev_states_.emplace_back(hash_key_, castling_rights_, enpassant_sq_, half_moves_, captured);
 
@@ -1729,7 +1729,7 @@ inline void Board::makeMove(const Move &move) {
 
     } else if (pt == PieceType::ROOK && utils::ourBackRank(move.from(), side_to_move_)) {
         const auto king_sq = kingSq(side_to_move_);
-        const auto file = move.from() > king_sq ? CastleSide::KING_SIDE : CastleSide::QUEEN_SIDE;
+        const auto file    = move.from() > king_sq ? CastleSide::KING_SIDE : CastleSide::QUEEN_SIDE;
 
         if (castling_rights_.getRookFile(side_to_move_, file) == utils::squareFile(move.from())) {
             const auto idx = castling_rights_.clearCastlingRight(side_to_move_, file);
@@ -1814,9 +1814,9 @@ inline void Board::unmakeMove(const Move &move) {
     const auto prev = prev_states_.back();
     prev_states_.pop_back();
 
-    enpassant_sq_ = prev.enpassant;
+    enpassant_sq_    = prev.enpassant;
     castling_rights_ = prev.castling;
-    half_moves_ = prev.half_moves;
+    half_moves_      = prev.half_moves;
 
     full_moves_--;
 
@@ -1848,7 +1848,7 @@ inline void Board::unmakeMove(const Move &move) {
 
         return;
     } else if (move.typeOf() == Move::PROMOTION) {
-        const auto pawn = utils::makePiece(side_to_move_, PieceType::PAWN);
+        const auto pawn  = utils::makePiece(side_to_move_, PieceType::PAWN);
         const auto piece = at(move.to());
         assert(utils::typeOfPiece(piece) == move.promotionType());
         assert(utils::typeOfPiece(piece) != PieceType::PAWN);
@@ -1876,7 +1876,7 @@ inline void Board::unmakeMove(const Move &move) {
     }
 
     if (move.typeOf() == Move::ENPASSANT) {
-        const auto pawn = utils::makePiece(~side_to_move_, PieceType::PAWN);
+        const auto pawn   = utils::makePiece(~side_to_move_, PieceType::PAWN);
         const auto pawnTo = static_cast<Square>(enpassant_sq_ ^ 8);
 
         assert(at(pawnTo) == Piece::NONE);
@@ -1904,10 +1904,10 @@ inline void Board::makeNullMove() {
 inline void Board::unmakeNullMove() {
     const auto &prev = prev_states_.back();
 
-    enpassant_sq_ = prev.enpassant;
+    enpassant_sq_    = prev.enpassant;
     castling_rights_ = prev.castling;
-    half_moves_ = prev.half_moves;
-    hash_key_ = prev.hash;
+    half_moves_      = prev.half_moves;
+    hash_key_        = prev.hash;
 
     full_moves_--;
 
@@ -1959,12 +1959,12 @@ static const std::array<std::array<U64, 64>, 64> SQUARES_BETWEEN_BB = init_squar
 template <Color c>
 [[nodiscard]] Bitboard checkMask(const Board &board, Square sq, int &double_check) {
     Bitboard mask = 0;
-    double_check = 0;
+    double_check  = 0;
 
     const auto opp_knight = board.pieces(PieceType::KNIGHT, ~c);
     const auto opp_bishop = board.pieces(PieceType::BISHOP, ~c);
-    const auto opp_rook = board.pieces(PieceType::ROOK, ~c);
-    const auto opp_queen = board.pieces(PieceType::QUEEN, ~c);
+    const auto opp_rook   = board.pieces(PieceType::ROOK, ~c);
+    const auto opp_queen  = board.pieces(PieceType::QUEEN, ~c);
 
     const auto opp_pawns = board.pieces(PieceType::PAWN, ~c);
 
@@ -2022,7 +2022,7 @@ template <Color c>
                                     Bitboard occ_us) {
     Bitboard pin_hv = 0;
 
-    const auto opp_rook = board.pieces(PieceType::ROOK, ~c);
+    const auto opp_rook  = board.pieces(PieceType::ROOK, ~c);
     const auto opp_queen = board.pieces(PieceType::QUEEN, ~c);
 
     Bitboard rook_attacks = attacks::rook(sq, occ_enemy) & (opp_rook | opp_queen);
@@ -2051,7 +2051,7 @@ template <Color c>
     Bitboard pin_diag = 0;
 
     const auto opp_bishop = board.pieces(PieceType::BISHOP, ~c);
-    const auto opp_queen = board.pieces(PieceType::QUEEN, ~c);
+    const auto opp_queen  = board.pieces(PieceType::QUEEN, ~c);
 
     Bitboard bishop_attacks = attacks::bishop(sq, occ_enemy) & (opp_bishop | opp_queen);
 
@@ -2074,11 +2074,11 @@ template <Color c>
 [[nodiscard]] Bitboard seenSquares(const Board &board, Bitboard enemy_empty) {
     auto king_sq = board.kingSq(~c);
 
-    auto queens = board.pieces(PieceType::QUEEN, c);
-    auto pawns = board.pieces(PieceType::PAWN, c);
+    auto queens  = board.pieces(PieceType::QUEEN, c);
+    auto pawns   = board.pieces(PieceType::PAWN, c);
     auto knights = board.pieces(PieceType::KNIGHT, c);
     auto bishops = board.pieces(PieceType::BISHOP, c) | queens;
-    auto rooks = board.pieces(PieceType::ROOK, c) | queens;
+    auto rooks   = board.pieces(PieceType::ROOK, c) | queens;
 
     auto occ = board.occ();
 
@@ -2127,19 +2127,19 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
                        Bitboard checkmask, Bitboard occ_enemy) {
     const auto pawns = board.pieces(PieceType::PAWN, c);
 
-    constexpr Direction UP = c == Color::WHITE ? Direction::NORTH : Direction::SOUTH;
+    constexpr Direction UP   = c == Color::WHITE ? Direction::NORTH : Direction::SOUTH;
     constexpr Direction DOWN = c == Color::WHITE ? Direction::SOUTH : Direction::NORTH;
     constexpr Direction DOWN_LEFT =
         c == Color::WHITE ? Direction::SOUTH_WEST : Direction::NORTH_EAST;
     constexpr Direction DOWN_RIGHT =
         c == Color::WHITE ? Direction::SOUTH_EAST : Direction::NORTH_WEST;
 
-    constexpr Bitboard RANK_B_PROMO = c == Color::WHITE
-                                          ? attacks::MASK_RANK[static_cast<int>(Rank::RANK_7)]
-                                          : attacks::MASK_RANK[static_cast<int>(Rank::RANK_2)];
-    constexpr Bitboard RANK_PROMO = c == Color::WHITE
-                                        ? attacks::MASK_RANK[static_cast<int>(Rank::RANK_8)]
-                                        : attacks::MASK_RANK[static_cast<int>(Rank::RANK_1)];
+    constexpr Bitboard RANK_B_PROMO     = c == Color::WHITE
+                                              ? attacks::MASK_RANK[static_cast<int>(Rank::RANK_7)]
+                                              : attacks::MASK_RANK[static_cast<int>(Rank::RANK_2)];
+    constexpr Bitboard RANK_PROMO       = c == Color::WHITE
+                                              ? attacks::MASK_RANK[static_cast<int>(Rank::RANK_8)]
+                                              : attacks::MASK_RANK[static_cast<int>(Rank::RANK_1)];
     constexpr Bitboard DOUBLE_PUSH_RANK = c == Color::WHITE
                                               ? attacks::MASK_RANK[static_cast<int>(Rank::RANK_3)]
                                               : attacks::MASK_RANK[static_cast<int>(Rank::RANK_6)];
@@ -2148,7 +2148,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
     const Bitboard pawns_lr = pawns & ~pin_hv;
 
     const Bitboard unpinnedpawns_lr = pawns_lr & ~pin_d;
-    const Bitboard pinnedpawns_lr = pawns_lr & pin_d;
+    const Bitboard pinnedpawns_lr   = pawns_lr & pin_d;
 
     Bitboard l_pawns = (attacks::pawnLeftAttacks<c>(unpinnedpawns_lr)) |
                        (attacks::pawnLeftAttacks<c>(pinnedpawns_lr) & pin_d);
@@ -2163,7 +2163,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
     // These pawns can walk Forward
     const Bitboard pawns_hv = pawns & ~pin_d;
 
-    const Bitboard pawns_pinned_hv = pawns_hv & pin_hv;
+    const Bitboard pawns_pinned_hv   = pawns_hv & pin_hv;
     const Bitboard pawns_unpinned_hv = pawns_hv & ~pin_hv;
 
     // Prune moves that are blocked by a piece
@@ -2179,9 +2179,9 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
         checkmask;
 
     if (pawns & RANK_B_PROMO) {
-        Bitboard promo_left = l_pawns & RANK_PROMO;
+        Bitboard promo_left  = l_pawns & RANK_PROMO;
         Bitboard promo_right = r_pawns & RANK_PROMO;
-        Bitboard promo_push = single_push & RANK_PROMO;
+        Bitboard promo_push  = single_push & RANK_PROMO;
 
         // Skip capturing promotions if we are only generating quiet moves.
         // Generates at ALL and CAPTURE
@@ -2258,13 +2258,13 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
             board.pieces(PieceType::ROOK, ~c) | board.pieces(PieceType::QUEEN, ~c);
 
         const bool isPossiblePin = kingMask && enemyQueenRook;
-        Bitboard epBB = attacks::pawn(~c, ep) & pawns_lr;
+        Bitboard epBB            = attacks::pawn(~c, ep) & pawns_lr;
 
         // For one en passant square two pawns could potentially take there.
 
         while (epBB) {
             const Square from = builtin::poplsb(epBB);
-            const Square to = ep;
+            const Square to   = ep;
 
             /*
              If the pawn is pinned but the en passant square is not on the
@@ -2385,11 +2385,11 @@ template <Color c, MoveGenType mt>
         const auto from_rook_sq =
             utils::fileRankSquare(rights.getRookFile(c, side), utils::squareRank(sq));
 
-        const Bitboard not_occ_path = SQUARES_BETWEEN_BB[sq][from_rook_sq];
-        const Bitboard not_attacked_path = SQUARES_BETWEEN_BB[sq][end_king_sq];
+        const Bitboard not_occ_path       = SQUARES_BETWEEN_BB[sq][from_rook_sq];
+        const Bitboard not_attacked_path  = SQUARES_BETWEEN_BB[sq][end_king_sq];
         const Bitboard empty_not_attacked = ~seen & ~(board.occ() & ~(1ull << from_rook_sq));
-        const Bitboard withoutRook = board.occ() & ~(1ull << from_rook_sq);
-        const Bitboard withoutKing = board.occ() & ~(1ull << sq);
+        const Bitboard withoutRook        = board.occ() & ~(1ull << from_rook_sq);
+        const Bitboard withoutKing        = board.occ() & ~(1ull << sq);
 
         if ((not_attacked_path & empty_not_attacked) == not_attacked_path &&
             ((not_occ_path & ~board.occ()) == not_occ_path) &&
@@ -2420,15 +2420,15 @@ void legalmoves(Movelist &movelist, const Board &board) {
 
     int _doubleCheck = 0;
 
-    Bitboard _occ_us = board.us(c);
-    Bitboard _occ_enemy = board.us(~c);
-    Bitboard _occ_all = _occ_us | _occ_enemy;
+    Bitboard _occ_us        = board.us(c);
+    Bitboard _occ_enemy     = board.us(~c);
+    Bitboard _occ_all       = _occ_us | _occ_enemy;
     Bitboard _enemy_emptyBB = ~_occ_us;
 
-    Bitboard _seen = seenSquares<~c>(board, _enemy_emptyBB);
+    Bitboard _seen      = seenSquares<~c>(board, _enemy_emptyBB);
     Bitboard _checkMask = checkMask<c>(board, king_sq, _doubleCheck);
-    Bitboard _pinHV = pinMaskRooks<c>(board, king_sq, _occ_enemy, _occ_us);
-    Bitboard _pinD = pinMaskBishops<c>(board, king_sq, _occ_enemy, _occ_us);
+    Bitboard _pinHV     = pinMaskRooks<c>(board, king_sq, _occ_enemy, _occ_us);
+    Bitboard _pinD      = pinMaskBishops<c>(board, king_sq, _occ_enemy, _occ_us);
 
     assert(_doubleCheck <= 2);
 
@@ -2482,7 +2482,7 @@ void legalmoves(Movelist &movelist, const Board &board) {
 
     while (knights_mask) {
         const Square from = builtin::poplsb(knights_mask);
-        moves = generateKnightMoves(from, movable_square);
+        moves             = generateKnightMoves(from, movable_square);
         while (moves) {
             const Square to = builtin::poplsb(moves);
             movelist.add(Move::make<Move::NORMAL>(from, to));
@@ -2491,7 +2491,7 @@ void legalmoves(Movelist &movelist, const Board &board) {
 
     while (bishops_mask) {
         const Square from = builtin::poplsb(bishops_mask);
-        moves = generateBishopMoves(from, movable_square, _pinD, _occ_all);
+        moves             = generateBishopMoves(from, movable_square, _pinD, _occ_all);
         while (moves) {
             const Square to = builtin::poplsb(moves);
             movelist.add(Move::make<Move::NORMAL>(from, to));
@@ -2500,7 +2500,7 @@ void legalmoves(Movelist &movelist, const Board &board) {
 
     while (rooks_mask) {
         const Square from = builtin::poplsb(rooks_mask);
-        moves = generateRookMoves(from, movable_square, _pinHV, _occ_all);
+        moves             = generateRookMoves(from, movable_square, _pinHV, _occ_all);
         while (moves) {
             const Square to = builtin::poplsb(moves);
             movelist.add(Move::make<Move::NORMAL>(from, to));
@@ -2509,7 +2509,7 @@ void legalmoves(Movelist &movelist, const Board &board) {
 
     while (queens_mask) {
         const Square from = builtin::poplsb(queens_mask);
-        moves = generateQueenMoves(from, movable_square, _pinD, _pinHV, _occ_all);
+        moves             = generateQueenMoves(from, movable_square, _pinD, _pinHV, _occ_all);
         while (moves) {
             const Square to = builtin::poplsb(moves);
             movelist.add(Move::make<Move::NORMAL>(from, to));
@@ -2576,10 +2576,10 @@ constexpr Bitboard BishopMagics[MAX_SQ] = {
     0xa010109502200ULL,    0x4a02012000ULL,       0x500201010098b028ULL, 0x8040002811040900ULL,
     0x28000010020204ULL,   0x6000020202d0240ULL,  0x8918844842082200ULL, 0x4010011029020020ULL};
 
-inline Bitboard RookAttacks[0x19000] = {};
+inline Bitboard RookAttacks[0x19000]  = {};
 inline Bitboard BishopAttacks[0x1480] = {};
 
-inline Magic RookTable[MAX_SQ] = {};
+inline Magic RookTable[MAX_SQ]   = {};
 inline Magic BishopTable[MAX_SQ] = {};
 
 /// @brief
@@ -2695,7 +2695,7 @@ inline void initSliders(Square sq, Magic table[], U64 magic,
     Bitboard occ = 0ULL;
 
     table[sq].magic = magic;
-    table[sq].mask = attacks(sq, occ) & ~edges;
+    table[sq].mask  = attacks(sq, occ) & ~edges;
     table[sq].shift = MAX_SQ - builtin::popcount(table[sq].mask);
 
     if (sq < MAX_SQ - 1) {
@@ -2704,14 +2704,14 @@ inline void initSliders(Square sq, Magic table[], U64 magic,
 
     do {
         table[sq].attacks[table[sq](occ)] = attacks(sq, occ);
-        occ = (occ - table[sq].mask) & table[sq].mask;
+        occ                               = (occ - table[sq].mask) & table[sq].mask;
     } while (occ);
 }
 
 /// @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at startup.
 inline void initAttacks() {
     BishopTable[0].attacks = BishopAttacks;
-    RookTable[0].attacks = RookAttacks;
+    RookTable[0].attacks   = RookAttacks;
 
     for (int i = 0; i < MAX_SQ; i++) {
         initSliders(static_cast<Square>(i), BishopTable, BishopMagics[i], runtime::bishopAttacks);
@@ -2928,7 +2928,7 @@ namespace uci {
 
     // Get the from and to squares
     Square from_sq = move.from();
-    Square to_sq = move.to();
+    Square to_sq   = move.to();
 
     // If the move is not a chess960 castling move and is a king moving more than one square,
     // update the to square to be the correct square for a regular castling move
@@ -2954,8 +2954,8 @@ namespace uci {
 /// @param uci
 /// @return
 [[nodiscard]] inline Move uciToMove(const Board &board, const std::string &uci) {
-    Square source = utils::extractSquare(uci.substr(0, 2));
-    Square target = utils::extractSquare(uci.substr(2, 2));
+    Square source   = utils::extractSquare(uci.substr(0, 2));
+    Square target   = utils::extractSquare(uci.substr(2, 2));
     PieceType piece = utils::typeOfPiece(board.at(source));
 
     // convert to king captures rook
@@ -2993,7 +2993,7 @@ namespace uci {
 /// @return
 [[nodiscard]] inline std::string moveToSan(Board board, const Move &move) {
     static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
-    static const std::string repFile[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
+    static const std::string repFile[]      = {"a", "b", "c", "d", "e", "f", "g", "h"};
 
     if (move.typeOf() == Move::CASTLING) {
         return move.to() > move.from() ? "O-O" : "O-O-O";
@@ -3060,7 +3060,7 @@ namespace uci {
 /// @return
 [[nodiscard]] inline std::string moveToLan(Board board, const Move &move) {
     static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
-    static const std::string repFile[] = {"a", "b", "c", "d", "e", "f", "g", "h"};
+    static const std::string repFile[]      = {"a", "b", "c", "d", "e", "f", "g", "h"};
 
     if (move.typeOf() == Move::CASTLING) {
         return move.to() > move.from() ? "O-O" : "O-O-O";
@@ -3208,14 +3208,14 @@ namespace uci {
 
     // the from square is actually the to
     if (file_to == File::NO_FILE && rank_to == Rank::NO_RANK) {
-        file_to = file_from;
-        rank_to = rank_from;
+        file_to   = file_from;
+        rank_to   = rank_from;
         file_from = File::NO_FILE;
         rank_from = Rank::NO_RANK;
     }
 
     Square from_sq = NO_SQ;
-    Square to_sq = utils::fileRankSquare(file_to, rank_to);
+    Square to_sq   = utils::fileRankSquare(file_to, rank_to);
 
     if (file_from != File::NO_FILE && rank_from != Rank::NO_RANK) {
         from_sq = utils::fileRankSquare(file_from, rank_from);
@@ -3310,7 +3310,7 @@ inline std::pair<std::string, std::string> extractHeader(const std::string &line
     std::string key;
     std::string value;
 
-    bool readingKey = false;
+    bool readingKey   = false;
     bool readingValue = false;
 
     for (const auto c : line) {
@@ -3338,7 +3338,7 @@ inline void extractMoves(Board &board, std::vector<PgnMove> &moves, std::string_
     std::string move;
     std::string comment;
 
-    bool readingMove = false;
+    bool readingMove    = false;
     bool readingComment = false;
 
     // Pgn are build up in the following way.
@@ -3439,7 +3439,7 @@ inline std::optional<Game> readGame(std::ifstream &file) {
             extractMoves(board, game.moves(), line);
 
             readingMoves = true;
-            hasBody = true;
+            hasBody      = true;
         }
     }
 
