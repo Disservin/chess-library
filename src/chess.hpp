@@ -1189,6 +1189,24 @@ class Board {
         return pieces(type, Color::WHITE) | pieces(type, Color::BLACK);
     }
 
+    /// @brief Returns a bitboard wiht the origin squares of the attacking pieces set
+    /// @param color Attacker Color
+    /// @param square Attacked Square
+    /// @param occupied 
+    /// @return 
+    [[nodiscard]] Bitboard attackers(Color color, Square square, Bitboard occupied) {
+        const auto queens = pieces(PieceType::QUEEN, color);
+
+        // using the fact that if we can attack PieceType from square, they can attack us back
+        auto atks = (movegen::attacks::pawn(~color, square) & pieces(PieceType::PAWN, color));
+        atks |= (movegen::attacks::knight(square) & pieces(PieceType::KNIGHT, color));
+        atks |= (movegen::attacks::bishop(square, occupied) & (pieces(PieceType::BISHOP, color) | queens));
+        atks |= (movegen::attacks::rook(square, occupied) & (pieces(PieceType::ROOK, color) | queens));
+        atks |= (movegen::attacks::king(square) & pieces(PieceType::KING, color));
+
+        return atks & occupied;
+    }
+
     /// @brief Returns either the piece or the piece type on a square
     /// @tparam T
     /// @param sq
@@ -1605,7 +1623,7 @@ inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
         Movelist movelist;
         movegen::legalmoves<MoveGenType::ALL>(movelist, board);
 
-        if (movelist.empty() && isAttacked(kingSq(side_to_move_), ~side_to_move_)) {
+        if (movelist.empty() && inCheck()) {
             return {GameResultReason::CHECKMATE, GameResult::LOSE};
         }
 
@@ -1623,7 +1641,7 @@ inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
     movegen::legalmoves<MoveGenType::ALL>(movelist, board);
 
     if (movelist.empty()) {
-        if (isAttacked(kingSq(side_to_move_), ~side_to_move_))
+        if (inCheck())
             return {GameResultReason::CHECKMATE, GameResult::LOSE};
         return {GameResultReason::STALEMATE, GameResult::DRAW};
     }
