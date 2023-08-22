@@ -31,13 +31,6 @@ class Board {
 
         Bitboard pieces(PieceType type);
 
-        /// @brief Returns a bitboard wiht the origin squares of the attacking pieces set
-        /// @param color Attacker Color
-        /// @param square Attacked Square
-        /// @param occupied 
-        /// @return 
-        Bitboard attackers(Color color, Square square, Bitboard occupied);
-
         /// @brief Checks if a move is a capture, enpassant moves are also considered captures.
         /// @param move
         /// @return
