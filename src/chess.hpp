@@ -1468,6 +1468,8 @@ class Board {
     [[nodiscard]] bool isInsufficientMaterial() const;
 
     /// @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
+    /// This function calculates all legal moves for the current position to check if the game is
+    /// over. If you are writing you should not use this function.
     /// @return
     [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const;
 

@@ -63,7 +63,10 @@ class Board {
 
         bool isInsufficientMaterial();
 
+        /// @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
         /// This function calculates all legal moves for the current position to check if the game is over.
+        /// If you are writing you should not use this function.
+        /// @return
         std::pair<GameResultReason, GameResult> isGameOver();
 
         bool isAttacked(Square square, Color color);
