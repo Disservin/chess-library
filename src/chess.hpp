@@ -1093,6 +1093,22 @@ inline U64 sideToMove() { return RANDOM_ARRAY[780]; }
  * Forward declarations                                                      *
 \****************************************************************************/
 
+namespace movegen {
+
+/// @brief Generates all legal moves for a position. The movelist will be
+/// emptied before adding the moves.
+/// @tparam mt
+/// @param movelist
+/// @param board
+template <MoveGenType mt = MoveGenType::ALL>
+void legalmoves(Movelist &movelist, const Board &board);
+
+}  // namespace movegen
+
+/****************************************************************************\
+ * Attacks                                                                   *
+\****************************************************************************/
+
 namespace attacks {
 Bitboard pawn(Color c, Square sq);
 Bitboard knight(Square sq);
@@ -1119,19 +1135,201 @@ static constexpr Bitboard MASK_FILE[8] = {
     0x1010101010101010, 0x2020202020202020, 0x4040404040404040, 0x8080808080808080,
 };
 
+struct Magic {
+    Bitboard mask;
+    U64 magic;
+    U64 *attacks;
+    U64 shift;
+
+    U64 operator()(U64 b) const { return ((b & mask) * magic) >> shift; }
+};
+
+constexpr Bitboard RookMagics[MAX_SQ] = {
+    0x8a80104000800020ULL, 0x140002000100040ULL,  0x2801880a0017001ULL,  0x100081001000420ULL,
+    0x200020010080420ULL,  0x3001c0002010008ULL,  0x8480008002000100ULL, 0x2080088004402900ULL,
+    0x800098204000ULL,     0x2024401000200040ULL, 0x100802000801000ULL,  0x120800800801000ULL,
+    0x208808088000400ULL,  0x2802200800400ULL,    0x2200800100020080ULL, 0x801000060821100ULL,
+    0x80044006422000ULL,   0x100808020004000ULL,  0x12108a0010204200ULL, 0x140848010000802ULL,
+    0x481828014002800ULL,  0x8094004002004100ULL, 0x4010040010010802ULL, 0x20008806104ULL,
+    0x100400080208000ULL,  0x2040002120081000ULL, 0x21200680100081ULL,   0x20100080080080ULL,
+    0x2000a00200410ULL,    0x20080800400ULL,      0x80088400100102ULL,   0x80004600042881ULL,
+    0x4040008040800020ULL, 0x440003000200801ULL,  0x4200011004500ULL,    0x188020010100100ULL,
+    0x14800401802800ULL,   0x2080040080800200ULL, 0x124080204001001ULL,  0x200046502000484ULL,
+    0x480400080088020ULL,  0x1000422010034000ULL, 0x30200100110040ULL,   0x100021010009ULL,
+    0x2002080100110004ULL, 0x202008004008002ULL,  0x20020004010100ULL,   0x2048440040820001ULL,
+    0x101002200408200ULL,  0x40802000401080ULL,   0x4008142004410100ULL, 0x2060820c0120200ULL,
+    0x1001004080100ULL,    0x20c020080040080ULL,  0x2935610830022400ULL, 0x44440041009200ULL,
+    0x280001040802101ULL,  0x2100190040002085ULL, 0x80c0084100102001ULL, 0x4024081001000421ULL,
+    0x20030a0244872ULL,    0x12001008414402ULL,   0x2006104900a0804ULL,  0x1004081002402ULL};
+
+constexpr Bitboard BishopMagics[MAX_SQ] = {
+    0x40040844404084ULL,   0x2004208a004208ULL,   0x10190041080202ULL,   0x108060845042010ULL,
+    0x581104180800210ULL,  0x2112080446200010ULL, 0x1080820820060210ULL, 0x3c0808410220200ULL,
+    0x4050404440404ULL,    0x21001420088ULL,      0x24d0080801082102ULL, 0x1020a0a020400ULL,
+    0x40308200402ULL,      0x4011002100800ULL,    0x401484104104005ULL,  0x801010402020200ULL,
+    0x400210c3880100ULL,   0x404022024108200ULL,  0x810018200204102ULL,  0x4002801a02003ULL,
+    0x85040820080400ULL,   0x810102c808880400ULL, 0xe900410884800ULL,    0x8002020480840102ULL,
+    0x220200865090201ULL,  0x2010100a02021202ULL, 0x152048408022401ULL,  0x20080002081110ULL,
+    0x4001001021004000ULL, 0x800040400a011002ULL, 0xe4004081011002ULL,   0x1c004001012080ULL,
+    0x8004200962a00220ULL, 0x8422100208500202ULL, 0x2000402200300c08ULL, 0x8646020080080080ULL,
+    0x80020a0200100808ULL, 0x2010004880111000ULL, 0x623000a080011400ULL, 0x42008c0340209202ULL,
+    0x209188240001000ULL,  0x400408a884001800ULL, 0x110400a6080400ULL,   0x1840060a44020800ULL,
+    0x90080104000041ULL,   0x201011000808101ULL,  0x1a2208080504f080ULL, 0x8012020600211212ULL,
+    0x500861011240000ULL,  0x180806108200800ULL,  0x4000020e01040044ULL, 0x300000261044000aULL,
+    0x802241102020002ULL,  0x20906061210001ULL,   0x5a84841004010310ULL, 0x4010801011c04ULL,
+    0xa010109502200ULL,    0x4a02012000ULL,       0x500201010098b028ULL, 0x8040002811040900ULL,
+    0x28000010020204ULL,   0x6000020202d0240ULL,  0x8918844842082200ULL, 0x4010011029020020ULL};
+
+inline Bitboard RookAttacks[0x19000]  = {};
+inline Bitboard BishopAttacks[0x1480] = {};
+
+inline Magic RookTable[MAX_SQ]   = {};
+inline Magic BishopTable[MAX_SQ] = {};
+
+/// @brief
+/// @param r
+/// @param f
+/// @return
+[[nodiscard]] inline int validSq(Rank r, File f) {
+    return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
+}
+
+/// @brief Make a square from a rank and file
+/// @param r
+/// @param f
+/// @return
+[[nodiscard]] inline Square makeSquare(Rank r, File f) {
+    return static_cast<Square>(int(r) * 8 + int(f));
+}
+
+namespace runtime {
+/// @brief [Internal Usage] Slow function to calculate bishop attacks
+/// @param sq
+/// @param occupied
+/// @return
+[[nodiscard]] inline Bitboard bishopAttacks(Square sq, Bitboard occupied) {
+    Bitboard attacks = 0ULL;
+
+    int r, f;
+
+    int br = sq / 8;
+    int bf = sq % 8;
+
+    for (r = br + 1, f = bf + 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f++) {
+        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
+        attacks |= (1ULL << s);
+        if (occupied & (1ULL << s)) break;
+    }
+
+    for (r = br - 1, f = bf + 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f++) {
+        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
+        attacks |= (1ULL << s);
+        if (occupied & (1ULL << s)) break;
+    }
+
+    for (r = br + 1, f = bf - 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f--) {
+        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
+        attacks |= (1ULL << s);
+        if (occupied & (1ULL << s)) break;
+    }
+
+    for (r = br - 1, f = bf - 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f--) {
+        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
+        attacks |= (1ULL << s);
+        if (occupied & (1ULL << s)) break;
+    }
+
+    return attacks;
+}
+
+/// @brief [Internal Usage] Slow function to calculate rook attacks
+/// @param sq
+/// @param occupied
+/// @return
+[[nodiscard]] inline Bitboard rookAttacks(Square sq, Bitboard occupied) {
+    Bitboard attacks = 0ULL;
+
+    int r, f;
+
+    int rr = sq / 8;
+    int rf = sq % 8;
+
+    for (r = rr + 1; validSq(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
+        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(rf));
+        attacks |= (1ULL << s);
+        if (occupied & (1ULL << s)) break;
+    }
+
+    for (r = rr - 1; validSq(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
+        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(rf));
+        attacks |= (1ULL << s);
+        if (occupied & (1ULL << s)) break;
+    }
+
+    for (f = rf + 1; validSq(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
+        Square s = makeSquare(static_cast<Rank>(rr), static_cast<File>(f));
+        attacks |= (1ULL << s);
+        if (occupied & (1ULL << s)) break;
+    }
+
+    for (f = rf - 1; validSq(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
+        Square s = makeSquare(static_cast<Rank>(rr), static_cast<File>(f));
+        attacks |= (1ULL << s);
+        if (occupied & (1ULL << s)) break;
+    }
+
+    return attacks;
+}
+
+}  // namespace runtime
+
+/// @brief [Internal Usage] Initializes the magic bitboard tables for sliding pieces
+/// @param sq
+/// @param table
+/// @param magic
+/// @param attacks
+inline void initSliders(Square sq, Magic table[], U64 magic,
+                        const std::function<Bitboard(Square, Bitboard)> &attacks) {
+    const Bitboard edges =
+        ((MASK_RANK[static_cast<int>(Rank::RANK_1)] | MASK_RANK[static_cast<int>(Rank::RANK_8)]) &
+         ~MASK_RANK[static_cast<int>(utils::squareRank(sq))]) |
+        ((MASK_FILE[static_cast<int>(File::FILE_A)] | MASK_FILE[static_cast<int>(File::FILE_H)]) &
+         ~MASK_FILE[static_cast<int>(utils::squareFile(sq))]);
+
+    Bitboard occ = 0ULL;
+
+    table[sq].magic = magic;
+    table[sq].mask  = attacks(sq, occ) & ~edges;
+    table[sq].shift = MAX_SQ - builtin::popcount(table[sq].mask);
+
+    if (sq < MAX_SQ - 1) {
+        table[sq + 1].attacks = table[sq].attacks + (1 << builtin::popcount(table[sq].mask));
+    }
+
+    do {
+        table[sq].attacks[table[sq](occ)] = attacks(sq, occ);
+        occ                               = (occ - table[sq].mask) & table[sq].mask;
+    } while (occ);
+}
+
+/// @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at startup.
+inline void initAttacks() {
+    BishopTable[0].attacks = BishopAttacks;
+    RookTable[0].attacks   = RookAttacks;
+
+    for (int i = 0; i < MAX_SQ; i++) {
+        initSliders(static_cast<Square>(i), BishopTable, BishopMagics[i], runtime::bishopAttacks);
+        initSliders(static_cast<Square>(i), RookTable, RookMagics[i], runtime::rookAttacks);
+    }
+}
+
+// force initialization of attacks
+static auto init = []() {
+    initAttacks();
+    return 0;
+}();
+
 }  // namespace attacks
-
-namespace movegen {
-
-/// @brief Generates all legal moves for a position. The movelist will be
-/// emptied before adding the moves.
-/// @tparam mt
-/// @param movelist
-/// @param board
-template <MoveGenType mt = MoveGenType::ALL>
-void legalmoves(Movelist &movelist, const Board &board);
-
-}  // namespace movegen
 
 /****************************************************************************\
  * Board                                                                     *
@@ -2530,200 +2728,6 @@ inline void legalmoves(Movelist &movelist, const Board &board) {
 }  // namespace movegen
 
 namespace attacks {
-
-struct Magic {
-    Bitboard mask;
-    U64 magic;
-    U64 *attacks;
-    U64 shift;
-
-    U64 operator()(U64 b) const { return ((b & mask) * magic) >> shift; }
-};
-
-constexpr Bitboard RookMagics[MAX_SQ] = {
-    0x8a80104000800020ULL, 0x140002000100040ULL,  0x2801880a0017001ULL,  0x100081001000420ULL,
-    0x200020010080420ULL,  0x3001c0002010008ULL,  0x8480008002000100ULL, 0x2080088004402900ULL,
-    0x800098204000ULL,     0x2024401000200040ULL, 0x100802000801000ULL,  0x120800800801000ULL,
-    0x208808088000400ULL,  0x2802200800400ULL,    0x2200800100020080ULL, 0x801000060821100ULL,
-    0x80044006422000ULL,   0x100808020004000ULL,  0x12108a0010204200ULL, 0x140848010000802ULL,
-    0x481828014002800ULL,  0x8094004002004100ULL, 0x4010040010010802ULL, 0x20008806104ULL,
-    0x100400080208000ULL,  0x2040002120081000ULL, 0x21200680100081ULL,   0x20100080080080ULL,
-    0x2000a00200410ULL,    0x20080800400ULL,      0x80088400100102ULL,   0x80004600042881ULL,
-    0x4040008040800020ULL, 0x440003000200801ULL,  0x4200011004500ULL,    0x188020010100100ULL,
-    0x14800401802800ULL,   0x2080040080800200ULL, 0x124080204001001ULL,  0x200046502000484ULL,
-    0x480400080088020ULL,  0x1000422010034000ULL, 0x30200100110040ULL,   0x100021010009ULL,
-    0x2002080100110004ULL, 0x202008004008002ULL,  0x20020004010100ULL,   0x2048440040820001ULL,
-    0x101002200408200ULL,  0x40802000401080ULL,   0x4008142004410100ULL, 0x2060820c0120200ULL,
-    0x1001004080100ULL,    0x20c020080040080ULL,  0x2935610830022400ULL, 0x44440041009200ULL,
-    0x280001040802101ULL,  0x2100190040002085ULL, 0x80c0084100102001ULL, 0x4024081001000421ULL,
-    0x20030a0244872ULL,    0x12001008414402ULL,   0x2006104900a0804ULL,  0x1004081002402ULL};
-
-constexpr Bitboard BishopMagics[MAX_SQ] = {
-    0x40040844404084ULL,   0x2004208a004208ULL,   0x10190041080202ULL,   0x108060845042010ULL,
-    0x581104180800210ULL,  0x2112080446200010ULL, 0x1080820820060210ULL, 0x3c0808410220200ULL,
-    0x4050404440404ULL,    0x21001420088ULL,      0x24d0080801082102ULL, 0x1020a0a020400ULL,
-    0x40308200402ULL,      0x4011002100800ULL,    0x401484104104005ULL,  0x801010402020200ULL,
-    0x400210c3880100ULL,   0x404022024108200ULL,  0x810018200204102ULL,  0x4002801a02003ULL,
-    0x85040820080400ULL,   0x810102c808880400ULL, 0xe900410884800ULL,    0x8002020480840102ULL,
-    0x220200865090201ULL,  0x2010100a02021202ULL, 0x152048408022401ULL,  0x20080002081110ULL,
-    0x4001001021004000ULL, 0x800040400a011002ULL, 0xe4004081011002ULL,   0x1c004001012080ULL,
-    0x8004200962a00220ULL, 0x8422100208500202ULL, 0x2000402200300c08ULL, 0x8646020080080080ULL,
-    0x80020a0200100808ULL, 0x2010004880111000ULL, 0x623000a080011400ULL, 0x42008c0340209202ULL,
-    0x209188240001000ULL,  0x400408a884001800ULL, 0x110400a6080400ULL,   0x1840060a44020800ULL,
-    0x90080104000041ULL,   0x201011000808101ULL,  0x1a2208080504f080ULL, 0x8012020600211212ULL,
-    0x500861011240000ULL,  0x180806108200800ULL,  0x4000020e01040044ULL, 0x300000261044000aULL,
-    0x802241102020002ULL,  0x20906061210001ULL,   0x5a84841004010310ULL, 0x4010801011c04ULL,
-    0xa010109502200ULL,    0x4a02012000ULL,       0x500201010098b028ULL, 0x8040002811040900ULL,
-    0x28000010020204ULL,   0x6000020202d0240ULL,  0x8918844842082200ULL, 0x4010011029020020ULL};
-
-inline Bitboard RookAttacks[0x19000]  = {};
-inline Bitboard BishopAttacks[0x1480] = {};
-
-inline Magic RookTable[MAX_SQ]   = {};
-inline Magic BishopTable[MAX_SQ] = {};
-
-/// @brief
-/// @param r
-/// @param f
-/// @return
-[[nodiscard]] inline int validSq(Rank r, File f) {
-    return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
-}
-
-/// @brief Make a square from a rank and file
-/// @param r
-/// @param f
-/// @return
-[[nodiscard]] inline Square makeSquare(Rank r, File f) {
-    return static_cast<Square>(int(r) * 8 + int(f));
-}
-
-namespace runtime {
-/// @brief [Internal Usage] Slow function to calculate bishop attacks
-/// @param sq
-/// @param occupied
-/// @return
-[[nodiscard]] inline Bitboard bishopAttacks(Square sq, Bitboard occupied) {
-    Bitboard attacks = 0ULL;
-
-    int r, f;
-
-    int br = sq / 8;
-    int bf = sq % 8;
-
-    for (r = br + 1, f = bf + 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f++) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
-        attacks |= (1ULL << s);
-        if (occupied & (1ULL << s)) break;
-    }
-
-    for (r = br - 1, f = bf + 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f++) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
-        attacks |= (1ULL << s);
-        if (occupied & (1ULL << s)) break;
-    }
-
-    for (r = br + 1, f = bf - 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f--) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
-        attacks |= (1ULL << s);
-        if (occupied & (1ULL << s)) break;
-    }
-
-    for (r = br - 1, f = bf - 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f--) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
-        attacks |= (1ULL << s);
-        if (occupied & (1ULL << s)) break;
-    }
-
-    return attacks;
-}
-
-/// @brief [Internal Usage] Slow function to calculate rook attacks
-/// @param sq
-/// @param occupied
-/// @return
-[[nodiscard]] inline Bitboard rookAttacks(Square sq, Bitboard occupied) {
-    Bitboard attacks = 0ULL;
-
-    int r, f;
-
-    int rr = sq / 8;
-    int rf = sq % 8;
-
-    for (r = rr + 1; validSq(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(rf));
-        attacks |= (1ULL << s);
-        if (occupied & (1ULL << s)) break;
-    }
-
-    for (r = rr - 1; validSq(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(rf));
-        attacks |= (1ULL << s);
-        if (occupied & (1ULL << s)) break;
-    }
-
-    for (f = rf + 1; validSq(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
-        Square s = makeSquare(static_cast<Rank>(rr), static_cast<File>(f));
-        attacks |= (1ULL << s);
-        if (occupied & (1ULL << s)) break;
-    }
-
-    for (f = rf - 1; validSq(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
-        Square s = makeSquare(static_cast<Rank>(rr), static_cast<File>(f));
-        attacks |= (1ULL << s);
-        if (occupied & (1ULL << s)) break;
-    }
-
-    return attacks;
-}
-
-}  // namespace runtime
-
-/// @brief [Internal Usage] Initializes the magic bitboard tables for sliding pieces
-/// @param sq
-/// @param table
-/// @param magic
-/// @param attacks
-inline void initSliders(Square sq, Magic table[], U64 magic,
-                        const std::function<Bitboard(Square, Bitboard)> &attacks) {
-    const Bitboard edges =
-        ((MASK_RANK[static_cast<int>(Rank::RANK_1)] | MASK_RANK[static_cast<int>(Rank::RANK_8)]) &
-         ~MASK_RANK[static_cast<int>(utils::squareRank(sq))]) |
-        ((MASK_FILE[static_cast<int>(File::FILE_A)] | MASK_FILE[static_cast<int>(File::FILE_H)]) &
-         ~MASK_FILE[static_cast<int>(utils::squareFile(sq))]);
-
-    Bitboard occ = 0ULL;
-
-    table[sq].magic = magic;
-    table[sq].mask  = attacks(sq, occ) & ~edges;
-    table[sq].shift = MAX_SQ - builtin::popcount(table[sq].mask);
-
-    if (sq < MAX_SQ - 1) {
-        table[sq + 1].attacks = table[sq].attacks + (1 << builtin::popcount(table[sq].mask));
-    }
-
-    do {
-        table[sq].attacks[table[sq](occ)] = attacks(sq, occ);
-        occ                               = (occ - table[sq].mask) & table[sq].mask;
-    } while (occ);
-}
-
-/// @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at startup.
-inline void initAttacks() {
-    BishopTable[0].attacks = BishopAttacks;
-    RookTable[0].attacks   = RookAttacks;
-
-    for (int i = 0; i < MAX_SQ; i++) {
-        initSliders(static_cast<Square>(i), BishopTable, BishopMagics[i], runtime::bishopAttacks);
-        initSliders(static_cast<Square>(i), RookTable, RookMagics[i], runtime::rookAttacks);
-    }
-}
-
-// force initialization of attacks
-static auto init = []() {
-    initAttacks();
-    return 0;
-}();
 
 /// @brief Shifts a bitboard in a given direction
 /// @tparam direction
