@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "chess.hpp"
+#include "../src/chess.hpp"
 
 using namespace chess;
 
