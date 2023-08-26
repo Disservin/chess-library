@@ -18,6 +18,5 @@ jobs:
       - name: Running Tests
         run: |
           cd tests
-          make clean
           make -j2
           ./out
