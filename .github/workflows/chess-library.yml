@@ -1,0 +1,22 @@
+name: Chess Library
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+jobs:
+  ChessLibrary:
+    name: Chess Library
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Installing required packages
+        run: |
+          sudo apt-get update
+          g++ --version
+      - name: Running Tests
+        run: |
+          cd tests
+          make -j2
+          ./out
