@@ -353,7 +353,7 @@ class BitField16 {
 
    private:
     static constexpr uint16_t group_size_ = 4;  // size of each group
-    uint16_t value_;
+    uint16_t value_                       = 0;
 };
 
 class CastlingRights {
@@ -426,7 +426,7 @@ class CastlingRights {
      bq   bk   wq   wk
      3    2    1    0    // group index
      */
-    BitField16 castling_rights_;
+    BitField16 castling_rights_ = {};
 };
 
 struct State {
@@ -1495,16 +1495,14 @@ class Board {
 
     std::vector<State> prev_states_;
 
-    U64 pieces_bb_[2][6]{};
-
-    std::array<Piece, 64> board_{};
+    U64 pieces_bb_[2][6]         = {};
+    std::array<Piece, 64> board_ = {};
 
     U64 hash_key_ = 0ULL;
+    U64 occ_all_  = 0ULL;
 
-    U64 occ_all_ = 0ULL;
-
-    CastlingRights castling_rights_;
-    uint16_t full_moves_ = 1;
+    CastlingRights castling_rights_ = {};
+    uint16_t full_moves_            = 1;
 
     Color side_to_move_  = Color::WHITE;
     Square enpassant_sq_ = Square::NO_SQ;
