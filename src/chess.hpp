@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.1.7
+VERSION: 0.1.8
 */
 
 #ifndef CHESS_HPP
@@ -690,6 +690,7 @@ static inline void trim(std::string &s) {
 }
 
 [[nodiscard]] constexpr PieceType typeOfPiece(Piece piece) {
+    if (piece == Piece::NONE) return PieceType::NONE;
     return static_cast<PieceType>(static_cast<int>(piece) % 6);
 }
 
