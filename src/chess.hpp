@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.1.8
+VERSION: 0.1.9
 */
 
 #ifndef CHESS_HPP
@@ -1439,7 +1439,7 @@ class Board {
     [[nodiscard]] Square enpassantSq() const { return enpassant_sq_; }
     [[nodiscard]] CastlingRights castlingRights() const { return castling_rights_; }
     [[nodiscard]] int halfMoveClock() const { return half_moves_; }
-    [[nodiscard]] int fullMoveNumber() const { return full_moves_; }
+    [[nodiscard]] int fullMoveNumber() const { return full_moves_ / 2; }
 
     void set960(bool is960) {
         chess960_ = is960;
@@ -1503,7 +1503,7 @@ class Board {
     U64 occ_all_  = 0ULL;
 
     CastlingRights castling_rights_ = {};
-    uint16_t full_moves_            = 1;
+    uint16_t full_moves_            = 2;
 
     Color side_to_move_  = Color::WHITE;
     Square enpassant_sq_ = Square::NO_SQ;
@@ -1543,9 +1543,13 @@ inline void Board::setFenInternal(std::string fen) {
     const std::string &en_passant = params[3];
 
     half_moves_ = std::stoi(params.size() > 4 ? params[4] : "0");
-    full_moves_ = std::stoi(params.size() > 4 ? params[5] : "1") * 2;
+    full_moves_ = std::stoi(params.size() > 5 ? params[5] : "1") * 2;
 
     side_to_move_ = (move_right == "w") ? Color::WHITE : Color::BLACK;
+
+    if (side_to_move_ == Color::BLACK) {
+        full_moves_++;
+    }
 
     auto square = Square(56);
     for (char curr : position) {
