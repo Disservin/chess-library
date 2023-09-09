@@ -8,7 +8,7 @@ It can be used for any type of chess program, be it a chess engine, a chess GUI,
 
 - **Fast**: This library is fast enough for pretty much any purpose in c++ and it is faster than most other chess libraries in c++.
 - **Documentation**: Easy to browse **documentation** at https://disservin.github.io/chess-library
-- **Robust**: Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/vondele/WLD_model).
+- **Robust**: Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/official-stockfish/WDL_model).
 - **PGN Support**: Read basic PGN Files.
 - **Namespace**: Everything is in the `chess::` namespace, so it won't pollute your namespace.
 
@@ -55,7 +55,7 @@ The 3 other big chess libraries that I know of in C++ are:
 ### Repositories using this library:
 
 - Stockfish Winrate Model
-  https://github.com/vondele/WLD_model
+  https://github.com/official-stockfish/WDL_model
 
 - CLI Tool for running chess engine matches
   https://github.com/Disservin/fast-chess
