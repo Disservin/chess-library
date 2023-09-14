@@ -3,20 +3,25 @@
 layout: home
 
 hero:
-  name: "C++ Chess"
-  text: "Documentation for chess-library"
-  tagline: A chess library for C++
+  name: "chess-library"
+  text: "Single Header Chess Library for C++"
+  tagline: Featurerich, fast, documented and easy to use
   actions:
     - theme: brand
-      text: Usage
+      text: Get Started
       link: /pages/usage
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/Disservin/chess-library
     - theme: alt
       text: Example
       link: /pages/example
 
 features:
-  - title: Speedy
-    details: Fast enough to use for chess engines
+  - title: Fast
+    details: Fast enough to use even for chess engines
   - title: Extensive API
-    details: Includes many features and has a clear documentation
+    details: Provides a lot of utility functions to make your life easier
+  - title: PGN Parser
+    details: Able to parse PGN files very quickly
 ---

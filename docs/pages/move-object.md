@@ -9,7 +9,7 @@ before checking for captures.
 struct Move {
    public:
     Move() = default;
-    Move(uint16_t move) : move_(move), score_(0) {}
+    Move(uint16_t move);
 
     template <uint16_t MoveType = 0>
     Move make(
