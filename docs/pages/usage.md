@@ -17,4 +17,4 @@ using namespace chess;
 
 That's it!
 
-Also see [my examples.](/pages/example)
+Also see [my examples.](/pages/examples)
