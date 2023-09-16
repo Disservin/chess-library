@@ -14,8 +14,8 @@ hero:
       text: View on GitHub
       link: https://github.com/Disservin/chess-library
     - theme: alt
-      text: Example
-      link: /pages/example
+      text: Examples
+      link: /pages/examples
 
 features:
   - title: Fast

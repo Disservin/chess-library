@@ -9,12 +9,6 @@ include_directories(tests/doctest)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 
-
-# Main application
-add_executable(chess_library
-        src/chess.hpp
-        src/main.cpp)
-
 add_executable(chess_library_tests
         tests/doctest/doctest.hpp
         tests/hash.cpp
