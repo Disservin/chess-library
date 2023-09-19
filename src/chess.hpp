@@ -1484,7 +1484,7 @@ class Board {
     /// @return
     [[nodiscard]] bool inCheck() const;
 
-    /// @brief Checks if side to move has at least 1 piece thats not pawn and not king
+    /// @brief Checks if the given color has at least 1 piece thats not pawn and not king
     /// @return
     [[nodiscard]] bool hasNonPawnMaterial(Color color) const;
 
