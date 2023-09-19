@@ -19,11 +19,6 @@ TEST_SUITE("Board Test") {
         CHECK(board.at(Square::SQ_E7) == Piece::BLACKPAWN);
 
         CHECK(board.zobrist() == Board().zobrist());
-
-        board = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
-        CHECK(!board.hasNonPawnMaterial(board.sideToMove()));
-        CHECK(!board.hasNonPawnMaterial(Color::WHITE));
-        CHECK(board.hasNonPawnMaterial(Color::BLACK));
     }
 
     TEST_CASE("makeNullMove") {
@@ -37,5 +32,13 @@ TEST_SUITE("Board Test") {
 
         CHECK(board.zobrist() == Board().zobrist());
         CHECK(board.sideToMove() == Color::WHITE);
+    }
+
+    TEST_CASE("hasNonPawnMaterial")
+    {
+        board = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
+        CHECK(!board.hasNonPawnMaterial(board.sideToMove()));
+        CHECK(!board.hasNonPawnMaterial(Color::WHITE));
+        CHECK(board.hasNonPawnMaterial(Color::BLACK));
     }
 }
