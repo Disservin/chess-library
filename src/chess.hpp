@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.1.10
+VERSION: 0.2.0
 */
 
 #ifndef CHESS_HPP
@@ -1546,7 +1546,7 @@ inline void Board::setFenInternal(std::string fen) {
     const std::string &castling   = params[2];
     const std::string &en_passant = params[3];
 
-    half_moves_ = std::stoi(params.size() > 4 ? params[4] : "0");
+    half_moves_   = std::stoi(params.size() > 4 ? params[4] : "0");
     plies_played_ = std::stoi(params.size() > 5 ? params[5] : "1") * 2 - 2;
 
     side_to_move_ = (move_right == "w") ? Color::WHITE : Color::BLACK;
@@ -1872,9 +1872,9 @@ inline bool Board::isAttacked(Square square, Color color) const {
 
 inline bool Board::inCheck() const { return isAttacked(kingSq(side_to_move_), ~side_to_move_); }
 
-inline bool Board::hasNonPawnMaterial(Color color) const
-{
-    return pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) | pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color);
+inline bool Board::hasNonPawnMaterial(Color color) const {
+    return pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
+           pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color);
 }
 
 inline void Board::placePiece(Piece piece, Square sq) {
