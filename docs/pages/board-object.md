@@ -73,6 +73,8 @@ class Board {
 
         bool inCheck();
 
+        bool hasNonPawnMaterial(Color color);
+
         U64 zobrist();
 };
 ```

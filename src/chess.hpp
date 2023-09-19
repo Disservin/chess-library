@@ -1484,6 +1484,10 @@ class Board {
     /// @return
     [[nodiscard]] bool inCheck() const;
 
+    /// @brief Checks if the given color has at least 1 piece thats not pawn and not king
+    /// @return
+    [[nodiscard]] bool hasNonPawnMaterial(Color color) const;
+
     /// @brief Regenerates the zobrist hash key
     /// @return
     [[nodiscard]] U64 zobrist() const;
@@ -1867,6 +1871,11 @@ inline bool Board::isAttacked(Square square, Color color) const {
 }
 
 inline bool Board::inCheck() const { return isAttacked(kingSq(side_to_move_), ~side_to_move_); }
+
+inline bool Board::hasNonPawnMaterial(Color color) const
+{
+    return pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) | pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color);
+}
 
 inline void Board::placePiece(Piece piece, Square sq) {
     assert(board_[sq] == Piece::NONE);
