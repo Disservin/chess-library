@@ -59,14 +59,20 @@ class Board {
 
         bool isRepetition(int count = 2);
 
+        /// @brief Checks if the current position is a draw by 50 move rule.
+        /// Keep in mind that by the rules of chess, if the position has 50 half moves
+        /// it's not necessarily a draw, since checkmate has higher priority, call getHalfMoveDrawType,
+        /// to determine whether the position is a draw or checkmate.
         bool isHalfMoveDraw();
+
+        /// @brief Only call this function if isHalfMoveDraw() returns true.
+        std::pair<GameResultReason, GameResult> getHalfMoveDrawType();
 
         bool isInsufficientMaterial();
 
         /// @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
         /// This function calculates all legal moves for the current position to check if the game is over.
         /// If you are writing you should not use this function.
-        /// @return
         std::pair<GameResultReason, GameResult> isGameOver();
 
         bool isAttacked(Square square, Color color);

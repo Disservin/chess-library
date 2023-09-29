@@ -34,11 +34,27 @@ TEST_SUITE("Board Test") {
         CHECK(board.sideToMove() == Color::WHITE);
     }
 
-    TEST_CASE("hasNonPawnMaterial")
-    {
+    TEST_CASE("hasNonPawnMaterial") {
         Board board = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
         CHECK(!board.hasNonPawnMaterial(board.sideToMove()));
         CHECK(!board.hasNonPawnMaterial(Color::WHITE));
         CHECK(board.hasNonPawnMaterial(Color::BLACK));
+    }
+
+    TEST_CASE("isHalfMoveDraw") {
+        Board board = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
+        CHECK(board.isHalfMoveDraw() == false);
+    }
+
+    TEST_CASE("isHalfMoveDraw True") {
+        Board board = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 100 1");
+        CHECK(board.isHalfMoveDraw());
+        CHECK(board.getHalfMoveDrawType().first == GameResultReason::FIFTY_MOVE_RULE);
+    }
+
+    TEST_CASE("isHalfMoveDraw True and Checkmate") {
+        Board board = Board("7k/8/5B1K/8/8/1B6/8/8 b - - 100 1");
+        CHECK(board.isHalfMoveDraw());
+        CHECK(board.getHalfMoveDrawType().first == GameResultReason::CHECKMATE);
     }
 }

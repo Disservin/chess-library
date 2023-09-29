@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.2.0
+VERSION: 0.3.0
 */
 
 #ifndef CHESS_HPP
@@ -1461,8 +1461,26 @@ class Board {
     [[nodiscard]] bool isRepetition(int count = 2) const;
 
     /// @brief Checks if the current position is a draw by 50 move rule.
+    /// Keep in mind that by the rules of chess, if the position has 50 half moves
+    /// it's not necessarily a draw, since checkmate has higher priority, call getHalfMoveDrawType,
+    /// to determine whether the position is a draw or checkmate.
     /// @return
     [[nodiscard]] bool isHalfMoveDraw() const { return half_moves_ >= 100; }
+
+    /// @brief Only call this function if isHalfMoveDraw() returns true.
+    /// @return
+    [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const {
+        const Board &board = *this;
+
+        Movelist movelist;
+        movegen::legalmoves<MoveGenType::ALL>(movelist, board);
+
+        if (movelist.empty() && inCheck()) {
+            return {GameResultReason::CHECKMATE, GameResult::LOSE};
+        }
+
+        return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
+    }
 
     /// @brief Checks if the current position is a draw by insufficient material.
     /// @return
@@ -1826,16 +1844,7 @@ inline bool Board::isInsufficientMaterial() const {
 
 inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
     if (isHalfMoveDraw()) {
-        const Board &board = *this;
-
-        Movelist movelist;
-        movegen::legalmoves<MoveGenType::ALL>(movelist, board);
-
-        if (movelist.empty() && inCheck()) {
-            return {GameResultReason::CHECKMATE, GameResult::LOSE};
-        }
-
-        return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
+        return getHalfMoveDrawType();
     }
 
     if (isInsufficientMaterial())
