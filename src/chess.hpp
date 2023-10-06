@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.3.0
+VERSION: 0.3.1
 */
 
 #ifndef CHESS_HPP
@@ -3428,7 +3428,7 @@ inline void extractMoves(Board &board, std::vector<PgnMove> &moves, std::string_
 /// @brief Read the next game from a file
 /// @param file
 /// @return
-inline std::optional<Game> readGame(std::ifstream &file) {
+inline std::optional<Game> readGame(std::istream &file) {
     Board board = Board();
 
     Game game;
