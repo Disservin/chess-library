@@ -9,7 +9,7 @@ With the following function you can read the next game from a file conviently.
 /// @brief Read the next game from a file
 /// @param file
 /// @return
-std::optional<Game> readGame(std::ifstream &file);
+std::optional<Game> readGame(std::istream &file);
 ```
 
 ## Example
