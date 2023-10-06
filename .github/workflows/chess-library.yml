@@ -2,9 +2,11 @@ name: Chess Library
 
 on:
   push:
-    branches: ["master"]
+    branches:
+      - master
   pull_request:
-    branches: ["master"]
+    branches:
+      - master
 jobs:
   ChessLibrary:
     name: Chess Library
