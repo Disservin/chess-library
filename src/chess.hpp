@@ -36,6 +36,7 @@ VERSION: 0.3.1
 #include <bitset>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -3135,94 +3136,87 @@ namespace uci {
     return lan;
 }
 
-[[nodiscard]] inline Move parseSanInternal(const Board &board, std::string &san, Movelist &moves) {
+[[nodiscard]] inline Move parseSanInternal(const Board &board, const char *san, Movelist &moves) {
     movegen::legalmoves(moves, board);
 
-    const auto original = san;
+    const char *original = san;
 
-    if (san.rfind("0-0-0", 0) == 0 || san.rfind("O-O-O", 0) == 0) {
+    if (strncmp(san, "0-0-0", 5) == 0 || strncmp(san, "O-O-O", 5) == 0) {
         for (auto move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
                 return move;
             }
         }
 
-        throw std::runtime_error("Illegal San, Step 1: " + san);
-    } else if (san.rfind("0-0", 0) == 0 || san.rfind("O-O", 0) == 0) {
+        throw std::runtime_error("Illegal San, Step 1: " + std::string(san));
+    } else if (strncmp(san, "0-0", 3) == 0 || strncmp(san, "O-O", 3) == 0) {
         for (auto move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
                 return move;
             }
         }
 
-        throw std::runtime_error("Illegal San, Step 2: " + san);
+        throw std::runtime_error("Illegal San, Step 2: " + std::string(san));
     }
 
     // A move looks like this:
-
     // [NBKRQ]? ([a-h])? ([1-8])? x? [a-h] [1-8] (=[nbrqkNBRQK])?
 
-    if (san.size() < 2) {
-        throw std::runtime_error("Illegal San, Step 3: " + san);
-    }
+    size_t index = 0;
 
-    PieceType pt = PieceType::NONE;
-
+    PieceType pt        = PieceType::NONE;
     PieceType promotion = PieceType::NONE;
+    File file_from      = File::NO_FILE;
+    Rank rank_from      = Rank::NO_RANK;
+    File file_to        = File::NO_FILE;
+    Rank rank_to        = Rank::NO_RANK;
 
-    File file_from = File::NO_FILE;
-    Rank rank_from = Rank::NO_RANK;
-
-    File file_to = File::NO_FILE;
-    Rank rank_to = Rank::NO_RANK;
-
-    // check if san starts with file
-    if (san[0] == 'N' || san[0] == 'B' || san[0] == 'R' || san[0] == 'Q' || san[0] == 'K') {
-        pt = charToPieceType[san[0]];
-        san.erase(0, 1);
+    // check if san starts with a piece type
+    if (san[index] == 'N' || san[index] == 'B' || san[index] == 'R' || san[index] == 'Q' ||
+        san[index] == 'K') {
+        pt = charToPieceType[san[index]];
+        ++index;
     }
 
-    if (san[0] >= 'a' && san[0] <= 'h') {
-        file_from = File(int(san[0] - 97));
-
+    // check if san starts with a file
+    if (san[index] >= 'a' && san[index] <= 'h') {
+        file_from = File(int(san[index] - 'a'));
         if (pt == PieceType::NONE) {
             pt = PieceType::PAWN;
         }
-
-        san.erase(0, 1);
+        ++index;
     }
 
-    if (san[0] >= '1' && san[0] <= '8') {
-        rank_from = Rank(int(san[0] - 49));
-
-        san.erase(0, 1);
+    // check if san starts with a rank
+    if (san[index] >= '1' && san[index] <= '8') {
+        rank_from = Rank(int(san[index] - '1'));
+        ++index;
     }
 
     // skip capture sign
-    if (san[0] == 'x') {
-        san.erase(0, 1);
+    if (san[index] == 'x') {
+        ++index;
     }
 
-    if (san[0] >= 'a' && san[0] <= 'h') {
-        file_to = File(int(san[0] - 97));
-
+    // check if san contains a destination square (file and rank)
+    if (san[index] >= 'a' && san[index] <= 'h') {
+        file_to = File(int(san[index] - 'a'));
         if (pt == PieceType::NONE) {
             pt = PieceType::PAWN;
         }
-
-        san.erase(0, 1);
+        ++index;
     }
 
-    if (san[0] >= '1' && san[0] <= '8') {
-        rank_to = Rank(int(san[0] - 49));
-
-        san.erase(0, 1);
+    if (san[index] >= '1' && san[index] <= '8') {
+        rank_to = Rank(int(san[index] - '1'));
+        ++index;
     }
 
-    if (san[0] == '=') {
-        san.erase(0, 1);
-
-        promotion = charToPieceType[san[0]];
+    // check for promotion
+    if (san[index] == '=') {
+        ++index;
+        promotion = charToPieceType[san[index]];
+        ++index;
     }
 
     // the from square is actually the to
@@ -3286,17 +3280,18 @@ namespace uci {
     std::cout << "promotion " << int(promotion) << std::endl;
     std::cout << "to_sq " << squareToString[int(to_sq)] << std::endl;
 
-    throw std::runtime_error("Illegal San, Step 4: " + original + " " + board.getFen());
+    throw std::runtime_error("Illegal San, Step 4: " + std::string(original) + " " +
+                             board.getFen());
 }
 
 /// @brief Converts a SAN string to a move
 /// @param board
 /// @param san
 /// @return
-[[nodiscard]] inline Move parseSan(const Board &board, std::string san) {
+[[nodiscard]] inline Move parseSan(const Board &board, const std::string &san) {
     Movelist moves;
 
-    return parseSanInternal(board, san, moves);
+    return parseSanInternal(board, san.c_str(), moves);
 }
 
 }  // namespace uci
@@ -3603,7 +3598,7 @@ class StreamParser {
     void addMove() {
         if (!move.empty()) {
             moves.clear();
-            const auto move_internal = uci::parseSanInternal(board, move, moves);
+            const auto move_internal = uci::parseSanInternal(board, move.c_str(), moves);
             game.moves().push_back({move_internal, comment});
             board.makeMove(move_internal);
 
