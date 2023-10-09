@@ -3476,6 +3476,10 @@ class StreamParser {
         for (std::size_t i = bufferIndex; i < length; ++i) {
             char c = buffer[i];
 
+            if (c == '\r') {
+                continue;
+            }
+
             // PGN End
             if (lineStart && inBody && c == '\n') {
                 bufferIndex = i;
@@ -3592,7 +3596,6 @@ class StreamParser {
             moves.clear();
 
             const auto move_internal = uci::parseSanInternal(board, move.c_str(), moves);
-
             game.moves().push_back({move_internal, comment});
             board.makeMove(move_internal);
 
