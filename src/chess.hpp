@@ -3135,12 +3135,7 @@ namespace uci {
     return lan;
 }
 
-/// @brief Converts a SAN string to a move
-/// @param board
-/// @param san
-/// @return
-[[nodiscard]] inline Move parseSan(const Board &board, std::string san) {
-    Movelist moves;
+[[nodiscard]] inline Move parseSanInternal(const Board &board, std::string &san, Movelist &moves) {
     movegen::legalmoves(moves, board);
 
     const auto original = san;
@@ -3292,6 +3287,16 @@ namespace uci {
     std::cout << "to_sq " << squareToString[int(to_sq)] << std::endl;
 
     throw std::runtime_error("Illegal San, Step 4: " + original + " " + board.getFen());
+}
+
+/// @brief Converts a SAN string to a move
+/// @param board
+/// @param san
+/// @return
+[[nodiscard]] inline Move parseSan(const Board &board, std::string san) {
+    Movelist moves;
+
+    return parseSanInternal(board, san, moves);
 }
 
 }  // namespace uci
@@ -3541,7 +3546,8 @@ class StreamParser {
 
     void addMove() {
         if (!move.empty()) {
-            const auto move_internal = uci::parseSan(board, move);
+            moves.clear();
+            const auto move_internal = uci::parseSanInternal(board, move, moves);
             game.moves().push_back({move_internal, comment});
             board.makeMove(move_internal);
 
@@ -3549,6 +3555,8 @@ class StreamParser {
             comment.clear();
         }
     };
+
+    Movelist moves;
 
     Board board = Board();
 
