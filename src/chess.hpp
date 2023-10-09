@@ -3427,14 +3427,14 @@ inline void extractMoves(Board &board, std::vector<PgnMove> &moves, std::string_
     }
 }
 
-enum class State { CONTINUE, BREAK };
-
 class StreamParser {
+    enum class State { CONTINUE, BREAK };
+
    public:
     StreamParser(std::istream &file_stream) : file(file_stream) {}
 
-    template <typename T>
-    void readGame(T &&callback) {
+    template <typename Callable>
+    void readGame(Callable &&func) {
         const std::size_t bufferSize = 1024;
         char buffer[bufferSize];
 
@@ -3482,8 +3482,13 @@ class StreamParser {
                 return;
             }
 
-            callback(game);
+            func(game);
         }
+    }
+
+    template <typename T, typename MemberFunc>
+    auto readGame(T &instance, MemberFunc mem_func) {
+        return readGame([&instance, mem_func](Game &game) { (instance.*mem_func)(game); });
     }
 
    private:
@@ -3636,38 +3641,6 @@ class StreamParser {
 
    private:
 };
-
-/// @brief Read the next game from a file
-/// @param file
-/// @return
-// inline std::optional<Game> readGame(std::istream &file) {
-//     StreamParser parser;
-
-//     bool hasHead = false;
-//     bool hasBody = false;
-
-//     const std::size_t bufferSize = 1024;
-//     char buffer[bufferSize];
-
-//     while (file) {
-//         file.read(buffer, bufferSize);
-//         std::streamsize bytesRead = file.gcount();
-
-//         if (bytesRead == 0) {
-//             break;
-//         }
-
-//         if (parser.processNextBytes(buffer, bytesRead, hasHead, hasBody) == State::BREAK) {
-//             break;
-//         }
-//     }
-
-//     if (!hasBody && !hasHead) {
-//         return std::nullopt;
-//     }
-
-//     return parser.game;
-// }
 
 }  // namespace pgn
 
