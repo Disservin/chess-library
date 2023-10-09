@@ -3471,6 +3471,11 @@ class StreamParser {
     }
 
    private:
+    bool isMoveChar(char c) {
+        // p, n, b, r, q, k, P, N, B, R, Q, K, a, b, c, d, e, f, g, h
+        return (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
+    }
+
     State processNextBytes(const char *buffer, std::size_t length, bool &hasHead, bool &hasBody,
                            int &bufferIndex) {
         for (std::size_t i = bufferIndex; i < length; ++i) {
@@ -3566,7 +3571,9 @@ class StreamParser {
 
                     addMove();
                 } else if (!readingMove && !readingComment) {
-                    if (!std::isalpha(c)) {
+                    // we are in empty space, when we encounter now a file or a piece we try to
+                    // parse the move
+                    if (!isMoveChar(c)) {
                         continue;
                     }
 
