@@ -8,7 +8,13 @@ using namespace chess;
 std::int64_t count = 0;
 
 void dosomething(Game& game) {
+    // for (const auto& header : game.headers()) {
+    //     std::cout << header.first << ": " << header.second << "\n";
+    // }
+
     Board board;
+    board.setFen(game.headers().at("FEN"));
+
     for (const auto& move : game.moves()) {
         board.makeMove(move.move);
         count++;
@@ -16,7 +22,7 @@ void dosomething(Game& game) {
 }
 
 int main(int argc, char const* argv[]) {
-    const auto file  = "../../../lichess_db_standard_rated_2014-01.pgn";
+    const auto file  = "62df67e48e4fa6ae47266770-10.pgn";
     auto file_stream = std::ifstream(file);
 
     std::uint64_t count = 0;

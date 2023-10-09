@@ -3411,6 +3411,9 @@ class StreamParser {
         const std::size_t bufferSize = 1024;
         char buffer[bufferSize];
 
+        int bufferIndex           = 0;
+        std::streamsize bytesRead = 0;
+
         while (true) {
             bool hasHead = false;
             bool hasBody = false;
@@ -3439,14 +3442,17 @@ class StreamParser {
             readingValue = false;
 
             while (file) {
-                file.read(buffer, bufferSize);
-                std::streamsize bytesRead = file.gcount();
+                if (bufferIndex == 0) {
+                    file.read(buffer, bufferSize);
+                    bytesRead = file.gcount();
 
-                if (bytesRead == 0) {
-                    break;
+                    if (bytesRead == 0) {
+                        break;
+                    }
                 }
 
-                if (processNextBytes(buffer, bytesRead, hasHead, hasBody) == State::BREAK) {
+                if (processNextBytes(buffer, bytesRead, hasHead, hasBody, bufferIndex) ==
+                    State::BREAK) {
                     break;
                 }
             }
@@ -3465,17 +3471,19 @@ class StreamParser {
     }
 
    private:
-    State processNextBytes(const char *buffer, std::size_t length, bool &hasHead, bool &hasBody) {
-        for (std::size_t i = 0; i < length; ++i) {
+    State processNextBytes(const char *buffer, std::size_t length, bool &hasHead, bool &hasBody,
+                           int &bufferIndex) {
+        for (std::size_t i = bufferIndex; i < length; ++i) {
             char c = buffer[i];
-
-            if (c == '\n') {
-                lineStart = true;
-            }
 
             // PGN End
             if (lineStart && inBody && c == '\n') {
+                bufferIndex = i;
                 return State::BREAK;
+            }
+
+            if (c == '\n') {
+                lineStart = true;
             }
 
             // PGN Header
@@ -3503,6 +3511,11 @@ class StreamParser {
 
                 lineStart = false;
                 continue;
+            }
+
+            // make sure that the linestart is turned off again
+            if (lineStart && c != '\n') {
+                lineStart = false;
             }
 
             if (inHeader) {
@@ -3570,6 +3583,7 @@ class StreamParser {
             continue;
         }
 
+        bufferIndex = 0;
         return State::CONTINUE;
     }
 
