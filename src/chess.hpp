@@ -3427,105 +3427,115 @@ enum class State { CONTINUE, BREAK };
 class StreamParser {
    public:
     template <typename T>
-    inline State processNextByte(char c, T &&callback, bool &hasHead, bool &hasBody) {
-        if (c == '\n') {
-            lineStart = true;
-        }
+    inline State processNextByte(const char *buffer, std::size_t length, T &&callback,
+                                 bool &hasHead, bool &hasBody) {
+        for (std::size_t i = 0; i < length; ++i) {
+            char c = buffer[i];
 
-        // PGN End
-        if (lineStart && inBody && c == '\n') {
-            return State::BREAK;
-        }
-
-        // PGN Header
-        if (lineStart && c == '[') {
-            hasHead = true;
-
-            inHeader = true;
-            inBody   = false;
-
-            readingKey = true;
-
-            lineStart = false;
-            return State::CONTINUE;
-        }
-
-        // PGN Moves Start
-        if (lineStart && hasHead && !inBody && c == '1') {
-            readingMove    = false;
-            readingComment = false;
-
-            hasBody = true;
-
-            inHeader = false;
-            inBody   = true;
-
-            lineStart = false;
-            return State::CONTINUE;
-        }
-
-        if (inHeader) {
-            if (c == '"') {
-                readingValue = !readingValue;
-            } else if (readingKey && c == ' ') {
-                readingKey = false;
-            } else if (readingKey) {
-                header.first += c;
-            } else if (readingValue) {
-                header.second += c;
-            } else if (c == '\n') {
-                readingKey   = false;
-                readingValue = false;
-                inHeader     = false;
-
-                game.setHeader(header.first, header.second);
-
-                if (header.first == "FEN") {
-                    board.setFen(header.second);
-                }
-
-                if (header.first == "Variant") {
-                    board.set960(header.second == "fischerandom");
-                }
-
-                header.first.clear();
-                header.second.clear();
+            if (c == '\n') {
+                lineStart = true;
             }
-        }
-        // Pgn are build up in the following way.
-        // {move_number} {move} {comment} {move} {comment} {move_number} ...
-        // So we need to skip the move_number then start reading the move, then save the comment
-        // then read the second move in the group. After that a move_number will follow again.
-        else if (inBody) {
-            if (readingMove && c == ' ') {
-                readingMove = false;
-            } else if (readingMove) {
-                move += c;
-            } else if (!readingComment && c == '{') {
-                readingComment = true;
-            } else if (readingComment && c == '}') {
-                readingComment = false;
 
-                addMove();
-            } else if (!readingMove && !readingComment) {
-                if (!std::isalpha(c)) {
-                    return State::CONTINUE;
-                }
+            // PGN End
+            if (lineStart && inBody && c == '\n') {
+                return State::BREAK;
+            }
 
-                addMove();
+            // PGN Header
+            if (lineStart && c == '[') {
+                hasHead = true;
 
-                readingMove = true;
-                move += c;
-            } else if (readingComment) {
-                comment += c;
-            } else if (c == '\n') {
+                inHeader = true;
+                inBody   = false;
+
+                readingKey = true;
+
+                lineStart = false;
+                // return State::CONTINUE;
+                continue;
+            }
+
+            // PGN Moves Start
+            if (lineStart && hasHead && !inBody && c == '1') {
                 readingMove    = false;
                 readingComment = false;
 
-                addMove();
-            }
-        }
+                hasBody = true;
 
+                inHeader = false;
+                inBody   = true;
+
+                lineStart = false;
+                // return State::CONTINUE;
+                continue;
+            }
+
+            if (inHeader) {
+                if (c == '"') {
+                    readingValue = !readingValue;
+                } else if (readingKey && c == ' ') {
+                    readingKey = false;
+                } else if (readingKey) {
+                    header.first += c;
+                } else if (readingValue) {
+                    header.second += c;
+                } else if (c == '\n') {
+                    readingKey   = false;
+                    readingValue = false;
+                    inHeader     = false;
+
+                    game.setHeader(header.first, header.second);
+
+                    if (header.first == "FEN") {
+                        board.setFen(header.second);
+                    }
+
+                    if (header.first == "Variant") {
+                        board.set960(header.second == "fischerandom");
+                    }
+
+                    header.first.clear();
+                    header.second.clear();
+                }
+            }
+            // Pgn are build up in the following way.
+            // {move_number} {move} {comment} {move} {comment} {move_number} ...
+            // So we need to skip the move_number then start reading the move, then save the comment
+            // then read the second move in the group. After that a move_number will follow again.
+            else if (inBody) {
+                if (readingMove && c == ' ') {
+                    readingMove = false;
+                } else if (readingMove) {
+                    move += c;
+                } else if (!readingComment && c == '{') {
+                    readingComment = true;
+                } else if (readingComment && c == '}') {
+                    readingComment = false;
+
+                    addMove();
+                } else if (!readingMove && !readingComment) {
+                    if (!std::isalpha(c)) {
+                        // return State::CONTINUE;
+                        continue;
+                    }
+
+                    addMove();
+
+                    readingMove = true;
+                    move += c;
+                } else if (readingComment) {
+                    comment += c;
+                } else if (c == '\n') {
+                    readingMove    = false;
+                    readingComment = false;
+
+                    addMove();
+                }
+            }
+
+            // return State::CONTINUE;
+            continue;
+        }
         return State::CONTINUE;
     }
 
@@ -3582,11 +3592,23 @@ inline std::optional<Game> readGame(std::istream &file) {
     bool hasBody = false;
 
     StreamParser parser;
-    char c;
 
-    while (file.get(c)) {
+    const std::size_t bufferSize = 1024;
+    char buffer[bufferSize];
+
+    // while (file.get(c)) {
+    // }
+
+    while (file) {
+        file.read(buffer, bufferSize);
+        std::streamsize bytesRead = file.gcount();
+
+        if (bytesRead == 0) {
+            break;
+        }
+
         if (parser.processNextByte(
-                c, [&]() {}, hasHead, hasBody) == State::BREAK) {
+                buffer, bytesRead, [&]() {}, hasHead, hasBody) == State::BREAK) {
             break;
         }
     }

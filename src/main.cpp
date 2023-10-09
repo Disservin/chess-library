@@ -6,7 +6,7 @@
 using namespace chess;
 
 int main(int argc, char const* argv[]) {
-    const auto file  = "..\\..\\..\\lichess_db_standard_rated_2014-01.pgn";
+    const auto file  = "../../../lichess_db_standard_rated_2014-01.pgn";
     auto file_stream = std::ifstream(file);
 
     std::uint64_t count = 0;
