@@ -2946,6 +2946,52 @@ template <Color c>
  * uci utility functions                                                     *
 \****************************************************************************/
 
+struct CMove {
+    char str[10] = {'\0'};
+    int length   = 0;
+
+    CMove() = default;
+
+    CMove(const char *str) {
+        for (int i = 0; i < 10; i++) {
+            this->str[i] = str[i];
+            if (str[i] == '\0') {
+                length = i;
+                break;
+            }
+        }
+    }
+
+    const char *c_str() const { return str; }
+
+    bool empty() const { return length == 0; }
+
+    int size() const { return length; }
+
+    void clear() {
+        for (int i = 0; i < 10; i++) {
+            str[i] = '\0';
+        }
+        length = 0;
+    }
+
+    char operator[](int index) const {
+        if (index < 0 || index >= length) {
+            return '\0';
+        }
+
+        return str[index];
+    }
+
+    CMove &operator+=(char c) {
+        if (length >= 9) {
+            return *this;
+        }
+        str[length++] = c;
+        return *this;
+    }
+};
+
 namespace uci {
 /// @brief Converts an internal move to a UCI string
 /// @param move
@@ -3136,27 +3182,27 @@ namespace uci {
     return lan;
 }
 
-[[nodiscard]] inline Move parseSanInternal(const Board &board, const char *san, Movelist &moves) {
+[[nodiscard]] inline Move parseSanInternal(const Board &board, const CMove &san, Movelist &moves) {
     movegen::legalmoves(moves, board);
 
-    const char *original = san;
+    const char *original = san.str;
 
-    if (strncmp(san, "0-0-0", 5) == 0 || strncmp(san, "O-O-O", 5) == 0) {
+    if (strncmp(san.str, "0-0-0", 5) == 0 || strncmp(san.str, "O-O-O", 5) == 0) {
         for (auto move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
                 return move;
             }
         }
 
-        throw std::runtime_error("Illegal San, Step 1: " + std::string(san));
-    } else if (strncmp(san, "0-0", 3) == 0 || strncmp(san, "O-O", 3) == 0) {
+        throw std::runtime_error("Illegal san.str, Step 1: " + std::string(san.str));
+    } else if (strncmp(san.str, "0-0", 3) == 0 || strncmp(san.str, "O-O", 3) == 0) {
         for (auto move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
                 return move;
             }
         }
 
-        throw std::runtime_error("Illegal San, Step 2: " + std::string(san));
+        throw std::runtime_error("Illegal San, Step 2: " + std::string(san.str));
     }
 
     // A move looks like this:
@@ -3291,7 +3337,7 @@ namespace uci {
 [[nodiscard]] inline Move parseSan(const Board &board, const std::string &san) {
     Movelist moves;
 
-    return parseSanInternal(board, san.c_str(), moves);
+    return parseSanInternal(board, CMove(san.c_str()), moves);
 }
 
 }  // namespace uci
@@ -3352,74 +3398,6 @@ inline std::pair<std::string, std::string> extractHeader(const std::string &line
     }
 
     return {key, value};
-}
-
-/// @brief [Internal use only] Extract and parse the move, plus any comments it might have.
-/// @param board
-/// @param line
-/// @return
-inline void extractMoves(Board &board, std::vector<PgnMove> &moves, std::string_view line) {
-    std::string move;
-    std::string comment;
-
-    bool readingMove    = false;
-    bool readingComment = false;
-
-    // Pgn are build up in the following way.
-    // {move_number} {move} {comment} {move} {comment} {move_number} ...
-    // So we need to skip the move_number then start reading the move, then save the comment
-    // then read the second move in the group. After that a move_number will follow again.
-    for (const auto c : line) {
-        if (readingMove && c == ' ') {
-            readingMove = false;
-        } else if (readingMove) {
-            move += c;
-        } else if (!readingComment && c == '{') {
-            readingComment = true;
-        } else if (readingComment && c == '}') {
-            readingComment = false;
-
-            if (!move.empty()) {
-                const auto move_internal = uci::parseSan(board, move);
-                moves.push_back({move_internal, comment});
-
-                board.makeMove(move_internal);
-
-                move.clear();
-                comment.clear();
-            }
-        } else if (!readingMove && !readingComment) {
-            if (!std::isalpha(c)) {
-                continue;
-            }
-
-            if (!move.empty()) {
-                const auto move_internal = uci::parseSan(board, move);
-                moves.push_back({move_internal, comment});
-
-                board.makeMove(move_internal);
-
-                move.clear();
-                comment.clear();
-            }
-
-            readingMove = true;
-            move += c;
-        } else if (readingComment) {
-            comment += c;
-        }
-    }
-
-    // add the remaining move
-    if (!move.empty()) {
-        const auto move_internal = uci::parseSan(board, move);
-        moves.push_back({move_internal, comment});
-
-        board.makeMove(move_internal);
-
-        move.clear();
-        comment.clear();
-    }
 }
 
 class StreamParser {
@@ -3598,7 +3576,9 @@ class StreamParser {
     void addMove() {
         if (!move.empty()) {
             moves.clear();
+
             const auto move_internal = uci::parseSanInternal(board, move.c_str(), moves);
+
             game.moves().push_back({move_internal, comment});
             board.makeMove(move_internal);
 
@@ -3618,7 +3598,7 @@ class StreamParser {
     std::pair<std::string, std::string> header;
 
     // move parsing
-    std::string move;
+    CMove move;
     std::string comment;
 
     bool readingMove    = false;
