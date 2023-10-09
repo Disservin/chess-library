@@ -13,7 +13,7 @@ void dosomething(Game& game) {
     // }
 
     Board board;
-    board.setFen(game.headers().at("FEN"));
+    // board.setFen(game.headers().at("FEN"));
 
     for (const auto& move : game.moves()) {
         board.makeMove(move.move);
@@ -22,7 +22,7 @@ void dosomething(Game& game) {
 }
 
 int main(int argc, char const* argv[]) {
-    const auto file  = "62df67e48e4fa6ae47266770-10.pgn";
+    const auto file  = "..\\..\\..\\lichess_db_standard_rated_2014-01.pgn";
     auto file_stream = std::ifstream(file);
 
     std::uint64_t count = 0;

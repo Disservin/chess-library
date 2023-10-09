@@ -3482,7 +3482,7 @@ class StreamParser {
 
             // PGN End
             if (lineStart && inBody && c == '\n') {
-                bufferIndex = i;
+                bufferIndex = i + 1;
                 return State::BREAK;
             }
 
