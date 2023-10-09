@@ -3431,8 +3431,63 @@ enum class State { CONTINUE, BREAK };
 
 class StreamParser {
    public:
-    inline State processNextByte(const char *buffer, std::size_t length, bool &hasHead,
-                                 bool &hasBody) {
+    StreamParser(std::istream &file_stream) : file(file_stream) {}
+
+    template <typename T>
+    void readGame(T &&callback) {
+        const std::size_t bufferSize = 1024;
+        char buffer[bufferSize];
+
+        while (true) {
+            bool hasHead = false;
+            bool hasBody = false;
+
+            moves.clear();
+            board.setFen(STARTPOS);
+            game = Game();
+
+            header.first.clear();
+            header.second.clear();
+
+            move.clear();
+            comment.clear();
+
+            readingMove    = false;
+            readingComment = false;
+
+            lineStart = true;
+
+            // current state
+            inHeader = false;
+            inBody   = false;
+
+            // Header
+            readingKey   = false;
+            readingValue = false;
+
+            while (file) {
+                file.read(buffer, bufferSize);
+                std::streamsize bytesRead = file.gcount();
+
+                if (bytesRead == 0) {
+                    break;
+                }
+
+                if (processNextBytes(buffer, bytesRead, hasHead, hasBody) == State::BREAK) {
+                    break;
+                }
+            }
+
+            if (!hasBody && !hasHead) {
+                return;
+            }
+
+            callback(game);
+        }
+    }
+
+   private:
+    State processNextBytes(const char *buffer, std::size_t length, bool &hasHead, bool &hasBody) {
         for (std::size_t i = 0; i < length; ++i) {
             char c = buffer[i];
 
@@ -3455,7 +3510,6 @@ class StreamParser {
                 readingKey = true;
 
                 lineStart = false;
-                // return State::CONTINUE;
                 continue;
             }
 
@@ -3470,7 +3524,6 @@ class StreamParser {
                 inBody   = true;
 
                 lineStart = false;
-                // return State::CONTINUE;
                 continue;
             }
 
@@ -3519,7 +3572,6 @@ class StreamParser {
                     addMove();
                 } else if (!readingMove && !readingComment) {
                     if (!std::isalpha(c)) {
-                        // return State::CONTINUE;
                         continue;
                     }
 
@@ -3537,9 +3589,9 @@ class StreamParser {
                 }
             }
 
-            // return State::CONTINUE;
             continue;
         }
+
         return State::CONTINUE;
     }
 
@@ -3554,6 +3606,8 @@ class StreamParser {
             comment.clear();
         }
     };
+
+    std::istream &file;
 
     Movelist moves;
 
@@ -3586,34 +3640,34 @@ class StreamParser {
 /// @brief Read the next game from a file
 /// @param file
 /// @return
-inline std::optional<Game> readGame(std::istream &file) {
-    bool hasHead = false;
-    bool hasBody = false;
+// inline std::optional<Game> readGame(std::istream &file) {
+//     StreamParser parser;
 
-    StreamParser parser;
+//     bool hasHead = false;
+//     bool hasBody = false;
 
-    const std::size_t bufferSize = 1024;
-    char buffer[bufferSize];
+//     const std::size_t bufferSize = 1024;
+//     char buffer[bufferSize];
 
-    while (file) {
-        file.read(buffer, bufferSize);
-        std::streamsize bytesRead = file.gcount();
+//     while (file) {
+//         file.read(buffer, bufferSize);
+//         std::streamsize bytesRead = file.gcount();
 
-        if (bytesRead == 0) {
-            break;
-        }
+//         if (bytesRead == 0) {
+//             break;
+//         }
 
-        if (parser.processNextByte(buffer, bytesRead, hasHead, hasBody) == State::BREAK) {
-            break;
-        }
-    }
+//         if (parser.processNextBytes(buffer, bytesRead, hasHead, hasBody) == State::BREAK) {
+//             break;
+//         }
+//     }
 
-    if (!hasBody && !hasHead) {
-        return std::nullopt;
-    }
+//     if (!hasBody && !hasHead) {
+//         return std::nullopt;
+//     }
 
-    return parser.game;
-}
+//     return parser.game;
+// }
 
 }  // namespace pgn
 

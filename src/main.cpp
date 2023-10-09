@@ -5,6 +5,16 @@
 
 using namespace chess;
 
+std::int64_t count = 0;
+
+void dosomething(Game& game) {
+    Board board;
+    for (const auto& move : game.moves()) {
+        board.makeMove(move.move);
+        count++;
+    }
+}
+
 int main(int argc, char const* argv[]) {
     const auto file  = "../../../lichess_db_standard_rated_2014-01.pgn";
     auto file_stream = std::ifstream(file);
@@ -13,19 +23,8 @@ int main(int argc, char const* argv[]) {
 
     const auto t0 = std::chrono::high_resolution_clock::now();
 
-    while (true) {
-        auto game = pgn::readGame(file_stream);
-
-        if (game.has_value() == false) {
-            break;
-        }
-
-        Board board;
-        for (const auto& move : game.value().moves()) {
-            board.makeMove(move.move);
-            count++;
-        }
-    }
+    pgn::StreamParser parser(file_stream);
+    parser.readGame(dosomething);
 
     const auto t1 = std::chrono::high_resolution_clock::now();
 
