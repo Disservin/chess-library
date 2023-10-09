@@ -3145,18 +3145,7 @@ namespace uci {
 
     const auto original = san;
 
-    if (san == "0-0" || san == "0-0+" || san == "0-0#" || san == "O-O" || san == "O-O+" ||
-        san == "O-O#") {
-        for (auto move : moves) {
-            if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
-                return move;
-            }
-        }
-
-        throw std::runtime_error("Illegal San, Step 1: " + san);
-
-    } else if (san == "0-0-0" || san == "0-0-0+" || san == "0-0-0#" || san == "O-O-O" ||
-               san == "O-O-O+" || san == "O-O-O#") {
+    if (san.rfind("0-0-0", 0) == 0 || san.rfind("O-O-O", 0) == 0) {
         for (auto move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
                 return move;
@@ -3164,6 +3153,14 @@ namespace uci {
         }
 
         throw std::runtime_error("Illegal San, Step 2: " + san);
+    } else if (san.rfind("0-0", 0) == 0 || san.rfind("O-O", 0) == 0) {
+        for (auto move : moves) {
+            if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
+                return move;
+            }
+        }
+
+        throw std::runtime_error("Illegal San, Step 1: " + san);
     }
 
     // A move looks like this:

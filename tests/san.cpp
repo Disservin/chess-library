@@ -122,3 +122,39 @@ TEST_CASE("Test King Castling Short move") {
     CHECK(uci::moveToSan(b, m) == "O-O-O");
     CHECK(uci::parseSan(b, "O-O-O") == m);
 }
+
+TEST_CASE("Test King Castling Short move with Zero") {
+    Board b;
+    b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R w KQkq - 0 17");
+
+    Move m = Move::make<Move::CASTLING>(SQ_E1, SQ_H1);
+
+    CHECK(uci::parseSan(b, "0-0") == m);
+}
+
+TEST_CASE("Test King Castling Short move with Zero") {
+    Board b;
+    b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1");
+
+    Move m = Move::make<Move::CASTLING>(SQ_E1, SQ_A1);
+
+    CHECK(uci::parseSan(b, "0-0-0") == m);
+}
+
+TEST_CASE("Test King Castling Short move with Annotation") {
+    Board b;
+    b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R w KQkq - 0 17");
+
+    Move m = Move::make<Move::CASTLING>(SQ_E1, SQ_H1);
+
+    CHECK(uci::parseSan(b, "0-0+?!") == m);
+}
+
+TEST_CASE("Test King Castling Short move with Annotation") {
+    Board b;
+    b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1");
+
+    Move m = Move::make<Move::CASTLING>(SQ_E1, SQ_A1);
+
+    CHECK(uci::parseSan(b, "0-0-0+?!") == m);
+}
