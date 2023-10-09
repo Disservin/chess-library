@@ -3431,9 +3431,8 @@ enum class State { CONTINUE, BREAK };
 
 class StreamParser {
    public:
-    template <typename T>
-    inline State processNextByte(const char *buffer, std::size_t length, T &&callback,
-                                 bool &hasHead, bool &hasBody) {
+    inline State processNextByte(const char *buffer, std::size_t length, bool &hasHead,
+                                 bool &hasBody) {
         for (std::size_t i = 0; i < length; ++i) {
             char c = buffer[i];
 
@@ -3604,8 +3603,7 @@ inline std::optional<Game> readGame(std::istream &file) {
             break;
         }
 
-        if (parser.processNextByte(
-                buffer, bytesRead, [&]() {}, hasHead, hasBody) == State::BREAK) {
+        if (parser.processNextByte(buffer, bytesRead, hasHead, hasBody) == State::BREAK) {
             break;
         }
     }
