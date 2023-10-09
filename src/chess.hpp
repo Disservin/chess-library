@@ -3588,14 +3588,6 @@ class StreamParser {
 /// @param file
 /// @return
 inline std::optional<Game> readGame(std::istream &file) {
-    // Board board = Board();
-
-    // Game game;
-
-    // std::string line;
-
-    // bool readingMoves = false;
-
     bool hasHead = false;
     bool hasBody = false;
 
@@ -3603,9 +3595,6 @@ inline std::optional<Game> readGame(std::istream &file) {
 
     const std::size_t bufferSize = 1024;
     char buffer[bufferSize];
-
-    // while (file.get(c)) {
-    // }
 
     while (file) {
         file.read(buffer, bufferSize);
@@ -3620,37 +3609,6 @@ inline std::optional<Game> readGame(std::istream &file) {
             break;
         }
     }
-
-    // while (!utils::safeGetline(file, line).eof()) {
-    //     // We read the moves and we reached the end of the pgn, which is signaled by an empty
-    //     line.
-    //     if (readingMoves && line.empty()) {
-    //         break;
-    //     }
-
-    //     if (line[0] == '[') {
-    //         // Parse the header
-    //         const auto header = extractHeader(line);
-
-    //         hasHead = true;
-
-    //         game.setHeader(header.first, header.second);
-
-    //         if (header.first == "FEN") {
-    //             board.setFen(header.second);
-    //         }
-
-    //         if (header.first == "Variant") {
-    //             board.set960(header.second == "fischerandom");
-    //         }
-    //     } else {
-    //         // Parse the moves
-    //         extractMoves(board, game.moves(), line);
-
-    //         readingMoves = true;
-    //         hasBody      = true;
-    //     }
-    // }
 
     if (!hasBody && !hasHead) {
         return std::nullopt;
