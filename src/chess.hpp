@@ -3422,56 +3422,211 @@ inline void extractMoves(Board &board, std::vector<PgnMove> &moves, std::string_
     }
 }
 
-/// @brief Read the next game from a file
-/// @param file
-/// @return
-inline std::optional<Game> readGame(std::istream &file) {
+enum class State { CONTINUE, BREAK };
+
+class StreamParser {
+   public:
+    template <typename T>
+    inline State processNextByte(char c, T &&callback, bool &hasHead, bool &hasBody) {
+        if (c == '\n') {
+            lineStart = true;
+        }
+
+        // PGN End
+        if (lineStart && inBody && c == '\n') {
+            return State::BREAK;
+        }
+
+        // PGN Header
+        if (lineStart && c == '[') {
+            hasHead = true;
+
+            inHeader = true;
+            inBody   = false;
+
+            readingKey = true;
+
+            lineStart = false;
+            return State::CONTINUE;
+        }
+
+        // PGN Moves Start
+        if (lineStart && hasHead && !inBody && c == '1') {
+            readingMove    = false;
+            readingComment = false;
+
+            hasBody = true;
+
+            inHeader = false;
+            inBody   = true;
+
+            lineStart = false;
+            return State::CONTINUE;
+        }
+
+        if (inHeader) {
+            if (c == '"') {
+                readingValue = !readingValue;
+            } else if (readingKey && c == ' ') {
+                readingKey = false;
+            } else if (readingKey) {
+                header.first += c;
+            } else if (readingValue) {
+                header.second += c;
+            } else if (c == '\n') {
+                readingKey   = false;
+                readingValue = false;
+                inHeader     = false;
+
+                game.setHeader(header.first, header.second);
+
+                if (header.first == "FEN") {
+                    board.setFen(header.second);
+                }
+
+                if (header.first == "Variant") {
+                    board.set960(header.second == "fischerandom");
+                }
+
+                header.first.clear();
+                header.second.clear();
+            }
+        }
+        // Pgn are build up in the following way.
+        // {move_number} {move} {comment} {move} {comment} {move_number} ...
+        // So we need to skip the move_number then start reading the move, then save the comment
+        // then read the second move in the group. After that a move_number will follow again.
+        else if (inBody) {
+            if (readingMove && c == ' ') {
+                readingMove = false;
+            } else if (readingMove) {
+                move += c;
+            } else if (!readingComment && c == '{') {
+                readingComment = true;
+            } else if (readingComment && c == '}') {
+                readingComment = false;
+
+                addMove();
+            } else if (!readingMove && !readingComment) {
+                if (!std::isalpha(c)) {
+                    return State::CONTINUE;
+                }
+
+                addMove();
+
+                readingMove = true;
+                move += c;
+            } else if (readingComment) {
+                comment += c;
+            } else if (c == '\n') {
+                readingMove    = false;
+                readingComment = false;
+
+                addMove();
+            }
+        }
+
+        return State::CONTINUE;
+    }
+
+    void addMove() {
+        if (!move.empty()) {
+            const auto move_internal = uci::parseSan(board, move);
+            game.moves().push_back({move_internal, comment});
+            board.makeMove(move_internal);
+
+            move.clear();
+            comment.clear();
+        }
+    };
+
     Board board = Board();
 
     Game game;
 
-    std::string line;
+    std::pair<std::string, std::string> header;
 
-    bool readingMoves = false;
+    // move parsing
+    std::string move;
+    std::string comment;
+
+    bool readingMove    = false;
+    bool readingComment = false;
+
+    bool lineStart = true;
+
+    // current state
+    bool inHeader = false;
+    bool inBody   = false;
+
+    // Header
+    bool readingKey   = false;
+    bool readingValue = false;
+
+   private:
+};
+
+/// @brief Read the next game from a file
+/// @param file
+/// @return
+inline std::optional<Game> readGame(std::istream &file) {
+    // Board board = Board();
+
+    // Game game;
+
+    // std::string line;
+
+    // bool readingMoves = false;
 
     bool hasHead = false;
     bool hasBody = false;
 
-    while (!utils::safeGetline(file, line).eof()) {
-        // We read the moves and we reached the end of the pgn, which is signaled by an empty line.
-        if (readingMoves && line.empty()) {
+    StreamParser parser;
+    char c;
+
+    while (file.get(c)) {
+        if (parser.processNextByte(
+                c, [&]() {}, hasHead, hasBody) == State::BREAK) {
             break;
         }
-
-        if (line[0] == '[') {
-            // Parse the header
-            const auto header = extractHeader(line);
-
-            hasHead = true;
-
-            game.setHeader(header.first, header.second);
-
-            if (header.first == "FEN") {
-                board.setFen(header.second);
-            }
-
-            if (header.first == "Variant") {
-                board.set960(header.second == "fischerandom");
-            }
-        } else {
-            // Parse the moves
-            extractMoves(board, game.moves(), line);
-
-            readingMoves = true;
-            hasBody      = true;
-        }
     }
+
+    // while (!utils::safeGetline(file, line).eof()) {
+    //     // We read the moves and we reached the end of the pgn, which is signaled by an empty
+    //     line.
+    //     if (readingMoves && line.empty()) {
+    //         break;
+    //     }
+
+    //     if (line[0] == '[') {
+    //         // Parse the header
+    //         const auto header = extractHeader(line);
+
+    //         hasHead = true;
+
+    //         game.setHeader(header.first, header.second);
+
+    //         if (header.first == "FEN") {
+    //             board.setFen(header.second);
+    //         }
+
+    //         if (header.first == "Variant") {
+    //             board.set960(header.second == "fischerandom");
+    //         }
+    //     } else {
+    //         // Parse the moves
+    //         extractMoves(board, game.moves(), line);
+
+    //         readingMoves = true;
+    //         hasBody      = true;
+    //     }
+    // }
 
     if (!hasBody && !hasHead) {
         return std::nullopt;
     }
 
-    return game;
+    return parser.game;
 }
 
 }  // namespace pgn
