@@ -3184,10 +3184,11 @@ namespace uci {
     return lan;
 }
 
-[[nodiscard]] inline Move parseSanInternal(const Board &board, const CMove &san, Movelist &moves) {
-    const char *original = san.str;
+[[nodiscard]] inline Move parseSanInternal(const Board &board, const std::string &san,
+                                           Movelist &moves) {
+    const char *original = san.c_str();
 
-    const auto cmp = [](const char *src, const char *pattern, int n) {
+    const auto cmp = [](const std::string &src, const std::string &pattern, int n) {
         for (int i = 0; i < n; i++) {
             if (src[i] != pattern[i]) {
                 return false;
@@ -3196,7 +3197,7 @@ namespace uci {
         return true;
     };
 
-    if (cmp(san.str, "0-0-0", 5) || cmp(san.str, "O-O-O", 5)) {
+    if (cmp(san, "0-0-0", 5) || cmp(san, "O-O-O", 5)) {
         movegen::legalmoves(moves, board, PieceGenType::KING);
         for (const auto &move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
@@ -3204,8 +3205,8 @@ namespace uci {
             }
         }
 
-        throw std::runtime_error("Illegal san.str, Step 1: " + std::string(san.str));
-    } else if (cmp(san.str, "0-0", 3) || cmp(san.str, "O-O", 3)) {
+        throw std::runtime_error("Illegal san.str, Step 1: " + std::string(san));
+    } else if (cmp(san, "0-0", 3) || cmp(san, "O-O", 3)) {
         movegen::legalmoves(moves, board, PieceGenType::KING);
         for (const auto &move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
@@ -3213,7 +3214,7 @@ namespace uci {
             }
         }
 
-        throw std::runtime_error("Illegal San, Step 2: " + std::string(san.str));
+        throw std::runtime_error("Illegal San, Step 2: " + std::string(san));
     }
 
     // A move looks like this:
@@ -3377,7 +3378,7 @@ namespace uci {
 [[nodiscard]] inline Move parseSan(const Board &board, const std::string &san) {
     Movelist moves;
 
-    return parseSanInternal(board, CMove(san.c_str()), moves);
+    return parseSanInternal(board, san, moves);
 }
 
 }  // namespace uci

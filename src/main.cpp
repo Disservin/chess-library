@@ -5,32 +5,27 @@
 
 using namespace chess;
 
-std::int64_t count = 0;
+class MyVisitor : public pgn::Visitor {
+   public:
+    void header(const std::string &key, const std::string &value) {}
 
-void dosomething(Game& game) {
-    // for (const auto& header : game.headers()) {
-    //     std::cout << header.first << ": " << header.second << "\n";
-    // }
+    void move(const std::string &move, const std::string &comment) {}
 
-    Board board;
-    // board.setFen(game.headers().at("FEN"));
+    void end() {}
+};
 
-    for (const auto& move : game.moves()) {
-        board.makeMove(move.move);
-        count++;
-    }
-}
-
-int main(int argc, char const* argv[]) {
+int main(int argc, char const *argv[]) {
     const auto file  = "..\\..\\..\\lichess_db_standard_rated_2014-01.pgn";
     auto file_stream = std::ifstream(file);
 
     std::uint64_t count = 0;
 
+    auto vis = std::make_unique<MyVisitor>();
+
     const auto t0 = std::chrono::high_resolution_clock::now();
 
-    pgn::StreamParser parser(file_stream);
-    parser.readGame(dosomething);
+    pgn::StreamParser parser(file_stream, *vis);
+    parser.readGame();
 
     const auto t1 = std::chrono::high_resolution_clock::now();
 
