@@ -3455,7 +3455,7 @@ class StreamParser {
     Visitor *visitor = nullptr;
 
     StreamParser(std::istream &file_stream, Visitor &visitor)
-        : file(file_stream), visitor(&visitor) {}
+        : visitor(&visitor), file(file_stream) {}
 
     void readGame() {
         const std::size_t bufferSize = 1024;
