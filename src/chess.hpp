@@ -3137,11 +3137,9 @@ namespace uci {
     return lan;
 }
 
-[[nodiscard]] inline Move parseSanInternal(const Board &board, const std::string &san,
+[[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
                                            Movelist &moves) {
-    const char *original = san.c_str();
-
-    const auto cmp = [](const std::string &src, const std::string &pattern, int n) {
+    const auto cmp = [](std::string_view src, std::string_view pattern, int n) {
         for (int i = 0; i < n; i++) {
             if (src[i] != pattern[i]) {
                 return false;
@@ -3158,7 +3156,7 @@ namespace uci {
             }
         }
 
-        throw std::runtime_error("Illegal san.str, Step 1: " + std::string(san));
+        throw std::runtime_error("Illegal San, Step 1: " + std::string(san));
     } else if (cmp(san, "0-0", 3) || cmp(san, "O-O", 3)) {
         movegen::legalmoves(moves, board, PieceGenType::KING);
         for (const auto &move : moves) {
@@ -3312,23 +3310,25 @@ namespace uci {
         }
     }
 
-    std::cout << "pt " << int(pt) << std::endl;
-    std::cout << "file_from " << int(file_from) << std::endl;
-    std::cout << "rank_from " << int(rank_from) << std::endl;
-    std::cout << "file_to " << int(file_to) << std::endl;
-    std::cout << "rank_to " << int(rank_to) << std::endl;
-    std::cout << "promotion " << int(promotion) << std::endl;
-    std::cout << "to_sq " << squareToString[int(to_sq)] << std::endl;
+    std::stringstream ss;
+    ss << "pt " << int(pt) << "\n";
+    ss << "file_from " << int(file_from) << "\n";
+    ss << "rank_from " << int(rank_from) << "\n";
+    ss << "file_to " << int(file_to) << "\n";
+    ss << "rank_to " << int(rank_to) << "\n";
+    ss << "promotion " << int(promotion) << "\n";
+    ss << "to_sq " << squareToString[int(to_sq)] << "\n";
 
-    throw std::runtime_error("Illegal San, Step 4: " + std::string(original) + " " +
-                             board.getFen());
+    std::cout << ss.str();
+
+    throw std::runtime_error("Illegal San, Step 3: " + std::string(san) + " " + board.getFen());
 }
 
 /// @brief Converts a SAN string to a move
 /// @param board
 /// @param san
 /// @return
-[[nodiscard]] inline Move parseSan(const Board &board, const std::string &san) {
+[[nodiscard]] inline Move parseSan(const Board &board, std::string_view san) {
     Movelist moves;
 
     return parseSanInternal(board, san, moves);
