@@ -1095,6 +1095,15 @@ inline U64 sideToMove() { return RANDOM_ARRAY[780]; }
  * Forward declarations                                                      *
 \****************************************************************************/
 
+enum PieceGenType {
+    PAWN   = 1,
+    KNIGHT = 2,
+    BISHOP = 4,
+    ROOK   = 8,
+    QUEEN  = 16,
+    KING   = 32,
+};
+
 namespace movegen {
 
 /// @brief Generates all legal moves for a position. The movelist will be
@@ -1103,7 +1112,9 @@ namespace movegen {
 /// @param movelist
 /// @param board
 template <MoveGenType mt = MoveGenType::ALL>
-void legalmoves(Movelist &movelist, const Board &board);
+void legalmoves(Movelist &movelist, const Board &board,
+                int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
+                             PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
 }  // namespace movegen
 
@@ -2517,9 +2528,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @param sq
 /// @param movable
 /// @return
-[[nodiscard]] inline Bitboard generateKnightMoves(Square sq, Bitboard movable) {
-    return attacks::knight(sq) & movable;
-}
+[[nodiscard]] inline Bitboard generateKnightMoves(Square sq) { return attacks::knight(sq); }
 
 /// @brief [Internal Usage] Generate bishop moves.
 /// @param sq
@@ -2527,11 +2536,10 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @param pin_d
 /// @param occ_all
 /// @return
-[[nodiscard]] inline Bitboard generateBishopMoves(Square sq, Bitboard movable, Bitboard pin_d,
-                                                  Bitboard occ_all) {
+[[nodiscard]] inline Bitboard generateBishopMoves(Square sq, Bitboard pin_d, Bitboard occ_all) {
     // The Bishop is pinned diagonally thus can only move diagonally.
-    if (pin_d & (1ULL << sq)) return attacks::bishop(sq, occ_all) & movable & pin_d;
-    return attacks::bishop(sq, occ_all) & movable;
+    if (pin_d & (1ULL << sq)) return attacks::bishop(sq, occ_all) & pin_d;
+    return attacks::bishop(sq, occ_all);
 }
 
 /// @brief [Internal Usage] Generate rook moves.
@@ -2540,11 +2548,10 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @param pin_hv
 /// @param occ_all
 /// @return
-[[nodiscard]] inline Bitboard generateRookMoves(Square sq, Bitboard movable, Bitboard pin_hv,
-                                                Bitboard occ_all) {
+[[nodiscard]] inline Bitboard generateRookMoves(Square sq, Bitboard pin_hv, Bitboard occ_all) {
     // The Rook is pinned horizontally thus can only move horizontally.
-    if (pin_hv & (1ULL << sq)) return attacks::rook(sq, occ_all) & movable & pin_hv;
-    return attacks::rook(sq, occ_all) & movable;
+    if (pin_hv & (1ULL << sq)) return attacks::rook(sq, occ_all) & pin_hv;
+    return attacks::rook(sq, occ_all);
 }
 
 /// @brief [Internal Usage] Generate queen moves.
@@ -2554,17 +2561,17 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @param pin_hv
 /// @param occ_all
 /// @return
-[[nodiscard]] inline Bitboard generateQueenMoves(Square sq, Bitboard movable, Bitboard pin_d,
-                                                 Bitboard pin_hv, Bitboard occ_all) {
+[[nodiscard]] inline Bitboard generateQueenMoves(Square sq, Bitboard pin_d, Bitboard pin_hv,
+                                                 Bitboard occ_all) {
     Bitboard moves = 0ULL;
 
     if (pin_d & (1ULL << sq))
-        moves |= attacks::bishop(sq, occ_all) & movable & pin_d;
+        moves |= attacks::bishop(sq, occ_all) & pin_d;
     else if (pin_hv & (1ULL << sq))
-        moves |= attacks::rook(sq, occ_all) & movable & pin_hv;
+        moves |= attacks::rook(sq, occ_all) & pin_hv;
     else {
-        moves |= attacks::rook(sq, occ_all) & movable;
-        moves |= attacks::bishop(sq, occ_all) & movable;
+        moves |= attacks::rook(sq, occ_all);
+        moves |= attacks::bishop(sq, occ_all);
     }
 
     return moves;
@@ -2626,13 +2633,25 @@ template <Color c, MoveGenType mt>
     return moves;
 }
 
+template <typename T>
+inline void whileBitboardAdd(Movelist &movelist, Bitboard mask, T func) {
+    while (mask) {
+        const Square from = builtin::poplsb(mask);
+        auto moves        = func(from);
+        while (moves) {
+            const Square to = builtin::poplsb(moves);
+            movelist.add(Move::make<Move::NORMAL>(from, to));
+        }
+    }
+}
+
 /// @brief [Internal Usage] all legal moves for a position
 /// @tparam c
 /// @tparam mt
 /// @param movelist
 /// @param board
 template <Color c, MoveGenType mt>
-void legalmoves(Movelist &movelist, const Board &board) {
+void legalmoves(Movelist &movelist, const Board &board, int pieces) {
     /*
      The size of the movelist might not
      be 0! This is done on purpose since it enables
@@ -2665,24 +2684,23 @@ void legalmoves(Movelist &movelist, const Board &board) {
     else  // QUIET moves
         movable_square = ~_occ_all;
 
-    Bitboard moves = generateKingMoves(king_sq, _seen, movable_square);
+    if (pieces & PieceGenType::KING) {
+        whileBitboardAdd(movelist, 1ull << king_sq, [&](Square sq) {
+            return generateKingMoves(king_sq, _seen, movable_square);
+        });
 
-    movable_square &= _checkMask;
+        if (utils::squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
+            (board.castlingRights().hasCastlingRight(c) && _checkMask == DEFAULT_CHECKMASK)) {
+            Bitboard moves_bb = generateCastleMoves<c, mt>(board, king_sq, _seen, _pinHV);
 
-    while (moves) {
-        Square to = builtin::poplsb(moves);
-        movelist.add(Move::make<Move::NORMAL>(king_sq, to));
-    }
-
-    if (utils::squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
-        (board.castlingRights().hasCastlingRight(c) && _checkMask == DEFAULT_CHECKMASK)) {
-        moves = generateCastleMoves<c, mt>(board, king_sq, _seen, _pinHV);
-
-        while (moves) {
-            Square to = builtin::poplsb(moves);
-            movelist.add(Move::make<Move::CASTLING>(king_sq, to));
+            while (moves_bb) {
+                Square to = builtin::poplsb(moves_bb);
+                movelist.add(Move::make<Move::CASTLING>(king_sq, to));
+            }
         }
     }
+
+    movable_square &= _checkMask;
 
     // Early return for double check as described earlier
     if (_doubleCheck == 2) return;
@@ -2700,53 +2718,37 @@ void legalmoves(Movelist &movelist, const Board &board) {
     Bitboard queens_mask = board.pieces(PieceType::QUEEN, c) & ~(_pinD & _pinHV);
 
     // Add the moves to the movelist.
-    generatePawnMoves<c, mt>(board, movelist, _pinD, _pinHV, _checkMask, _occ_enemy);
+    if (pieces & PieceGenType::PAWN)
+        generatePawnMoves<c, mt>(board, movelist, _pinD, _pinHV, _checkMask, _occ_enemy);
 
-    while (knights_mask) {
-        const Square from = builtin::poplsb(knights_mask);
-        moves             = generateKnightMoves(from, movable_square);
-        while (moves) {
-            const Square to = builtin::poplsb(moves);
-            movelist.add(Move::make<Move::NORMAL>(from, to));
-        }
-    }
+    if (pieces & PieceGenType::KNIGHT)
+        whileBitboardAdd(movelist, knights_mask,
+                         [&](Square sq) { return generateKnightMoves(sq) & movable_square; });
 
-    while (bishops_mask) {
-        const Square from = builtin::poplsb(bishops_mask);
-        moves             = generateBishopMoves(from, movable_square, _pinD, _occ_all);
-        while (moves) {
-            const Square to = builtin::poplsb(moves);
-            movelist.add(Move::make<Move::NORMAL>(from, to));
-        }
-    }
+    if (pieces & PieceGenType::BISHOP)
+        whileBitboardAdd(movelist, bishops_mask, [&](Square sq) {
+            return generateBishopMoves(sq, _pinD, _occ_all) & movable_square;
+        });
 
-    while (rooks_mask) {
-        const Square from = builtin::poplsb(rooks_mask);
-        moves             = generateRookMoves(from, movable_square, _pinHV, _occ_all);
-        while (moves) {
-            const Square to = builtin::poplsb(moves);
-            movelist.add(Move::make<Move::NORMAL>(from, to));
-        }
-    }
+    if (pieces & PieceGenType::ROOK)
+        whileBitboardAdd(movelist, rooks_mask, [&](Square sq) {
+            return generateRookMoves(sq, _pinHV, _occ_all) & movable_square;
+        });
 
-    while (queens_mask) {
-        const Square from = builtin::poplsb(queens_mask);
-        moves             = generateQueenMoves(from, movable_square, _pinD, _pinHV, _occ_all);
-        while (moves) {
-            const Square to = builtin::poplsb(moves);
-            movelist.add(Move::make<Move::NORMAL>(from, to));
-        }
-    }
+    if (pieces & PieceGenType::QUEEN)
+        whileBitboardAdd(movelist, queens_mask, [&](Square sq) {
+            return generateQueenMoves(sq, _pinD, _pinHV, _occ_all) & movable_square;
+        });
 }
 
 template <MoveGenType mt>
-inline void legalmoves(Movelist &movelist, const Board &board) {
+inline void legalmoves(Movelist &movelist, const Board &board, int pieces) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt>(movelist, board);
+        legalmoves<Color::WHITE, mt>(movelist, board, pieces);
     else
-        legalmoves<Color::BLACK, mt>(movelist, board);
+        legalmoves<Color::BLACK, mt>(movelist, board, pieces);
 }
 
 }  // namespace movegen
@@ -3183,11 +3185,10 @@ namespace uci {
 }
 
 [[nodiscard]] inline Move parseSanInternal(const Board &board, const CMove &san, Movelist &moves) {
-    movegen::legalmoves(moves, board);
-
     const char *original = san.str;
 
     if (strncmp(san.str, "0-0-0", 5) == 0 || strncmp(san.str, "O-O-O", 5) == 0) {
+        movegen::legalmoves(moves, board, PieceGenType::KING);
         for (auto move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
                 return move;
@@ -3196,6 +3197,7 @@ namespace uci {
 
         throw std::runtime_error("Illegal san.str, Step 1: " + std::string(san.str));
     } else if (strncmp(san.str, "0-0", 3) == 0 || strncmp(san.str, "O-O", 3) == 0) {
+        movegen::legalmoves(moves, board, PieceGenType::KING);
         for (auto move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
                 return move;
@@ -3279,6 +3281,35 @@ namespace uci {
     if (file_from != File::NO_FILE && rank_from != Rank::NO_RANK) {
         from_sq = utils::fileRankSquare(file_from, rank_from);
     }
+
+    const auto pt_to_pgt = [](PieceType pt) {
+        switch (pt) {
+            case PieceType::PAWN:
+                return PieceGenType::PAWN;
+                break;
+            case PieceType::KNIGHT:
+                return PieceGenType::KNIGHT;
+                break;
+            case PieceType::BISHOP:
+                return PieceGenType::BISHOP;
+                break;
+            case PieceType::ROOK:
+                return PieceGenType::ROOK;
+                break;
+            case PieceType::QUEEN:
+                return PieceGenType::QUEEN;
+                break;
+            case PieceType::KING:
+                return PieceGenType::KING;
+                break;
+            default:
+                break;
+        }
+        assert(false);
+        return PieceGenType::PAWN;
+    };
+
+    movegen::legalmoves(moves, board, pt_to_pgt(pt));
 
     for (const auto move : moves) {
         if (pt != board.at<PieceType>(move.from()) || move.to() != to_sq) {
