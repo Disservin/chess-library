@@ -3187,18 +3187,27 @@ namespace uci {
 [[nodiscard]] inline Move parseSanInternal(const Board &board, const CMove &san, Movelist &moves) {
     const char *original = san.str;
 
-    if (strncmp(san.str, "0-0-0", 5) == 0 || strncmp(san.str, "O-O-O", 5) == 0) {
+    const auto cmp = [](const char *src, const char *pattern, int n) {
+        for (int i = 0; i < n; i++) {
+            if (src[i] != pattern[i]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    if (cmp(san.str, "0-0-0", 5) || cmp(san.str, "O-O-O", 5)) {
         movegen::legalmoves(moves, board, PieceGenType::KING);
-        for (auto move : moves) {
+        for (const auto &move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
                 return move;
             }
         }
 
         throw std::runtime_error("Illegal san.str, Step 1: " + std::string(san.str));
-    } else if (strncmp(san.str, "0-0", 3) == 0 || strncmp(san.str, "O-O", 3) == 0) {
+    } else if (cmp(san.str, "0-0", 3) || cmp(san.str, "O-O", 3)) {
         movegen::legalmoves(moves, board, PieceGenType::KING);
-        for (auto move : moves) {
+        for (const auto &move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
                 return move;
             }
@@ -3311,8 +3320,8 @@ namespace uci {
 
     movegen::legalmoves(moves, board, pt_to_pgt(pt));
 
-    for (const auto move : moves) {
-        if (pt != board.at<PieceType>(move.from()) || move.to() != to_sq) {
+    for (const auto &move : moves) {
+        if (move.to() != to_sq) {
             continue;
         }
 
