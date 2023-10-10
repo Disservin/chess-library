@@ -3367,33 +3367,6 @@ struct Game {
 
 namespace pgn {
 
-/// @brief [Internal use only]
-/// @param line
-/// @return
-inline std::pair<std::string, std::string> extractHeader(const std::string &line) {
-    std::string key;
-    std::string value;
-
-    bool readingKey   = false;
-    bool readingValue = false;
-
-    for (const auto c : line) {
-        if (c == '[') {
-            readingKey = true;
-        } else if (c == '"') {
-            readingValue = !readingValue;
-        } else if (readingKey && c == ' ') {
-            readingKey = false;
-        } else if (readingKey) {
-            key += c;
-        } else if (readingValue) {
-            value += c;
-        }
-    }
-
-    return {key, value};
-}
-
 class Visitor {
    public:
     virtual void header(const std::string &key, const std::string &value)  = 0;
@@ -3411,15 +3384,15 @@ class StreamParser {
     void readGame(Visitor &vis) {
         this->visitor = &vis;
 
-        const std::size_t bufferSize = 1024 * 1024;
-        char buffer[bufferSize];
+        const std::size_t buffer_size = 1024 * 1024;
+        char buffer[buffer_size];
 
-        int bufferIndex           = 0;
-        std::streamsize bytesRead = 0;
+        std::streamsize buffer_index = 0;
+        std::streamsize bytes_read   = 0;
 
         while (true) {
-            bool hasHead = false;
-            bool hasBody = false;
+            bool has_head = false;
+            bool has_body = false;
 
             header.first.clear();
             header.second.clear();
@@ -3427,45 +3400,41 @@ class StreamParser {
             move.clear();
             comment.clear();
 
-            readingMove    = false;
-            readingComment = false;
+            reading_move    = false;
+            reading_comment = false;
 
-            lineStart = true;
+            line_start = true;
 
             // current state
-            inHeader = false;
-            inBody   = false;
+            in_header = false;
+            in_body   = false;
 
             // Header
-            readingKey   = false;
-            readingValue = false;
+            reading_key   = false;
+            reading_value = false;
 
             this->visitor->startPgn();
 
-            while (file) {
-                if (bufferIndex == 0) {
-                    file.read(buffer, bufferSize);
-                    bytesRead = file.gcount();
+            while (true) {
+                if (buffer_index == 0) {
+                    // afaik read() checks good() internally, but just make sure
+                    if (!file.good()) break;
 
-                    if (bytesRead == 0) {
-                        break;
-                    }
+                    file.read(buffer, buffer_size);
+                    bytes_read = file.gcount();
+
+                    if (bytes_read == 0) break;
                 }
 
-                if (processNextBytes(buffer, bytesRead, hasHead, hasBody, bufferIndex) ==
+                if (processNextBytes(buffer, bytes_read, buffer_index, has_head, has_body) ==
                     State::BREAK) {
                     break;
                 }
             }
 
-            // file has reached eof, but there is still data in the buffer
-            if (!file && bufferIndex != 0) {
-                processNextBytes(buffer, bytesRead, hasHead, hasBody, bufferIndex);
-            }
-
             this->visitor->endPgn();
 
-            if (!hasBody && !hasHead) {
+            if (!has_body && !has_head) {
                 return;
             }
         }
@@ -3475,75 +3444,78 @@ class StreamParser {
     enum class State { CONTINUE, BREAK };
 
     // A-Za-z
-    bool isMoveChar(char c) { return (c >= 97 && c <= 122) || (c >= 65 && c <= 90); }
+    bool isLetter(char c) { return (c >= 97 && c <= 122) || (c >= 65 && c <= 90); }
 
-    State processNextBytes(const char *buffer, std::size_t length, bool &hasHead, bool &hasBody,
-                           int &bufferIndex) {
-        for (std::size_t i = bufferIndex; i < length; ++i) {
+    State processNextBytes(const char *buffer, std::streamsize length,
+                           std::streamsize &buffer_index, bool &has_head, bool &has_body) {
+        for (std::streamsize i = buffer_index; i < length; ++i) {
             char c = buffer[i];
 
+            // skip carriage return
             if (c == '\r') {
                 continue;
             }
 
             // PGN End
-            if (lineStart && inBody && c == '\n') {
-                bufferIndex = i + 1;
+            if (line_start && in_body && c == '\n') {
+                buffer_index = i + 1;
 
                 return State::BREAK;
             }
 
+            // set line_start to true, since the next char will be first on
+            // a new line
             if (c == '\n') {
-                lineStart = true;
+                line_start = true;
             }
 
             // PGN Header
-            if (lineStart && c == '[') {
-                hasHead = true;
+            if (line_start && c == '[') {
+                has_head = true;
 
-                inHeader = true;
-                inBody   = false;
+                in_header = true;
+                in_body   = false;
 
-                readingKey = true;
+                reading_key = true;
 
-                lineStart = false;
+                line_start = false;
                 continue;
             }
 
             // PGN Moves Start
-            if (lineStart && hasHead && !inBody && c == '1') {
-                readingMove    = false;
-                readingComment = false;
+            if (line_start && has_head && !in_body && c == '1') {
+                reading_move    = false;
+                reading_comment = false;
 
-                hasBody = true;
+                has_body = true;
 
-                inHeader = false;
-                inBody   = true;
+                in_header = false;
+                in_body   = true;
 
-                lineStart = false;
+                line_start = false;
 
                 visitor->startMoves();
                 continue;
             }
 
-            // make sure that the linestart is turned off again
-            if (lineStart && c != '\n') {
-                lineStart = false;
+            // make sure that the line_start is turned off again
+            if (line_start && c != '\n') {
+                line_start = false;
             }
 
-            if (inHeader) {
+            if (in_header) {
                 if (c == '"') {
-                    readingValue = !readingValue;
-                } else if (readingKey && c == ' ') {
-                    readingKey = false;
-                } else if (readingKey) {
+                    reading_value = !reading_value;
+                } else if (reading_key && c == ' ') {
+                    reading_key = false;
+                } else if (reading_key) {
                     header.first += c;
-                } else if (readingValue) {
+                } else if (reading_value) {
                     header.second += c;
                 } else if (c == '\n') {
-                    readingKey   = false;
-                    readingValue = false;
-                    inHeader     = false;
+                    reading_key   = false;
+                    reading_value = false;
+                    in_header     = false;
 
                     visitor->header(header.first, header.second);
 
@@ -3555,25 +3527,27 @@ class StreamParser {
             // {move_number} {move} {comment} {move} {comment} {move_number} ...
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
-            else if (inBody) {
-                if (readingMove && c == ' ') {
-                    readingMove = false;
-                } else if (readingMove) {
+            else if (in_body) {
+                // whitespace while reading a move means that we have finished reading the move
+                if (reading_move && c == ' ') {
+                    reading_move = false;
+                } else if (reading_move) {
                     move += c;
-                } else if (!readingComment && c == '{') {
-                    readingComment = true;
-                } else if (readingComment && c == '}') {
-                    readingComment = false;
+                } else if (!reading_comment && c == '{') {
+                    reading_comment = true;
+                } else if (reading_comment && c == '}') {
+                    reading_comment = false;
 
                     if (!move.empty()) {
                         visitor->move(move, comment);
                         move.clear();
                         comment.clear();
                     }
-                } else if (!readingMove && !readingComment) {
-                    // we are in empty space, when we encounter now a file or a piece we try to
-                    // parse the move
-                    if (!isMoveChar(c)) {
+                }
+                // we are in empty space, when we encounter now a file or a piece we try to
+                // parse the move
+                else if (!reading_move && !reading_comment) {
+                    if (!isLetter(c)) {
                         continue;
                     }
 
@@ -3583,23 +3557,26 @@ class StreamParser {
                         comment.clear();
                     }
 
-                    readingMove = true;
+                    reading_move = true;
                     move += c;
-                } else if (readingComment) {
+                } else if (reading_comment) {
                     comment += c;
                 } else if (c == '\n') {
-                    readingMove    = false;
-                    readingComment = false;
+                    reading_move    = false;
+                    reading_comment = false;
                 }
             }
 
             continue;
         }
 
-        bufferIndex = 0;
+        // we have processed all bytes
+        buffer_index = 0;
+
         return State::CONTINUE;
     }
 
+   private:
     Visitor *visitor = nullptr;
 
     std::istream &file;
@@ -3610,20 +3587,18 @@ class StreamParser {
     std::string move;
     std::string comment;
 
-    bool readingMove    = false;
-    bool readingComment = false;
+    bool reading_move    = false;
+    bool reading_comment = false;
 
-    bool lineStart = true;
+    bool line_start = true;
 
     // current state
-    bool inHeader = false;
-    bool inBody   = false;
+    bool in_header = false;
+    bool in_body   = false;
 
     // Header
-    bool readingKey   = false;
-    bool readingValue = false;
-
-   private:
+    bool reading_key   = false;
+    bool reading_value = false;
 };
 
 }  // namespace pgn
