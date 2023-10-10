@@ -11,7 +11,9 @@ class MyVisitor : public pgn::Visitor {
 
     void move(const std::string &move, const std::string &comment) {}
 
-    void end() {}
+    void startPgn() {}
+    void startMoves() {}
+    void endPgn() {}
 };
 
 int main(int argc, char const *argv[]) {

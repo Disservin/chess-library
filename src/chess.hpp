@@ -3398,8 +3398,10 @@ class Visitor {
    public:
     virtual void header(const std::string &key, const std::string &value)  = 0;
     virtual void move(const std::string &move, const std::string &comment) = 0;
-    // virtual void comment(const std::string &comment)                       = 0;
-    virtual void end() = 0;
+
+    virtual void startPgn()   = 0;
+    virtual void startMoves() = 0;
+    virtual void endPgn()     = 0;
 };
 
 class StreamParser {
@@ -3438,6 +3440,8 @@ class StreamParser {
             readingKey   = false;
             readingValue = false;
 
+            this->visitor->startPgn();
+
             while (file) {
                 if (bufferIndex == 0) {
                     file.read(buffer, bufferSize);
@@ -3454,11 +3458,11 @@ class StreamParser {
                 }
             }
 
+            this->visitor->endPgn();
+
             if (!hasBody && !hasHead) {
                 return;
             }
-
-            this->visitor->end();
         }
     }
 
@@ -3511,6 +3515,8 @@ class StreamParser {
                 inBody   = true;
 
                 lineStart = false;
+
+                visitor->startMoves();
                 continue;
             }
 
