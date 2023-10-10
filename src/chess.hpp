@@ -3139,6 +3139,7 @@ namespace uci {
 
 [[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
                                            Movelist &moves) {
+    moves.clear();
     const auto cmp = [](std::string_view src, std::string_view pattern, int n) {
         for (int i = 0; i < n; i++) {
             if (src[i] != pattern[i]) {
