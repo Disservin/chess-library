@@ -24,8 +24,8 @@ int main(int argc, char const *argv[]) {
 
     const auto t0 = std::chrono::high_resolution_clock::now();
 
-    pgn::StreamParser parser(file_stream, *vis);
-    parser.readGame();
+    pgn::StreamParser parser(file_stream);
+    parser.readGame(*vis);
 
     const auto t1 = std::chrono::high_resolution_clock::now();
 

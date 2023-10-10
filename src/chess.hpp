@@ -2948,52 +2948,6 @@ template <Color c>
  * uci utility functions                                                     *
 \****************************************************************************/
 
-struct CMove {
-    char str[10] = {'\0'};
-    int length   = 0;
-
-    CMove() = default;
-
-    CMove(const char *str) {
-        for (int i = 0; i < 10; i++) {
-            this->str[i] = str[i];
-            if (str[i] == '\0') {
-                length = i;
-                break;
-            }
-        }
-    }
-
-    const char *c_str() const { return str; }
-
-    bool empty() const { return length == 0; }
-
-    int size() const { return length; }
-
-    void clear() {
-        for (int i = 0; i < 10; i++) {
-            str[i] = '\0';
-        }
-        length = 0;
-    }
-
-    char operator[](int index) const {
-        if (index < 0 || index >= length) {
-            return '\0';
-        }
-
-        return str[index];
-    }
-
-    CMove &operator+=(char c) {
-        if (length >= 9) {
-            return *this;
-        }
-        str[length++] = c;
-        return *this;
-    }
-};
-
 namespace uci {
 /// @brief Converts an internal move to a UCI string
 /// @param move
@@ -3450,15 +3404,12 @@ class Visitor {
 };
 
 class StreamParser {
-    enum class State { CONTINUE, BREAK };
-
    public:
-    Visitor *visitor = nullptr;
+    StreamParser(std::istream &file_stream) : file(file_stream) {}
 
-    StreamParser(std::istream &file_stream, Visitor &visitor)
-        : visitor(&visitor), file(file_stream) {}
+    void readGame(Visitor &vis) {
+        this->visitor = &vis;
 
-    void readGame() {
         const std::size_t bufferSize = 1024;
         char buffer[bufferSize];
 
@@ -3508,20 +3459,15 @@ class StreamParser {
                 return;
             }
 
-            visitor->end();
+            this->visitor->end();
         }
     }
 
-    template <typename T, typename MemberFunc>
-    auto readGame(T &instance, MemberFunc mem_func) {
-        return readGame([&instance, mem_func](Game &game) { (instance.*mem_func)(game); });
-    }
-
    private:
-    bool isMoveChar(char c) {
-        // p, n, b, r, q, k, P, N, B, R, Q, K, a, b, c, d, e, f, g, h
-        return (c >= 97 && c <= 122) || (c >= 65 && c <= 90);
-    }
+    enum class State { CONTINUE, BREAK };
+
+    // A-Za-z
+    bool isMoveChar(char c) { return (c >= 97 && c <= 122) || (c >= 65 && c <= 90); }
 
     State processNextBytes(const char *buffer, std::size_t length, bool &hasHead, bool &hasBody,
                            int &bufferIndex) {
@@ -3613,11 +3559,6 @@ class StreamParser {
                         move.clear();
                         comment.clear();
                     }
-
-                    // if (!comment.empty()) {
-                    //     visitor->comment(comment);
-                    //     comment.clear();
-                    // }
                 } else if (!readingMove && !readingComment) {
                     // we are in empty space, when we encounter now a file or a piece we try to
                     // parse the move
@@ -3629,13 +3570,6 @@ class StreamParser {
                         visitor->move(move, comment);
                         move.clear();
                         comment.clear();
-                        // visitor->move(move);
-                        // move.clear();
-                    }
-
-                    if (!comment.empty()) {
-                        // visitor->comment(comment);
-                        // comment.clear();
                     }
 
                     readingMove = true;
@@ -3645,16 +3579,6 @@ class StreamParser {
                 } else if (c == '\n') {
                     readingMove    = false;
                     readingComment = false;
-
-                    // if (!move.empty()) {
-                    //     visitor->move(move);
-                    //     move.clear();
-                    // }
-
-                    // if (!comment.empty()) {
-                    //     visitor->comment(comment);
-                    //     comment.clear();
-                    // }
                 }
             }
 
@@ -3664,6 +3588,8 @@ class StreamParser {
         bufferIndex = 0;
         return State::CONTINUE;
     }
+
+    Visitor *visitor = nullptr;
 
     std::istream &file;
 
