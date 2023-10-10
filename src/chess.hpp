@@ -3440,14 +3440,24 @@ inline std::pair<std::string, std::string> extractHeader(const std::string &line
     return {key, value};
 }
 
+class Visitor {
+   public:
+    virtual void header(const std::string &key, const std::string &value)  = 0;
+    virtual void move(const std::string &move, const std::string &comment) = 0;
+    // virtual void comment(const std::string &comment)                       = 0;
+    virtual void end() = 0;
+};
+
 class StreamParser {
     enum class State { CONTINUE, BREAK };
 
    public:
-    StreamParser(std::istream &file_stream) : file(file_stream) {}
+    Visitor *visitor = nullptr;
 
-    template <typename Callable>
-    void readGame(Callable &&func) {
+    StreamParser(std::istream &file_stream, Visitor &visitor)
+        : file(file_stream), visitor(&visitor) {}
+
+    void readGame() {
         const std::size_t bufferSize = 1024;
         char buffer[bufferSize];
 
@@ -3457,10 +3467,6 @@ class StreamParser {
         while (true) {
             bool hasHead = false;
             bool hasBody = false;
-
-            moves.clear();
-            board.setFen(STARTPOS);
-            game = Game();
 
             header.first.clear();
             header.second.clear();
@@ -3501,7 +3507,7 @@ class StreamParser {
                 return;
             }
 
-            func(game);
+            visitor->end();
         }
     }
 
@@ -3581,15 +3587,7 @@ class StreamParser {
                     readingValue = false;
                     inHeader     = false;
 
-                    game.setHeader(header.first, header.second);
-
-                    if (header.first == "FEN") {
-                        board.setFen(header.second);
-                    }
-
-                    if (header.first == "Variant") {
-                        board.set960(header.second == "fischerandom");
-                    }
+                    visitor->header(header.first, header.second);
 
                     header.first.clear();
                     header.second.clear();
@@ -3609,7 +3607,16 @@ class StreamParser {
                 } else if (readingComment && c == '}') {
                     readingComment = false;
 
-                    addMove();
+                    if (!move.empty()) {
+                        visitor->move(move, comment);
+                        move.clear();
+                        comment.clear();
+                    }
+
+                    // if (!comment.empty()) {
+                    //     visitor->comment(comment);
+                    //     comment.clear();
+                    // }
                 } else if (!readingMove && !readingComment) {
                     // we are in empty space, when we encounter now a file or a piece we try to
                     // parse the move
@@ -3617,7 +3624,18 @@ class StreamParser {
                         continue;
                     }
 
-                    addMove();
+                    if (!move.empty()) {
+                        visitor->move(move, comment);
+                        move.clear();
+                        comment.clear();
+                        // visitor->move(move);
+                        // move.clear();
+                    }
+
+                    if (!comment.empty()) {
+                        // visitor->comment(comment);
+                        // comment.clear();
+                    }
 
                     readingMove = true;
                     move += c;
@@ -3627,7 +3645,15 @@ class StreamParser {
                     readingMove    = false;
                     readingComment = false;
 
-                    addMove();
+                    // if (!move.empty()) {
+                    //     visitor->move(move);
+                    //     move.clear();
+                    // }
+
+                    // if (!comment.empty()) {
+                    //     visitor->comment(comment);
+                    //     comment.clear();
+                    // }
                 }
             }
 
@@ -3638,31 +3664,12 @@ class StreamParser {
         return State::CONTINUE;
     }
 
-    void addMove() {
-        if (!move.empty()) {
-            moves.clear();
-
-            const auto move_internal = uci::parseSanInternal(board, move.c_str(), moves);
-            game.moves().push_back({move_internal, comment});
-            board.makeMove(move_internal);
-
-            move.clear();
-            comment.clear();
-        }
-    };
-
     std::istream &file;
-
-    Movelist moves;
-
-    Board board = Board();
-
-    Game game;
 
     std::pair<std::string, std::string> header;
 
     // move parsing
-    CMove move;
+    std::string move;
     std::string comment;
 
     bool readingMove    = false;
