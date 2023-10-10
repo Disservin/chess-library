@@ -3411,7 +3411,7 @@ class StreamParser {
     void readGame(Visitor &vis) {
         this->visitor = &vis;
 
-        const std::size_t bufferSize = 1024;
+        const std::size_t bufferSize = 1024 * 1024;
         char buffer[bufferSize];
 
         int bufferIndex           = 0;
@@ -3458,6 +3458,11 @@ class StreamParser {
                 }
             }
 
+            // file has reached eof, but there is still data in the buffer
+            if (!file && bufferIndex != 0) {
+                processNextBytes(buffer, bytesRead, hasHead, hasBody, bufferIndex);
+            }
+
             this->visitor->endPgn();
 
             if (!hasBody && !hasHead) {
@@ -3484,6 +3489,7 @@ class StreamParser {
             // PGN End
             if (lineStart && inBody && c == '\n') {
                 bufferIndex = i + 1;
+
                 return State::BREAK;
             }
 
