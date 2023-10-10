@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.3.1
+VERSION: 0.4.0
 */
 
 #ifndef CHESS_HPP
@@ -3381,7 +3381,7 @@ class StreamParser {
    public:
     StreamParser(std::istream &file_stream) : file(file_stream) {}
 
-    void readGame(Visitor &vis) {
+    void readGames(Visitor &vis) {
         this->visitor = &vis;
 
         const std::size_t buffer_size = 1024 * 1024;

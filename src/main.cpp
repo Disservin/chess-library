@@ -20,14 +20,12 @@ int main(int argc, char const *argv[]) {
     const auto file  = "..\\..\\..\\lichess_db_standard_rated_2014-01.pgn";
     auto file_stream = std::ifstream(file);
 
-    std::uint64_t count = 0;
-
     auto vis = std::make_unique<MyVisitor>();
 
     const auto t0 = std::chrono::high_resolution_clock::now();
 
     pgn::StreamParser parser(file_stream);
-    parser.readGame(*vis);
+    parser.readGames(*vis);
 
     const auto t1 = std::chrono::high_resolution_clock::now();
 
