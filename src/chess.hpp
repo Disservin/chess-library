@@ -2685,9 +2685,8 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
         movable_square = ~_occ_all;
 
     if (pieces & PieceGenType::KING) {
-        whileBitboardAdd(movelist, 1ull << king_sq, [&](Square sq) {
-            return generateKingMoves(king_sq, _seen, movable_square);
-        });
+        whileBitboardAdd(movelist, 1ull << king_sq,
+                         [&](Square sq) { return generateKingMoves(sq, _seen, movable_square); });
 
         if (utils::squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
             (board.castlingRights().hasCastlingRight(c) && _checkMask == DEFAULT_CHECKMASK)) {
