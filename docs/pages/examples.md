@@ -61,7 +61,7 @@ uint64_t perft(Board& board, int depth) {
 #include <memory>
 #include <string>
 
-#include "./chess.hpp"
+#include "chess.hpp"
 
 using namespace chess;
 
