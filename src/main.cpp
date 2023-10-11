@@ -39,7 +39,7 @@ int main(int argc, char const *argv[]) {
 
     const auto t1 = std::chrono::high_resolution_clock::now();
 
-    const auto file_size_mb = std::filesystem::file_size(file) / 1024.0 / 1024.0;
+    const auto file_size_mb = std::filesystem::file_size(file) / 1000.0 / 1000.0;
 
     std::cout << "MB/s: "
               << (file_size_mb / std::chrono::duration_cast<std::chrono::seconds>(t1 - t0).count())
