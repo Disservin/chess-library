@@ -7,13 +7,23 @@ using namespace chess;
 
 class MyVisitor : public pgn::Visitor {
    public:
-    void header(const std::string &key, const std::string &value) {}
+    void header(const std::string &key, const std::string &value) {
+        // if (key == "FEN") {
+        //     board.setFen(value);
+        // }
+    }
 
-    void move(const std::string &move, const std::string &comment) {}
+    void move(const std::string &move, const std::string &comment) {
+        // auto m = uci::parseSan(board, move);
+        // board.makeMove(m);
+    }
 
-    void startPgn() {}
+    void startPgn() { board.setFen(STARTPOS); }
     void startMoves() {}
     void endPgn() {}
+
+   private:
+    Board board;
 };
 
 int main(int argc, char const *argv[]) {

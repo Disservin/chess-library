@@ -35,6 +35,7 @@ VERSION: 0.4.0
 #include <array>
 #include <bitset>
 #include <cassert>
+#include <charconv>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
@@ -641,15 +642,22 @@ inline void printBitboard(Bitboard bb) {
 /// @param string
 /// @param delimiter
 /// @return
-[[nodiscard]] inline std::vector<std::string> splitString(const std::string &string,
-                                                          const char &delimiter) {
-    std::stringstream string_stream(string);
-    std::string segment;
-    std::vector<std::string> seglist;
+[[nodiscard]] inline std::vector<std::string_view> splitString(std::string_view string,
+                                                               const char &delimiter) {
+    std::vector<std::string_view> result;
+    size_t start = 0;
+    size_t end   = string.find(delimiter);
 
-    while (std::getline(string_stream, segment, delimiter)) seglist.emplace_back(segment);
+    while (end != std::string_view::npos) {
+        result.push_back(string.substr(start, end - start));
+        start = end + 1;
+        end   = string.find(delimiter, start);
+    }
 
-    return seglist;
+    // Add the last chunk (or the only chunk if there are no delimiters)
+    result.push_back(string.substr(start));
+
+    return result;
 }
 
 /// @brief Get the file of a square.
@@ -1349,13 +1357,13 @@ static auto init = []() {
 \****************************************************************************/
 class Board {
    public:
-    explicit Board(std::string fen = STARTPOS);
+    explicit Board(std::string_view fen = STARTPOS);
 
     /// @brief [Internal Usage]
     /// @param fen
-    void setFenInternal(std::string fen);
+    void setFenInternal(std::string_view fen);
 
-    virtual void setFen(const std::string &fen);
+    virtual void setFen(std::string_view fen);
 
     /// @brief Get the current FEN string.
     /// @return
@@ -1552,14 +1560,15 @@ class Board {
 /****************************************************************************\
  * Board Implementations                                                     *
 \****************************************************************************/
-inline Board::Board(std::string fen) { setFenInternal(std::move(fen)); }
+inline Board::Board(std::string_view fen) { setFenInternal(fen); }
 
-inline void Board::setFenInternal(std::string fen) {
+inline void Board::setFenInternal(std::string_view fen) {
     original_fen_ = fen;
 
     std::fill(std::begin(board_), std::end(board_), Piece::NONE);
 
-    utils::trim(fen);
+    // find leading whitespaces and remove them
+    while (fen[0] == ' ') fen.remove_prefix(1);
 
     occ_all_ = 0ULL;
 
@@ -1569,15 +1578,25 @@ inline void Board::setFenInternal(std::string fen) {
         }
     }
 
-    const std::vector<std::string> params = utils::splitString(fen, ' ');
+    const auto params = utils::splitString(fen, ' ');
 
-    const std::string &position   = params[0];
-    const std::string &move_right = params[1];
-    const std::string &castling   = params[2];
-    const std::string &en_passant = params[3];
+    const auto position   = params[0];
+    const auto move_right = params[1];
+    const auto castling   = params[2];
+    const auto en_passant = params[3];
 
-    half_moves_   = std::stoi(params.size() > 4 ? params[4] : "0");
-    plies_played_ = std::stoi(params.size() > 5 ? params[5] : "1") * 2 - 2;
+    if (params.size() > 4) {
+        std::from_chars(params[4].data(), params[4].data() + params[4].size(), half_moves_);
+    } else {
+        half_moves_ = 0;
+    }
+
+    if (params.size() > 5) {
+        std::from_chars(params[5].data(), params[5].data() + params[5].size(), plies_played_);
+        plies_played_ = plies_played_ * 2 - 2;
+    } else {
+        plies_played_ = 0;
+    }
 
     side_to_move_ = (move_right == "w") ? Color::WHITE : Color::BLACK;
 
@@ -1679,7 +1698,7 @@ inline void Board::setFenInternal(std::string fen) {
     prev_states_.reserve(150);
 }
 
-inline void Board::setFen(const std::string &fen) { setFenInternal(fen); }
+inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
 
 [[nodiscard]] inline std::string Board::getFen() const {
     std::stringstream ss;

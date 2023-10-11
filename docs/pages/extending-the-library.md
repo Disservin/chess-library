@@ -37,9 +37,9 @@ using namespace chess;
 class W_Board : public Board {
    public:
     W_Board() : Board() {}
-    W_Board(const std::string &fen) : Board(fen) {}
+    W_Board(std::string_view fen) : Board(fen) {}
 
-    virtual void setFen(std::string fen) {
+    virtual void setFen(std::string_view fen) {
         Board::setFen(fen);
         inc = 0;
     }
