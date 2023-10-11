@@ -3385,7 +3385,7 @@ class StreamParser {
     void readGames(Visitor &vis) {
         this->visitor = &vis;
 
-        const std::size_t buffer_size = 1024 * 1024;
+        const std::size_t buffer_size = 512 * 512;
         char buffer[buffer_size];
 
         std::streamsize buffer_index = 0;
