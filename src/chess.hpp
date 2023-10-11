@@ -2666,7 +2666,6 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
     Bitboard _occ_all       = _occ_us | _occ_enemy;
     Bitboard _enemy_emptyBB = ~_occ_us;
 
-    Bitboard _seen      = seenSquares<~c>(board, _enemy_emptyBB);
     Bitboard _checkMask = checkMask<c>(board, king_sq, _doubleCheck);
     Bitboard _pinHV     = pinMaskRooks<c>(board, king_sq, _occ_enemy, _occ_us);
     Bitboard _pinD      = pinMaskBishops<c>(board, king_sq, _occ_enemy, _occ_us);
@@ -2685,6 +2684,8 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
         movable_square = ~_occ_all;
 
     if (pieces & PieceGenType::KING) {
+        Bitboard _seen = seenSquares<~c>(board, _enemy_emptyBB);
+
         whileBitboardAdd(movelist, 1ull << king_sq,
                          [&](Square sq) { return generateKingMoves(sq, _seen, movable_square); });
 
@@ -2704,40 +2705,45 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
     // Early return for double check as described earlier
     if (_doubleCheck == 2) return;
 
-    // Prune knights that are pinned since these cannot move.
-    Bitboard knights_mask = board.pieces(PieceType::KNIGHT, c) & ~(_pinD | _pinHV);
-
-    // Prune horizontally pinned bishops
-    Bitboard bishops_mask = board.pieces(PieceType::BISHOP, c) & ~_pinHV;
-
-    //  Prune diagonally pinned rooks
-    Bitboard rooks_mask = board.pieces(PieceType::ROOK, c) & ~_pinD;
-
-    // Prune double pinned queens
-    Bitboard queens_mask = board.pieces(PieceType::QUEEN, c) & ~(_pinD & _pinHV);
-
     // Add the moves to the movelist.
-    if (pieces & PieceGenType::PAWN)
+    if (pieces & PieceGenType::PAWN) {
         generatePawnMoves<c, mt>(board, movelist, _pinD, _pinHV, _checkMask, _occ_enemy);
+    }
 
-    if (pieces & PieceGenType::KNIGHT)
+    if (pieces & PieceGenType::KNIGHT) {
+        // Prune knights that are pinned since these cannot move.
+        Bitboard knights_mask = board.pieces(PieceType::KNIGHT, c) & ~(_pinD | _pinHV);
+
         whileBitboardAdd(movelist, knights_mask,
                          [&](Square sq) { return generateKnightMoves(sq) & movable_square; });
+    }
 
-    if (pieces & PieceGenType::BISHOP)
+    if (pieces & PieceGenType::BISHOP) {
+        // Prune horizontally pinned bishops
+        Bitboard bishops_mask = board.pieces(PieceType::BISHOP, c) & ~_pinHV;
+
         whileBitboardAdd(movelist, bishops_mask, [&](Square sq) {
             return generateBishopMoves(sq, _pinD, _occ_all) & movable_square;
         });
+    }
 
-    if (pieces & PieceGenType::ROOK)
+    if (pieces & PieceGenType::ROOK) {
+        //  Prune diagonally pinned rooks
+        Bitboard rooks_mask = board.pieces(PieceType::ROOK, c) & ~_pinD;
+
         whileBitboardAdd(movelist, rooks_mask, [&](Square sq) {
             return generateRookMoves(sq, _pinHV, _occ_all) & movable_square;
         });
+    }
 
-    if (pieces & PieceGenType::QUEEN)
+    if (pieces & PieceGenType::QUEEN) {
+        // Prune double pinned queens
+        Bitboard queens_mask = board.pieces(PieceType::QUEEN, c) & ~(_pinD & _pinHV);
+
         whileBitboardAdd(movelist, queens_mask, [&](Square sq) {
             return generateQueenMoves(sq, _pinD, _pinHV, _occ_all) & movable_square;
         });
+    }
 }
 
 template <MoveGenType mt>
