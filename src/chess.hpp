@@ -3395,8 +3395,8 @@ namespace pgn {
 
 class Visitor {
    public:
-    virtual void header(const std::string &key, const std::string &value)  = 0;
-    virtual void move(const std::string &move, const std::string &comment) = 0;
+    virtual void header(std::string_view key, std::string_view value)  = 0;
+    virtual void move(std::string_view move, std::string_view comment) = 0;
 
     virtual void startPgn()   = 0;
     virtual void startMoves() = 0;

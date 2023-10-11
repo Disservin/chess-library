@@ -7,13 +7,13 @@ using namespace chess;
 
 class MyVisitor : public pgn::Visitor {
    public:
-    void header(const std::string &key, const std::string &value) {
+    void header(std::string_view key, std::string_view value) {
         // if (key == "FEN") {
         //     board.setFen(value);
         // }
     }
 
-    void move(const std::string &move, const std::string &comment) {
+    void move(std::string_view move, std::string_view comment) {
         // auto m = uci::parseSan(board, move);
         // board.makeMove(m);
     }

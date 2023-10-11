@@ -67,9 +67,9 @@ using namespace chess;
 
 class MyVisitor : public pgn::Visitor {
    public:
-    void header(const std::string &key, const std::string &value) {}
+    void header(std::string_view key, std::string_view value) {}
 
-    void move(const std::string &move, const std::string &comment) {}
+    void move(std::string_view move, std::string_view comment) {}
 
     void startPgn() {}
     void startMoves() {}

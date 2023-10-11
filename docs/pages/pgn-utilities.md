@@ -12,9 +12,9 @@ The `Visitor` class is defined as follows:
 ```c++
 class MyVisitor : public pgn::Visitor {
    public:
-    void header(const std::string &key, const std::string &value) override {}
+    void header(std::string_view key, std::string_view value) override {}
 
-    void move(const std::string &move, const std::string &comment) override {}
+    void move(std::string_view move, std::string_view comment) override {}
 
     void startPgn() override {}
     void startMoves() override {}
