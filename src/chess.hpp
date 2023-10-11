@@ -3380,7 +3380,13 @@ class Visitor {
 
 class StreamParser {
    public:
-    StreamParser(std::istream &file_stream) : file(file_stream) {}
+    StreamParser(std::istream &file_stream) : file(file_stream) {
+        header.first.reserve(256);
+        header.second.reserve(256);
+
+        move.reserve(16);
+        comment.reserve(256);
+    }
 
     void readGames(Visitor &vis) {
         this->visitor = &vis;
