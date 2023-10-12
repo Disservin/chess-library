@@ -3488,19 +3488,6 @@ class StreamParser {
                 continue;
             }
 
-            // PGN End
-            if (line_start && in_body && c == '\n') {
-                buffer_index = i + 1;
-
-                return State::BREAK;
-            }
-
-            // set line_start to true, since the next char will be first on
-            // a new line
-            if (c == '\n') {
-                line_start = true;
-            }
-
             // PGN Header
             if (line_start && c == '[') {
                 has_head = true;
@@ -3515,7 +3502,7 @@ class StreamParser {
             }
 
             // PGN Moves Start
-            if (line_start && has_head && !in_body && c == '1') {
+            if (line_start && has_head && !in_header && !in_body) {
                 reading_move    = false;
                 reading_comment = false;
 
@@ -3528,6 +3515,19 @@ class StreamParser {
 
                 visitor->startMoves();
                 continue;
+            }
+
+            // PGN End
+            if (line_start && in_body && c == '\n') {
+                buffer_index = i + 1;
+
+                return State::BREAK;
+            }
+
+            // set line_start to true, since the next char will be first on
+            // a new line
+            if (c == '\n') {
+                line_start = true;
             }
 
             // make sure that the line_start is turned off again
