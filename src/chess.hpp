@@ -3445,8 +3445,6 @@ class StreamParser {
             reading_key   = false;
             reading_value = false;
 
-            this->visitor->startPgn();
-
             while (true) {
                 if (buffer_index == 0) {
                     // afaik read() checks good() internally, but just make sure
@@ -3463,8 +3461,6 @@ class StreamParser {
                     break;
                 }
             }
-
-            this->visitor->endPgn();
 
             if (!has_body && !has_head) {
                 return;
@@ -3490,6 +3486,11 @@ class StreamParser {
 
             // PGN Header
             if (line_start && c == '[') {
+                if (pgn_end) {
+                    pgn_end = false;
+                    visitor->startPgn();
+                }
+
                 has_head = true;
 
                 in_header = true;
@@ -3520,6 +3521,11 @@ class StreamParser {
             // PGN End
             if (line_start && in_body && c == '\n') {
                 buffer_index = i + 1;
+                pgn_end      = true;
+
+                if (has_body && has_head) {
+                    visitor->endPgn();
+                }
 
                 return State::BREAK;
             }
@@ -3631,6 +3637,8 @@ class StreamParser {
     // Header
     bool reading_key   = false;
     bool reading_value = false;
+
+    bool pgn_end = true;
 };
 
 }  // namespace pgn
