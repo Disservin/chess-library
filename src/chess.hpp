@@ -3521,11 +3521,10 @@ class StreamParser {
             // PGN End
             if (line_start && in_body && c == '\n') {
                 buffer_index = i + 1;
-                pgn_end      = true;
 
-                if (has_body && has_head) {
-                    visitor->endPgn();
-                }
+                pgn_end = true;
+
+                visitor->endPgn();
 
                 return State::BREAK;
             }
