@@ -12,19 +12,22 @@ class MyVisitor : public pgn::Visitor {
     void move(std::string_view move, std::string_view comment) { count_++; }
 
     void startPgn() { game_count_++; }
-    void startMoves() { assert(end_count_ == game_count_ - 1); }
-    void endPgn() {
-        end_count_++;
-        assert(end_count_ == game_count_);
+    void startMoves() {
+        move_start_count_++;
+        assert(end_count_ == game_count_ - 1);
     }
+    void endPgn() { end_count_++; }
 
     int count() const { return count_; }
     int gameCount() const { return game_count_; }
+    int endCount() const { return end_count_; }
+    int moveStartCount() const { return move_start_count_; }
 
    private:
-    int end_count_  = 0;
-    int game_count_ = 0;
-    int count_      = 0;
+    int end_count_        = 0;
+    int game_count_       = 0;
+    int count_            = 0;
+    int move_start_count_ = 0;
 };
 
 TEST_SUITE("PGN StreamParser") {
@@ -37,6 +40,9 @@ TEST_SUITE("PGN StreamParser") {
         parser.readGames(*vis);
 
         CHECK(vis->count() == 130);
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
     }
 
     TEST_CASE("Corrupted PGN") {
@@ -48,6 +54,9 @@ TEST_SUITE("PGN StreamParser") {
         parser.readGames(*vis);
 
         CHECK(vis->count() == 124);
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
     }
 
     TEST_CASE("No Moves PGN") {
@@ -59,6 +68,9 @@ TEST_SUITE("PGN StreamParser") {
         parser.readGames(*vis);
 
         CHECK(vis->count() == 0);
+        CHECK(vis->moveStartCount() == 1);
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
     }
 
     TEST_CASE("Multiple") {
@@ -70,5 +82,6 @@ TEST_SUITE("PGN StreamParser") {
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 4);
+        CHECK(vis->endCount() == 4);
     }
 }

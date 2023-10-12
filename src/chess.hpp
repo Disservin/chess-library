@@ -3445,6 +3445,8 @@ class StreamParser {
             reading_key   = false;
             reading_value = false;
 
+            State state = State::CONTINUE;
+
             while (true) {
                 if (buffer_index == 0) {
                     // afaik read() checks good() internally, but just make sure
@@ -3456,14 +3458,21 @@ class StreamParser {
                     if (bytes_read == 0) break;
                 }
 
-                if (processNextBytes(buffer, bytes_read, buffer_index, has_head, has_body) ==
-                    State::BREAK) {
+                if ((state = processNextBytes(buffer, bytes_read, buffer_index, has_head,
+                                              has_body)) == State::BREAK) {
                     break;
                 }
             }
 
             if (!has_body && !has_head) {
                 return;
+            }
+
+            // The previous while loop will typically break because of the return code from
+            // processNextBytes, but in case we have reached the end of the file (bytes_read == 0)
+            // or an error happened, we need to manually call endPgn.
+            if (state != State::BREAK) {
+                visitor->endPgn();
             }
         }
     }
