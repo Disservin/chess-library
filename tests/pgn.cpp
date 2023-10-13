@@ -7,15 +7,19 @@ using namespace chess;
 
 class MyVisitor : public pgn::Visitor {
    public:
-    void header(std::string_view key, std::string_view value) {}
-
-    void move(std::string_view move, std::string_view comment) { count_++; }
+    ~MyVisitor() {}
 
     void startPgn() { game_count_++; }
+
+    void header(std::string_view key, std::string_view value) {}
+
     void startMoves() {
         move_start_count_++;
         assert(end_count_ == game_count_ - 1);
     }
+
+    void move(std::string_view move, std::string_view comment) { count_++; }
+
     void endPgn() { end_count_++; }
 
     int count() const { return count_; }
