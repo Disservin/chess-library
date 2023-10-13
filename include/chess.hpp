@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.4.3
+VERSION: 0.4.4
 */
 
 #ifndef CHESS_HPP
@@ -175,12 +175,14 @@ constexpr Square operator^(Square sq, int i) {
  * Constants                                                                 *
 \****************************************************************************/
 
+namespace constants {
 constexpr int MAX_SQ                 = 64;
 constexpr int MAX_PIECE              = 12;
 constexpr int MAX_MOVES              = 256;
 constexpr Bitboard DEFAULT_CHECKMASK = 18446744073709551615ULL;
 
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+}  // namespace constants
 
 // clang-format off
 const std::string squareToString[64] = {
@@ -566,7 +568,7 @@ struct Movelist {
     /// @brief Add a move to the end of the movelist.
     /// @param move
     constexpr void add(Move move) {
-        assert(size_ < MAX_MOVES);
+        assert(size_ < constants::MAX_MOVES);
         moves_[size_++] = move;
     }
 
@@ -613,7 +615,7 @@ struct Movelist {
     [[nodiscard]] constexpr const_iterator end() const { return moves_ + size_; }
 
    private:
-    Move moves_[MAX_MOVES]{};
+    Move moves_[constants::MAX_MOVES]{};
     int size_ = 0;
 };
 
@@ -665,9 +667,9 @@ inline std::istream &safeGetline(std::istream &is, std::string &t) {
 /// @brief Print a bitboard to the console.
 /// @param bb
 inline void printBitboard(Bitboard bb) {
-    std::bitset<MAX_SQ> b(bb);
+    std::bitset<constants::MAX_SQ> b(bb);
     std::string str_bitset = b.to_string();
-    for (int i = 0; i < MAX_SQ; i += 8) {
+    for (int i = 0; i < constants::MAX_SQ; i += 8) {
         std::string x = str_bitset.substr(i, 8);
         reverse(x.begin(), x.end());
         std::cout << x << std::endl;
@@ -1202,7 +1204,7 @@ struct Magic {
     U64 operator()(U64 b) const { return ((b & mask) * magic) >> shift; }
 };
 
-constexpr Bitboard RookMagics[MAX_SQ] = {
+constexpr Bitboard RookMagics[constants::MAX_SQ] = {
     0x8a80104000800020ULL, 0x140002000100040ULL,  0x2801880a0017001ULL,  0x100081001000420ULL,
     0x200020010080420ULL,  0x3001c0002010008ULL,  0x8480008002000100ULL, 0x2080088004402900ULL,
     0x800098204000ULL,     0x2024401000200040ULL, 0x100802000801000ULL,  0x120800800801000ULL,
@@ -1220,7 +1222,7 @@ constexpr Bitboard RookMagics[MAX_SQ] = {
     0x280001040802101ULL,  0x2100190040002085ULL, 0x80c0084100102001ULL, 0x4024081001000421ULL,
     0x20030a0244872ULL,    0x12001008414402ULL,   0x2006104900a0804ULL,  0x1004081002402ULL};
 
-constexpr Bitboard BishopMagics[MAX_SQ] = {
+constexpr Bitboard BishopMagics[constants::MAX_SQ] = {
     0x40040844404084ULL,   0x2004208a004208ULL,   0x10190041080202ULL,   0x108060845042010ULL,
     0x581104180800210ULL,  0x2112080446200010ULL, 0x1080820820060210ULL, 0x3c0808410220200ULL,
     0x4050404440404ULL,    0x21001420088ULL,      0x24d0080801082102ULL, 0x1020a0a020400ULL,
@@ -1241,8 +1243,8 @@ constexpr Bitboard BishopMagics[MAX_SQ] = {
 inline Bitboard RookAttacks[0x19000]  = {};
 inline Bitboard BishopAttacks[0x1480] = {};
 
-inline Magic RookTable[MAX_SQ]   = {};
-inline Magic BishopTable[MAX_SQ] = {};
+inline Magic RookTable[constants::MAX_SQ]   = {};
+inline Magic BishopTable[constants::MAX_SQ] = {};
 
 /// @brief
 /// @param r
@@ -1358,9 +1360,9 @@ inline void initSliders(Square sq, Magic table[], U64 magic,
 
     table[sq].magic = magic;
     table[sq].mask  = attacks(sq, occ) & ~edges;
-    table[sq].shift = MAX_SQ - builtin::popcount(table[sq].mask);
+    table[sq].shift = constants::MAX_SQ - builtin::popcount(table[sq].mask);
 
-    if (sq < MAX_SQ - 1) {
+    if (sq < constants::MAX_SQ - 1) {
         table[sq + 1].attacks = table[sq].attacks + (1 << builtin::popcount(table[sq].mask));
     }
 
@@ -1375,7 +1377,7 @@ inline void initAttacks() {
     BishopTable[0].attacks = BishopAttacks;
     RookTable[0].attacks   = RookAttacks;
 
-    for (int i = 0; i < MAX_SQ; i++) {
+    for (int i = 0; i < constants::MAX_SQ; i++) {
         initSliders(static_cast<Square>(i), BishopTable, BishopMagics[i], runtime::bishopAttacks);
         initSliders(static_cast<Square>(i), RookTable, RookMagics[i], runtime::rookAttacks);
     }
@@ -1394,7 +1396,7 @@ static auto init = []() {
 \****************************************************************************/
 class Board {
    public:
-    explicit Board(std::string_view fen = STARTPOS);
+    explicit Board(std::string_view fen = constants::STARTPOS);
 
     /// @brief [Internal Usage]
     /// @param fen
@@ -2214,11 +2216,11 @@ namespace movegen {
 // force initialization of squares between
 static auto init_squares_between = []() constexpr {
     // initialize squares between table
-    std::array<std::array<U64, MAX_SQ>, MAX_SQ> squares_between_bb{};
+    std::array<std::array<U64, constants::MAX_SQ>, constants::MAX_SQ> squares_between_bb{};
     U64 sqs = 0;
 
-    for (int sq1 = 0; sq1 < MAX_SQ; ++sq1) {
-        for (int sq2 = 0; sq2 < MAX_SQ; ++sq2) {
+    for (int sq1 = 0; sq1 < constants::MAX_SQ; ++sq1) {
+        for (int sq2 = 0; sq2 < constants::MAX_SQ; ++sq2) {
             sqs = (1ULL << sq1) | (1ULL << sq2);
             if (sq1 == sq2)
                 squares_between_bb[sq1][sq2] = 0ull;
@@ -2292,7 +2294,7 @@ template <Color c>
     }
 
     if (!mask) {
-        return DEFAULT_CHECKMASK;
+        return constants::DEFAULT_CHECKMASK;
     }
 
     return mask;
@@ -2746,7 +2748,8 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
                          [&](Square sq) { return generateKingMoves(sq, _seen, movable_square); });
 
         if (utils::squareRank(king_sq) == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
-            (board.castlingRights().hasCastlingRight(c) && _checkMask == DEFAULT_CHECKMASK)) {
+            (board.castlingRights().hasCastlingRight(c) &&
+             _checkMask == constants::DEFAULT_CHECKMASK)) {
             Bitboard moves_bb = generateCastleMoves<c, mt>(board, king_sq, _seen, _pinHV);
 
             while (moves_bb) {
@@ -2844,7 +2847,7 @@ template <Direction direction>
 
 // clang-format off
 // pre-calculated lookup table for pawn attacks
-static constexpr Bitboard PawnAttacks[2][MAX_SQ] = {
+static constexpr Bitboard PawnAttacks[2][constants::MAX_SQ] = {
     // white pawn attacks
     { 0x200, 0x500, 0xa00, 0x1400,
       0x2800, 0x5000, 0xa000, 0x4000,
@@ -2886,7 +2889,7 @@ static constexpr Bitboard PawnAttacks[2][MAX_SQ] = {
 // clang-format on
 
 // pre-calculated lookup table for knight attacks
-static constexpr Bitboard KnightAttacks[MAX_SQ] = {
+static constexpr Bitboard KnightAttacks[constants::MAX_SQ] = {
     0x0000000000020400, 0x0000000000050800, 0x00000000000A1100, 0x0000000000142200,
     0x0000000000284400, 0x0000000000508800, 0x0000000000A01000, 0x0000000000402000,
     0x0000000002040004, 0x0000000005080008, 0x000000000A110011, 0x0000000014220022,
@@ -2905,7 +2908,7 @@ static constexpr Bitboard KnightAttacks[MAX_SQ] = {
     0x0044280000000000, 0x0088500000000000, 0x0010A00000000000, 0x0020400000000000};
 
 // pre-calculated lookup table for king attacks
-static constexpr Bitboard KingAttacks[MAX_SQ] = {
+static constexpr Bitboard KingAttacks[constants::MAX_SQ] = {
     0x0000000000000302, 0x0000000000000705, 0x0000000000000E0A, 0x0000000000001C14,
     0x0000000000003828, 0x0000000000007050, 0x000000000000E0A0, 0x000000000000C040,
     0x0000000000030203, 0x0000000000070507, 0x00000000000E0A0E, 0x00000000001C141C,
