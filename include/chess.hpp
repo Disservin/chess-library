@@ -333,7 +333,7 @@ namespace utils {
 /// @brief Converts a string to a square
 /// @param square_str
 /// @return
-[[nodiscard]] Square extractSquare(std::string_view square_str);
+[[nodiscard]] constexpr Square extractSquare(std::string_view square_str);
 
 /// @brief Makes a square from a file and rank
 /// @param f
