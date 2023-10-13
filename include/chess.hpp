@@ -267,23 +267,60 @@ constexpr char pieceToChar(Piece piece) {
     return '.';
 }
 
-static std::unordered_map<PieceType, char> PieceTypeToChar({{PieceType::PAWN, 'p'},
-                                                            {PieceType::KNIGHT, 'n'},
-                                                            {PieceType::BISHOP, 'b'},
-                                                            {PieceType::ROOK, 'r'},
-                                                            {PieceType::QUEEN, 'q'},
-                                                            {PieceType::KING, 'k'}});
+constexpr char pieceTypeToChar(PieceType pt) {
+    switch (pt) {
+        case PieceType::PAWN:
+            return 'p';
+        case PieceType::KNIGHT:
+            return 'n';
+        case PieceType::BISHOP:
+            return 'b';
+        case PieceType::ROOK:
+            return 'r';
+        case PieceType::QUEEN:
+            return 'q';
+        case PieceType::KING:
+            return 'k';
+        case PieceType::NONE:
+            assert(false);
+            return '.';
+    }
 
-static std::unordered_map<char, PieceType> charToPieceType({{'n', PieceType::KNIGHT},
-                                                            {'b', PieceType::BISHOP},
-                                                            {'r', PieceType::ROOK},
-                                                            {'q', PieceType::QUEEN},
-                                                            {'k', PieceType::KING},
-                                                            {'N', PieceType::KNIGHT},
-                                                            {'B', PieceType::BISHOP},
-                                                            {'R', PieceType::ROOK},
-                                                            {'Q', PieceType::QUEEN},
-                                                            {'K', PieceType::KING}});
+    assert(false);
+    return ',';
+}
+
+constexpr PieceType charToPieceType(char c) {
+    switch (c) {
+        case 'p':
+            return PieceType::PAWN;
+        case 'n':
+            return PieceType::KNIGHT;
+        case 'b':
+            return PieceType::BISHOP;
+        case 'r':
+            return PieceType::ROOK;
+        case 'q':
+            return PieceType::QUEEN;
+        case 'k':
+            return PieceType::KING;
+        case 'P':
+            return PieceType::PAWN;
+        case 'N':
+            return PieceType::KNIGHT;
+        case 'B':
+            return PieceType::BISHOP;
+        case 'R':
+            return PieceType::ROOK;
+        case 'Q':
+            return PieceType::QUEEN;
+        case 'K':
+            return PieceType::KING;
+    }
+
+    assert(false);
+    return PieceType::NONE;
+}
 
 /****************************************************************************\
  * Forward declarations                                                      *
@@ -292,9 +329,9 @@ class Board;
 
 namespace utils {
 /// @brief Converts a string to a square
-/// @param squareStr
+/// @param square_str
 /// @return
-[[nodiscard]] Square extractSquare(std::string_view squareStr);
+[[nodiscard]] Square extractSquare(std::string_view square_str);
 
 /// @brief Makes a square from a file and rank
 /// @param f
@@ -518,7 +555,7 @@ inline std::ostream &operator<<(std::ostream &os, const Move &move) {
 
     os << squareToString[from_sq] << squareToString[to_sq];
     if (move.typeOf() == Move::PROMOTION) {
-        os << PieceTypeToChar.at(move.promotionType());
+        os << pieceTypeToChar(move.promotionType());
     }
 
     return os;
@@ -727,10 +764,10 @@ static inline void trim(std::string &s) {
     return ((9 * (sq1 ^ sq2)) & 8) == 0;
 }
 
-[[nodiscard]] inline Square extractSquare(std::string_view squareStr) {
-    char letter = squareStr[0];
+[[nodiscard]] inline Square extractSquare(std::string_view square_str) {
+    char letter = square_str[0];
     int file    = letter - 96;
-    int rank    = squareStr[1] - 48;
+    int rank    = square_str[1] - 48;
     int index   = (rank - 1) * 8 + file - 1;
     return Square(index);
 }
@@ -2997,7 +3034,7 @@ namespace uci {
 
     // If the move is a promotion, add the promoted piece to the string stream
     if (move.typeOf() == Move::PROMOTION) {
-        ss << PieceTypeToChar[move.promotionType()];
+        ss << pieceTypeToChar(move.promotionType());
     }
 
     return ss.str();
@@ -3029,7 +3066,7 @@ namespace uci {
     if (piece == PieceType::PAWN && uci.length() == 5 &&
         utils::squareRank(target) ==
             (board.sideToMove() == Color::WHITE ? Rank::RANK_8 : Rank::RANK_1)) {
-        return Move::make<Move::PROMOTION>(source, target, charToPieceType[uci.at(4)]);
+        return Move::make<Move::PROMOTION>(source, target, charToPieceType(uci.at(4)));
     }
 
     switch (uci.length()) {
@@ -3209,7 +3246,7 @@ namespace uci {
     // check if san starts with a piece type
     if (san[index] == 'N' || san[index] == 'B' || san[index] == 'R' || san[index] == 'Q' ||
         san[index] == 'K') {
-        pt = charToPieceType[san[index]];
+        pt = charToPieceType(san[index]);
         ++index;
     }
 
@@ -3250,7 +3287,7 @@ namespace uci {
     // check for promotion
     if (san[index] == '=') {
         ++index;
-        promotion = charToPieceType[san[index]];
+        promotion = charToPieceType(san[index]);
         ++index;
     }
 
