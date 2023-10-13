@@ -3,9 +3,9 @@
 ```cpp
 class Board {
     public:
-        Board::Board(const std::string fen)
+        Board::Board(const std::string_view fen)
 
-        void setFen(std::string fen);
+        void setFen(std::string_view fen);
         std::string getFen();
 
         void makeMove(const Move &move);

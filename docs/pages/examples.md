@@ -57,35 +57,34 @@ uint64_t perft(Board& board, int depth) {
 ## PGN Parser
 
 ```cpp
-#include <iostream>
+#include <ifstream>
+#include <memory>
+#include <string>
 
 #include "chess.hpp"
 
 using namespace chess;
 
-int main() {
-    std::ifstream file("game.pgn");
+class MyVisitor : public pgn::Visitor {
+   public:
+    void header(std::string_view key, std::string_view value) {}
 
-    while (true) {
-        auto game = pgn::readGame(file);
+    void move(std::string_view move, std::string_view comment) {}
 
-        if (!game.has_value()) {
-            break;
-        }
+    void startPgn() {}
+    void startMoves() {}
+    void endPgn() {}
+};
 
-        Board board = Board(game.value().headers().at("FEN"));
+int main(int argc, char const *argv[]) {
+    const auto file  = "games.pgn";
+    auto file_stream = std::ifstream(file);
 
-        for (auto &&i : game.value().headers()) {
-            std::cout << i.first << ": " << i.second << std::endl;
-        }
+    auto vis = std::make_unique<MyVisitor>();
 
-        for (auto &&[move, comment] : game.value().moves()) {
-            std::cout << uci::moveToSan(board, move) << std::endl;
-            board.makeMove(move);
-        }
-    }
+    pgn::StreamParser parser(file_stream);
+    parser.readGames(*vis);
 
     return 0;
 }
-
 ```
