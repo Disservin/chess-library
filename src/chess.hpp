@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.4.2
+VERSION: 0.4.3
 */
 
 #ifndef CHESS_HPP
@@ -3524,6 +3524,7 @@ class StreamParser {
             if (line_start && c == '[') {
                 if (pgn_end) {
                     pgn_end = false;
+                    visitor->skipPgn(false);
                     visitor->startPgn();
                 }
 
