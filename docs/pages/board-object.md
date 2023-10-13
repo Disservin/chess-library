@@ -3,7 +3,7 @@
 ```cpp
 class Board {
     public:
-        Board::Board(const std::string_view fen)
+        Board::Board(std::string_view fen)
 
         void setFen(std::string_view fen);
         std::string getFen(bool moveCounters = true);
