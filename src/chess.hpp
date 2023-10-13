@@ -1367,7 +1367,7 @@ class Board {
 
     /// @brief Get the current FEN string.
     /// @return
-    [[nodiscard]] std::string getFen() const;
+    [[nodiscard]] std::string getFen(bool moveCounters = true) const;
 
     void makeMove(const Move &move);
     void unmakeMove(const Move &move);
@@ -1700,7 +1700,7 @@ inline void Board::setFenInternal(std::string_view fen) {
 
 inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
 
-[[nodiscard]] inline std::string Board::getFen() const {
+[[nodiscard]] inline std::string Board::getFen(bool moveCounters) const {
     std::stringstream ss;
 
     // Loop through the ranks of the board in reverse order
@@ -1758,7 +1758,8 @@ inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
     else
         ss << " " << squareToString[enpassant_sq_] << " ";
 
-    ss << halfMoveClock() << " " << fullMoveNumber();
+    if (moveCounters)
+        ss << halfMoveClock() << " " << fullMoveNumber();
 
     // Return the resulting FEN string
     return ss.str();
