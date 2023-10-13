@@ -21,6 +21,12 @@ class Visitor {
    public:
     virtual ~Visitor(){};
 
+    /// @brief When true, the current PGN will be skipped and only
+    /// endPgn will be called, this will also reset the skip flag to false.
+    /// @param skip
+    void skipPgn(bool skip);
+    bool skip();
+
     /// @brief Called when a new PGN starts
     virtual void startPgn() = 0;
 

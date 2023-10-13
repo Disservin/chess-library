@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.4.1
+VERSION: 0.4.2
 */
 
 #ifndef CHESS_HPP
@@ -3399,6 +3399,13 @@ class Visitor {
    public:
     virtual ~Visitor(){};
 
+    /// @brief When true, the current PGN will be skipped and only
+    /// endPgn will be called, this will also reset the skip flag to false.
+    /// Has to be called after startPgn.
+    /// @param skip
+    void skipPgn(bool skip) { skip_ = skip; }
+    bool skip() { return skip_; }
+
     /// @brief Called when a new PGN starts
     virtual void startPgn() = 0;
 
@@ -3417,6 +3424,9 @@ class Visitor {
 
     /// @brief Called when a game ends
     virtual void endPgn() = 0;
+
+   private:
+    bool skip_ = false;
 };
 
 class StreamParser {
@@ -3489,6 +3499,7 @@ class StreamParser {
             // or an error happened, we need to manually call endPgn.
             if (state != State::BREAK) {
                 visitor->endPgn();
+                visitor->skipPgn(false);
             }
         }
     }
@@ -3539,7 +3550,7 @@ class StreamParser {
 
                 line_start = false;
 
-                visitor->startMoves();
+                if (!visitor->skip()) visitor->startMoves();
                 continue;
             }
 
@@ -3550,6 +3561,7 @@ class StreamParser {
                 pgn_end = true;
 
                 visitor->endPgn();
+                visitor->skipPgn(false);
 
                 return State::BREAK;
             }
@@ -3579,7 +3591,7 @@ class StreamParser {
                     reading_value = false;
                     in_header     = false;
 
-                    visitor->header(header.first, header.second);
+                    if (!visitor->skip()) visitor->header(header.first, header.second);
 
                     header.first.clear();
                     header.second.clear();
@@ -3601,7 +3613,7 @@ class StreamParser {
                     reading_comment = false;
 
                     if (!move.empty()) {
-                        visitor->move(move, comment);
+                        if (!visitor->skip()) visitor->move(move, comment);
                         move.clear();
                         comment.clear();
                     }
@@ -3614,7 +3626,7 @@ class StreamParser {
                     }
 
                     if (!move.empty()) {
-                        visitor->move(move, comment);
+                        if (!visitor->skip()) visitor->move(move, comment);
                         move.clear();
                         comment.clear();
                     }

@@ -11,7 +11,11 @@ class MyVisitor : public pgn::Visitor {
 
     void startPgn() { game_count_++; }
 
-    void header(std::string_view key, std::string_view value) {}
+    void header(std::string_view key, std::string_view value) {
+        if (key == "Result" && value == "*") {
+            this->skipPgn(true);
+        }
+    }
 
     void startMoves() {
         move_start_count_++;
@@ -87,5 +91,19 @@ TEST_SUITE("PGN StreamParser") {
 
         CHECK(vis->gameCount() == 4);
         CHECK(vis->endCount() == 4);
+    }
+
+    TEST_CASE("Skip") {
+        const auto file  = "./pgns/skip.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 2);
+        CHECK(vis->endCount() == 2);
+        CHECK(vis->moveStartCount() == 1);
+        CHECK(vis->count() == 130);
     }
 }
