@@ -6,7 +6,7 @@ class Board {
         Board::Board(const std::string_view fen)
 
         void setFen(std::string_view fen);
-        std::string getFen();
+        std::string getFen(bool moveCounters = true);
 
         void makeMove(const Move &move);
         void unmakeMove(const Move &move);
