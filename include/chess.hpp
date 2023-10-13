@@ -619,11 +619,6 @@ struct Movelist {
     int size_ = 0;
 };
 
-struct PgnMove {
-    Move move;
-    std::string comment;
-};
-
 /****************************************************************************\
  * Various utility functions used across the codebase                        *
 \****************************************************************************/
@@ -3401,35 +3396,6 @@ namespace uci {
 }
 
 }  // namespace uci
-
-/// @brief Object representing a chess game
-struct Game {
-   public:
-    Game() = default;
-
-    Game(const std::unordered_map<std::string, std::string> &headers,
-         const std::vector<PgnMove> &moves)
-        : headers_(headers), moves_(moves) {}
-
-    /// @brief Get the headers of the game
-    /// @return
-    [[nodiscard]] const std::unordered_map<std::string, std::string> &headers() const {
-        return headers_;
-    }
-
-    /// @brief Get the moves of the game
-    [[nodiscard]] const std::vector<PgnMove> &moves() const { return moves_; }
-    [[nodiscard]] std::vector<PgnMove> &moves() { return moves_; }
-
-    /// @brief Set a header
-    /// @param key
-    /// @param value
-    void setHeader(const std::string &key, const std::string &value) { headers_[key] = value; }
-
-   private:
-    std::unordered_map<std::string, std::string> headers_;
-    std::vector<PgnMove> moves_;
-};
 
 namespace pgn {
 
