@@ -23,6 +23,7 @@ class Visitor {
 
     /// @brief When true, the current PGN will be skipped and only
     /// endPgn will be called, this will also reset the skip flag to false.
+    /// Has to be called after startPgn.
     /// @param skip
     void skipPgn(bool skip);
     bool skip();
