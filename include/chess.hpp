@@ -682,22 +682,6 @@ inline void printBitboard(Bitboard bb) {
     return int(squareRank(sq)) + int(squareFile(sq));
 }
 
-static inline void ltrim(std::string &s) {
-    s.erase(s.begin(),
-            std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
-}
-
-static inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); })
-                .base(),
-            s.end());
-}
-
-static inline void trim(std::string &s) {
-    rtrim(s);
-    ltrim(s);
-}
-
 [[nodiscard]] constexpr PieceType typeOfPiece(Piece piece) {
     if (piece == Piece::NONE) return PieceType::NONE;
     return static_cast<PieceType>(static_cast<int>(piece) % 6);
