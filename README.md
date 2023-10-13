@@ -1,12 +1,12 @@
 # An extensive chess library for C++
 
-chess-library is a chess library for C++, with reasonably fast move generation for all purposes, written in c++17.
+**chess-library** is a chess library for C++, with reasonably fast move generation for all purposes, written in **C++17**.
 
 It can be used for any type of chess program, be it a chess engine, a chess GUI, or a chess data anaylsis tool.
 
 ### Why this library?
 
-- **Fast**: This library is fast enough for pretty much any purpose in c++ and it is faster than most other chess libraries in c++.
+- **Fast**: This library is fast enough for pretty much any purpose in C++ and it is faster than most other chess libraries in C++.
 - **Documentation**: Easy to browse **documentation** at https://disservin.github.io/chess-library
 - **Robust**: Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/official-stockfish/WDL_model).
 - **PGN Support**: Read basic PGN Files.

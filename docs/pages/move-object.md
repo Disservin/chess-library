@@ -78,7 +78,7 @@ std::string moveToSan(Board board, const Move& move);
 
 std::string moveToLan(Board board, const Move& move);
 
-Move parseSan(const Board& board, std::string san);
+Move parseSan(const Board& board, std::string_view san);
 
 }  // namespace uci
 ```

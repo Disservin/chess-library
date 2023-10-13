@@ -59,10 +59,11 @@ class Board {
 
         bool isRepetition(int count = 2);
 
-        /// @brief Checks if the current position is a draw by 50 move rule.
-        /// Keep in mind that by the rules of chess, if the position has 50 half moves
-        /// it's not necessarily a draw, since checkmate has higher priority, call getHalfMoveDrawType,
-        /// to determine whether the position is a draw or checkmate.
+        /// @brief Checks if the current position is a draw by 50 move rule. Keep in mind
+        /// that by the rules of chess, if the position has 50 half moves it's not
+        /// necessarily a draw, since checkmate has higher priority, call
+        /// getHalfMoveDrawType, to determine whether the position is a draw or
+        /// checkmate.
         bool isHalfMoveDraw();
 
         /// @brief Only call this function if isHalfMoveDraw() returns true.
@@ -70,17 +71,24 @@ class Board {
 
         bool isInsufficientMaterial();
 
-        /// @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
-        /// This function calculates all legal moves for the current position to check if the game is over.
+        /// @brief Checks if the game is over.
+        /// Returns GameResultReason::NONE if the game is not over.
+        /// This function calculates all legal moves for the current position
+        /// to check if the game is over.
         /// If you are writing you should not use this function.
         std::pair<GameResultReason, GameResult> isGameOver();
 
+        /// @brief Checks if the square is attackeqd by the color.
         bool isAttacked(Square square, Color color);
 
+        /// @brief Check if the current position is in check.
         bool inCheck();
 
+        /// @brief Check if the color has any non pawn material left.
         bool hasNonPawnMaterial(Color color);
 
+        /// @brief Recalculates the zobrist hash and return it.
+        /// If you want get the zobrist hash use hash().
         U64 zobrist();
 };
 ```

@@ -1,6 +1,7 @@
 # Usage
 
-chess-library is a single header library.  
+chess-library is a single header library.
+
 Thus to use it in your project just copy the header file `chess.hpp` into your project  
 and include in the necessary files.
 

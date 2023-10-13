@@ -7,19 +7,16 @@ using namespace chess;
 
 class MyVisitor : public pgn::Visitor {
    public:
-    void header(std::string_view key, std::string_view value) {
-        // if (key == "FEN") {
-        //     board.setFen(value);
-        // }
-    }
-
-    void move(std::string_view move, std::string_view comment) {
-        // auto m = uci::parseSan(board, move);
-        // board.makeMove(m);
-    }
+    virtual ~MyVisitor() {}
 
     void startPgn() { board.setFen(STARTPOS); }
+
+    void header(std::string_view key, std::string_view value) {}
+
     void startMoves() {}
+
+    void move(std::string_view move, std::string_view comment) {}
+
     void endPgn() {}
 
    private:

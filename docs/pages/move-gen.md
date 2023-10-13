@@ -6,14 +6,12 @@ You can generate different types of moves with the `MoveGenType` enum.
 enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 ```
 
-````cpp
-
 ```cpp
 namespace movegen {
     template <MoveGenType mt>
     void legalmoves(Movelist& movelist, const Board& board , int pieces = 63);
 }
-````
+```
 
 ::: tip
 Since 0.4.0 you can pass `pieces` to `legalmoves` to generate moves only for

@@ -2,6 +2,8 @@
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
 
+title: Home
+
 hero:
   name: "chess-library"
   text: "Single Header Chess Library for C++"

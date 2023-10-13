@@ -6,9 +6,8 @@ Below you will find a set of a few functions that can ease your life.
 namespace utils {
     void printBitboard(Bitboard bb);
 
-    std::vector<std::string> splitString(
-        const std::string& string,
-        const char& delimiter);
+    std::vector<std::string_view> splitString(std::string_view string,
+                                              const char& delimiter);
 
     File squareFile(Square sq);
     Rank squareRank(Square sq);
