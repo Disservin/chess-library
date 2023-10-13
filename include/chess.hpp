@@ -711,7 +711,7 @@ inline void printBitboard(Bitboard bb) {
     return ((9 * (sq1 ^ sq2)) & 8) == 0;
 }
 
-[[nodiscard]] inline Square extractSquare(std::string_view square_str) {
+[[nodiscard]] constexpr Square extractSquare(std::string_view square_str) {
     char letter = square_str[0];
     int file    = letter - 96;
     int rank    = square_str[1] - 48;
@@ -723,7 +723,7 @@ inline void printBitboard(Bitboard bb) {
 /// @param sq
 /// @param color
 /// @return
-[[nodiscard]] inline bool ourBackRank(Square sq, Color color) {
+[[nodiscard]] constexpr bool ourBackRank(Square sq, Color color) {
     if (color == Color::WHITE)
         return squareRank(sq) == Rank::RANK_1;
     else
