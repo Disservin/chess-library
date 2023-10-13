@@ -3399,14 +3399,23 @@ class Visitor {
    public:
     virtual ~Visitor(){};
 
+    /// @brief Called when a new PGN starts
     virtual void startPgn() = 0;
 
+    /// @brief Called for each header
+    /// @param key
+    /// @param value
     virtual void header(std::string_view key, std::string_view value) = 0;
 
+    /// @brief Called before the first move of a game
     virtual void startMoves() = 0;
 
+    /// @brief Called for each move of a game
+    /// @param move
+    /// @param comment
     virtual void move(std::string_view move, std::string_view comment) = 0;
 
+    /// @brief Called when a game ends
     virtual void endPgn() = 0;
 };
 
