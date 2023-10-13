@@ -3,7 +3,7 @@
 
 using namespace chess;
 
-TEST_SUITE("Builtin Test") {
+TEST_SUITE("Builtin") {
     TEST_CASE("lsb") {
         U64 b = 0x0000000000000001ULL;
 

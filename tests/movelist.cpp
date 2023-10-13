@@ -3,7 +3,7 @@
 
 using namespace chess;
 
-TEST_SUITE("Movelist Test") {
+TEST_SUITE("Movelist") {
     TEST_CASE("add") {
         Movelist moves;
         moves.add(Move::make(Square::SQ_A1, Square::SQ_A2));

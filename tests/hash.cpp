@@ -3,7 +3,7 @@
 
 using namespace chess;
 
-TEST_SUITE("Zobrist Hash Tests") {
+TEST_SUITE("Zobrist Hash") {
     TEST_CASE("Test Zobrist Hash Startpos") {
         Board b;
 

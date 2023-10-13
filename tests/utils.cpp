@@ -3,7 +3,7 @@
 
 using namespace chess;
 
-TEST_SUITE("Utils Test") {
+TEST_SUITE("Utilities") {
     TEST_CASE("extractSquare") {
         CHECK(utils::extractSquare("a1") == Square::SQ_A1);
         CHECK(utils::extractSquare("h8") == Square::SQ_H8);

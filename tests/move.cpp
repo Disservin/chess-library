@@ -3,7 +3,7 @@
 
 using namespace chess;
 
-TEST_SUITE("Move Test") {
+TEST_SUITE("Move") {
     TEST_CASE("from") {
         CHECK(Move::make(Square::SQ_A1, Square::SQ_A2).from() == Square::SQ_A1);
         CHECK(Move::make(Square::SQ_H8, Square::SQ_H1).from() == Square::SQ_H8);

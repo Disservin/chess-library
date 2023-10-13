@@ -33,10 +33,10 @@ class Perft {
     void benchPerft(Board& board, int depth, uint64_t expected_node_count) {
         board_ = board;
 
-        const auto t1 = high_resolution_clock::now();
+        const auto t1    = high_resolution_clock::now();
         const auto nodes = perft(depth);
-        const auto t2 = high_resolution_clock::now();
-        const auto ms = duration_cast<milliseconds>(t2 - t1).count();
+        const auto t2    = high_resolution_clock::now();
+        const auto ms    = duration_cast<milliseconds>(t2 - t1).count();
 
         std::stringstream ss;
         // clang-format off
@@ -61,7 +61,7 @@ struct Test {
     int depth;
 };
 
-TEST_SUITE("Perft Tests") {
+TEST_SUITE("PERFT") {
     TEST_CASE("Standard Chess") {
         const Test test_positions[] = {
             {"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 3195901860, 7},

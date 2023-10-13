@@ -3,7 +3,7 @@
 
 using namespace chess;
 
-TEST_SUITE("Board Test") {
+TEST_SUITE("Board") {
     TEST_CASE("makeMove") {
         Board board = Board();
         board.makeMove(Move::make(Square::SQ_E2, Square::SQ_E4));
