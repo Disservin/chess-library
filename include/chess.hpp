@@ -1286,8 +1286,6 @@ namespace runtime {
     return attacks;
 }
 
-}  // namespace runtime
-
 /// @brief [Internal Usage] Initializes the magic bitboard tables for sliding pieces
 /// @param sq
 /// @param table
@@ -1328,9 +1326,11 @@ inline void initAttacks() {
     }
 }
 
+}  // namespace runtime
+
 // force initialization of attacks
 static auto init = []() {
-    initAttacks();
+    runtime::initAttacks();
     return 0;
 }();
 
@@ -1351,7 +1351,7 @@ class Board {
 
     /// @brief Get the current FEN string.
     /// @return
-    [[nodiscard]] std::string getFen(bool moveCounters = true) const;
+    [[nodiscard]] std::string getFen(bool move_counters = true) const;
 
     void makeMove(const Move &move);
     void unmakeMove(const Move &move);
@@ -1684,7 +1684,7 @@ inline void Board::setFenInternal(std::string_view fen) {
 
 inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
 
-[[nodiscard]] inline std::string Board::getFen(bool moveCounters) const {
+[[nodiscard]] inline std::string Board::getFen(bool move_counters) const {
     std::stringstream ss;
 
     // Loop through the ranks of the board in reverse order
@@ -1742,7 +1742,7 @@ inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
     else
         ss << " " << squareToString[enpassant_sq_] << " ";
 
-    if (moveCounters) ss << halfMoveClock() << " " << fullMoveNumber();
+    if (move_counters) ss << halfMoveClock() << " " << fullMoveNumber();
 
     // Return the resulting FEN string
     return ss.str();
