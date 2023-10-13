@@ -11,7 +11,7 @@ Surge was making problems with undefined references, so I had to manually fix it
 */
 
 // chess-library
-#include "chess-library/src/chess.hpp"
+#include "chess-library/include/chess.hpp"
 
 // surge
 #include "surge/src/position.h"

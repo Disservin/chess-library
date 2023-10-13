@@ -1,4 +1,4 @@
-#include "../src/chess.hpp"
+#include "../include/chess.hpp"
 #include "doctest/doctest.hpp"
 
 using namespace chess;
