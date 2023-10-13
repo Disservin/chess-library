@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.4.0
+VERSION: 0.4.1
 */
 
 #ifndef CHESS_HPP
@@ -1758,8 +1758,7 @@ inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
     else
         ss << " " << squareToString[enpassant_sq_] << " ";
 
-    if (moveCounters)
-        ss << halfMoveClock() << " " << fullMoveNumber();
+    if (moveCounters) ss << halfMoveClock() << " " << fullMoveNumber();
 
     // Return the resulting FEN string
     return ss.str();
