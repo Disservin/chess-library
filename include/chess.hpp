@@ -3463,8 +3463,7 @@ class StreamParser {
    private:
     enum class State { CONTINUE, BREAK };
 
-    // A-Za-z
-    bool isLetter(char c) { return (c >= 97 && c <= 122) || (c >= 65 && c <= 90); }
+    bool isLetterOrHyphen(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-'; }
 
     State processNextBytes(const char *buffer, std::streamsize length,
                            std::streamsize &buffer_index, bool &has_head, bool &has_body) {
@@ -3560,7 +3559,7 @@ class StreamParser {
             // then read the second move in the group. After that a move_number will follow again.
             else if (in_body) {
                 // whitespace while reading a move means that we have finished reading the move
-                if (reading_move && c == ' ') {
+                if (reading_move && (c == ' ' || c == '\n')) {
                     reading_move = false;
                 } else if (reading_move) {
                     move += c;
@@ -3570,6 +3569,9 @@ class StreamParser {
                     reading_comment = false;
 
                     if (!move.empty()) {
+                        if (move[0] == '-') {
+                            move = move[1] + move;
+                        }
                         if (!visitor->skip()) visitor->move(move, comment);
                         move.clear();
                         comment.clear();
@@ -3578,11 +3580,14 @@ class StreamParser {
                 // we are in empty space, when we encounter now a file or a piece we try to
                 // parse the move
                 else if (!reading_move && !reading_comment) {
-                    if (!isLetter(c)) {
+                    if (!isLetterOrHyphen(c)) {
                         continue;
                     }
 
                     if (!move.empty()) {
+                        if (move[0] == '-') {
+                            move = move[1] + move;
+                        }
                         if (!visitor->skip()) visitor->move(move, comment);
                         move.clear();
                         comment.clear();
