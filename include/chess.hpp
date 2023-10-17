@@ -3569,7 +3569,7 @@ class StreamParser {
                     reading_comment = false;
 
                     if (!move.empty()) {
-                        if (move[0] == '-') {
+                        if (move[0] == '-' && move.size() > 1) {
                             move = move[1] + move;
                         }
                         if (!visitor->skip()) visitor->move(move, comment);
@@ -3585,7 +3585,7 @@ class StreamParser {
                     }
 
                     if (!move.empty()) {
-                        if (move[0] == '-') {
+                        if (move[0] == '-' && move.size() > 1) {
                             move = move[1] + move;
                         }
                         if (!visitor->skip()) visitor->move(move, comment);
