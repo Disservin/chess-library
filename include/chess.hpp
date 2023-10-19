@@ -3454,6 +3454,7 @@ class StreamParser {
             // processNextBytes, but in case we have reached the end of the file (bytes_read == 0)
             // or an error happened, we need to manually call endPgn.
             if (state != State::BREAK) {
+                callMove();
                 visitor->endPgn();
                 visitor->skipPgn(false);
             }
@@ -3463,7 +3464,20 @@ class StreamParser {
    private:
     enum class State { CONTINUE, BREAK };
 
-    bool isLetterOrHyphen(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-'; }
+    bool isLetterOrHyphen(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-';
+    }
+
+    void callMove() {
+        if (!move.empty()) {
+            if (move[0] == '-' && move.size() > 1) {
+                move = move[1] + move;
+            }
+            if (!visitor->skip()) visitor->move(move, comment);
+            move.clear();
+            comment.clear();
+        }
+    }
 
     State processNextBytes(const char *buffer, std::streamsize length,
                            std::streamsize &buffer_index, bool &has_head, bool &has_body) {
@@ -3568,14 +3582,7 @@ class StreamParser {
                 } else if (reading_comment && c == '}') {
                     reading_comment = false;
 
-                    if (!move.empty()) {
-                        if (move[0] == '-' && move.size() > 1) {
-                            move = move[1] + move;
-                        }
-                        if (!visitor->skip()) visitor->move(move, comment);
-                        move.clear();
-                        comment.clear();
-                    }
+                    callMove();
                 }
                 // we are in empty space, when we encounter now a file or a piece we try to
                 // parse the move
@@ -3584,14 +3591,7 @@ class StreamParser {
                         continue;
                     }
 
-                    if (!move.empty()) {
-                        if (move[0] == '-' && move.size() > 1) {
-                            move = move[1] + move;
-                        }
-                        if (!visitor->skip()) visitor->move(move, comment);
-                        move.clear();
-                        comment.clear();
-                    }
+                    callMove();
 
                     reading_move = true;
                     move += c;
