@@ -3385,9 +3385,47 @@ class Visitor {
     bool skip_ = false;
 };
 
+class FileBuffer {
+   private:
+    static constexpr std::size_t N = 512;
+    using BufferType               = std::array<char, N * N>;
+
+   public:
+    FileBuffer(std::istream &stream) : file_(stream) {}
+
+    std::optional<bool> fill() {
+        if (!file_.good()) return std::nullopt;
+
+        file_.read(buffer_.data(), N * N);
+        bytes_read_ = file_.gcount();
+
+        return std::optional<bool>(bytes_read_ > 0);
+    }
+
+    std::optional<std::streamsize> bytesRead() const {
+        return bytes_read_ > 0 ? std::optional<std::streamsize>(bytes_read_) : std::nullopt;
+    }
+
+    auto nextChar() {
+        assert(buffer_index_ < bytes_read_);
+
+        return buffer_[buffer_index_++];
+    }
+
+    auto position() const { return buffer_index_; }
+
+    const BufferType &buffer() const { return buffer_; }
+
+   private:
+    std::istream &file_;
+    BufferType buffer_;
+    std::streamsize bytes_read_   = 0;
+    std::streamsize buffer_index_ = 0;
+};
+
 class StreamParser {
    public:
-    StreamParser(std::istream &file_stream) : file(file_stream) {
+    StreamParser(std::istream &file_stream) : file_buffer(file_stream), file(file_stream) {
         header.first.reserve(256);
         header.second.reserve(256);
 
@@ -3399,11 +3437,11 @@ class StreamParser {
     void readGames(Visitor &vis) {
         this->visitor = &vis;
 
-        const std::size_t buffer_size = 512 * 512;
-        char buffer[buffer_size];
+        // const std::size_t buffer_size = 512 * 512;
+        // char buffer[buffer_size];
 
-        std::streamsize buffer_index = 0;
-        std::streamsize bytes_read   = 0;
+        // std::streamsize buffer_index = 0;
+        // std::streamsize bytes_read   = 0;
 
         while (true) {
             bool has_head = false;
@@ -3431,18 +3469,21 @@ class StreamParser {
             State state = State::CONTINUE;
 
             while (true) {
-                if (buffer_index == 0) {
-                    // afaik read() checks good() internally, but just make sure
-                    if (!file.good()) break;
+                // if (buffer_index == 0) {
+                //     // afaik read() checks good() internally, but just make sure
+                //     if (!file.good()) break;
 
-                    file.read(buffer, buffer_size);
-                    bytes_read = file.gcount();
+                //     file.read(buffer, buffer_size);
+                //     bytes_read = file.gcount();
 
-                    if (bytes_read == 0) break;
-                }
+                //     if (bytes_read == 0) break;
+                // }
 
-                if ((state = processNextBytes(buffer, bytes_read, buffer_index, has_head,
-                                              has_body)) == State::BREAK) {
+                const auto res = file_buffer.fill();
+
+                if (!res.has_value() || !res.value()) break;
+
+                if ((state = processNextBytes(has_head, has_body)) == State::BREAK) {
                     break;
                 }
             }
@@ -3475,10 +3516,9 @@ class StreamParser {
         }
     }
 
-    State processNextBytes(const char *buffer, std::streamsize length,
-                           std::streamsize &buffer_index, bool &has_head, bool &has_body) {
-        for (std::streamsize i = buffer_index; i < length; ++i) {
-            char c = buffer[i];
+    State processNextBytes(bool &has_head, bool &has_body) {
+        for (std::streamsize i = file_buffer.position(); i < file_buffer.bytesRead(); ++i) {
+            char c = file_buffer.nextChar();
 
             // save the last three characters across different buffers
             cbuf[2] = cbuf[1];
@@ -3619,7 +3659,8 @@ class StreamParser {
         return State::CONTINUE;
     }
 
-   private:
+    FileBuffer file_buffer;
+
     Visitor *visitor = nullptr;
 
     std::istream &file;
