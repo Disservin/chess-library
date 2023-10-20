@@ -3393,28 +3393,26 @@ class FileBuffer {
    public:
     FileBuffer(std::istream &stream) : file_(stream) {}
 
+    std::optional<char> get() {
+        if (buffer_index_ == bytes_read_) {
+            const auto ret = fill();
+            return ret.has_value() && ret.value() ? std::optional<char>(buffer_[buffer_index_++])
+                                                  : std::nullopt;
+        }
+
+        return buffer_[buffer_index_++];
+    }
+
     std::optional<bool> fill() {
         if (!file_.good()) return std::nullopt;
+
+        buffer_index_ = 0;
 
         file_.read(buffer_.data(), N * N);
         bytes_read_ = file_.gcount();
 
         return std::optional<bool>(bytes_read_ > 0);
     }
-
-    std::optional<std::streamsize> bytesRead() const {
-        return bytes_read_ > 0 ? std::optional<std::streamsize>(bytes_read_) : std::nullopt;
-    }
-
-    auto nextChar() {
-        assert(buffer_index_ < bytes_read_);
-
-        return buffer_[buffer_index_++];
-    }
-
-    auto position() const { return buffer_index_; }
-
-    const BufferType &buffer() const { return buffer_; }
 
    private:
     std::istream &file_;
@@ -3425,27 +3423,20 @@ class FileBuffer {
 
 class StreamParser {
    public:
-    StreamParser(std::istream &file_stream) : file_buffer(file_stream), file(file_stream) {
+    StreamParser(std::istream &file_stream) : file_buffer(file_stream) {
         header.first.reserve(256);
         header.second.reserve(256);
 
         move.reserve(16);
         comment.reserve(256);
-        cbuf = "   ";
     }
 
     void readGames(Visitor &vis) {
         this->visitor = &vis;
 
-        // const std::size_t buffer_size = 512 * 512;
-        // char buffer[buffer_size];
-
-        // std::streamsize buffer_index = 0;
-        // std::streamsize bytes_read   = 0;
-
-        while (true) {
-            bool has_head = false;
-            bool has_body = false;
+        const auto reset = [&]() {
+            has_head = false;
+            has_body = false;
 
             header.first.clear();
             header.second.clear();
@@ -3465,47 +3456,25 @@ class StreamParser {
             // Header
             reading_key   = false;
             reading_value = false;
+        };
 
-            State state = State::CONTINUE;
-
-            while (true) {
-                // if (buffer_index == 0) {
-                //     // afaik read() checks good() internally, but just make sure
-                //     if (!file.good()) break;
-
-                //     file.read(buffer, buffer_size);
-                //     bytes_read = file.gcount();
-
-                //     if (bytes_read == 0) break;
-                // }
-
-                const auto res = file_buffer.fill();
-
-                if (!res.has_value() || !res.value()) break;
-
-                if ((state = processNextBytes(has_head, has_body)) == State::BREAK) {
-                    break;
+        while (true) {
+            const auto c = file_buffer.get();
+            if (!c.has_value()) {
+                if (!pgn_end && has_body) {
+                    pgn_end = true;
+                    callMove();
+                    visitor->endPgn();
+                    visitor->skipPgn(false);
                 }
-            }
-
-            if (!has_body && !has_head) {
                 return;
             }
 
-            // The previous while loop will typically break because of the return code from
-            // processNextBytes, but in case we have reached the end of the file (bytes_read == 0)
-            // or an error happened, we need to manually call endPgn.
-            if (state != State::BREAK) {
-                callMove();
-                visitor->endPgn();
-                visitor->skipPgn(false);
-            }
+            processNextByte(c.value(), reset);
         }
     }
 
    private:
-    enum class State { CONTINUE, BREAK };
-
     bool isLetter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
 
     void callMove() {
@@ -3516,161 +3485,154 @@ class StreamParser {
         }
     }
 
-    State processNextBytes(bool &has_head, bool &has_body) {
-        for (std::streamsize i = file_buffer.position(); i < file_buffer.bytesRead(); ++i) {
-            char c = file_buffer.nextChar();
+    template <typename T>
+    void processNextByte(const char c, const T &reset_func) {
+        // save the last three characters across different buffers
+        cbuf[2] = cbuf[1];
+        cbuf[1] = cbuf[0];
+        cbuf[0] = c;
 
-            // save the last three characters across different buffers
-            cbuf[2] = cbuf[1];
-            cbuf[1] = cbuf[0];
-            cbuf[0] = c;
-
-            // skip carriage return
-            if (c == '\r') {
-                continue;
-            }
-
-            // PGN Header
-            if (line_start && c == '[') {
-                if (pgn_end) {
-                    pgn_end = false;
-                    visitor->skipPgn(false);
-                    visitor->startPgn();
-                }
-
-                has_head = true;
-
-                in_header = true;
-                in_body   = false;
-
-                reading_key = true;
-
-                line_start = false;
-                continue;
-            }
-
-            // PGN Moves Start
-            if (line_start && has_head && !in_header && !in_body) {
-                reading_move    = false;
-                reading_comment = false;
-
-                has_body = true;
-
-                in_header = false;
-                in_body   = true;
-
-                line_start = false;
-
-                if (!visitor->skip()) visitor->startMoves();
-                continue;
-            }
-
-            // PGN End
-            if (line_start && in_body && c == '\n') {
-                buffer_index = i + 1;
-
-                pgn_end = true;
-
-                visitor->endPgn();
-                visitor->skipPgn(false);
-
-                return State::BREAK;
-            }
-
-            // set line_start to true, since the next char will be first on
-            // a new line
-            if (c == '\n') {
-                line_start = true;
-            }
-
-            // make sure that the line_start is turned off again
-            if (line_start && c != '\n') {
-                line_start = false;
-            }
-
-            if (in_header) {
-                if (c == '"') {
-                    reading_value = !reading_value;
-                } else if (reading_key && c == ' ') {
-                    reading_key = false;
-                } else if (reading_key) {
-                    header.first += c;
-                } else if (reading_value) {
-                    header.second += c;
-                } else if (c == '\n') {
-                    reading_key   = false;
-                    reading_value = false;
-                    in_header     = false;
-
-                    if (!visitor->skip()) visitor->header(header.first, header.second);
-
-                    header.first.clear();
-                    header.second.clear();
-                }
-            }
-            // Pgn are build up in the following way.
-            // {move_number} {move} {comment} {move} {comment} {move_number} ...
-            // So we need to skip the move_number then start reading the move, then save the comment
-            // then read the second move in the group. After that a move_number will follow again.
-            else if (in_body) {
-                // whitespace while reading a move means that we have finished reading the move
-                if (reading_move && (c == ' ' || c == '\n')) {
-                    reading_move = false;
-                } else if (reading_move) {
-                    move += c;
-                } else if (!reading_comment && c == '{') {
-                    reading_comment = true;
-                } else if (reading_comment && c == '}') {
-                    reading_comment = false;
-
-                    callMove();
-                }
-                // we are in empty space, when we encounter now a file or a piece, or a castling
-                // move, we try to parse the move
-                else if (!reading_move && !reading_comment) {
-                    // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
-                    // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                    if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
-                        callMove();
-                        reading_move = true;
-                        if (c == '0') {
-                            move += "0-0";
-                        } else {
-                            move += c;
-                        }
-                    } else {
-                        // no new move detected
-                        continue;
-                    }
-                } else if (reading_comment) {
-                    comment += c;
-                } else if (c == '\n') {
-                    reading_move    = false;
-                    reading_comment = false;
-                }
-            }
-
-            continue;
+        // skip carriage return
+        if (c == '\r') {
+            return;
         }
 
-        // we have processed all bytes
-        buffer_index = 0;
+        // PGN Header
+        if (line_start && c == '[') {
+            if (pgn_end) {
+                pgn_end = false;
+                visitor->skipPgn(false);
+                visitor->startPgn();
+            }
 
-        return State::CONTINUE;
+            has_head = true;
+
+            in_header = true;
+            in_body   = false;
+
+            reading_key = true;
+
+            line_start = false;
+            return;
+        }
+
+        // PGN Moves Start
+        if (line_start && has_head && !in_header && !in_body) {
+            reading_move    = false;
+            reading_comment = false;
+
+            has_body = true;
+
+            in_header = false;
+            in_body   = true;
+
+            line_start = false;
+
+            if (!visitor->skip()) visitor->startMoves();
+            return;
+        }
+
+        // PGN End
+        if (line_start && in_body && c == '\n') {
+            // buffer_index = i + 1;
+
+            pgn_end = true;
+
+            visitor->endPgn();
+            visitor->skipPgn(false);
+
+            reset_func();
+            return;
+        }
+
+        // set line_start to true, since the next char will be first on
+        // a new line
+        if (c == '\n') {
+            line_start = true;
+        }
+
+        // make sure that the line_start is turned off again
+        if (line_start && c != '\n') {
+            line_start = false;
+        }
+
+        if (in_header) {
+            if (c == '"') {
+                reading_value = !reading_value;
+            } else if (reading_key && c == ' ') {
+                reading_key = false;
+            } else if (reading_key) {
+                header.first += c;
+            } else if (reading_value) {
+                header.second += c;
+            } else if (c == '\n') {
+                reading_key   = false;
+                reading_value = false;
+                in_header     = false;
+
+                if (!visitor->skip()) visitor->header(header.first, header.second);
+
+                header.first.clear();
+                header.second.clear();
+            }
+        }
+        // Pgn are build up in the following way.
+        // {move_number} {move} {comment} {move} {comment} {move_number} ...
+        // So we need to skip the move_number then start reading the move, then save the comment
+        // then read the second move in the group. After that a move_number will follow again.
+        else if (in_body) {
+            // whitespace while reading a move means that we have finished reading the move
+            if (reading_move && (c == ' ' || c == '\n')) {
+                reading_move = false;
+            } else if (reading_move) {
+                move += c;
+            } else if (!reading_comment && c == '{') {
+                reading_comment = true;
+            } else if (reading_comment && c == '}') {
+                reading_comment = false;
+
+                callMove();
+            }
+            // we are in empty space, when we encounter now a file or a piece, or a castling
+            // move, we try to parse the move
+            else if (!reading_move && !reading_comment) {
+                // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
+                // 0-0(-0) castling moves from results like 1-0 and 0-1.
+                if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
+                    callMove();
+
+                    reading_move = true;
+
+                    if (c == '0') {
+                        move += "0-0";
+                    } else {
+                        move += c;
+                    }
+                } else {
+                    // no new move detected
+                    return;
+                }
+            } else if (reading_comment) {
+                comment += c;
+            } else if (c == '\n') {
+                reading_move    = false;
+                reading_comment = false;
+            }
+        }
     }
 
     FileBuffer file_buffer;
 
     Visitor *visitor = nullptr;
 
-    std::istream &file;
-
     // one time allocations
     std::pair<std::string, std::string> header;
 
     std::string move;
     std::string comment;
-    std::string cbuf;
+
+    // buffer for the last two characters, cbuf[0] is the current character
+    std::array<char, 3> cbuf = {'\0', '\0', '\0'};
 
     // State
 
@@ -3682,6 +3644,9 @@ class StreamParser {
 
     bool in_header = false;
     bool in_body   = false;
+
+    bool has_head = false;
+    bool has_body = false;
 
     // Header
     bool reading_key   = false;
