@@ -3459,6 +3459,7 @@ class StreamParser {
 
         while (true) {
             const auto c = stream_buffer.get();
+
             if (!c.has_value()) {
                 if (!pgn_end && has_body) {
                     pgn_end = true;
@@ -3466,6 +3467,7 @@ class StreamParser {
                     visitor->endPgn();
                     visitor->skipPgn(false);
                 }
+
                 return;
             }
 
@@ -3479,6 +3481,7 @@ class StreamParser {
     void callMove() {
         if (!move.empty()) {
             if (!visitor->skip()) visitor->move(move, comment);
+
             move.clear();
             comment.clear();
         }
