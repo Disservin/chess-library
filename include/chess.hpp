@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.0
+VERSION: 0.5.1
 */
 
 #ifndef CHESS_HPP
@@ -179,7 +179,7 @@ namespace constants {
 constexpr int MAX_SQ                 = 64;
 constexpr int MAX_PIECE              = 12;
 constexpr int MAX_MOVES              = 256;
-constexpr Bitboard DEFAULT_CHECKMASK = 18446744073709551615ULL;
+constexpr Bitboard DEFAULT_CHECKMASK = 0xFFFFFFFFFFFFFFFF;  // 18446744073709551615ULL
 
 static const std::string STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 }  // namespace constants
