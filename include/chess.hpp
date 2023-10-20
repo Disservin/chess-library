@@ -3393,6 +3393,7 @@ class StreamParser {
 
         move.reserve(16);
         comment.reserve(256);
+        cbuf = "   ";
     }
 
     void readGames(Visitor &vis) {
@@ -3478,6 +3479,11 @@ class StreamParser {
                            std::streamsize &buffer_index, bool &has_head, bool &has_body) {
         for (std::streamsize i = buffer_index; i < length; ++i) {
             char c = buffer[i];
+
+            // save the last three characters across different buffers
+            cbuf[2] = cbuf[1];
+            cbuf[1] = cbuf[0];
+            cbuf[0] = c;
 
             // skip carriage return
             if (c == '\r') {
@@ -3584,7 +3590,7 @@ class StreamParser {
                 else if (!reading_move && !reading_comment) {
                     // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
                     // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                    if (isLetter(c) || (c == '0' && i > 1 && buffer[i-1] == '-' && buffer[i-2] == '0')) {
+                    if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
                         callMove();
                         reading_move = true;
                         if (c == '0') {
@@ -3623,6 +3629,7 @@ class StreamParser {
 
     std::string move;
     std::string comment;
+    std::string cbuf;
 
     // State
 
