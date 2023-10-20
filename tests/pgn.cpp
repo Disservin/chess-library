@@ -47,7 +47,7 @@ TEST_SUITE("PGN StreamParser") {
         pgn::StreamParser parser(file_stream);
         parser.readGames(*vis);
 
-        // CHECK(vis->count() == 130); @TODO fix 1/2-1/2 being interpreted as a move
+        CHECK(vis->count() == 130);
         CHECK(vis->gameCount() == 1);
         CHECK(vis->endCount() == 1);
         CHECK(vis->moveStartCount() == 1);
@@ -61,7 +61,7 @@ TEST_SUITE("PGN StreamParser") {
         pgn::StreamParser parser(file_stream);
         parser.readGames(*vis);
 
-        // CHECK(vis->count() == 124); @TODO fix 1/2-1/2 being interpreted as a move
+        CHECK(vis->count() == 125);
         CHECK(vis->gameCount() == 1);
         CHECK(vis->endCount() == 1);
         CHECK(vis->moveStartCount() == 1);
@@ -104,7 +104,7 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->gameCount() == 2);
         CHECK(vis->endCount() == 2);
         CHECK(vis->moveStartCount() == 1);
-        // CHECK(vis->count() == 130); @TODO fix 1/2-1/2 being interpreted as a move
+        CHECK(vis->count() == 130);
     }
 
     TEST_CASE("Newline by moves") {
@@ -122,7 +122,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Castling with 0-0") {
-        const auto file  = "./pgns/castling .pgn";
+        const auto file  = "./pgns/castling.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -133,5 +133,19 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->endCount() == 1);
         CHECK(vis->moveStartCount() == 1);
         CHECK(vis->count() == 6);
+    }
+
+    TEST_CASE("Black to move, and castling with 0-0-0") {
+        const auto file  = "./pgns/black2move.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+        CHECK(vis->count() == 3);
     }
 }

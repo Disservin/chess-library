@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.4.6
+VERSION: 0.5.0
 */
 
 #ifndef CHESS_HPP
@@ -3393,6 +3393,7 @@ class StreamParser {
 
         move.reserve(16);
         comment.reserve(256);
+        cbuf = "   ";
     }
 
     void readGames(Visitor &vis) {
@@ -3464,15 +3465,10 @@ class StreamParser {
    private:
     enum class State { CONTINUE, BREAK };
 
-    bool isLetterOrHyphen(char c) {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-';
-    }
+    bool isLetter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
 
     void callMove() {
         if (!move.empty()) {
-            if (move[0] == '-' && move.size() > 1) {
-                move = move[1] + move;
-            }
             if (!visitor->skip()) visitor->move(move, comment);
             move.clear();
             comment.clear();
@@ -3483,6 +3479,11 @@ class StreamParser {
                            std::streamsize &buffer_index, bool &has_head, bool &has_body) {
         for (std::streamsize i = buffer_index; i < length; ++i) {
             char c = buffer[i];
+
+            // save the last three characters across different buffers
+            cbuf[2] = cbuf[1];
+            cbuf[1] = cbuf[0];
+            cbuf[0] = c;
 
             // skip carriage return
             if (c == '\r') {
@@ -3584,17 +3585,23 @@ class StreamParser {
 
                     callMove();
                 }
-                // we are in empty space, when we encounter now a file or a piece we try to
-                // parse the move
+                // we are in empty space, when we encounter now a file or a piece, or a castling
+                // move, we try to parse the move
                 else if (!reading_move && !reading_comment) {
-                    if (!isLetterOrHyphen(c)) {
+                    // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
+                    // 0-0(-0) castling moves from results like 1-0 and 0-1.
+                    if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
+                        callMove();
+                        reading_move = true;
+                        if (c == '0') {
+                            move += "0-0";
+                        } else {
+                            move += c;
+                        }
+                    } else {
+                        // no new move detected
                         continue;
                     }
-
-                    callMove();
-
-                    reading_move = true;
-                    move += c;
                 } else if (reading_comment) {
                     comment += c;
                 } else if (c == '\n') {
@@ -3622,6 +3629,7 @@ class StreamParser {
 
     std::string move;
     std::string comment;
+    std::string cbuf;
 
     // State
 
