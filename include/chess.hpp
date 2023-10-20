@@ -3434,29 +3434,6 @@ class StreamParser {
     void readGames(Visitor &vis) {
         this->visitor = &vis;
 
-        const auto reset = [&]() {
-            header.first.clear();
-            header.second.clear();
-
-            move.clear();
-            comment.clear();
-
-            reading_move    = false;
-            reading_comment = false;
-
-            line_start = true;
-
-            has_head = false;
-            has_body = false;
-
-            in_header = false;
-            in_body   = false;
-
-            // Header
-            reading_key   = false;
-            reading_value = false;
-        };
-
         while (true) {
             const auto c = stream_buffer.get();
 
@@ -3471,11 +3448,34 @@ class StreamParser {
                 return;
             }
 
-            processNextByte(c.value(), reset);
+            processNextByte(c.value());
         }
     }
 
    private:
+    void reset_trackers() {
+        header.first.clear();
+        header.second.clear();
+
+        move.clear();
+        comment.clear();
+
+        reading_move    = false;
+        reading_comment = false;
+
+        line_start = true;
+
+        has_head = false;
+        has_body = false;
+
+        in_header = false;
+        in_body   = false;
+
+        // Header
+        reading_key   = false;
+        reading_value = false;
+    }
+
     bool isLetter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
 
     void callMove() {
@@ -3487,8 +3487,7 @@ class StreamParser {
         }
     }
 
-    template <typename T>
-    void processNextByte(const char c, const T &reset_func) {
+    void processNextByte(const char c) {
         // save the last three characters across different buffers
         cbuf[2] = cbuf[1];
         cbuf[1] = cbuf[0];
@@ -3543,7 +3542,7 @@ class StreamParser {
             visitor->endPgn();
             visitor->skipPgn(false);
 
-            reset_func();
+            reset_trackers();
             return;
         }
 
