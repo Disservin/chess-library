@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.4
+VERSION: 0.5.5
 */
 
 #ifndef CHESS_HPP
@@ -328,35 +328,6 @@ constexpr PieceType charToPieceType(char c) {
  * Forward declarations                                                      *
 \****************************************************************************/
 class Board;
-
-namespace utils {
-/// @brief Converts a string to a square
-/// @param square_str
-/// @return
-[[nodiscard]] constexpr Square extractSquare(std::string_view square_str);
-
-/// @brief Makes a square from a file and rank
-/// @param f
-/// @param r
-/// @return
-[[nodiscard]] constexpr Square fileRankSquare(File f, Rank r);
-
-/// @brief Get the rank of a square
-/// @param sq
-/// @return
-[[nodiscard]] constexpr Rank squareRank(Square sq);
-
-/// @brief Get the file of a square
-/// @param a
-/// @param b
-/// @return
-[[nodiscard]] int squareDistance(Square a, Square b);
-
-/// @brief Get the PieceType of a piece
-/// @param piece
-/// @return
-[[nodiscard]] constexpr PieceType typeOfPiece(Piece piece);
-}  // namespace utils
 
 /****************************************************************************\
  * Structs                                                                   *
