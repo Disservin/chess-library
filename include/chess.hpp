@@ -3391,7 +3391,7 @@ class StreamBuffer {
     using BufferType               = std::array<char, N * N>;
 
    public:
-    StreamBuffer(std::istream &stream) : file_(stream) {}
+    StreamBuffer(std::istream &stream) : stream_(stream) {}
 
     std::optional<char> get() {
         if (buffer_index_ == bytes_read_) {
@@ -3404,18 +3404,52 @@ class StreamBuffer {
     }
 
     std::optional<bool> fill() {
-        if (!file_.good()) return std::nullopt;
+        if (!stream_.good()) return std::nullopt;
 
         buffer_index_ = 0;
 
-        file_.read(buffer_.data(), N * N);
-        bytes_read_ = file_.gcount();
+        stream_.read(buffer_.data(), N * N);
+        bytes_read_ = stream_.gcount();
 
         return std::optional<bool>(bytes_read_ > 0);
     }
 
+    /// @brief Assume that the current character is already the opening_delim
+    /// @param open_delim
+    /// @param close_delim
+    /// @return
+    bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
+        int stack = 1;
+
+        while (true) {
+            const auto ret = get();
+
+            if (!ret.has_value()) {
+                return false;
+            }
+
+            if (ret.value() == open_delim) {
+                stack++;
+            } else if (ret.value() == close_delim) {
+                if (stack == 0) {
+                    // Mismatched closing delimiter
+                    return false;
+                } else {
+                    stack--;
+                    if (stack == 0) {
+                        // Matching closing delimiter found
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // If we reach this point, there are unmatched opening delimiters
+        return false;
+    }
+
    private:
-    std::istream &file_;
+    std::istream &stream_;
     BufferType buffer_;
     std::streamsize bytes_read_   = 0;
     std::streamsize buffer_index_ = 0;
@@ -3598,6 +3632,12 @@ class StreamParser {
             // we are in empty space, when we encounter now a file or a piece, or a castling
             // move, we try to parse the move
             else if (!reading_move && !reading_comment) {
+                // skip variations
+                if (c == '(') {
+                    stream_buffer.readUntilMatchingDelimiter('(', ')');
+                    return;
+                }
+
                 // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
                 // 0-0(-0) castling moves from results like 1-0 and 0-1.
                 if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
