@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.2
+VERSION: 0.5.3
 */
 
 #ifndef CHESS_HPP
@@ -3414,6 +3414,40 @@ class StreamBuffer {
         return std::optional<bool>(bytes_read_ > 0);
     }
 
+    /// @brief Assume that the current character is already the opening_delim
+    /// @param open_delim
+    /// @param close_delim
+    /// @return
+    bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
+        int stack = 1;
+
+        while (true) {
+            const auto ret = get();
+
+            if (!ret.has_value()) {
+                return false;
+            }
+
+            if (ret.value() == open_delim) {
+                stack++;
+            } else if (ret.value() == close_delim) {
+                if (stack == 0) {
+                    // Mismatched closing delimiter
+                    return false;
+                } else {
+                    stack--;
+                    if (stack == 0) {
+                        // Matching closing delimiter found
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // If we reach this point, there are unmatched opening delimiters
+        return false;
+    }
+
    private:
     std::istream &stream_;
     BufferType buffer_;
@@ -3597,6 +3631,12 @@ class StreamParser {
             // we are in empty space, when we encounter now a file or a piece, or a castling
             // move, we try to parse the move
             else if (!reading_move && !reading_comment) {
+                // skip variations
+                if (c == '(') {
+                    stream_buffer.readUntilMatchingDelimiter('(', ')');
+                    return;
+                }
+
                 // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
                 // 0-0(-0) castling moves from results like 1-0 and 0-1.
                 if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {

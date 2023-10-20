@@ -148,4 +148,18 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->moveStartCount() == 1);
         CHECK(vis->count() == 3);
     }
+
+    TEST_CASE("Skip Variations") {
+        const auto file  = "./pgns/variations.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+        CHECK(vis->count() == 108);
+    }
 }
