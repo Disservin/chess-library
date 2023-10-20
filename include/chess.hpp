@@ -3391,7 +3391,7 @@ class StreamBuffer {
     using BufferType               = std::array<char, N * N>;
 
    public:
-    StreamBuffer(std::istream &stream) : file_(stream) {}
+    StreamBuffer(std::istream &stream) : stream_(stream) {}
 
     std::optional<char> get() {
         if (buffer_index_ == bytes_read_) {
@@ -3404,18 +3404,18 @@ class StreamBuffer {
     }
 
     std::optional<bool> fill() {
-        if (!file_.good()) return std::nullopt;
+        if (!stream_.good()) return std::nullopt;
 
         buffer_index_ = 0;
 
-        file_.read(buffer_.data(), N * N);
-        bytes_read_ = file_.gcount();
+        stream_.read(buffer_.data(), N * N);
+        bytes_read_ = stream_.gcount();
 
         return std::optional<bool>(bytes_read_ > 0);
     }
 
    private:
-    std::istream &file_;
+    std::istream &stream_;
     BufferType buffer_;
     std::streamsize bytes_read_   = 0;
     std::streamsize buffer_index_ = 0;
