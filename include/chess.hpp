@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.5
+VERSION: 0.5.6
 */
 
 #ifndef CHESS_HPP
@@ -325,11 +325,6 @@ constexpr PieceType charToPieceType(char c) {
 }
 
 /****************************************************************************\
- * Forward declarations                                                      *
-\****************************************************************************/
-class Board;
-
-/****************************************************************************\
  * Structs                                                                   *
 \****************************************************************************/
 
@@ -439,22 +434,6 @@ class CastlingRights {
      3    2    1    0    // group index
      */
     BitField16 castling_rights_ = {};
-};
-
-struct State {
-    U64 hash;
-    CastlingRights castling;
-    Square enpassant;
-    uint8_t half_moves;
-    Piece captured_piece;
-
-    State(const U64 &hash, const CastlingRights &castling, const Square &enpassant,
-          const uint8_t &half_moves, const Piece &captured_piece)
-        : hash(hash),
-          castling(castling),
-          enpassant(enpassant),
-          half_moves(half_moves),
-          captured_piece(captured_piece) {}
 };
 
 struct Move {
@@ -601,11 +580,13 @@ namespace utils {
 inline void printBitboard(Bitboard bb) {
     std::bitset<constants::MAX_SQ> b(bb);
     std::string str_bitset = b.to_string();
+
     for (int i = 0; i < constants::MAX_SQ; i += 8) {
         std::string x = str_bitset.substr(i, 8);
         reverse(x.begin(), x.end());
-        std::cout << x << std::endl;
+        std::cout << x << '\n';
     }
+
     std::cout << '\n' << std::endl;
 }
 
@@ -701,6 +682,22 @@ inline void printBitboard(Bitboard bb) {
         return squareRank(sq) == Rank::RANK_8;
 }
 
+/// @brief
+/// @param r
+/// @param f
+/// @return
+[[nodiscard]] constexpr int validSq(Rank r, File f) {
+    return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
+}
+
+/// @brief Make a square from a rank and file
+/// @param r
+/// @param f
+/// @return
+[[nodiscard]] constexpr Square makeSquare(Rank r, File f) {
+    return static_cast<Square>(int(r) * 8 + int(f));
+}
+
 }  // namespace utils
 
 /****************************************************************************\
@@ -729,9 +726,9 @@ inline Square msb(U64 b) {
     return Square(63 ^ __builtin_clzll(b));
 }
 
-#elif defined(_MSC_VER)  // MSVC
+#elif defined(_MSC_VER)
 
-#ifdef _WIN64  // MSVC, WIN64
+#ifdef _WIN64
 #include <intrin.h>
 inline Square lsb(U64 b) {
     unsigned long idx;
@@ -745,35 +742,13 @@ inline Square msb(U64 b) {
     return (Square)idx;
 }
 
-#else  // MSVC, WIN32
-#include <intrin.h>
-inline Square lsb(U64 b) {
-    unsigned long idx;
+#else
 
-    if (b & 0xffffffff) {
-        _BitScanForward(&idx, int32_t(b));
-        return Square(idx);
-    } else {
-        _BitScanForward(&idx, int32_t(b >> 32));
-        return Square(idx + 32);
-    }
-}
-
-inline Square msb(U64 b) {
-    unsigned long idx;
-
-    if (b >> 32) {
-        _BitScanReverse(&idx, int32_t(b >> 32));
-        return Square(idx + 32);
-    } else {
-        _BitScanReverse(&idx, int32_t(b));
-        return Square(idx);
-    }
-}
+#error "MSVC 32-bit not supported."
 
 #endif
 
-#else  // Compiler is neither GCC nor MSVC compatible
+#else
 
 #error "Compiler not supported."
 
@@ -787,7 +762,7 @@ inline int popcount(U64 mask) {
 
     return (uint8_t)_mm_popcnt_u64(mask);
 
-#else  // Assumed gcc or compatible compiler
+#else
 
     return __builtin_popcountll(mask);
 
@@ -1067,6 +1042,8 @@ enum PieceGenType {
     KING   = 32,
 };
 
+class Board;
+
 namespace movegen {
 
 /// @brief Generates all legal moves for a position. The movelist will be
@@ -1162,22 +1139,6 @@ inline Bitboard BishopAttacks[0x1480] = {};
 inline Magic RookTable[constants::MAX_SQ]   = {};
 inline Magic BishopTable[constants::MAX_SQ] = {};
 
-/// @brief
-/// @param r
-/// @param f
-/// @return
-[[nodiscard]] inline int validSq(Rank r, File f) {
-    return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
-}
-
-/// @brief Make a square from a rank and file
-/// @param r
-/// @param f
-/// @return
-[[nodiscard]] inline Square makeSquare(Rank r, File f) {
-    return static_cast<Square>(int(r) * 8 + int(f));
-}
-
 namespace runtime {
 /// @brief [Internal Usage] Slow function to calculate bishop attacks
 /// @param sq
@@ -1191,26 +1152,30 @@ namespace runtime {
     int br = sq / 8;
     int bf = sq % 8;
 
-    for (r = br + 1, f = bf + 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f++) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
+    for (r = br + 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
+         r++, f++) {
+        Square s = utils::makeSquare(static_cast<Rank>(r), static_cast<File>(f));
         attacks |= (1ULL << s);
         if (occupied & (1ULL << s)) break;
     }
 
-    for (r = br - 1, f = bf + 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f++) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
+    for (r = br - 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
+         r--, f++) {
+        Square s = utils::makeSquare(static_cast<Rank>(r), static_cast<File>(f));
         attacks |= (1ULL << s);
         if (occupied & (1ULL << s)) break;
     }
 
-    for (r = br + 1, f = bf - 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f--) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
+    for (r = br + 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
+         r++, f--) {
+        Square s = utils::makeSquare(static_cast<Rank>(r), static_cast<File>(f));
         attacks |= (1ULL << s);
         if (occupied & (1ULL << s)) break;
     }
 
-    for (r = br - 1, f = bf - 1; validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f--) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(f));
+    for (r = br - 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
+         r--, f--) {
+        Square s = utils::makeSquare(static_cast<Rank>(r), static_cast<File>(f));
         attacks |= (1ULL << s);
         if (occupied & (1ULL << s)) break;
     }
@@ -1230,26 +1195,26 @@ namespace runtime {
     int rr = sq / 8;
     int rf = sq % 8;
 
-    for (r = rr + 1; validSq(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(rf));
+    for (r = rr + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
+        Square s = utils::makeSquare(static_cast<Rank>(r), static_cast<File>(rf));
         attacks |= (1ULL << s);
         if (occupied & (1ULL << s)) break;
     }
 
-    for (r = rr - 1; validSq(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
-        Square s = makeSquare(static_cast<Rank>(r), static_cast<File>(rf));
+    for (r = rr - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
+        Square s = utils::makeSquare(static_cast<Rank>(r), static_cast<File>(rf));
         attacks |= (1ULL << s);
         if (occupied & (1ULL << s)) break;
     }
 
-    for (f = rf + 1; validSq(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
-        Square s = makeSquare(static_cast<Rank>(rr), static_cast<File>(f));
+    for (f = rf + 1; utils::validSq(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
+        Square s = utils::makeSquare(static_cast<Rank>(rr), static_cast<File>(f));
         attacks |= (1ULL << s);
         if (occupied & (1ULL << s)) break;
     }
 
-    for (f = rf - 1; validSq(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
-        Square s = makeSquare(static_cast<Rank>(rr), static_cast<File>(f));
+    for (f = rf - 1; utils::validSq(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
+        Square s = utils::makeSquare(static_cast<Rank>(rr), static_cast<File>(f));
         attacks |= (1ULL << s);
         if (occupied & (1ULL << s)) break;
     }
@@ -1311,12 +1276,25 @@ static auto init = []() {
  * Board                                                                     *
 \****************************************************************************/
 class Board {
+   private:
+    struct State {
+        U64 hash;
+        CastlingRights castling;
+        Square enpassant;
+        uint8_t half_moves;
+        Piece captured_piece;
+
+        State(const U64 &hash, const CastlingRights &castling, const Square &enpassant,
+              const uint8_t &half_moves, const Piece &captured_piece)
+            : hash(hash),
+              castling(castling),
+              enpassant(enpassant),
+              half_moves(half_moves),
+              captured_piece(captured_piece) {}
+    };
+
    public:
     explicit Board(std::string_view fen = constants::STARTPOS);
-
-    /// @brief [Internal Usage]
-    /// @param fen
-    void setFenInternal(std::string_view fen);
 
     virtual void setFen(std::string_view fen);
 
@@ -1509,6 +1487,10 @@ class Board {
     bool chess960_ = false;
 
    private:
+    /// @brief [Internal Usage]
+    /// @param fen
+    void setFenInternal(std::string_view fen);
+
     std::string original_fen_;
 };
 
@@ -1655,7 +1637,7 @@ inline void Board::setFenInternal(std::string_view fen) {
 
 inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
 
-[[nodiscard]] inline std::string Board::getFen(bool move_counters) const {
+inline std::string Board::getFen(bool move_counters) const {
     std::stringstream ss;
 
     // Loop through the ranks of the board in reverse order
@@ -1719,7 +1701,7 @@ inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
     return ss.str();
 }
 
-[[nodiscard]] inline U64 Board::zobrist() const {
+inline U64 Board::zobrist() const {
     U64 hash_key = 0ULL;
 
     U64 wPieces = us(Color::WHITE);
@@ -2929,6 +2911,7 @@ template <Color c>
 \****************************************************************************/
 
 namespace uci {
+
 /// @brief Converts an internal move to a UCI string
 /// @param move
 /// @param chess960
@@ -2992,7 +2975,9 @@ namespace uci {
         case 4:
             return Move::make<Move::NORMAL>(source, target);
         default:
-            std::cout << "Warning; uci move cannot be converted to move!" << std::endl;
+#ifdef DEBUG
+            std::cerr << "Warning; uci move cannot be converted to move!" << std::endl;
+#endif
             return Move::make<Move::NORMAL>(source, target);
     }
 }
