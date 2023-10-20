@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.6
+VERSION: 0.5.7
 */
 
 #ifndef CHESS_HPP
@@ -327,114 +327,6 @@ constexpr PieceType charToPieceType(char c) {
 /****************************************************************************\
  * Structs                                                                   *
 \****************************************************************************/
-
-/// @brief [Internal Usage] 16 bit bitfield
-class BitField16 {
-   public:
-    BitField16() : value_(0) {}
-
-    // Sets the value of the specified group to the given value
-    void setGroupValue(uint16_t group_index, uint16_t group_value) {
-        assert(group_value < 16 && "group_value must be less than 16");
-        assert(group_index < 4 && "group_index must be less than 4");
-
-        // calculate the bit position of the start of the group you want to set
-        const uint16_t startBit = group_index * group_size_;
-        const auto setMask      = static_cast<uint16_t>(group_value << startBit);
-
-        // clear the bits in the group
-        value_ &= ~(0xF << startBit);
-
-        // set the bits in the group
-        value_ |= setMask;
-    }
-
-    [[nodiscard]] uint16_t getGroup(uint16_t group_index) const {
-        assert(group_index < 4 && "group_index must be less than 4");
-        uint16_t startBit = group_index * group_size_;
-        return (value_ >> startBit) & 0xF;
-    }
-
-    void clear() { value_ = 0; }
-    [[nodiscard]] uint16_t get() const { return value_; }
-
-   private:
-    static constexpr uint16_t group_size_ = 4;  // size of each group
-    uint16_t value_                       = 0;
-};
-
-class CastlingRights {
-   public:
-    template <Color color, CastleSide castle, File rook_file>
-    void setCastlingRight() {
-        int file = static_cast<uint16_t>(rook_file) + 1;
-
-        castling_rights_.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle),
-                                       static_cast<uint16_t>(file));
-    }
-
-    void setCastlingRight(Color color, CastleSide castle, File rook_file) {
-        int file = static_cast<uint16_t>(rook_file) + 1;
-
-        castling_rights_.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle),
-                                       static_cast<uint16_t>(file));
-    }
-
-    void clearAllCastlingRights() { castling_rights_.clear(); }
-
-    int clearCastlingRight(Color color, CastleSide castle) {
-        castling_rights_.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle), 0);
-
-        switch (castle) {
-            case CastleSide::KING_SIDE:
-                return color == Color::WHITE ? 0 : 2;
-            case CastleSide::QUEEN_SIDE:
-                return color == Color::WHITE ? 1 : 3;
-            default:
-                assert(false);
-                return -1;
-        }
-    }
-
-    void clearCastlingRight(Color color) {
-        castling_rights_.setGroupValue(2 * static_cast<int>(color), 0);
-        castling_rights_.setGroupValue(2 * static_cast<int>(color) + 1, 0);
-    }
-
-    [[nodiscard]] bool isEmpty() const { return castling_rights_.get() == 0; }
-
-    [[nodiscard]] bool hasCastlingRight(Color color) const {
-        return castling_rights_.getGroup(2 * static_cast<int>(color)) != 0 ||
-               castling_rights_.getGroup(2 * static_cast<int>(color) + 1) != 0;
-    }
-
-    [[nodiscard]] bool hasCastlingRight(Color color, CastleSide castle) const {
-        return castling_rights_.getGroup(2 * static_cast<int>(color) + static_cast<int>(castle)) !=
-               0;
-    }
-
-    [[nodiscard]] File getRookFile(Color color, CastleSide castle) const {
-        return static_cast<File>(
-            castling_rights_.getGroup(2 * static_cast<int>(color) + static_cast<int>(castle)) - 1);
-    }
-
-    [[nodiscard]] int getHashIndex() const {
-        return hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE) +
-               2 * hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE) +
-               4 * hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE) +
-               8 * hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE);
-    }
-
-   private:
-    /*
-     denotes the file of the rook that we castle to
-     1248 1248 1248 1248
-     0000 0000 0000 0000
-     bq   bk   wq   wk
-     3    2    1    0    // group index
-     */
-    BitField16 castling_rights_ = {};
-};
 
 struct Move {
    public:
@@ -1277,6 +1169,115 @@ static auto init = []() {
 \****************************************************************************/
 class Board {
    private:
+    class CastlingRights {
+       public:
+        template <Color color, CastleSide castle, File rook_file>
+        void setCastlingRight() {
+            int file = static_cast<uint16_t>(rook_file) + 1;
+
+            castling_rights_.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle),
+                                           static_cast<uint16_t>(file));
+        }
+
+        void setCastlingRight(Color color, CastleSide castle, File rook_file) {
+            int file = static_cast<uint16_t>(rook_file) + 1;
+
+            castling_rights_.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle),
+                                           static_cast<uint16_t>(file));
+        }
+
+        void clearAllCastlingRights() { castling_rights_.clear(); }
+
+        int clearCastlingRight(Color color, CastleSide castle) {
+            castling_rights_.setGroupValue(2 * static_cast<int>(color) + static_cast<int>(castle),
+                                           0);
+
+            switch (castle) {
+                case CastleSide::KING_SIDE:
+                    return color == Color::WHITE ? 0 : 2;
+                case CastleSide::QUEEN_SIDE:
+                    return color == Color::WHITE ? 1 : 3;
+                default:
+                    assert(false);
+                    return -1;
+            }
+        }
+
+        void clearCastlingRight(Color color) {
+            castling_rights_.setGroupValue(2 * static_cast<int>(color), 0);
+            castling_rights_.setGroupValue(2 * static_cast<int>(color) + 1, 0);
+        }
+
+        [[nodiscard]] bool isEmpty() const { return castling_rights_.get() == 0; }
+
+        [[nodiscard]] bool hasCastlingRight(Color color) const {
+            return castling_rights_.getGroup(2 * static_cast<int>(color)) != 0 ||
+                   castling_rights_.getGroup(2 * static_cast<int>(color) + 1) != 0;
+        }
+
+        [[nodiscard]] bool hasCastlingRight(Color color, CastleSide castle) const {
+            return castling_rights_.getGroup(2 * static_cast<int>(color) +
+                                             static_cast<int>(castle)) != 0;
+        }
+
+        [[nodiscard]] File getRookFile(Color color, CastleSide castle) const {
+            return static_cast<File>(
+                castling_rights_.getGroup(2 * static_cast<int>(color) + static_cast<int>(castle)) -
+                1);
+        }
+
+        [[nodiscard]] int getHashIndex() const {
+            return hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE) +
+                   2 * hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE) +
+                   4 * hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE) +
+                   8 * hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE);
+        }
+
+       private:
+        class BitField16 {
+           public:
+            BitField16() : value_(0) {}
+
+            // Sets the value of the specified group to the given value
+            void setGroupValue(uint16_t group_index, uint16_t group_value) {
+                assert(group_value < 16 && "group_value must be less than 16");
+                assert(group_index < 4 && "group_index must be less than 4");
+
+                // calculate the bit position of the start of the group you want to set
+                const uint16_t startBit = group_index * group_size_;
+                const auto setMask      = static_cast<uint16_t>(group_value << startBit);
+
+                // clear the bits in the group
+                value_ &= ~(0xF << startBit);
+
+                // set the bits in the group
+                value_ |= setMask;
+            }
+
+            [[nodiscard]] uint16_t getGroup(uint16_t group_index) const {
+                assert(group_index < 4 && "group_index must be less than 4");
+                uint16_t startBit = group_index * group_size_;
+                return (value_ >> startBit) & 0xF;
+            }
+
+            void clear() { value_ = 0; }
+            [[nodiscard]] uint16_t get() const { return value_; }
+
+           private:
+            static constexpr uint16_t group_size_ = 4;  // size of each group
+            uint16_t value_                       = 0;
+        };
+
+        /*
+         denotes the file of the rook that we castle to
+         1248 1248 1248 1248
+         0000 0000 0000 0000
+         bq   bk   wq   wk
+         3    2    1    0    // group index
+         */
+        BitField16 castling_rights_ = {};
+    };
+
     struct State {
         U64 hash;
         CastlingRights castling;
@@ -3359,76 +3360,6 @@ class Visitor {
     bool skip_ = false;
 };
 
-class StreamBuffer {
-   private:
-    static constexpr std::size_t N = 512;
-    using BufferType               = std::array<char, N * N>;
-
-   public:
-    StreamBuffer(std::istream &stream) : stream_(stream) {}
-
-    std::optional<char> get() {
-        if (buffer_index_ == bytes_read_) {
-            const auto ret = fill();
-            return ret.has_value() && ret.value() ? std::optional<char>(buffer_[buffer_index_++])
-                                                  : std::nullopt;
-        }
-
-        return buffer_[buffer_index_++];
-    }
-
-    std::optional<bool> fill() {
-        if (!stream_.good()) return std::nullopt;
-
-        buffer_index_ = 0;
-
-        stream_.read(buffer_.data(), N * N);
-        bytes_read_ = stream_.gcount();
-
-        return std::optional<bool>(bytes_read_ > 0);
-    }
-
-    /// @brief Assume that the current character is already the opening_delim
-    /// @param open_delim
-    /// @param close_delim
-    /// @return
-    bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
-        int stack = 1;
-
-        while (true) {
-            const auto ret = get();
-
-            if (!ret.has_value()) {
-                return false;
-            }
-
-            if (ret.value() == open_delim) {
-                stack++;
-            } else if (ret.value() == close_delim) {
-                if (stack == 0) {
-                    // Mismatched closing delimiter
-                    return false;
-                } else {
-                    stack--;
-                    if (stack == 0) {
-                        // Matching closing delimiter found
-                        return true;
-                    }
-                }
-            }
-        }
-
-        // If we reach this point, there are unmatched opening delimiters
-        return false;
-    }
-
-   private:
-    std::istream &stream_;
-    BufferType buffer_;
-    std::streamsize bytes_read_   = 0;
-    std::streamsize buffer_index_ = 0;
-};
-
 class StreamParser {
    public:
     StreamParser(std::istream &stream) : stream_buffer(stream) {
@@ -3461,6 +3392,77 @@ class StreamParser {
     }
 
    private:
+    class StreamBuffer {
+       private:
+        static constexpr std::size_t N = 512;
+        using BufferType               = std::array<char, N * N>;
+
+       public:
+        StreamBuffer(std::istream &stream) : stream_(stream) {}
+
+        std::optional<char> get() {
+            if (buffer_index_ == bytes_read_) {
+                const auto ret = fill();
+                return ret.has_value() && ret.value()
+                           ? std::optional<char>(buffer_[buffer_index_++])
+                           : std::nullopt;
+            }
+
+            return buffer_[buffer_index_++];
+        }
+
+        std::optional<bool> fill() {
+            if (!stream_.good()) return std::nullopt;
+
+            buffer_index_ = 0;
+
+            stream_.read(buffer_.data(), N * N);
+            bytes_read_ = stream_.gcount();
+
+            return std::optional<bool>(bytes_read_ > 0);
+        }
+
+        /// @brief Assume that the current character is already the opening_delim
+        /// @param open_delim
+        /// @param close_delim
+        /// @return
+        bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
+            int stack = 1;
+
+            while (true) {
+                const auto ret = get();
+
+                if (!ret.has_value()) {
+                    return false;
+                }
+
+                if (ret.value() == open_delim) {
+                    stack++;
+                } else if (ret.value() == close_delim) {
+                    if (stack == 0) {
+                        // Mismatched closing delimiter
+                        return false;
+                    } else {
+                        stack--;
+                        if (stack == 0) {
+                            // Matching closing delimiter found
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // If we reach this point, there are unmatched opening delimiters
+            return false;
+        }
+
+       private:
+        std::istream &stream_;
+        BufferType buffer_;
+        std::streamsize bytes_read_   = 0;
+        std::streamsize buffer_index_ = 0;
+    };
+
     void reset_trackers() {
         header.first.clear();
         header.second.clear();
