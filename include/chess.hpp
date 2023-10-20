@@ -3435,9 +3435,6 @@ class StreamParser {
         this->visitor = &vis;
 
         const auto reset = [&]() {
-            has_head = false;
-            has_body = false;
-
             header.first.clear();
             header.second.clear();
 
@@ -3449,7 +3446,9 @@ class StreamParser {
 
             line_start = true;
 
-            // current state
+            has_head = false;
+            has_body = false;
+
             in_header = false;
             in_body   = false;
 
