@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.3
+VERSION: 0.5.4
 */
 
 #ifndef CHESS_HPP
@@ -3147,8 +3147,22 @@ namespace uci {
     return lan;
 }
 
+class SanParseError : public std::exception {
+   public:
+    explicit SanParseError(const char *message) : msg_(message) {}
+
+    explicit SanParseError(const std::string &message) : msg_(message) {}
+
+    virtual ~SanParseError() noexcept {}
+
+    virtual const char *what() const noexcept { return msg_.c_str(); }
+
+   protected:
+    std::string msg_;
+};
+
 [[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
-                                           Movelist &moves) {
+                                           Movelist &moves) noexcept(false) {
     moves.clear();
     const auto cmp = [](std::string_view src, std::string_view pattern, int n) {
         for (int i = 0; i < n; i++) {
@@ -3167,7 +3181,7 @@ namespace uci {
             }
         }
 
-        throw std::runtime_error("Illegal San, Step 1: " + std::string(san));
+        throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
     } else if (cmp(san, "0-0", 3) || cmp(san, "O-O", 3)) {
         movegen::legalmoves(moves, board, PieceGenType::KING);
         for (const auto &move : moves) {
@@ -3176,7 +3190,7 @@ namespace uci {
             }
         }
 
-        throw std::runtime_error("Illegal San, Step 2: " + std::string(san));
+        throw SanParseError("Failed to parse san. At step 2: " + std::string(san));
     }
 
     // A move looks like this:
@@ -3321,7 +3335,9 @@ namespace uci {
         }
     }
 
+#ifdef DEBUG
     std::stringstream ss;
+
     ss << "pt " << int(pt) << "\n";
     ss << "file_from " << int(file_from) << "\n";
     ss << "rank_from " << int(rank_from) << "\n";
@@ -3330,16 +3346,18 @@ namespace uci {
     ss << "promotion " << int(promotion) << "\n";
     ss << "to_sq " << squareToString[int(to_sq)] << "\n";
 
-    std::cout << ss.str();
+    std::cerr << ss.str();
+#endif
 
-    throw std::runtime_error("Illegal San, Step 3: " + std::string(san) + " " + board.getFen());
+    throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " +
+                        board.getFen());
 }
 
 /// @brief Converts a SAN string to a move
 /// @param board
 /// @param san
 /// @return
-[[nodiscard]] inline Move parseSan(const Board &board, std::string_view san) {
+[[nodiscard]] inline Move parseSan(const Board &board, std::string_view san) noexcept(false) {
     Movelist moves;
 
     return parseSanInternal(board, san, moves);

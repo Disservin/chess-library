@@ -19,3 +19,8 @@ using namespace chess;
 That's it!
 
 Also see [my examples.](/pages/examples)
+
+::: tip
+The library internally uses `assert` and may print debug information to `std::cerr`.
+To disable this define `NDEBUG` when compiling.
+:::
