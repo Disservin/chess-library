@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.2
+VERSION: 0.5.3
 */
 
 #ifndef CHESS_HPP
