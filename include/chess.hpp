@@ -3385,13 +3385,13 @@ class Visitor {
     bool skip_ = false;
 };
 
-class FileBuffer {
+class StreamBuffer {
    private:
     static constexpr std::size_t N = 512;
     using BufferType               = std::array<char, N * N>;
 
    public:
-    FileBuffer(std::istream &stream) : file_(stream) {}
+    StreamBuffer(std::istream &stream) : file_(stream) {}
 
     std::optional<char> get() {
         if (buffer_index_ == bytes_read_) {
@@ -3423,7 +3423,7 @@ class FileBuffer {
 
 class StreamParser {
    public:
-    StreamParser(std::istream &file_stream) : file_buffer(file_stream) {
+    StreamParser(std::istream &stream) : stream_buffer(stream) {
         header.first.reserve(256);
         header.second.reserve(256);
 
@@ -3459,7 +3459,7 @@ class StreamParser {
         };
 
         while (true) {
-            const auto c = file_buffer.get();
+            const auto c = stream_buffer.get();
             if (!c.has_value()) {
                 if (!pgn_end && has_body) {
                     pgn_end = true;
@@ -3621,7 +3621,7 @@ class StreamParser {
         }
     }
 
-    FileBuffer file_buffer;
+    StreamBuffer stream_buffer;
 
     Visitor *visitor = nullptr;
 
