@@ -3379,7 +3379,9 @@ class StreamParser {
             if (!c.has_value()) {
                 if (!pgn_end && has_body) {
                     pgn_end = true;
-                    callMove();
+
+                    callVisitorMoveFunction();
+
                     visitor->endPgn();
                     visitor->skipPgn(false);
                 }
@@ -3488,7 +3490,7 @@ class StreamParser {
 
     bool isLetter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
 
-    void callMove() {
+    void callVisitorMoveFunction() {
         if (!move.empty()) {
             if (!visitor->skip()) visitor->move(move, comment);
 
@@ -3546,7 +3548,6 @@ class StreamParser {
         // PGN End
         if (line_start && in_body && c == '\n') {
             // buffer_index = i + 1;
-
             pgn_end = true;
 
             visitor->endPgn();
@@ -3593,7 +3594,12 @@ class StreamParser {
         // then read the second move in the group. After that a move_number will follow again.
         else if (in_body) {
             // whitespace while reading a move means that we have finished reading the move
-            if (reading_move && (c == ' ' || c == '\n')) {
+            if (c == '\n') {
+                reading_move    = false;
+                reading_comment = false;
+
+                callVisitorMoveFunction();
+            } else if (reading_move && c == ' ') {
                 reading_move = false;
             } else if (reading_move) {
                 move += c;
@@ -3602,7 +3608,7 @@ class StreamParser {
             } else if (reading_comment && c == '}') {
                 reading_comment = false;
 
-                callMove();
+                callVisitorMoveFunction();
             }
             // we are in empty space, when we encounter now a file or a piece, or a castling
             // move, we try to parse the move
@@ -3616,7 +3622,7 @@ class StreamParser {
                 // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
                 // 0-0(-0) castling moves from results like 1-0 and 0-1.
                 if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
-                    callMove();
+                    callVisitorMoveFunction();
 
                     reading_move = true;
 
@@ -3631,9 +3637,6 @@ class StreamParser {
                 }
             } else if (reading_comment) {
                 comment += c;
-            } else if (c == '\n') {
-                reading_move    = false;
-                reading_comment = false;
             }
         }
     }
