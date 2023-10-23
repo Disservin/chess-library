@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.8
+VERSION: 0.5.9
 */
 
 #ifndef CHESS_HPP
@@ -3130,7 +3130,7 @@ class SanParseError : public std::exception {
         return true;
     };
 
-    if (cmp(san, "0-0-0", 5) || cmp(san, "O-O-O", 5)) {
+    if (san.size() >= 5 && (cmp(san, "0-0-0", 5) || cmp(san, "O-O-O", 5))) {
         movegen::legalmoves(moves, board, PieceGenType::KING);
         for (const auto &move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
@@ -3139,7 +3139,7 @@ class SanParseError : public std::exception {
         }
 
         throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
-    } else if (cmp(san, "0-0", 3) || cmp(san, "O-O", 3)) {
+    } else if (san.size() >= 3 && (cmp(san, "0-0", 3) || cmp(san, "O-O", 3))) {
         movegen::legalmoves(moves, board, PieceGenType::KING);
         for (const auto &move : moves) {
             if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
@@ -3163,14 +3163,14 @@ class SanParseError : public std::exception {
     Rank rank_to        = Rank::NO_RANK;
 
     // check if san starts with a piece type
-    if (san[index] == 'N' || san[index] == 'B' || san[index] == 'R' || san[index] == 'Q' ||
-        san[index] == 'K') {
+    if (index < san.size() && (san[index] == 'N' || san[index] == 'B' || san[index] == 'R' ||
+                               san[index] == 'Q' || san[index] == 'K')) {
         pt = charToPieceType(san[index]);
         ++index;
     }
 
     // check if san starts with a file
-    if (san[index] >= 'a' && san[index] <= 'h') {
+    if (index < san.size() && san[index] >= 'a' && san[index] <= 'h') {
         file_from = File(int(san[index] - 'a'));
         if (pt == PieceType::NONE) {
             pt = PieceType::PAWN;
@@ -3179,18 +3179,18 @@ class SanParseError : public std::exception {
     }
 
     // check if san starts with a rank
-    if (san[index] >= '1' && san[index] <= '8') {
+    if (index < san.size() && (san[index] >= '1' && san[index] <= '8')) {
         rank_from = Rank(int(san[index] - '1'));
         ++index;
     }
 
     // skip capture sign
-    if (san[index] == 'x') {
+    if (index < san.size() && san[index] == 'x') {
         ++index;
     }
 
     // check if san contains a destination square (file and rank)
-    if (san[index] >= 'a' && san[index] <= 'h') {
+    if (index < san.size() && san[index] >= 'a' && san[index] <= 'h') {
         file_to = File(int(san[index] - 'a'));
         if (pt == PieceType::NONE) {
             pt = PieceType::PAWN;
@@ -3198,13 +3198,13 @@ class SanParseError : public std::exception {
         ++index;
     }
 
-    if (san[index] >= '1' && san[index] <= '8') {
+    if (index < san.size() && san[index] >= '1' && san[index] <= '8') {
         rank_to = Rank(int(san[index] - '1'));
         ++index;
     }
 
     // check for promotion
-    if (san[index] == '=') {
+    if (index < san.size() && san[index] == '=') {
         ++index;
         promotion = charToPieceType(san[index]);
         ++index;
