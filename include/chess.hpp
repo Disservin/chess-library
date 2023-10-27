@@ -3118,6 +3118,144 @@ class SanParseError : public std::exception {
     std::string msg_;
 };
 
+struct SanMoveInformation {
+    std::optional<File> from_file;
+    std::optional<Rank> from_rank;
+
+    Square to;
+
+    PieceType piece;
+
+    std::optional<PieceType> promotion;
+
+    bool castling = false;
+    bool capture  = false;
+};
+
+bool isRank(char c) { return c >= '1' && c <= '8'; }
+bool isFile(char c) { return c >= 'a' && c <= 'h'; }
+
+[[nodiscard]] inline SanMoveInformation parseSanInfo(const Board &board, std::string_view san,
+                                                     Movelist &moves) noexcept(false) {
+    moves.clear();
+
+    if (san.length() < 2) {
+        throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
+    }
+
+    SanMoveInformation info;
+
+    // pawn move
+    if (isFile(san[0])) {
+        info.piece     = PieceType::PAWN;
+        info.from_file = File(san[0] - 'a');
+    } else {
+        switch (san[0]) {
+            case 'N':
+                info.piece = PieceType::KNIGHT;
+                break;
+            case 'B':
+                info.piece = PieceType::BISHOP;
+                break;
+            case 'R':
+                info.piece = PieceType::ROOK;
+                break;
+            case 'Q':
+                info.piece = PieceType::QUEEN;
+                break;
+            case 'K':
+                info.piece = PieceType::KING;
+                break;
+            case 'O':
+                info.piece    = PieceType::KING;
+                info.castling = true;
+                break;
+            case '0':
+                info.piece    = PieceType::KING;
+                info.castling = true;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    switch (info.piece) {
+        case PieceType::PAWN:
+            if (san[1] == 'x') {
+                info.capture = true;
+                san.remove_prefix(2);
+
+                // at least two characters must be left
+                if (san.size() < 2) {
+                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+                }
+
+                assert(isFile(san[0]));
+                assert(isRank(san[1]));
+
+                File to_file = File(san[0] - 'a');
+                Rank to_rank = Rank(san[1] - '1');
+
+                info.to = utils::fileRankSquare(to_file, to_rank);
+
+                san.remove_prefix(2);
+
+            } else {
+                // has to be the to & from rank
+                info.from_rank = Rank(san[1] - '1');
+                info.to = utils::fileRankSquare(info.from_file.value(), info.from_rank.value());
+                san.remove_prefix(1);
+            }
+
+            // Promotion
+            if (san.size() >= 2) {
+                assert(san[0] == '=');
+                san.remove_prefix(1);
+
+                switch (san[0]) {
+                    case 'N':
+                        info.promotion = PieceType::KNIGHT;
+                        break;
+                    case 'B':
+                        info.promotion = PieceType::BISHOP;
+                        break;
+                    case 'R':
+                        info.promotion = PieceType::ROOK;
+                        break;
+                    case 'Q':
+                        info.promotion = PieceType::QUEEN;
+                        break;
+                    default:
+                        throw SanParseError("Failed to parse san. At step 2: " + std::string(san));
+                        break;
+                }
+
+                return info;
+            }
+
+            return info;
+        case PieceType::KNIGHT:
+            /* code */
+            break;
+        case PieceType::BISHOP:
+            /* code */
+            break;
+        case PieceType::ROOK:
+            /* code */
+            break;
+        case PieceType::QUEEN:
+            /* code */
+            break;
+        case PieceType::KING:
+            /* code */
+            break;
+
+        default:
+            break;
+    }
+}
+
 [[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
                                            Movelist &moves) noexcept(false) {
     moves.clear();
