@@ -3128,8 +3128,10 @@ struct SanMoveInformation {
 
     std::optional<PieceType> promotion;
 
-    bool castling = false;
-    bool capture  = false;
+    bool castling_short = false;
+    bool castling_long  = false;
+
+    bool capture = false;
 };
 
 bool isRank(char c) { return c >= '1' && c <= '8'; }
@@ -3149,6 +3151,61 @@ bool isFile(char c) { return c >= 'a' && c <= 'h'; }
     if (isFile(san[0])) {
         info.piece     = PieceType::PAWN;
         info.from_file = File(san[0] - 'a');
+
+        if (san[1] == 'x') {
+            info.capture = true;
+            san.remove_prefix(2);
+
+            // at least two characters must be left
+            if (san.size() < 2) {
+                throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+            }
+
+            assert(isFile(san[0]));
+            assert(isRank(san[1]));
+
+            File to_file = File(san[0] - 'a');
+            Rank to_rank = Rank(san[1] - '1');
+
+            info.to = utils::fileRankSquare(to_file, to_rank);
+
+            san.remove_prefix(2);
+
+        } else {
+            // has to be the to & from rank
+            info.from_rank = Rank(san[1] - '1');
+            info.to        = utils::fileRankSquare(info.from_file.value(), info.from_rank.value());
+            san.remove_prefix(1);
+        }
+
+        // Promotion
+        if (san.size() >= 2) {
+            assert(san[0] == '=');
+            san.remove_prefix(1);
+
+            switch (san[0]) {
+                case 'N':
+                    info.promotion = PieceType::KNIGHT;
+                    break;
+                case 'B':
+                    info.promotion = PieceType::BISHOP;
+                    break;
+                case 'R':
+                    info.promotion = PieceType::ROOK;
+                    break;
+                case 'Q':
+                    info.promotion = PieceType::QUEEN;
+                    break;
+                default:
+                    throw SanParseError("Failed to parse san. At step 2: " + std::string(san));
+                    break;
+            }
+
+            return info;
+        }
+
+        return info;
+
     } else {
         switch (san[0]) {
             case 'N':
@@ -3167,92 +3224,61 @@ bool isFile(char c) { return c >= 'a' && c <= 'h'; }
                 info.piece = PieceType::KING;
                 break;
             case 'O':
-                info.piece    = PieceType::KING;
-                info.castling = true;
-                break;
+                info.piece = PieceType::KING;
+
+                if (san.length() < 3) {
+                    throw SanParseError("Failed to parse san. At step 3: " + std::string(san));
+                }
+
+                san.remove_prefix(3);
+
+                if (san.length() == 0 || (san.length() >= 1 && san[0] != '-')) {
+                    info.castling_short = true;
+                }
+
+                if (san.length() >= 2 && san[0] == '-' && san[1] == 'O') {
+                    info.castling_long = true;
+                }
+
+                return info;
+
             case '0':
-                info.piece    = PieceType::KING;
-                info.castling = true;
+                info.piece = PieceType::KING;
+
+                if (san.length() < 3) {
+                    throw SanParseError("Failed to parse san. At step 3: " + std::string(san));
+                }
+
+                san.remove_prefix(3);
+
+                if (san.length() == 0 || (san.length() >= 1 && san[0] != '-')) {
+                    info.castling_short = true;
+                }
+
+                if (san.length() >= 2 && san[0] == '-' && san[1] == '0') {
+                    info.castling_long = true;
+                }
+
+                return info;
                 break;
 
             default:
+                throw SanParseError("Failed to parse san. At step 3: " + std::string(san));
                 break;
         }
     }
 
-    switch (info.piece) {
-        case PieceType::PAWN:
-            if (san[1] == 'x') {
-                info.capture = true;
-                san.remove_prefix(2);
+    san.remove_prefix(1);
 
-                // at least two characters must be left
-                if (san.size() < 2) {
-                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
-                }
+    if (san.length() < 2) {
+        throw SanParseError("Failed to parse san. At step 4: " + std::string(san));
+    }
 
-                assert(isFile(san[0]));
-                assert(isRank(san[1]));
-
-                File to_file = File(san[0] - 'a');
-                Rank to_rank = Rank(san[1] - '1');
-
-                info.to = utils::fileRankSquare(to_file, to_rank);
-
-                san.remove_prefix(2);
-
-            } else {
-                // has to be the to & from rank
-                info.from_rank = Rank(san[1] - '1');
-                info.to = utils::fileRankSquare(info.from_file.value(), info.from_rank.value());
-                san.remove_prefix(1);
-            }
-
-            // Promotion
-            if (san.size() >= 2) {
-                assert(san[0] == '=');
-                san.remove_prefix(1);
-
-                switch (san[0]) {
-                    case 'N':
-                        info.promotion = PieceType::KNIGHT;
-                        break;
-                    case 'B':
-                        info.promotion = PieceType::BISHOP;
-                        break;
-                    case 'R':
-                        info.promotion = PieceType::ROOK;
-                        break;
-                    case 'Q':
-                        info.promotion = PieceType::QUEEN;
-                        break;
-                    default:
-                        throw SanParseError("Failed to parse san. At step 2: " + std::string(san));
-                        break;
-                }
-
-                return info;
-            }
-
-            return info;
-        case PieceType::KNIGHT:
-            /* code */
-            break;
-        case PieceType::BISHOP:
-            /* code */
-            break;
-        case PieceType::ROOK:
-            /* code */
-            break;
-        case PieceType::QUEEN:
-            /* code */
-            break;
-        case PieceType::KING:
-            /* code */
-            break;
-
-        default:
-            break;
+    if (san[0] == 'x') {
+        info.capture = true;
+        san.remove_prefix(1);
+    } else {
+        info.capture = false;
     }
 }
 
