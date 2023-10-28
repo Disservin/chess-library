@@ -169,13 +169,22 @@ TEST_SUITE("SAN Parser") {
         CHECK(uci::parseSan(b, "Qcxe6") == m);
     }
 
-    TEST_CASE("Test Rook Capture Ambiguity") {
+    TEST_CASE("Test Rook Ambiguity") {
         Board b;
         b.setFen("3k4/8/8/R7/8/8/8/R3K3 w - - 0 1");
 
         Move m = Move::make(SQ_A1, SQ_A3);
 
         CHECK(uci::parseSan(b, "R1a3") == m);
+    }
+
+    TEST_CASE("Test Rook Capture Ambiguity") {
+        Board b;
+        b.setFen("2r3k1/4nn2/pq1p1pp1/3Pp3/1pN1P1P1/1P1Q4/P1r1NP2/1K1R3R b - - 2 19");
+
+        Move m = Move::make(SQ_C8, SQ_C4);
+
+        CHECK(uci::parseSan(b, "R8xc4") == m);
     }
 
     TEST_CASE("Test Pawn Capture Promotion Ambiguity") {

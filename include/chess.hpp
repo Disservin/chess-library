@@ -3320,14 +3320,22 @@ template <bool PEDANTIC = false>
     // ambigous move have two ranks specified
     else if (isRank(san[0])) {
         info.from_rank = Rank(san[0] - '1');
-        to_file        = File(san[1] - 'a');
+        san.remove_prefix(1);
+
+        if (san[0] == 'x') {
+            info.capture = true;
+            // remove 'x'
+            san.remove_prefix(1);
+        }
+
+        to_file = File(san[0] - 'a');
 
         // the to_file is actually also the from file
         info.from_file = to_file;
 
         info.from = utils::fileRankSquare(info.from_file, info.from_rank);
 
-        san.remove_prefix(2);
+        san.remove_prefix(1);
     }
 
     if (san.length() < 1) {
