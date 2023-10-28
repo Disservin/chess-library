@@ -114,7 +114,7 @@ TEST_SUITE("SAN Parser") {
         CHECK(uci::parseSan(b, "O-O") == m);
     }
 
-    TEST_CASE("Test King Castling Short move") {
+    TEST_CASE("Test King Castling Long move") {
         Board b;
         b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1");
 
@@ -133,7 +133,7 @@ TEST_SUITE("SAN Parser") {
         CHECK(uci::parseSan(b, "0-0") == m);
     }
 
-    TEST_CASE("Test King Castling Short move with Zero") {
+    TEST_CASE("Test King Castling Long move with Zero") {
         Board b;
         b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1");
 
@@ -151,12 +151,39 @@ TEST_SUITE("SAN Parser") {
         CHECK(uci::parseSan(b, "0-0+?!") == m);
     }
 
-    TEST_CASE("Test King Castling Short move with Annotation") {
+    TEST_CASE("Test King Castling Long move with Annotation") {
         Board b;
         b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1");
 
         Move m = Move::make<Move::CASTLING>(SQ_E1, SQ_A1);
 
         CHECK(uci::parseSan(b, "0-0-0+?!") == m);
+    }
+
+    TEST_CASE("Test Queen Capture Ambiguity") {
+        Board b;
+        b.setFen("3k4/8/4b3/8/2Q3Q1/8/8/3K4 w - - 0 1");
+
+        Move m = Move::make(SQ_C4, SQ_E6);
+
+        CHECK(uci::parseSan(b, "Qcxe6") == m);
+    }
+
+    TEST_CASE("Test Pawn Capture Promotion Ambiguity") {
+        Board b;
+        b.setFen("2k2n2/4P1P1/8/8/8/8/8/2K5 w - - 0 1");
+
+        Move m = Move::make<Move::PROMOTION>(SQ_E7, SQ_F8, PieceType::QUEEN);
+
+        CHECK(uci::parseSan(b, "exf8=Q+") == m);
+    }
+
+    TEST_CASE("Test Pawn Push") {
+        Board b;
+        b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+        Move m = Move::make(SQ_E2, SQ_E4);
+
+        CHECK(uci::parseSan(b, "e4") == m);
     }
 }
