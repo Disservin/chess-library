@@ -3136,14 +3136,12 @@ struct SanMoveInformation {
 };
 
 template <bool PEDANTIC = false>
-[[nodiscard]] inline SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
+inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcept(false) {
     if constexpr (PEDANTIC) {
         if (san.length() < 2) {
             throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
         }
     }
-
-    SanMoveInformation info;
 
     constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info,
                                      char castling_char) {
@@ -3157,8 +3155,6 @@ template <bool PEDANTIC = false>
         assert((info.castling_short && !info.castling_long) ||
                (!info.castling_short && info.castling_long) ||
                (!info.castling_short && !info.castling_long));
-
-        return info;
     };
 
     // set to 1 to skip piece type offset
@@ -3181,9 +3177,12 @@ template <bool PEDANTIC = false>
             info.piece = PieceType::KING;
             break;
         case 'O':
-            return parse_castle(san, info, 'O');
+            parse_castle(san, info, 'O');
+            return;
+
         case '0':
-            return parse_castle(san, info, '0');
+            parse_castle(san, info, '0');
+            return;
 
         default:
             // remove piece type offset
@@ -3268,7 +3267,7 @@ template <bool PEDANTIC = false>
         info.from = utils::fileRankSquare(info.from_file, info.from_rank);
     }
 
-    return info;
+    return;
 }
 
 template <bool PEDANTIC = false>
@@ -3276,7 +3275,9 @@ template <bool PEDANTIC = false>
                                            Movelist &moves) noexcept(false) {
     moves.clear();
 
-    const auto info          = parseSanInfo<PEDANTIC>(san);
+    SanMoveInformation info;
+
+    parseSanInfo<PEDANTIC>(info, san);
     constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (int(pt)); };
 
     movegen::legalmoves(moves, board, pt_to_pgt(info.piece));
