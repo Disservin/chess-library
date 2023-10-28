@@ -222,4 +222,22 @@ TEST_SUITE("SAN Parser") {
 
         CHECK(uci::parseSan(b, "a8=Q+") == m);
     }
+
+    TEST_CASE("Test Knight Ambiguity") {
+        Board b;
+        b.setFen("8/8/5K2/2N3P1/3N3n/4k3/3N4/7r w - - 59 97");
+
+        Move m = Move::make(SQ_D4, SQ_B3);
+
+        CHECK(uci::parseSan(b, "Nd4b3") == m);
+    }
+
+    TEST_CASE("Test Knight Capture Ambiguity") {
+        Board b;
+        b.setFen("8/8/5K2/2N3P1/3N3n/4k3/3N4/7r w - - 59 97");
+
+        Move m = Move::make(SQ_D4, SQ_B3);
+
+        CHECK(uci::parseSan(b, "Nd4xb3") == m);
+    }
 }

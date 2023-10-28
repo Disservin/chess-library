@@ -3327,6 +3327,27 @@ template <bool PEDANTIC = false>
     }
 
     to_rank = Rank(san[0] - '1');
+
+    san.remove_prefix(1);
+
+    // cover moves like (Nd4)xb3 or (Nd4)b3
+    if (san.length() >= 2) {
+        if (san[0] == 'x') {
+            info.capture = true;
+            san.remove_prefix(1);
+        }
+
+        if (san.length() >= 2 && isFile(san[0]) && isRank(san[1])) {
+            info.from_file = to_file;
+            info.from_rank = to_rank;
+
+            to_file = File(san[0] - 'a');
+            to_rank = Rank(san[1] - '1');
+
+            info.from = utils::fileRankSquare(info.from_file, info.from_rank);
+        }
+    }
+
     info.to = utils::fileRankSquare(to_file, to_rank);
 
     return info;
