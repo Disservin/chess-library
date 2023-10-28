@@ -3499,13 +3499,7 @@ class Visitor {
 
 class StreamParser {
    public:
-    StreamParser(std::istream &stream) : stream_buffer(stream) {
-        header.first.reserve(256);
-        header.second.reserve(256);
-
-        move.reserve(16);
-        comment.reserve(256);
-    }
+    StreamParser(std::istream &stream) : stream_buffer(stream) {}
 
     void readGames(Visitor &vis) {
         this->visitor = &vis;
@@ -3526,11 +3520,34 @@ class StreamParser {
                 return;
             }
 
-            processNextByte(c.value());
+            processNextByte(*c);
         }
     }
 
    private:
+    class LineBuffer {
+       public:
+        bool empty() const { return index_ == 0; }
+
+        void clear() { index_ = 0; }
+
+        std::string_view get() const { return std::string_view(buffer_.data(), index_); }
+
+        void operator+=(char c) {
+            if (index_ < N) {
+                buffer_[index_++] = c;
+            } else {
+                throw std::runtime_error("LineBuffer overflow");
+            }
+        }
+
+       private:
+        // PGN lines are limited to 255 characters
+        static constexpr int N      = 255;
+        std::array<char, N> buffer_ = {};
+        std::size_t index_          = 0;
+    };
+
     class StreamBuffer {
        private:
         static constexpr std::size_t N = 512;
@@ -3542,9 +3559,8 @@ class StreamParser {
         std::optional<char> get() {
             if (buffer_index_ == bytes_read_) {
                 const auto ret = fill();
-                return ret.has_value() && ret.value()
-                           ? std::optional<char>(buffer_[buffer_index_++])
-                           : std::nullopt;
+                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++])
+                                               : std::nullopt;
             }
 
             return buffer_[buffer_index_++];
@@ -3575,9 +3591,9 @@ class StreamParser {
                     return false;
                 }
 
-                if (ret.value() == open_delim) {
+                if (*ret == open_delim) {
                     stack++;
-                } else if (ret.value() == close_delim) {
+                } else if (*ret == close_delim) {
                     if (stack == 0) {
                         // Mismatched closing delimiter
                         return false;
@@ -3629,7 +3645,7 @@ class StreamParser {
 
     void callVisitorMoveFunction() {
         if (!move.empty()) {
-            if (!visitor->skip()) visitor->move(move, comment);
+            if (!visitor->skip()) visitor->move(move.get(), comment.get());
 
             move.clear();
             comment.clear();
@@ -3719,7 +3735,7 @@ class StreamParser {
                 reading_value = false;
                 in_header     = false;
 
-                if (!visitor->skip()) visitor->header(header.first, header.second);
+                if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
 
                 header.first.clear();
                 header.second.clear();
@@ -3764,7 +3780,10 @@ class StreamParser {
                     reading_move = true;
 
                     if (c == '0') {
-                        move += "0-0";
+                        // move += "0-0";
+                        move += '0';
+                        move += '-';
+                        move += '0';
                     } else {
                         move += c;
                     }
@@ -3783,10 +3802,11 @@ class StreamParser {
     Visitor *visitor = nullptr;
 
     // one time allocations
-    std::pair<std::string, std::string> header;
+    std::pair<LineBuffer, LineBuffer> header;
 
-    std::string move;
-    std::string comment;
+    // std::string move;
+    LineBuffer move;
+    LineBuffer comment;
 
     // buffer for the last two characters, cbuf[0] is the current character
     // std::array<char, 3> cbuf = {'\0', '\0', '\0'};
