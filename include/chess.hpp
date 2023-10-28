@@ -3349,7 +3349,11 @@ template <bool PEDANTIC = false>
     parseSanInfo<PEDANTIC>(info, san);
     constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (int(pt)); };
 
-    movegen::legalmoves(moves, board, pt_to_pgt(info.piece));
+    if (info.capture) {
+        movegen::legalmoves<MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
+    } else {
+        movegen::legalmoves<MoveGenType::QUIET>(moves, board, pt_to_pgt(info.piece));
+    }
 
     if (info.castling_short || info.castling_long) {
         for (const auto &move : moves) {
