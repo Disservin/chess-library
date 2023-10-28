@@ -3777,7 +3777,6 @@ class StreamParser {
                     reading_move = true;
 
                     if (c == '0') {
-                        // move += "0-0";
                         move += '0';
                         move += '-';
                         move += '0';
@@ -3806,7 +3805,6 @@ class StreamParser {
     LineBuffer comment;
 
     // buffer for the last two characters, cbuf[0] is the current character
-    // std::array<char, 3> cbuf = {'\0', '\0', '\0'};
     char c3 = '\0';
     char c2 = '\0';
     char c1 = '\0';
