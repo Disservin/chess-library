@@ -386,24 +386,22 @@ struct Move {
     static constexpr uint16_t ENPASSANT = 2 << 14;
     static constexpr uint16_t CASTLING  = 3 << 14;
 
-    friend std::ostream &operator<<(std::ostream &os, const Move &move);
+    std::ostream &operator<<(std::ostream &os) {
+        Square from_sq = from();
+        Square to_sq   = to();
+
+        os << squareToString[from_sq] << squareToString[to_sq];
+        if (typeOf() == Move::PROMOTION) {
+            os << pieceTypeToChar(promotionType());
+        }
+
+        return os;
+    }
 
    private:
     uint16_t move_;
     int16_t score_;
 };
-
-inline std::ostream &operator<<(std::ostream &os, const Move &move) {
-    Square from_sq = move.from();
-    Square to_sq   = move.to();
-
-    os << squareToString[from_sq] << squareToString[to_sq];
-    if (move.typeOf() == Move::PROMOTION) {
-        os << pieceTypeToChar(move.promotionType());
-    }
-
-    return os;
-}
 
 struct Movelist {
    public:
