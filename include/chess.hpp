@@ -3135,14 +3135,16 @@ struct SanMoveInformation {
     bool capture = false;
 };
 
-[[nodiscard]] inline SanMoveInformation parseSanInfo(const Board &board,
-                                                     std::string_view san) noexcept(false) {
-    if (san.length() < 2) {
-        throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
+template <bool PEDANTIC = false>
+[[nodiscard]] inline SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
+    if constexpr (PEDANTIC) {
+        if (san.length() < 2) {
+            throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
+        }
     }
 
-    const auto isRank = [](char c) { return c >= '1' && c <= '8'; };
-    const auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
+    constexpr auto isRank = [](char c) { return c >= '1' && c <= '8'; };
+    constexpr auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
 
     SanMoveInformation info;
 
@@ -3158,13 +3160,20 @@ struct SanMoveInformation {
             // remove file and 'x'
             san.remove_prefix(2);
 
-            // at least two characters must be left
-            if (san.size() < 2) {
-                throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
-            }
+            if constexpr (PEDANTIC) {
+                // at least two characters must be left
+                if (san.size() < 2) {
+                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+                }
 
-            assert(isFile(san[0]));
-            assert(isRank(san[1]));
+                if (!isFile(san[0])) {
+                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+                }
+
+                if (!isRank(san[1])) {
+                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+                }
+            }
 
             File to_file = File(san[0] - 'a');
             Rank to_rank = Rank(san[1] - '1');
@@ -3184,7 +3193,11 @@ struct SanMoveInformation {
 
         // Promotion
         if (san.size() >= 2) {
-            assert(san[0] == '=');
+            if constexpr (PEDANTIC) {
+                if (san[0] != '=') {
+                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+                }
+            }
 
             // remove '='
             san.remove_prefix(1);
@@ -3213,12 +3226,8 @@ struct SanMoveInformation {
         return info;
     }
 
-    const auto parseCastle = [&san, &info](char castling_char) {
+    const auto parse_castle = [&san, &info](char castling_char) {
         info.piece = PieceType::KING;
-
-        if (san.length() < 2) {
-            throw SanParseError("Failed to parse san. At step 3: " + std::string(san));
-        }
 
         san.remove_prefix(3);
 
@@ -3250,10 +3259,9 @@ struct SanMoveInformation {
             info.piece = PieceType::KING;
             break;
         case 'O':
-            return parseCastle('O');
-
+            return parse_castle('O');
         case '0':
-            return parseCastle('0');
+            return parse_castle('0');
 
         default:
             throw SanParseError("Failed to parse san. At step 5: " + std::string(san));
@@ -3263,6 +3271,7 @@ struct SanMoveInformation {
     // remove piecetype char
     san.remove_prefix(1);
 
+    // note PEDANTIC, because we need the bound check
     if (san.length() < 2) {
         throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
     }
@@ -3294,7 +3303,9 @@ struct SanMoveInformation {
             info.capture   = true;
             info.from_file = to_file;
 
-            assert(san.length() >= 3);
+            if (san.length() < 3) {
+                throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
+            }
 
             to_file = File(san[2] - 'a');
 
@@ -3305,9 +3316,9 @@ struct SanMoveInformation {
         else {
             san.remove_prefix(1);
         }
-    } else if (isRank(san[0])) {
-        assert(san.length() >= 3);
-
+    }
+    // ambigous move have two ranks specified
+    else if (isRank(san[0])) {
         info.from_rank = Rank(san[0] - '1');
         to_file        = File(san[1] - 'a');
 
@@ -3317,11 +3328,11 @@ struct SanMoveInformation {
         info.from = utils::fileRankSquare(info.from_file, info.from_rank);
 
         san.remove_prefix(2);
-    } else {
-        throw SanParseError("Failed to parse san. At step 7: " + std::string(san));
     }
 
-    assert(san.length() >= 1);
+    if (san.length() < 1) {
+        throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
+    }
 
     to_rank = Rank(san[0] - '1');
     info.to = utils::fileRankSquare(to_file, to_rank);
@@ -3331,8 +3342,8 @@ struct SanMoveInformation {
 
 [[nodiscard]] inline Move parseSanInternalNew(const Board &board, std::string_view san,
                                               Movelist &moves) noexcept(false) {
-    const auto info      = parseSanInfo(board, san);
-    const auto pt_to_pgt = [](PieceType pt) { return 1 << (int(pt)); };
+    const auto info          = parseSanInfo(san);
+    constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (int(pt)); };
 
     movegen::legalmoves(moves, board, pt_to_pgt(info.piece));
 
