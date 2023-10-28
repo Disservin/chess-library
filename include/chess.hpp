@@ -3396,17 +3396,15 @@ struct SanMoveInformation {
     }
 
 #ifdef DEBUG
-    // std::stringstream ss;
+    std::stringstream ss;
 
-    // ss << "pt " << int(pt) << "\n";
-    // ss << "file_from " << int(file_from) << "\n";
-    // ss << "rank_from " << int(rank_from) << "\n";
-    // ss << "file_to " << int(file_to) << "\n";
-    // ss << "rank_to " << int(rank_to) << "\n";
-    // ss << "promotion " << int(promotion) << "\n";
-    // ss << "to_sq " << squareToString[int(to_sq)] << "\n";
+    ss << "pt " << int(info.piece) << "\n";
+    ss << "info.from_file " << int(info.from_file) << "\n";
+    ss << "info.from_rank " << int(info.from_rank) << "\n";
+    ss << "promotion " << int(info.promotion) << "\n";
+    ss << "to_sq " << squareToString[info.to] << "\n";
 
-    // std::cerr << ss.str();
+    std::cerr << ss.str();
 #endif
 
     throw SanParseError("Failed to parse san. At step 8: " + std::string(san) + " " +
