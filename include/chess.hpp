@@ -3124,9 +3124,10 @@ struct SanMoveInformation {
 
     PieceType promotion = PieceType::NONE;
 
-    Square to = NO_SQ;
+    Square from = NO_SQ;
+    Square to   = NO_SQ;  // a valid move always has a to square
 
-    PieceType piece = PieceType::NONE;
+    PieceType piece = PieceType::NONE;  // a valid move always has a piece
 
     bool castling_short = false;
     bool castling_long  = false;
@@ -3134,14 +3135,14 @@ struct SanMoveInformation {
     bool capture = false;
 };
 
-inline bool isRank(char c) { return c >= '1' && c <= '8'; }
-inline bool isFile(char c) { return c >= 'a' && c <= 'h'; }
-
 [[nodiscard]] inline SanMoveInformation parseSanInfo(const Board &board,
                                                      std::string_view san) noexcept(false) {
     if (san.length() < 2) {
         throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
     }
+
+    const auto isRank = [](char c) { return c >= '1' && c <= '8'; };
+    const auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
 
     SanMoveInformation info;
 
@@ -3304,6 +3305,18 @@ inline bool isFile(char c) { return c >= 'a' && c <= 'h'; }
         else {
             san.remove_prefix(1);
         }
+    } else if (isRank(san[0])) {
+        assert(san.length() >= 3);
+
+        info.from_rank = Rank(san[0] - '1');
+        to_file        = File(san[1] - 'a');
+
+        // the to_file is actually also the from file
+        info.from_file = to_file;
+
+        info.from = utils::fileRankSquare(info.from_file, info.from_rank);
+
+        san.remove_prefix(2);
     } else {
         throw SanParseError("Failed to parse san. At step 7: " + std::string(san));
     }
@@ -3311,7 +3324,6 @@ inline bool isFile(char c) { return c >= 'a' && c <= 'h'; }
     assert(san.length() >= 1);
 
     to_rank = Rank(san[0] - '1');
-
     info.to = utils::fileRankSquare(to_file, to_rank);
 
     return info;
@@ -3319,15 +3331,8 @@ inline bool isFile(char c) { return c >= 'a' && c <= 'h'; }
 
 [[nodiscard]] inline Move parseSanInternalNew(const Board &board, std::string_view san,
                                               Movelist &moves) noexcept(false) {
-    const auto info = parseSanInfo(board, san);
-
+    const auto info      = parseSanInfo(board, san);
     const auto pt_to_pgt = [](PieceType pt) { return 1 << (int(pt)); };
-
-    Square from_sq = NO_SQ;
-
-    if (info.from_file != File::NO_FILE && info.from_rank != Rank::NO_RANK) {
-        from_sq = utils::fileRankSquare(info.from_file, info.from_rank);
-    }
 
     movegen::legalmoves(moves, board, pt_to_pgt(info.piece));
 
@@ -3377,8 +3382,8 @@ inline bool isFile(char c) { return c >= 'a' && c <= 'h'; }
             return move;
         }
 
-        if (from_sq != NO_SQ) {
-            if (move.from() == from_sq) {
+        if (info.from != NO_SQ) {
+            if (move.from() == info.from) {
                 return move;
             }
             continue;
