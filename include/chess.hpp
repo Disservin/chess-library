@@ -3239,42 +3239,39 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
                (!info.castling_short && !info.castling_long));
     };
 
+    constexpr auto isRank = [](char c) { return c >= '1' && c <= '8'; };
+    constexpr auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
+
     // set to 1 to skip piece type offset
     std::size_t index = 1;
 
-    switch (san[0]) {
-        case 'N':
-            info.piece = PieceType::KNIGHT;
-            break;
-        case 'B':
-            info.piece = PieceType::BISHOP;
-            break;
-        case 'R':
-            info.piece = PieceType::ROOK;
-            break;
-        case 'Q':
-            info.piece = PieceType::QUEEN;
-            break;
-        case 'K':
-            info.piece = PieceType::KING;
-            break;
-        case 'O':
-            parse_castle(san, info, 'O');
-            return;
-
-        case '0':
-            parse_castle(san, info, '0');
-            return;
-
-        default:
-            // remove piece type offset
-            index--;
-            info.piece = PieceType::PAWN;
-            break;
+    if (san[0] == 'O' || san[0] == '0') {
+        parse_castle(san, info, san[0]);
+        return;
+    } else if (isFile(san[0])) {
+        index--;
+        info.piece = PieceType::PAWN;
+    } else {
+        switch (san[0]) {
+            case 'N':
+                info.piece = PieceType::KNIGHT;
+                break;
+            case 'B':
+                info.piece = PieceType::BISHOP;
+                break;
+            case 'R':
+                info.piece = PieceType::ROOK;
+                break;
+            case 'Q':
+                info.piece = PieceType::QUEEN;
+                break;
+            case 'K':
+                info.piece = PieceType::KING;
+                break;
+            default:
+                break;
+        }
     }
-
-    constexpr auto isRank = [](char c) { return c >= '1' && c <= '8'; };
-    constexpr auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
 
     File file_to = File::NO_FILE;
     Rank rank_to = Rank::NO_RANK;
