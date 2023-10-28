@@ -3245,7 +3245,7 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
                 info.promotion = PieceType::QUEEN;
                 break;
             default:
-                throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
+                throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
         }
 
         index++;
@@ -3292,7 +3292,7 @@ template <bool PEDANTIC = false>
             }
         }
 
-        throw SanParseError("Failed to parse san. At step 9: " + std::string(san) + " " +
+        throw SanParseError("Failed to parse san. At step 2: " + std::string(san) + " " +
                             board.getFen());
     }
 
@@ -3348,7 +3348,7 @@ template <bool PEDANTIC = false>
     std::cerr << ss.str();
 #endif
 
-    throw SanParseError("Failed to parse san. At step 10: " + std::string(san) + " " +
+    throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " +
                         board.getFen());
 }
 

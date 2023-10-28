@@ -22,7 +22,7 @@ class MyVisitor : public pgn::Visitor {
         assert(end_count_ == game_count_ - 1);
     }
 
-    void move(std::string_view move, std::string_view comment) { count_++; }
+    void move(std::string_view, std::string_view) { count_++; }
 
     void endPgn() { end_count_++; }
 
