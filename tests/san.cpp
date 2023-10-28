@@ -187,6 +187,15 @@ TEST_SUITE("SAN Parser") {
         CHECK(uci::parseSan(b, "R8xc4") == m);
     }
 
+    TEST_CASE("Test Knight Capture Ambiguity") {
+        Board b;
+        b.setFen("r5k1/5p2/2n2B1p/4P3/p1n3PN/8/P4PK1/1R6 b - - 2 28");
+
+        Move m = Move::make(SQ_C6, SQ_E5);
+
+        CHECK(uci::parseSan(b, "N6xe5") == m);
+    }
+
     TEST_CASE("Test Pawn Capture Promotion Ambiguity") {
         Board b;
         b.setFen("2k2n2/4P1P1/8/8/8/8/8/2K5 w - - 0 1");
@@ -203,5 +212,14 @@ TEST_SUITE("SAN Parser") {
         Move m = Move::make(SQ_E2, SQ_E4);
 
         CHECK(uci::parseSan(b, "e4") == m);
+    }
+
+    TEST_CASE("Test Pawn Promotion") {
+        Board b;
+        b.setFen("8/Pk6/8/5p2/8/8/8/2K5 w - - 1 781");
+
+        Move m = Move::make<Move::PROMOTION>(SQ_A7, SQ_A8, PieceType::QUEEN);
+
+        CHECK(uci::parseSan(b, "a8=Q+") == m);
     }
 }

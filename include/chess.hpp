@@ -3188,7 +3188,7 @@ template <bool PEDANTIC = false>
             info.to = utils::fileRankSquare(info.from_file, Rank(san[1] - '1'));
 
             // remove rank
-            san.remove_prefix(1);
+            san.remove_prefix(2);
         }
 
         // Promotion
@@ -3210,8 +3210,6 @@ template <bool PEDANTIC = false>
                     throw SanParseError("Failed to parse san. At step 5: " + std::string(san));
                     break;
             }
-
-            return info;
         }
 
         return info;
@@ -3320,11 +3318,6 @@ template <bool PEDANTIC = false>
         }
 
         to_file = File(san[0] - 'a');
-
-        // the to_file is actually also the from file
-        info.from_file = to_file;
-
-        info.from = utils::fileRankSquare(info.from_file, info.from_rank);
 
         san.remove_prefix(1);
     }
