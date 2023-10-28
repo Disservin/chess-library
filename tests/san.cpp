@@ -234,7 +234,7 @@ TEST_SUITE("SAN Parser") {
 
     TEST_CASE("Test Knight Capture Ambiguity") {
         Board b;
-        b.setFen("8/8/5K2/2N3P1/3N3n/4k3/3N4/7r w - - 59 97");
+        b.setFen("8/8/5K2/2N3P1/3N3n/1b2k3/3N4/7r w - - 59 97");
 
         Move m = Move::make(SQ_D4, SQ_B3);
 

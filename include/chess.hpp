@@ -3320,7 +3320,7 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
         index++;
     }
 
-    // for simple moves like Nf3, e4, fxg6, etc. all the information is contained
+    // for simple moves like Nf3, e4, etc. all the information is contained
     // in the from file and rank. Thus we need to move it to the to file and rank.
     if (file_to == File::NO_FILE && rank_to == Rank::NO_RANK) {
         file_to = info.from_file;
@@ -3328,6 +3328,11 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
 
         info.from_file = File::NO_FILE;
         info.from_rank = Rank::NO_RANK;
+    }
+
+    // pawns which are not capturing stay on the same file
+    if (info.piece == PieceType::PAWN && info.from_file == File::NO_FILE && !info.capture) {
+        info.from_file = file_to;
     }
 
     info.to = utils::fileRankSquare(file_to, rank_to);
@@ -3342,14 +3347,18 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
 template <bool PEDANTIC = false>
 [[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
                                            Movelist &moves) noexcept(false) {
-    moves.clear();
-
     SanMoveInformation info;
 
     parseSanInfo<PEDANTIC>(info, san);
     constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (int(pt)); };
 
-    movegen::legalmoves(moves, board, pt_to_pgt(info.piece));
+    moves.clear();
+
+    if (info.capture) {
+        movegen::legalmoves<MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
+    } else {
+        movegen::legalmoves<MoveGenType::QUIET>(moves, board, pt_to_pgt(info.piece));
+    }
 
     if (info.castling_short || info.castling_long) {
         for (const auto &move : moves) {
@@ -3366,36 +3375,38 @@ template <bool PEDANTIC = false>
     }
 
     for (const auto &move : moves) {
-        // castling moves were already handled and to square has to match
+        // Skip all moves that are not to the correct square
+        // or are castling moves
         if (move.to() != info.to || move.typeOf() == Move::CASTLING) {
             continue;
         }
 
-        if (info.promotion != PieceType::NONE && move.typeOf() == Move::PROMOTION &&
-            info.promotion == move.promotionType() && move.to() == info.to &&
-            ((info.from_file == File::NO_FILE &&
-              utils::squareFile(move.from()) == utils::squareFile(info.to)) ||
-             utils::squareFile(move.from()) == info.from_file)) {
-            return move;
+        if (info.promotion != PieceType::NONE) {
+            if (move.typeOf() == Move::PROMOTION && info.promotion == move.promotionType()) {
+                if (utils::squareFile(move.from()) == info.from_file) {
+                    return move;
+                }
+            }
+
+            continue;
         }
 
-        if (move.typeOf() == Move::PROMOTION) continue;
-
-        if (move.typeOf() == Move::ENPASSANT && info.piece == PieceType::PAWN &&
-            move.to() == info.to && utils::squareFile(move.from()) == info.from_file) {
-            return move;
-        }
-
-        if (move.typeOf() == Move::ENPASSANT) continue;
-
+        // For simple moves like Nf3
         if (info.from_rank == Rank::NO_RANK && info.from_file == File::NO_FILE) {
             return move;
         }
 
+        if (move.typeOf() == Move::ENPASSANT) {
+            if (utils::squareFile(move.from()) == info.from_file) return move;
+            continue;
+        }
+
+        // we know the from square, so we can check if it matches
         if (info.from != NO_SQ) {
             if (move.from() == info.from) {
                 return move;
             }
+
             continue;
         }
 
