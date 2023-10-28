@@ -3167,11 +3167,11 @@ template <bool PEDANTIC = false>
                 }
 
                 if (!isFile(san[0])) {
-                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+                    throw SanParseError("Failed to parse san. At step 2: " + std::string(san));
                 }
 
                 if (!isRank(san[1])) {
-                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+                    throw SanParseError("Failed to parse san. At step 3: " + std::string(san));
                 }
             }
 
@@ -3192,17 +3192,8 @@ template <bool PEDANTIC = false>
         }
 
         // Promotion
-        if (san.size() >= 2) {
-            if constexpr (PEDANTIC) {
-                if (san[0] != '=') {
-                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
-                }
-            }
-
-            // remove '='
-            san.remove_prefix(1);
-
-            switch (san[0]) {
+        if (san.size() >= 2 && san[0] == '=') {
+            switch (san[1]) {
                 case 'N':
                     info.promotion = PieceType::KNIGHT;
                     break;
@@ -3216,7 +3207,7 @@ template <bool PEDANTIC = false>
                     info.promotion = PieceType::QUEEN;
                     break;
                 default:
-                    throw SanParseError("Failed to parse san. At step 2: " + std::string(san));
+                    throw SanParseError("Failed to parse san. At step 5: " + std::string(san));
                     break;
             }
 
@@ -3264,7 +3255,7 @@ template <bool PEDANTIC = false>
             return parse_castle('0');
 
         default:
-            throw SanParseError("Failed to parse san. At step 5: " + std::string(san));
+            throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
             break;
     }
 
@@ -3273,7 +3264,7 @@ template <bool PEDANTIC = false>
 
     // note PEDANTIC, because we need the bound check
     if (san.length() < 2) {
-        throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
+        throw SanParseError("Failed to parse san. At step 7: " + std::string(san));
     }
 
     if (san[0] == 'x') {
@@ -3304,7 +3295,7 @@ template <bool PEDANTIC = false>
             info.from_file = to_file;
 
             if (san.length() < 3) {
-                throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
+                throw SanParseError("Failed to parse san. At step 8: " + std::string(san));
             }
 
             to_file = File(san[2] - 'a');
@@ -3339,7 +3330,7 @@ template <bool PEDANTIC = false>
     }
 
     if (san.length() < 1) {
-        throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
+        throw SanParseError("Failed to parse san. At step 9: " + std::string(san));
     }
 
     to_rank = Rank(san[0] - '1');
@@ -3368,7 +3359,7 @@ template <bool PEDANTIC = false>
             }
         }
 
-        throw SanParseError("Failed to parse san. At step 1: " + std::string(san) + " " +
+        throw SanParseError("Failed to parse san. At step 10: " + std::string(san) + " " +
                             board.getFen());
     }
 
@@ -3424,7 +3415,7 @@ template <bool PEDANTIC = false>
     std::cerr << ss.str();
 #endif
 
-    throw SanParseError("Failed to parse san. At step 8: " + std::string(san) + " " +
+    throw SanParseError("Failed to parse san. At step 11: " + std::string(san) + " " +
                         board.getFen());
 }
 
