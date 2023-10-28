@@ -3771,7 +3771,7 @@ class StreamParser {
 
                 // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
                 // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                if (isLetter(c) || (c == '0' && c1 == '-' && c2 == '0')) {
+                if (isLetter(c) || (c == '0' && c2 == '-' && c3 == '0')) {
                     callVisitorMoveFunction();
 
                     reading_move = true;
