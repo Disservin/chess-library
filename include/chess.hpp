@@ -3340,35 +3340,33 @@ template <bool PEDANTIC = false>
     return info;
 }
 
-[[nodiscard]] inline Move parseSanInternalNew(const Board &board, std::string_view san,
-                                              Movelist &moves) noexcept(false) {
-    const auto info          = parseSanInfo(san);
+template <bool PEDANTIC = false>
+[[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
+                                           Movelist &moves) noexcept(false) {
+    moves.clear();
+
+    const auto info          = parseSanInfo<PEDANTIC>(san);
     constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (int(pt)); };
 
     movegen::legalmoves(moves, board, pt_to_pgt(info.piece));
 
-    if (info.castling_short) {
+    if (info.castling_short || info.castling_long) {
         for (const auto &move : moves) {
-            if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
-                return move;
+            if (move.typeOf() == Move::CASTLING) {
+                if ((info.castling_short && move.to() > move.from()) ||
+                    (info.castling_long && move.to() < move.from())) {
+                    return move;
+                }
             }
         }
 
         throw SanParseError("Failed to parse san. At step 1: " + std::string(san) + " " +
                             board.getFen());
-    } else if (info.castling_long) {
-        for (const auto &move : moves) {
-            if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
-                return move;
-            }
-        }
-
-        throw SanParseError("Failed to parse san. At step 2: " + std::string(san) + " " +
-                            board.getFen());
     }
 
     for (const auto &move : moves) {
-        if (move.to() != info.to) {
+        // castling moves were already handled and to square has to match
+        if (move.to() != info.to || move.typeOf() == Move::CASTLING) {
             continue;
         }
 
@@ -3422,207 +3420,16 @@ template <bool PEDANTIC = false>
                         board.getFen());
 }
 
-[[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
-                                           Movelist &moves) noexcept(false) {
-    moves.clear();
-    const auto cmp = [](std::string_view src, std::string_view pattern, int n) {
-        for (int i = 0; i < n; i++) {
-            if (src[i] != pattern[i]) {
-                return false;
-            }
-        }
-        return true;
-    };
-
-    if (san.size() >= 5 && (cmp(san, "0-0-0", 5) || cmp(san, "O-O-O", 5))) {
-        movegen::legalmoves(moves, board, PieceGenType::KING);
-        for (const auto &move : moves) {
-            if (move.typeOf() == Move::CASTLING && move.to() < move.from()) {
-                return move;
-            }
-        }
-
-        throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
-    } else if (san.size() >= 3 && (cmp(san, "0-0", 3) || cmp(san, "O-O", 3))) {
-        movegen::legalmoves(moves, board, PieceGenType::KING);
-        for (const auto &move : moves) {
-            if (move.typeOf() == Move::CASTLING && move.to() > move.from()) {
-                return move;
-            }
-        }
-
-        throw SanParseError("Failed to parse san. At step 2: " + std::string(san));
-    }
-
-    // A move looks like this:
-    // [NBKRQ]? ([a-h])? ([1-8])? x? [a-h] [1-8] (=[nbrqkNBRQK])?
-
-    size_t index = 0;
-
-    PieceType pt        = PieceType::NONE;
-    PieceType promotion = PieceType::NONE;
-    File file_from      = File::NO_FILE;
-    Rank rank_from      = Rank::NO_RANK;
-    File file_to        = File::NO_FILE;
-    Rank rank_to        = Rank::NO_RANK;
-
-    // check if san starts with a piece type
-    if (index < san.size() && (san[index] == 'N' || san[index] == 'B' || san[index] == 'R' ||
-                               san[index] == 'Q' || san[index] == 'K')) {
-        pt = charToPieceType(san[index]);
-        ++index;
-    }
-
-    // check if san starts with a file
-    if (index < san.size() && san[index] >= 'a' && san[index] <= 'h') {
-        file_from = File(int(san[index] - 'a'));
-        if (pt == PieceType::NONE) {
-            pt = PieceType::PAWN;
-        }
-        ++index;
-    }
-
-    // check if san starts with a rank
-    if (index < san.size() && (san[index] >= '1' && san[index] <= '8')) {
-        rank_from = Rank(int(san[index] - '1'));
-        ++index;
-    }
-
-    // skip capture sign
-    if (index < san.size() && san[index] == 'x') {
-        ++index;
-    }
-
-    // check if san contains a destination square (file and rank)
-    if (index < san.size() && san[index] >= 'a' && san[index] <= 'h') {
-        file_to = File(int(san[index] - 'a'));
-        if (pt == PieceType::NONE) {
-            pt = PieceType::PAWN;
-        }
-        ++index;
-    }
-
-    if (index < san.size() && san[index] >= '1' && san[index] <= '8') {
-        rank_to = Rank(int(san[index] - '1'));
-        ++index;
-    }
-
-    // check for promotion
-    if (index < san.size() && san[index] == '=') {
-        ++index;
-        promotion = charToPieceType(san[index]);
-        ++index;
-    }
-
-    // the from square is actually the to
-    if (file_to == File::NO_FILE && rank_to == Rank::NO_RANK) {
-        file_to   = file_from;
-        rank_to   = rank_from;
-        file_from = File::NO_FILE;
-        rank_from = Rank::NO_RANK;
-    }
-
-    Square from_sq = NO_SQ;
-    Square to_sq   = utils::fileRankSquare(file_to, rank_to);
-
-    if (file_from != File::NO_FILE && rank_from != Rank::NO_RANK) {
-        from_sq = utils::fileRankSquare(file_from, rank_from);
-    }
-
-    const auto pt_to_pgt = [](PieceType pt) {
-        switch (pt) {
-            case PieceType::PAWN:
-                return PieceGenType::PAWN;
-                break;
-            case PieceType::KNIGHT:
-                return PieceGenType::KNIGHT;
-                break;
-            case PieceType::BISHOP:
-                return PieceGenType::BISHOP;
-                break;
-            case PieceType::ROOK:
-                return PieceGenType::ROOK;
-                break;
-            case PieceType::QUEEN:
-                return PieceGenType::QUEEN;
-                break;
-            case PieceType::KING:
-                return PieceGenType::KING;
-                break;
-            default:
-                break;
-        }
-        assert(false);
-        return PieceGenType::PAWN;
-    };
-
-    movegen::legalmoves(moves, board, pt_to_pgt(pt));
-
-    for (const auto &move : moves) {
-        if (move.to() != to_sq) {
-            continue;
-        }
-
-        if (promotion != PieceType::NONE && move.typeOf() == Move::PROMOTION &&
-            promotion == move.promotionType() && move.to() == to_sq &&
-            ((file_from == File::NO_FILE && utils::squareFile(move.from()) == file_to) ||
-             utils::squareFile(move.from()) == file_from)) {
-            return move;
-        }
-
-        if (move.typeOf() == Move::PROMOTION) continue;
-
-        if (move.typeOf() == Move::ENPASSANT && pt == PieceType::PAWN && move.to() == to_sq &&
-            utils::squareFile(move.from()) == file_from) {
-            return move;
-        }
-
-        if (move.typeOf() == Move::ENPASSANT) continue;
-
-        if (rank_from == Rank::NO_RANK && file_from == File::NO_FILE) {
-            return move;
-        }
-
-        if (from_sq != NO_SQ) {
-            if (move.from() == from_sq) {
-                return move;
-            }
-            continue;
-        }
-
-        if ((utils::squareFile(move.from()) == file_from) ||
-            (utils::squareRank(move.from()) == rank_from)) {
-            return move;
-        }
-    }
-
-#ifdef DEBUG
-    std::stringstream ss;
-
-    ss << "pt " << int(pt) << "\n";
-    ss << "file_from " << int(file_from) << "\n";
-    ss << "rank_from " << int(rank_from) << "\n";
-    ss << "file_to " << int(file_to) << "\n";
-    ss << "rank_to " << int(rank_to) << "\n";
-    ss << "promotion " << int(promotion) << "\n";
-    ss << "to_sq " << squareToString[int(to_sq)] << "\n";
-
-    std::cerr << ss.str();
-#endif
-
-    throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " +
-                        board.getFen());
-}
-
 /// @brief Converts a SAN string to a move
+/// @tparam PEDANTIC
 /// @param board
 /// @param san
 /// @return
+template <bool PEDANTIC = false>
 [[nodiscard]] inline Move parseSan(const Board &board, std::string_view san) noexcept(false) {
     Movelist moves;
 
-    // return parseSanInternal(board, san, moves);
-    return parseSanInternalNew(board, san, moves);
+    return parseSanInternal<PEDANTIC>(board, san, moves);
 }
 
 }  // namespace uci
