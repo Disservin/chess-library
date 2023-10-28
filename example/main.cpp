@@ -9,7 +9,7 @@ class MyVisitor : public pgn::Visitor {
    public:
     virtual ~MyVisitor() {}
 
-    void startPgn() { board.setFen(STARTPOS); }
+    void startPgn() { board.setFen(constants::STARTPOS); }
 
     void header(std::string_view key, std::string_view value) {}
 
@@ -39,7 +39,11 @@ int main(int argc, char const *argv[]) {
     const auto file_size_mb = std::filesystem::file_size(file) / 1000.0 / 1000.0;
 
     std::cout << "MB/s: "
-              << (file_size_mb / std::chrono::duration_cast<std::chrono::seconds>(t1 - t0).count())
+              << (file_size_mb /
+                  (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0))
+              << "\n";
+
+    std::cout << (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0)
               << "\n";
 
     return 0;
