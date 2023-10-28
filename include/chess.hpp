@@ -3638,9 +3638,9 @@ class StreamParser {
 
     void processNextByte(const char c) {
         // save the last three characters across different buffers
-        cbuf[2] = cbuf[1];
-        cbuf[1] = cbuf[0];
-        cbuf[0] = c;
+        c3 = c2;
+        c2 = c1;
+        c1 = c;
 
         // skip carriage return
         if (c == '\r') {
@@ -3758,7 +3758,7 @@ class StreamParser {
 
                 // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
                 // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
+                if (isLetter(c) || (c == '0' && c1 == '-' && c2 == '0')) {
                     callVisitorMoveFunction();
 
                     reading_move = true;
@@ -3789,7 +3789,10 @@ class StreamParser {
     std::string comment;
 
     // buffer for the last two characters, cbuf[0] is the current character
-    std::array<char, 3> cbuf = {'\0', '\0', '\0'};
+    // std::array<char, 3> cbuf = {'\0', '\0', '\0'};
+    char c3 = '\0';
+    char c2 = '\0';
+    char c1 = '\0';
 
     // State
 
