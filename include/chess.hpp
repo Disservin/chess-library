@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.9
+VERSION: 0.5.10
 */
 
 #ifndef CHESS_HPP
@@ -3153,6 +3153,8 @@ template <bool PEDANTIC = false>
         info.piece     = PieceType::PAWN;
         info.from_file = File(san[0] - 'a');
 
+        File from_file = info.from_file;
+
         // capture
         if (san[1] == 'x') {
             info.capture = true;
@@ -3175,21 +3177,13 @@ template <bool PEDANTIC = false>
                 }
             }
 
-            File to_file = File(san[0] - 'a');
-            Rank to_rank = Rank(san[1] - '1');
-
-            info.to = utils::fileRankSquare(to_file, to_rank);
-
-            // remove file and rank
-            san.remove_prefix(2);
-
-        } else {
-            // has to be the to & from file
-            info.to = utils::fileRankSquare(info.from_file, Rank(san[1] - '1'));
-
-            // remove rank
-            san.remove_prefix(2);
+            from_file = File(san[0] - 'a');
         }
+
+        info.to = utils::fileRankSquare(from_file, Rank(san[1] - '1'));
+
+        // remove file and rank
+        san.remove_prefix(2);
 
         // Promotion
         if (san.size() >= 2 && san[0] == '=') {
@@ -3215,18 +3209,18 @@ template <bool PEDANTIC = false>
         return info;
     }
 
-    const auto parse_castle = [&san, &info](char castling_char) {
+    constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info,
+                                     char castling_char) {
         info.piece = PieceType::KING;
 
         san.remove_prefix(3);
 
-        if (san.length() == 0 || (san.length() >= 1 && san[0] != '-')) {
-            info.castling_short = true;
-        }
+        info.castling_short = san.length() == 0 || (san.length() >= 1 && san[0] != '-');
+        info.castling_long  = san.length() >= 2 && san[0] == '-' && san[1] == castling_char;
 
-        if (san.length() >= 2 && san[0] == '-' && san[1] == castling_char) {
-            info.castling_long = true;
-        }
+        assert((info.castling_short && !info.castling_long) ||
+               (!info.castling_short && info.castling_long) ||
+               (!info.castling_short && !info.castling_long));
 
         return info;
     };
@@ -3248,9 +3242,9 @@ template <bool PEDANTIC = false>
             info.piece = PieceType::KING;
             break;
         case 'O':
-            return parse_castle('O');
+            return parse_castle(san, info, 'O');
         case '0':
-            return parse_castle('0');
+            return parse_castle(san, info, '0');
 
         default:
             throw SanParseError("Failed to parse san. At step 5: " + std::string(san));
@@ -3260,7 +3254,7 @@ template <bool PEDANTIC = false>
     // remove piecetype char
     san.remove_prefix(1);
 
-    // note PEDANTIC, because we need the bound check
+    // not PEDANTIC, because we need the bounds check
     if (san.length() < 2) {
         throw SanParseError("Failed to parse san. At step 6: " + std::string(san));
     }
@@ -3278,32 +3272,61 @@ template <bool PEDANTIC = false>
     if (isFile(san[0])) {
         to_file = File(san[0] - 'a');
 
-        // ambigous move have two files specified
-        // Nfg5
-        if (isFile(san[1])) {
-            info.from_file = to_file;
-            to_file        = File(san[1] - 'a');
+        // remove file
+        san.remove_prefix(1);
 
-            // remove the two files
-            san.remove_prefix(2);
+        const bool was_rank = san.length() >= 1 && isRank(san[0]);
+
+        // ambigous moves have two files specified
+        // Nfg5
+        if (isFile(san[0])) {
+            info.from_file = to_file;
+            to_file        = File(san[0] - 'a');
+
+            // remove the file
+            san.remove_prefix(1);
         }
         // (Q)gxe6
-        else if (san[1] == 'x') {
+        else if (san[0] == 'x') {
             info.capture   = true;
             info.from_file = to_file;
 
-            if (san.length() < 3) {
+            if (san.length() < 2) {
                 throw SanParseError("Failed to parse san. At step 7: " + std::string(san));
             }
 
-            to_file = File(san[2] - 'a');
+            to_file = File(san[1] - 'a');
 
             // remove the two files and 'x'
-            san.remove_prefix(3);
+            san.remove_prefix(2);
         }
-        // normale move, Rh1
-        else {
-            san.remove_prefix(1);
+
+        if (san.length() < 1) {
+            throw SanParseError("Failed to parse san. At step 8: " + std::string(san));
+        }
+
+        to_rank = Rank(san[0] - '1');
+
+        // remove rank
+        san.remove_prefix(1);
+
+        // cover moves like (Nd4)xb3 or (Nd4)b3
+        if (was_rank && san.length() >= 2) {
+            if (san[0] == 'x') {
+                info.capture = true;
+                // remove capture
+                san.remove_prefix(1);
+            }
+
+            if (san.length() >= 2 && isFile(san[0]) && isRank(san[1])) {
+                info.from_file = to_file;
+                info.from_rank = to_rank;
+
+                to_file = File(san[0] - 'a');
+                to_rank = Rank(san[1] - '1');
+
+                info.from = utils::fileRankSquare(info.from_file, info.from_rank);
+            }
         }
     }
     // ambigous move have two ranks specified
@@ -3319,33 +3342,11 @@ template <bool PEDANTIC = false>
 
         to_file = File(san[0] - 'a');
 
-        san.remove_prefix(1);
-    }
-
-    if (san.length() < 1) {
-        throw SanParseError("Failed to parse san. At step 8: " + std::string(san));
-    }
-
-    to_rank = Rank(san[0] - '1');
-
-    san.remove_prefix(1);
-
-    // cover moves like (Nd4)xb3 or (Nd4)b3
-    if (san.length() >= 2) {
-        if (san[0] == 'x') {
-            info.capture = true;
-            san.remove_prefix(1);
+        if (san.length() < 2) {
+            throw SanParseError("Failed to parse san. At step 9: " + std::string(san));
         }
 
-        if (san.length() >= 2 && isFile(san[0]) && isRank(san[1])) {
-            info.from_file = to_file;
-            info.from_rank = to_rank;
-
-            to_file = File(san[0] - 'a');
-            to_rank = Rank(san[1] - '1');
-
-            info.from = utils::fileRankSquare(info.from_file, info.from_rank);
-        }
+        to_rank = Rank(san[1] - '1');
     }
 
     info.to = utils::fileRankSquare(to_file, to_rank);
