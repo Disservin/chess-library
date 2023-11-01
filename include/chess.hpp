@@ -25,7 +25,7 @@ Source: https://github.com/Disservin/chess-library
 */
 
 /*
-VERSION: 0.5.11
+VERSION: 0.5.12
 */
 
 #ifndef CHESS_HPP
@@ -1414,8 +1414,8 @@ class Board {
     [[nodiscard]] Color sideToMove() const { return side_to_move_; }
     [[nodiscard]] Square enpassantSq() const { return enpassant_sq_; }
     [[nodiscard]] CastlingRights castlingRights() const { return castling_rights_; }
-    [[nodiscard]] int halfMoveClock() const { return half_moves_; }
-    [[nodiscard]] int fullMoveNumber() const { return 1 + plies_played_ / 2; }
+    [[nodiscard]] std::uint32_t halfMoveClock() const { return half_moves_; }
+    [[nodiscard]] std::uint32_t fullMoveNumber() const { return 1 + plies_played_ / 2; }
 
     void set960(bool is960) {
         chess960_ = is960;
@@ -1661,31 +1661,29 @@ inline void Board::setFenInternal(std::string_view fen) {
 inline void Board::setFen(std::string_view fen) { setFenInternal(fen); }
 
 inline std::string Board::getFen(bool move_counters) const {
-    std::stringstream ss;
+    std::string ss;
+    ss.reserve(100);
 
     // Loop through the ranks of the board in reverse order
     for (int rank = 7; rank >= 0; rank--) {
-        int free_space = 0;
+        std::uint32_t free_space = 0;
 
         // Loop through the files of the board
         for (int file = 0; file < 8; file++) {
             // Calculate the square index
             const int sq = rank * 8 + file;
 
-            // Get the piece at the current square
-            const Piece piece = at(Square(sq));
-
             // If there is a piece at the current square
-            if (piece != Piece::NONE) {
+            if (Piece piece = at(Square(sq)); piece != Piece::NONE) {
                 // If there were any empty squares before this piece,
                 // append the number of empty squares to the FEN string
                 if (free_space) {
-                    ss << free_space;
+                    ss += std::to_string(free_space);
                     free_space = 0;
                 }
 
                 // Append the character representing the piece to the FEN string
-                ss << pieceToChar(piece);
+                ss += pieceToChar(piece);
             } else {
                 // If there is no piece at the current square, increment the
                 // counter for the number of empty squares
@@ -1696,32 +1694,41 @@ inline std::string Board::getFen(bool move_counters) const {
         // If there are any empty squares at the end of the rank,
         // append the number of empty squares to the FEN string
         if (free_space != 0) {
-            ss << free_space;
+            ss += std::to_string(free_space);
         }
 
         // Append a "/" character to the FEN string, unless this is the last rank
-        ss << (rank > 0 ? "/" : "");
+        ss += (rank > 0 ? "/" : "");
     }
 
     // Append " w " or " b " to the FEN string, depending on which player's turn it is
-    ss << (side_to_move_ == Color::WHITE ? " w " : " b ");
+    ss += ' ';
+    ss += (side_to_move_ == Color::WHITE ? 'w' : 'b');
+    ss += ' ';
 
     // Append the appropriate characters to the FEN string to indicate
     // whether castling is allowed for each player
-    ss << getCastleString();
-    if (castling_rights_.isEmpty()) ss << "-";
+    ss += getCastleString();
+    if (castling_rights_.isEmpty()) ss += '-';
 
     // Append information about the en passant square (if any)
     // and the half-move clock and full move number to the FEN string
     if (enpassant_sq_ == NO_SQ)
-        ss << " - ";
-    else
-        ss << " " << squareToString[enpassant_sq_] << " ";
+        ss += " - ";
+    else {
+        ss += ' ';
+        ss += squareToString[enpassant_sq_];
+        ss += ' ';
+    }
 
-    if (move_counters) ss << halfMoveClock() << " " << fullMoveNumber();
+    if (move_counters) {
+        ss += std::to_string(halfMoveClock());
+        ss += ' ';
+        ss += std::to_string(fullMoveNumber());
+    }
 
     // Return the resulting FEN string
-    return ss.str();
+    return ss;
 }
 
 inline U64 Board::zobrist() const {
@@ -1773,29 +1780,35 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
 }
 
 inline std::string Board::getCastleString() const {
-    std::stringstream ss;
+    std::string ss;
+
+    constexpr auto convert = [](Color c, File file) {
+        return c == Color::WHITE ? char(file) + 65 : char(file) + 97;
+    };
+
+    const auto get_file = [&](Color c, CastleSide side) {
+        return c == Color::WHITE
+                   ? convert(Color::WHITE, castling_rights_.getRookFile(Color::WHITE, side))
+                   : convert(Color::WHITE, castling_rights_.getRookFile(Color::BLACK, side));
+    };
 
     if (chess960_) {
         if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE))
-            ss << char(char(castling_rights_.getRookFile(Color::WHITE, CastleSide::KING_SIDE)) +
-                       65);
+            ss += get_file(Color::WHITE, CastleSide::KING_SIDE);
         if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE))
-            ss << char(char(castling_rights_.getRookFile(Color::WHITE, CastleSide::QUEEN_SIDE)) +
-                       65);
+            ss += get_file(Color::WHITE, CastleSide::QUEEN_SIDE);
         if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE))
-            ss << char(char(castling_rights_.getRookFile(Color::BLACK, CastleSide::KING_SIDE)) +
-                       97);
+            ss += get_file(Color::BLACK, CastleSide::KING_SIDE);
         if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE))
-            ss << char(char(castling_rights_.getRookFile(Color::BLACK, CastleSide::QUEEN_SIDE)) +
-                       97);
+            ss += get_file(Color::BLACK, CastleSide::QUEEN_SIDE);
     } else {
-        if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE)) ss << "K";
-        if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE)) ss << "Q";
-        if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE)) ss << "k";
-        if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE)) ss << "q";
+        if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::KING_SIDE)) ss += 'K';
+        if (castling_rights_.hasCastlingRight(Color::WHITE, CastleSide::QUEEN_SIDE)) ss += 'Q';
+        if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::KING_SIDE)) ss += 'k';
+        if (castling_rights_.hasCastlingRight(Color::BLACK, CastleSide::QUEEN_SIDE)) ss += 'q';
     }
 
-    return ss.str();
+    return ss;
 }
 
 inline bool Board::isRepetition(int count) const {
