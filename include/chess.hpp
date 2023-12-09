@@ -328,10 +328,10 @@ constexpr PieceType charToPieceType(char c) {
  * Structs                                                                   *
 \****************************************************************************/
 
-struct Move {
+class Move {
    public:
     Move() = default;
-    constexpr Move(uint16_t move) : move_(move), score_(0) {}
+    constexpr Move(uint16_t move) : move_(move) {}
 
     /// @brief Creates a move from a source and target square.
     /// pt is the promotion piece, when you want to create a promotion move you must also
@@ -369,12 +369,7 @@ struct Move {
         return static_cast<PieceType>(((move_ >> 12) & 3) + static_cast<int>(PieceType::KNIGHT));
     }
 
-    /// @brief Set the score for a move. Useful if you later want to sort the moves.
-    /// @param score
-    constexpr void setScore(int16_t score) { score_ = score; }
-
     [[nodiscard]] constexpr uint16_t move() const { return move_; }
-    [[nodiscard]] constexpr int16_t score() const { return score_; }
 
     bool operator==(const Move &rhs) const { return move_ == rhs.move_; }
     bool operator!=(const Move &rhs) const { return move_ != rhs.move_; }
@@ -388,6 +383,27 @@ struct Move {
 
    private:
     uint16_t move_;
+};
+
+class ExtMove : public Move {
+   public:
+    ExtMove() = default;
+    constexpr ExtMove(uint16_t move) : Move(move), score_(0) {}
+
+    /// @brief Set the score for a move. Useful if you later want to sort the moves.
+    /// @param score
+    constexpr void setScore(int16_t score) { score_ = score; }
+
+    [[nodiscard]] constexpr int16_t score() const { return score_; }
+
+    template <uint16_t MoveType = 0>
+    [[nodiscard]] static constexpr ExtMove make(Square source, Square target,
+                                                PieceType pt = PieceType::KNIGHT) {
+        return ExtMove(MoveType + ((uint16_t(pt) - uint16_t(PieceType::KNIGHT)) << 12) +
+                       uint16_t(source << 6) + uint16_t(target));
+    }
+
+   private:
     int16_t score_;
 };
 
@@ -403,11 +419,12 @@ inline std::ostream &operator<<(std::ostream &os, const Move &move) {
     return os;
 }
 
-struct Movelist {
+template <typename T = Move>
+class Movelist {
    public:
     /// @brief Add a move to the end of the movelist.
     /// @param move
-    constexpr void add(Move move) {
+    constexpr void add(T move) {
         assert(size_ < constants::MAX_MOVES);
         moves_[size_++] = move;
     }
@@ -416,7 +433,7 @@ struct Movelist {
     /// otherwise -1.
     /// @param move
     /// @return
-    constexpr int find(Move move) {
+    constexpr int find(T move) {
         for (int i = 0; i < size_; ++i) {
             if (moves_[i] == move) {
                 return i;
@@ -436,17 +453,11 @@ struct Movelist {
     /// @brief Clears the movelist.
     constexpr void clear() { size_ = 0; }
 
-    /// @brief Sorts the movelist by score in descending order. Uses std::stable_sort.
-    inline void sort(int index = 0) {
-        std::stable_sort(moves_ + index, moves_ + size_,
-                         [](const Move &a, const Move &b) { return a.score() > b.score(); });
-    }
+    constexpr T operator[](int index) const { return moves_[index]; }
+    constexpr T &operator[](int index) { return moves_[index]; }
 
-    constexpr Move operator[](int index) const { return moves_[index]; }
-    constexpr Move &operator[](int index) { return moves_[index]; }
-
-    typedef Move *iterator;
-    typedef const Move *const_iterator;
+    typedef T *iterator;
+    typedef const T *const_iterator;
 
     constexpr iterator begin() { return moves_; }
     constexpr iterator end() { return moves_ + size_; }
@@ -455,7 +466,7 @@ struct Movelist {
     [[nodiscard]] constexpr const_iterator end() const { return moves_ + size_; }
 
    private:
-    Move moves_[constants::MAX_MOVES]{};
+    T moves_[constants::MAX_MOVES]{};
     int size_ = 0;
 };
 
@@ -943,8 +954,8 @@ namespace movegen {
 /// @tparam mt
 /// @param movelist
 /// @param board
-template <MoveGenType mt = MoveGenType::ALL>
-void legalmoves(Movelist &movelist, const Board &board,
+template <MoveGenType mt = MoveGenType::ALL, typename T = Move>
+void legalmoves(Movelist<T> &movelist, const Board &board,
                 int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                              PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
@@ -1448,7 +1459,7 @@ class Board {
     [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const {
         const Board &board = *this;
 
-        Movelist movelist;
+        Movelist<Move> movelist;
         movegen::legalmoves<MoveGenType::ALL>(movelist, board);
 
         if (movelist.empty() && inCheck()) {
@@ -1858,7 +1869,7 @@ inline std::pair<GameResultReason, GameResult> Board::isGameOver() const {
 
     const Board &board = *this;
 
-    Movelist movelist;
+    Movelist<Move> movelist;
     movegen::legalmoves<MoveGenType::ALL>(movelist, board);
 
     if (movelist.empty()) {
@@ -2587,8 +2598,8 @@ template <Color c>
 /// @param pin_hv
 /// @param checkmask
 /// @param occ_enemy
-template <Color c, MoveGenType mt>
-void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
+template <Color c, MoveGenType mt, typename T = Move>
+void generatePawnMoves(const Board &board, Movelist<T> &moves, Bitboard pin_d, Bitboard pin_hv,
                        Bitboard checkmask, Bitboard occ_enemy) {
     const auto pawns = board.pieces(PieceType::PAWN, c);
 
@@ -2652,30 +2663,30 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
         // Generates at ALL and CAPTURE
         while (mt != MoveGenType::QUIET && promo_left) {
             const auto index = builtin::poplsb(promo_left);
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::QUEEN));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::ROOK));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::BISHOP));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::KNIGHT));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN_RIGHT, index, PieceType::QUEEN));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN_RIGHT, index, PieceType::ROOK));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN_RIGHT, index, PieceType::BISHOP));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN_RIGHT, index, PieceType::KNIGHT));
         }
 
         // Skip capturing promotions if we are only generating quiet moves.
         // Generates at ALL and CAPTURE
         while (mt != MoveGenType::QUIET && promo_right) {
             const auto index = builtin::poplsb(promo_right);
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::QUEEN));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::ROOK));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::BISHOP));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::KNIGHT));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN_LEFT, index, PieceType::QUEEN));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN_LEFT, index, PieceType::ROOK));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN_LEFT, index, PieceType::BISHOP));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN_LEFT, index, PieceType::KNIGHT));
         }
 
         // Skip quiet promotions if we are only generating captures.
         // Generates at ALL and QUIET
         while (mt != MoveGenType::CAPTURE && promo_push) {
             const auto index = builtin::poplsb(promo_push);
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::QUEEN));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::ROOK));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::BISHOP));
-            moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::KNIGHT));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN, index, PieceType::QUEEN));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN, index, PieceType::ROOK));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN, index, PieceType::BISHOP));
+            moves.add(T::template make<T::PROMOTION>(index + DOWN, index, PieceType::KNIGHT));
         }
     }
 
@@ -2685,22 +2696,22 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 
     while (mt != MoveGenType::QUIET && l_pawns) {
         const auto index = builtin::poplsb(l_pawns);
-        moves.add(Move::make<Move::NORMAL>(index + DOWN_RIGHT, index));
+        moves.add(T::template make<T::NORMAL>(index + DOWN_RIGHT, index));
     }
 
     while (mt != MoveGenType::QUIET && r_pawns) {
         const auto index = builtin::poplsb(r_pawns);
-        moves.add(Move::make<Move::NORMAL>(index + DOWN_LEFT, index));
+        moves.add(T::template make<T::NORMAL>(index + DOWN_LEFT, index));
     }
 
     while (mt != MoveGenType::CAPTURE && single_push) {
         const auto index = builtin::poplsb(single_push);
-        moves.add(Move::make<Move::NORMAL>(index + DOWN, index));
+        moves.add(T::template make<T::NORMAL>(index + DOWN, index));
     }
 
     while (mt != MoveGenType::CAPTURE && double_push) {
         const auto index = builtin::poplsb(double_push);
-        moves.add(Move::make<Move::NORMAL>(index + DOWN + DOWN, index));
+        moves.add(T::template make<T::NORMAL>(index + DOWN + DOWN, index));
     }
 
     const Square ep = board.enpassantSq();
@@ -2751,7 +2762,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
                 (attacks::rook(kSQ, board.occ() & ~connectingPawns) & enemyQueenRook) != 0)
                 break;
 
-            moves.add(Move::make<Move::ENPASSANT>(from, to));
+            moves.add(T::template make<T::ENPASSANT>(from, to));
         }
     }
 }
@@ -2865,14 +2876,14 @@ template <Color c, MoveGenType mt>
     return moves;
 }
 
-template <typename T>
-inline void whileBitboardAdd(Movelist &movelist, Bitboard mask, T func) {
+template <typename T, typename M = Move>
+inline void whileBitboardAdd(Movelist<M> &movelist, Bitboard mask, T func) {
     while (mask) {
         const Square from = builtin::poplsb(mask);
         auto moves        = func(from);
         while (moves) {
             const Square to = builtin::poplsb(moves);
-            movelist.add(Move::make<Move::NORMAL>(from, to));
+            movelist.add(M::template make<M::NORMAL>(from, to));
         }
     }
 }
@@ -2882,8 +2893,8 @@ inline void whileBitboardAdd(Movelist &movelist, Bitboard mask, T func) {
 /// @tparam mt
 /// @param movelist
 /// @param board
-template <Color c, MoveGenType mt>
-void legalmoves(Movelist &movelist, const Board &board, int pieces) {
+template <Color c, MoveGenType mt, typename T = Move>
+void legalmoves(Movelist<T> &movelist, const Board &board, int pieces) {
     /*
      The size of the movelist might not
      be 0! This is done on purpose since it enables
@@ -2928,7 +2939,7 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
 
             while (moves_bb) {
                 Square to = builtin::poplsb(moves_bb);
-                movelist.add(Move::make<Move::CASTLING>(king_sq, to));
+                movelist.add(T::template make<T::CASTLING>(king_sq, to));
             }
         }
     }
@@ -2979,14 +2990,14 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
     }
 }
 
-template <MoveGenType mt>
-inline void legalmoves(Movelist &movelist, const Board &board, int pieces) {
+template <MoveGenType mt, typename T>
+inline void legalmoves(Movelist<T> &movelist, const Board &board, int pieces) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt>(movelist, board, pieces);
+        legalmoves<Color::WHITE, mt, T>(movelist, board, pieces);
     else
-        legalmoves<Color::BLACK, mt>(movelist, board, pieces);
+        legalmoves<Color::BLACK, mt, T>(movelist, board, pieces);
 }
 
 }  // namespace movegen
@@ -3356,9 +3367,9 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
     return;
 }
 
-template <bool PEDANTIC = false>
+template <bool PEDANTIC = false, typename T = Move>
 [[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
-                                           Movelist &moves) noexcept(false) {
+                                           Movelist<T> &moves) noexcept(false) {
     SanMoveInformation info;
 
     parseSanInfo<PEDANTIC>(info, san);
@@ -3367,9 +3378,9 @@ template <bool PEDANTIC = false>
     moves.clear();
 
     if (info.capture) {
-        movegen::legalmoves<MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
+        movegen::legalmoves<MoveGenType::CAPTURE, T>(moves, board, pt_to_pgt(info.piece));
     } else {
-        movegen::legalmoves<MoveGenType::QUIET>(moves, board, pt_to_pgt(info.piece));
+        movegen::legalmoves<MoveGenType::QUIET, T>(moves, board, pt_to_pgt(info.piece));
     }
 
     if (info.castling_short || info.castling_long) {
