@@ -1912,7 +1912,7 @@ inline void Board::removePiece(Piece piece, Square sq) {
 
 inline void Board::makeMove(const Move &move) {
     // Validate side to move
-    assert((at(move.from()) < Piece::BLACKPAWN) == (this->side_to_move_ == Color::WHITE));
+    assert((at(move.from()) < Piece::BLACKPAWN) == (side_to_move_ == Color::WHITE));
     const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
     const auto captured = at(move.to());
     const auto pt       = at<PieceType>(move.from());
@@ -3501,7 +3501,7 @@ class StreamParser {
     StreamParser(std::istream &stream) : stream_buffer(stream) {}
 
     void readGames(Visitor &vis) {
-        this->visitor = &vis;
+        visitor = &vis;
 
         while (true) {
             const auto c = stream_buffer.get();
