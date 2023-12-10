@@ -46,7 +46,7 @@ class File {
         return static_cast<int>(file) < static_cast<int>(rhs.file);
     }
 
-    operator char() const { return static_cast<char>(static_cast<int>(file) + 'a'); }
+    explicit operator char() const { return static_cast<char>(static_cast<int>(file) + 'a'); }
 
     static constexpr underlying FILE_A  = underlying::FILE_A;
     static constexpr underlying FILE_B  = underlying::FILE_B;

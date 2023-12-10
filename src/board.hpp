@@ -463,7 +463,8 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] Bitboard pieces(PieceType type, Color color) const {
-        return pieces_bb_[static_cast<int>(type)] & occ_bb_[static_cast<int>(color.internal())];
+        return pieces_bb_[static_cast<int>(type.internal())] &
+               occ_bb_[static_cast<int>(color.internal())];
     }
 
     /// @brief Returns all pieces of a certain type
@@ -495,7 +496,7 @@ class Board {
     }
 
     [[nodiscard]] static Color color(Piece piece) {
-        return static_cast<Color>(static_cast<int>(piece) / 6);
+        return static_cast<Color>(static_cast<int>(piece.internal()) / 6);
     }
 
     /// @brief Get the current hash key of the board
@@ -709,7 +710,7 @@ class Board {
         const auto sq_ = int(sq.internal());
         assert(board_[sq_] == Piece::NONE);
 
-        pieces_bb_[static_cast<int>(piece.type())] |= (1ULL << (sq_));
+        pieces_bb_[static_cast<int>(piece.type().internal())] |= (1ULL << (sq_));
         occ_bb_[static_cast<int>(piece.color().internal())] |= (1ULL << (sq_));
         occ_all_ |= (1ULL << sq_);
 
@@ -720,7 +721,7 @@ class Board {
         const auto sq_ = int(sq.internal());
         assert(board_[sq_] == piece && piece != Piece::NONE);
 
-        pieces_bb_[static_cast<int>(piece.type())] &= ~(1ULL << (sq_));
+        pieces_bb_[static_cast<int>(piece.type().internal())] &= ~(1ULL << (sq_));
         occ_bb_[static_cast<int>(piece.color().internal())] &= ~(1ULL << (sq_));
         occ_all_ &= ~(1ULL << sq_);
 
@@ -837,7 +838,7 @@ class Board {
                          sq <= static_cast<int>(sq_corner); sq++) {
                         if (at<PieceType>(Square(sq)) == PieceType::NONE) continue;
                         if (at<PieceType>(Square(sq)) == PieceType::ROOK &&
-                            int(at(Square(sq))) / 6 == int(color)) {
+                            int(at(Square(sq)).internal()) / 6 == int(color)) {
                             castling_rights_.setCastlingRight(
                                 color, CastlingRights::Side::KING_SIDE, Square(sq).file());
                             break;
@@ -855,7 +856,7 @@ class Board {
                     for (int sq = int(king_sq.internal()) - 1; sq >= int(sq_corner); sq--) {
                         if (at<PieceType>(Square(sq)) == PieceType::NONE) continue;
                         if (at<PieceType>(Square(sq)) == PieceType::ROOK &&
-                            int(at(Square(sq))) / 6 == int(color)) {
+                            int(at(Square(sq)).internal()) / 6 == int(color)) {
                             castling_rights_.setCastlingRight(
                                 color, CastlingRights::Side::QUEEN_SIDE, Square(sq).file());
                             break;

@@ -34,12 +34,12 @@ class PieceType {
                 pt = underlying::KING;
                 break;
             default:
-                assert(false);
+                pt = underlying::NONE;
                 break;
         }
     }
 
-    constexpr operator char() const {
+    constexpr explicit operator char() const {
         switch (pt) {
             case underlying::PAWN:
                 return 'p';
@@ -54,7 +54,6 @@ class PieceType {
             case underlying::KING:
                 return 'k';
             default:
-                assert(false);
                 return ' ';
         }
     }
@@ -144,13 +143,15 @@ class Piece {
                 piece = BLACK_KING;
                 break;
             default:
-                assert(false);
+                piece = NONE;
                 break;
         }
     }
 
     constexpr PieceType type() const { return static_cast<PieceType>(int(piece) & 7); }
     constexpr Color color() const { return static_cast<Color>(int(piece) >> 3); }
+
+    constexpr underlying internal() const { return piece; }
 
     constexpr bool operator==(const Piece& rhs) const { return piece == rhs.piece; }
     constexpr bool operator!=(const Piece& rhs) const { return piece != rhs.piece; }
@@ -163,7 +164,7 @@ class Piece {
 
     constexpr bool operator<(const Piece& rhs) const { return piece < rhs.piece; }
 
-    operator char() const {
+    explicit operator char() const {
         switch (piece) {
             case WHITE_PAWN:
                 return 'P';
