@@ -11,7 +11,7 @@ class Color {
    public:
     enum class underlying : std::int8_t { WHITE = 0, BLACK = 1, NO_COLOR = -1 };
 
-    constexpr Color() = default;
+    Color() = default;
     constexpr Color(underlying c) : color(c) {}
     constexpr Color(std::int8_t c) : color(static_cast<underlying>(c)) {
         assert(c == 0 || c == 1 || c == -1);

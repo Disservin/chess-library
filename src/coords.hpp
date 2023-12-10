@@ -16,7 +16,8 @@ class File {
         FILE_E,
         FILE_F,
         FILE_G,
-        FILE_H
+        FILE_H,
+        NO_FILE
     };
 
     constexpr File() = default;
@@ -38,14 +39,15 @@ class File {
         return static_cast<int>(file) <= static_cast<int>(rhs.file);
     }
 
-    static constexpr underlying FILE_A = underlying::FILE_A;
-    static constexpr underlying FILE_B = underlying::FILE_B;
-    static constexpr underlying FILE_C = underlying::FILE_C;
-    static constexpr underlying FILE_D = underlying::FILE_D;
-    static constexpr underlying FILE_E = underlying::FILE_E;
-    static constexpr underlying FILE_F = underlying::FILE_F;
-    static constexpr underlying FILE_G = underlying::FILE_G;
-    static constexpr underlying FILE_H = underlying::FILE_H;
+    static constexpr underlying FILE_A  = underlying::FILE_A;
+    static constexpr underlying FILE_B  = underlying::FILE_B;
+    static constexpr underlying FILE_C  = underlying::FILE_C;
+    static constexpr underlying FILE_D  = underlying::FILE_D;
+    static constexpr underlying FILE_E  = underlying::FILE_E;
+    static constexpr underlying FILE_F  = underlying::FILE_F;
+    static constexpr underlying FILE_G  = underlying::FILE_G;
+    static constexpr underlying FILE_H  = underlying::FILE_H;
+    static constexpr underlying NO_FILE = underlying::NO_FILE;
 
    private:
     underlying file;
