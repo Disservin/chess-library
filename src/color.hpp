@@ -67,4 +67,15 @@ std::ostream& operator<<(std::ostream& os, const Color& color) {
     return os << static_cast<std::string>(color);
 }
 
+constexpr Color::underlying operator~(Color::underlying color) {
+    switch (color) {
+        case Color::underlying::WHITE:
+            return Color::underlying::BLACK;
+        case Color::underlying::BLACK:
+            return Color::underlying::WHITE;
+        default:
+            return Color::underlying::NO_COLOR;
+    }
+}
+
 }  // namespace chess

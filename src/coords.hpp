@@ -171,6 +171,7 @@ class Square {
     }
 
     constexpr underlying internal() const { return sq; }
+    constexpr int index() const { return static_cast<std::uint8_t>(sq); }
 
     constexpr File file() const { return File(static_cast<std::uint8_t>(sq) & 7); }
     constexpr Rank rank() const { return Rank(static_cast<std::uint8_t>(sq) >> 3); }
@@ -218,5 +219,9 @@ enum class Direction : int8_t {
     SOUTH_WEST = -9,
     SOUTH_EAST = -7
 };
+
+constexpr Square operator+(Square sq, Direction dir) {
+    return static_cast<Square>(sq.index() + static_cast<int8_t>(dir));
+}
 
 }  // namespace chess

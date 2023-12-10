@@ -34,6 +34,7 @@ enum class GameResultReason {
 class Board {
     using U64 = std::uint64_t;
 
+   public:
     class CastlingRights {
        public:
         enum class Side : uint8_t { KING_SIDE, QUEEN_SIDE };
@@ -91,6 +92,7 @@ class Board {
         std::array<std::array<File, 2>, 2> rooks;
     };
 
+   private:
     struct State {
         CastlingRights castling;
         U64 hash;
@@ -892,4 +894,24 @@ class Board {
 
     std::string original_fen_;
 };
+
+inline std::ostream &operator<<(std::ostream &os, const Board &b) {
+    for (int i = 63; i >= 0; i -= 8) {
+        os << " " << static_cast<char>(b.board_[i - 7]) << " " << static_cast<char>(b.board_[i - 6])
+           << " " << static_cast<char>(b.board_[i - 5]) << " " << static_cast<char>(b.board_[i - 4])
+           << " " << static_cast<char>(b.board_[i - 3]) << " " << static_cast<char>(b.board_[i - 2])
+           << " " << static_cast<char>(b.board_[i - 1]) << " " << static_cast<char>(b.board_[i])
+           << " \n";
+    }
+    os << "\n\n";
+    os << "Side to move: " << static_cast<int>(b.side_to_move_.internal()) << "\n";
+    os << "Castling rights: " << b.getCastleString() << "\n";
+    os << "Halfmoves: " << b.halfMoveClock() << "\n";
+    os << "Fullmoves: " << b.fullMoveNumber() << "\n";
+    os << "EP: " << static_cast<int>(b.enpassant_sq_.internal()) << "\n";
+    os << "Hash: " << b.hash_key_ << "\n";
+
+    os << std::endl;
+    return os;
+}
 }  // namespace  chess

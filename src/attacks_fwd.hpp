@@ -181,14 +181,19 @@ class attacks {
     [[nodiscard]] static constexpr Bitboard shift(const Bitboard b);
 
     /// @brief Generate the left side pawn attacks.
+    /// @tparam c
+
     /// @param pawns
     /// @return
-    [[nodiscard]] static Bitboard pawnLeftAttacks(Color c, const Bitboard pawns);
+    template <Color::underlying c>
+    [[nodiscard]] static Bitboard pawnLeftAttacks(const Bitboard pawns);
 
     /// @brief Generate the right side pawn attacks.
+    /// @tparam c
     /// @param pawns
     /// @return
-    [[nodiscard]] static Bitboard pawnRightAttacks(Color c, const Bitboard pawns);
+    template <Color::underlying c>
+    [[nodiscard]] static Bitboard pawnRightAttacks(const Bitboard pawns);
 
     /// @brief Returns the pawn attacks for a given color and square
     /// @param c

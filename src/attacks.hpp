@@ -39,17 +39,21 @@ template <Direction direction>
 }
 
 /// @brief [Internal Usage] Generate the left side pawn attacks.
+/// @tparam c
 /// @param pawns
 /// @return
-[[nodiscard]] inline Bitboard attacks::pawnLeftAttacks(Color c, const Bitboard pawns) {
+template <Color::underlying c>
+[[nodiscard]] inline Bitboard attacks::pawnLeftAttacks(const Bitboard pawns) {
     return c == Color::WHITE ? (pawns << 7) & ~MASK_FILE[static_cast<int>(File::FILE_H)]
                              : (pawns >> 7) & ~MASK_FILE[static_cast<int>(File::FILE_A)];
 }
 
 /// @brief [Internal Usage] Generate the right side pawn attacks.
+/// @tparam c
 /// @param pawns
 /// @return
-[[nodiscard]] inline Bitboard attacks::pawnRightAttacks(Color c, const Bitboard pawns) {
+template <Color::underlying c>
+[[nodiscard]] inline Bitboard attacks::pawnRightAttacks(const Bitboard pawns) {
     return c == Color::WHITE ? (pawns << 9) & ~MASK_FILE[static_cast<int>(File::FILE_A)]
                              : (pawns >> 9) & ~MASK_FILE[static_cast<int>(File::FILE_H)];
 }

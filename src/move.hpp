@@ -22,8 +22,9 @@ class Move {
     template <std::uint16_t MoveType = 0>
     [[nodiscard]] static constexpr Move make(Square source, Square target,
                                              PieceType pt = PieceType::KNIGHT) {
-        return Move(MoveType + ((std::uint16_t(pt) - std::uint16_t(PieceType::KNIGHT)) << 12) +
-                    std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target));
+        return Move(
+            MoveType + ((std::uint16_t(pt.internal()) - std::uint16_t(PieceType::KNIGHT)) << 12) +
+            std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target.index()));
     }
 
     /// @brief Get the source square of the move.
@@ -75,7 +76,7 @@ inline std::ostream &operator<<(std::ostream &os, const Move &move) {
 
     os << from_sq << to_sq;
     if (move.typeOf() == Move::PROMOTION) {
-        os << move.promotionType();
+        os << static_cast<char>(move.promotionType());
     }
 
     return os;

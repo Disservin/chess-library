@@ -192,8 +192,7 @@ class Piece {
             case BLACK_KING:
                 return 'k';
             default:
-                assert(false);
-                return ' ';
+                return '.';
         }
     }
 

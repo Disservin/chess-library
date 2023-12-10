@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 
 #include "movelist.hpp"
@@ -11,11 +13,10 @@ enum PieceGenType {
     QUEEN  = 16,
     KING   = 32,
 };
-}
 
 class Board;
 
-namespace chess::movegen {
+namespace movegen {
 enum class MoveGenType : std::uint8_t { ALL, CAPTURE, QUIET };
 
 /// @brief Generates all legal moves for a position. The movelist will be
@@ -28,4 +29,6 @@ void legalmoves(Movelist &movelist, const Board &board,
                 int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                              PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
-}  // namespace chess::movegen
+}  // namespace movegen
+
+}  // namespace chess
