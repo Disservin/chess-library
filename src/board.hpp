@@ -100,8 +100,8 @@ class Board {
 
         State(const U64 &hash, const CastlingRights &castling, const Square &enpassant,
               const uint8_t &half_moves, const Piece &captured_piece)
-            : hash(hash),
-              castling(castling),
+            : castling(castling),
+              hash(hash),
               enpassant(enpassant),
               half_moves(half_moves),
               captured_piece(captured_piece) {}
@@ -454,7 +454,7 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] Square kingSq(Color color) const {
-        assert(pieces(PieceType::KING, color) != 0);
+        assert(pieces(PieceType::KING, color) != Bitboard(0));
         return pieces(PieceType::KING, color).lsb();
     }
 
@@ -480,9 +480,9 @@ class Board {
     template <typename T = Piece>
     [[nodiscard]] T at(Square sq) const {
         if constexpr (std::is_same_v<T, PieceType>) {
-            return utils::typeOfPiece(board_[sq]);
+            return board_[static_cast<int>(sq.internal())].type();
         } else {
-            return board_[sq];
+            return board_[static_cast<int>(sq.internal())];
         }
     }
 

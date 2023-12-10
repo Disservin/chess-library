@@ -11,7 +11,7 @@ namespace chess {
 
 class Bitboard {
    public:
-    constexpr Bitboard() = default;
+    constexpr Bitboard() : bits(0) {}
     constexpr Bitboard(std::uint64_t bits) : bits(bits) {}
 
     constexpr Bitboard operator&(const Bitboard& rhs) const { return Bitboard(bits & rhs.bits); }
@@ -97,13 +97,14 @@ class Bitboard {
         std::bitset<64> b(bits);
         std::string str_bitset = b.to_string();
 
+        std::string str;
+
         for (int i = 0; i < 64; i += 8) {
             std::string x = str_bitset.substr(i, 8);
             std::reverse(x.begin(), x.end());
-            std::cout << x << '\n';
+            str += x + '\n';
         }
-
-        std::cout << '\n' << std::endl;
+        return str;
     }
 
     operator bool() const { return bits; }

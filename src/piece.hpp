@@ -11,7 +11,7 @@ class PieceType {
    public:
     enum class underlying : std::uint8_t { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, NONE };
 
-    constexpr PieceType() = default;
+    constexpr PieceType() : pt(underlying::NONE) {}
     constexpr PieceType(underlying pt) : pt(pt) {}
     constexpr PieceType(char type) {
         switch (type) {
@@ -39,7 +39,7 @@ class PieceType {
         }
     }
 
-    operator char() const {
+    constexpr operator char() const {
         switch (pt) {
             case underlying::PAWN:
                 return 'p';
@@ -83,7 +83,7 @@ inline std::ostream& operator<<(std::ostream& os, const PieceType& pt) {
 
 class Piece {
    public:
-    enum underlying : std::uint8_t {
+    enum class underlying : std::uint8_t {
         NONE,
         WHITE_PAWN   = 1,
         WHITE_KNIGHT = 2,
@@ -99,10 +99,10 @@ class Piece {
         BLACK_KING   = 14
     };
 
-    constexpr Piece() = default;
+    constexpr Piece() : piece(underlying::NONE) {}
     constexpr Piece(underlying piece) : piece(piece) {}
     constexpr Piece(PieceType type, Color color)
-        : piece(static_cast<underlying>(static_cast<std::uint8_t>(type) |
+        : piece(static_cast<underlying>(static_cast<std::uint8_t>(type.internal()) |
                                         (static_cast<std::uint8_t>(color.internal()) << 3))) {}
     constexpr Piece(char p) {
         switch (p) {
@@ -149,8 +149,8 @@ class Piece {
         }
     }
 
-    constexpr PieceType type() const { return static_cast<PieceType>(piece & 7); }
-    constexpr Color color() const { return static_cast<Color>(piece >> 3); }
+    constexpr PieceType type() const { return static_cast<PieceType>(int(piece) & 7); }
+    constexpr Color color() const { return static_cast<Color>(int(piece) >> 3); }
 
     constexpr bool operator==(const Piece& rhs) const { return piece == rhs.piece; }
     constexpr bool operator!=(const Piece& rhs) const { return piece != rhs.piece; }
@@ -160,6 +160,8 @@ class Piece {
 
     constexpr bool operator==(const PieceType& rhs) const { return type() == rhs; }
     constexpr bool operator!=(const PieceType& rhs) const { return type() != rhs; }
+
+    constexpr bool operator<(const Piece& rhs) const { return piece < rhs.piece; }
 
     operator char() const {
         switch (piece) {

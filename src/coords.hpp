@@ -20,7 +20,7 @@ class File {
         NO_FILE
     };
 
-    constexpr File() = default;
+    constexpr File() : file(underlying::NO_FILE) {}
     constexpr File(underlying file) : file(file) {}
     constexpr File(char file) : file(static_cast<underlying>(file - 'a')) {}
 
@@ -76,7 +76,7 @@ class Rank {
         NO_RANK
     };
 
-    constexpr Rank() = default;
+    constexpr Rank() : rank(underlying::NO_RANK) {}
     constexpr Rank(underlying rank) : rank(rank) {}
     constexpr Rank(char rank) : rank(static_cast<underlying>(rank - '1')) {}
 
@@ -125,7 +125,8 @@ class Square {
     };
     // clang-format on
 
-    constexpr Square() = default;
+    constexpr Square() : sq(underlying::NO_SQ) {}
+
     constexpr Square(std::uint8_t sq) : sq(static_cast<underlying>(sq)) {}
     constexpr Square(File file, Rank rank)
         : sq(static_cast<underlying>(static_cast<std::uint8_t>(file.internal()) +
