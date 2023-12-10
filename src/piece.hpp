@@ -39,8 +39,6 @@ class PieceType {
         }
     }
 
-    constexpr underlying internal() const { return pt; }
-
     operator char() const {
         switch (pt) {
             case underlying::PAWN:
@@ -60,6 +58,11 @@ class PieceType {
                 return ' ';
         }
     }
+
+    constexpr bool operator==(const PieceType& rhs) const { return pt == rhs.pt; }
+    constexpr bool operator!=(const PieceType& rhs) const { return pt != rhs.pt; }
+
+    constexpr underlying internal() const { return pt; }
 
     static constexpr underlying PAWN   = underlying::PAWN;
     static constexpr underlying KNIGHT = underlying::KNIGHT;

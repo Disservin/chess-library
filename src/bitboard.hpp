@@ -37,6 +37,13 @@ class Bitboard {
     constexpr bool operator==(const Bitboard& rhs) const { return bits == rhs.bits; }
     constexpr bool operator!=(const Bitboard& rhs) const { return bits != rhs.bits; }
 
+    constexpr bool operator!=(std::uint64_t rhs) const { return bits != rhs; }
+
+    constexpr bool operator||(const Bitboard& rhs) const { return bits || rhs.bits; }
+    constexpr bool operator&&(const Bitboard& rhs) const { return bits && rhs.bits; }
+
+    constexpr Bitboard operator|(std::uint64_t rhs) const { return Bitboard(bits | rhs); }
+
     constexpr Bitboard& set(std::uint8_t index) {
         bits |= (1ULL << index);
         return *this;
@@ -98,6 +105,8 @@ class Bitboard {
 
         std::cout << '\n' << std::endl;
     }
+
+    operator bool() const { return bits; }
 
    private:
     std::uint64_t bits;

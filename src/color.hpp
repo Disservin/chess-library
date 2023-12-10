@@ -31,6 +31,17 @@ class Color {
     constexpr bool operator==(const Color& rhs) const { return color == rhs.color; }
     constexpr bool operator!=(const Color& rhs) const { return color != rhs.color; }
 
+    constexpr Color operator~() const {
+        switch (color) {
+            case underlying::WHITE:
+                return Color(underlying::BLACK);
+            case underlying::BLACK:
+                return Color(underlying::WHITE);
+            default:
+                return Color(underlying::NO_COLOR);
+        }
+    }
+
     constexpr operator std::string() const {
         switch (color) {
             case underlying::WHITE:

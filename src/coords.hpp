@@ -39,6 +39,15 @@ class File {
         return static_cast<int>(file) <= static_cast<int>(rhs.file);
     }
 
+    constexpr bool operator>(const File& rhs) const {
+        return static_cast<int>(file) > static_cast<int>(rhs.file);
+    }
+    constexpr bool operator<(const File& rhs) const {
+        return static_cast<int>(file) < static_cast<int>(rhs.file);
+    }
+
+    operator char() const { return static_cast<char>(static_cast<int>(file) + 'a'); }
+
     static constexpr underlying FILE_A  = underlying::FILE_A;
     static constexpr underlying FILE_B  = underlying::FILE_B;
     static constexpr underlying FILE_C  = underlying::FILE_C;
@@ -142,6 +151,13 @@ class Square {
 
     constexpr bool operator==(const Square& rhs) const { return sq == rhs.sq; }
     constexpr bool operator!=(const Square& rhs) const { return sq != rhs.sq; }
+
+    constexpr bool operator>(const Square& rhs) const {
+        return static_cast<std::uint8_t>(sq) > static_cast<std::uint8_t>(rhs.sq);
+    }
+    constexpr bool operator<(const Square& rhs) const {
+        return static_cast<std::uint8_t>(sq) < static_cast<std::uint8_t>(rhs.sq);
+    }
 
     operator std::string() const {
         std::string str;
