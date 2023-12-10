@@ -157,16 +157,8 @@ class Piece {
         }
     }
 
-    constexpr PieceType type() const { return static_cast<PieceType::underlying>(int(piece) % 6); }
-    constexpr Color color() const {
-        if (piece == NONE) {
-            return Color::NO_COLOR;
-        }
-        return static_cast<Color>(static_cast<int>(piece) / 6);
-    }
-
-    constexpr underlying internal() const { return piece; }
-
+    constexpr bool operator<(const Piece& rhs) const { return piece < rhs.piece; }
+    constexpr bool operator>(const Piece& rhs) const { return piece > rhs.piece; }
     constexpr bool operator==(const Piece& rhs) const { return piece == rhs.piece; }
     constexpr bool operator!=(const Piece& rhs) const { return piece != rhs.piece; }
 
@@ -176,9 +168,7 @@ class Piece {
     constexpr bool operator==(const PieceType& rhs) const { return type() == rhs; }
     constexpr bool operator!=(const PieceType& rhs) const { return type() != rhs; }
 
-    constexpr bool operator<(const Piece& rhs) const { return piece < rhs.piece; }
-
-    explicit operator char() const {
+    constexpr explicit operator char() const {
         switch (piece) {
             case WHITE_PAWN:
                 return 'P';
@@ -209,6 +199,17 @@ class Piece {
                 return '.';
         }
     }
+
+    constexpr PieceType type() const { return static_cast<PieceType::underlying>(int(piece) % 6); }
+
+    constexpr Color color() const {
+        if (piece == NONE) {
+            return Color::NO_COLOR;
+        }
+        return static_cast<Color>(static_cast<int>(piece) / 6);
+    }
+
+    constexpr underlying internal() const { return piece; }
 
     static constexpr underlying NONE         = underlying::NONE;
     static constexpr underlying WHITE_PAWN   = underlying::WHITE_PAWN;

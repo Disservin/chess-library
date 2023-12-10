@@ -12,8 +12,10 @@ class Color {
     enum class underlying : std::int8_t { WHITE = 0, BLACK = 1, NO_COLOR = -1 };
 
     constexpr Color() : color(underlying::NO_COLOR) {}
-    constexpr Color(underlying c) : color(c) {}
-    constexpr Color(std::int8_t c) : color(static_cast<underlying>(c)) {
+    constexpr Color(underlying c) : color(c) {
+        assert(c == underlying::WHITE || c == underlying::BLACK || c == underlying::NO_COLOR);
+    }
+    constexpr Color(int c) : color(static_cast<underlying>(c)) {
         assert(c == 0 || c == 1 || c == -1);
     }
     constexpr Color(std::string_view str) {
@@ -26,11 +28,6 @@ class Color {
         }
     }
 
-    constexpr underlying internal() const { return color; }
-
-    constexpr bool operator==(const Color& rhs) const { return color == rhs.color; }
-    constexpr bool operator!=(const Color& rhs) const { return color != rhs.color; }
-
     constexpr Color operator~() const {
         switch (color) {
             case underlying::WHITE:
@@ -42,7 +39,7 @@ class Color {
         }
     }
 
-    operator std::string() const {
+    explicit operator std::string() const {
         switch (color) {
             case underlying::WHITE:
                 return "w";
@@ -52,6 +49,11 @@ class Color {
                 return "NO_COLOR";
         }
     }
+
+    constexpr bool operator==(const Color& rhs) const { return color == rhs.color; }
+    constexpr bool operator!=(const Color& rhs) const { return color != rhs.color; }
+
+    constexpr underlying internal() const { return color; }
 
     friend std::ostream& operator<<(std::ostream& os, const Color& color);
 

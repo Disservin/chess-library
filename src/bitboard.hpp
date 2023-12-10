@@ -16,6 +16,20 @@ class Bitboard {
 
     explicit operator bool() const { return bits != 0; }
 
+    explicit operator std::string() const {
+        std::bitset<64> b(bits);
+        std::string str_bitset = b.to_string();
+
+        std::string str;
+
+        for (int i = 0; i < 64; i += 8) {
+            std::string x = str_bitset.substr(i, 8);
+            std::reverse(x.begin(), x.end());
+            str += x + '\n';
+        }
+        return str;
+    }
+
     constexpr Bitboard operator&(std::uint64_t rhs) const { return Bitboard(bits & rhs); }
     constexpr Bitboard operator|(std::uint64_t rhs) const { return Bitboard(bits | rhs); }
     constexpr Bitboard operator^(std::uint64_t rhs) const { return Bitboard(bits ^ rhs); }
@@ -46,7 +60,6 @@ class Bitboard {
 
     constexpr bool operator==(const Bitboard& rhs) const { return bits == rhs.bits; }
     constexpr bool operator!=(const Bitboard& rhs) const { return bits != rhs.bits; }
-
     constexpr bool operator||(const Bitboard& rhs) const { return bits || rhs.bits; }
     constexpr bool operator&&(const Bitboard& rhs) const { return bits && rhs.bits; }
 
@@ -81,20 +94,6 @@ class Bitboard {
     }
 
     constexpr std::uint64_t getBits() const { return bits; }
-
-    operator std::string() const {
-        std::bitset<64> b(bits);
-        std::string str_bitset = b.to_string();
-
-        std::string str;
-
-        for (int i = 0; i < 64; i += 8) {
-            std::string x = str_bitset.substr(i, 8);
-            std::reverse(x.begin(), x.end());
-            str += x + '\n';
-        }
-        return str;
-    }
 
     friend std::ostream& operator<<(std::ostream& os, const Bitboard& bb);
 
