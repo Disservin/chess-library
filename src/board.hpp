@@ -465,7 +465,7 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] Bitboard pieces(PieceType type, Color color) const {
-        return pieces_bb_[static_cast<int>(type.internal())] &
+        return pieces_bb_[static_cast<int>(type.index())] &
                occ_bb_[static_cast<int>(color.internal())];
     }
 
@@ -525,7 +525,8 @@ class Board {
         std::string ss;
 
         constexpr auto convert = [](Color c, File file) {
-            return c == Color::WHITE ? char(file) + 65 : char(file) + 97;
+            //return c == Color::WHITE ? char(file) + 65 : char(file) + 97;
+            return c == Color::WHITE ? char(file.internal()) + 'A' : char(file.internal()) + 'a';
         };
 
         const auto get_file = [&](Color c, CastlingRights::Side side) {
@@ -709,10 +710,10 @@ class Board {
 
    protected:
     virtual void placePiece(Piece piece, Square sq) {
-        const auto sq_ = int(sq.internal());
+        const auto sq_ = sq.index();
         assert(board_[sq_] == Piece::NONE);
 
-        pieces_bb_[static_cast<int>(piece.type().internal())] |= (1ULL << (sq_));
+        pieces_bb_[static_cast<int>(piece.type().index())] |= (1ULL << (sq_));
         occ_bb_[static_cast<int>(piece.color().internal())] |= (1ULL << (sq_));
         occ_all_ |= (1ULL << sq_);
 
@@ -723,7 +724,7 @@ class Board {
         const auto sq_ = int(sq.internal());
         assert(board_[sq_] == piece && piece != Piece::NONE);
 
-        pieces_bb_[static_cast<int>(piece.type().internal())] &= ~(1ULL << (sq_));
+        pieces_bb_[static_cast<int>(piece.type().index())] &= ~(1ULL << (sq_));
         occ_bb_[static_cast<int>(piece.color().internal())] &= ~(1ULL << (sq_));
         occ_all_ &= ~(1ULL << sq_);
 
@@ -754,7 +755,7 @@ class Board {
     void setFenInternal(std::string_view fen) {
         original_fen_ = fen;
 
-        std::fill(std::begin(board_), std::end(board_), Piece::NONE);
+        board_.fill(Piece::NONE);
 
         // find leading whitespaces and remove them
         while (fen[0] == ' ') fen.remove_prefix(1);
@@ -766,7 +767,7 @@ class Board {
         }
 
         for (const auto c : {0, 1}) {
-            occ_bb_[c] = 0ULL;
+            occ_bb_[c] = Bitboard(0ULL);
         }
 
         const auto params = utils::splitString(fen, ' ');
@@ -795,6 +796,8 @@ class Board {
             plies_played_++;
         }
 
+
+
         auto square = Square(56);
         for (char curr : position) {
             if (Piece(curr) != Piece::NONE) {
@@ -809,6 +812,7 @@ class Board {
                 square = Square(static_cast<int>(square.internal()) + (curr - '0'));
             }
         }
+
 
         castling_rights_.clear();
 
@@ -890,6 +894,8 @@ class Board {
 
         prev_states_.clear();
         prev_states_.reserve(150);
+
+
     }
 
     std::string original_fen_;

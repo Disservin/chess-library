@@ -109,9 +109,16 @@ class Bitboard {
         return str;
     }
 
+    friend std::ostream& operator<<(std::ostream& os , const Bitboard& bb);
+
     operator bool() const { return bits; }
 
    private:
     std::uint64_t bits;
 };
+
+ inline std::ostream& operator<<(std::ostream& os , const Bitboard& bb) {
+    os << std::string(bb);
+    return os;
+}
 }  // namespace chess

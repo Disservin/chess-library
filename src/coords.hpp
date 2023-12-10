@@ -22,7 +22,7 @@ class File {
 
     constexpr File() : file(underlying::NO_FILE) {}
     constexpr File(underlying file) : file(file) {}
-    constexpr File(char file) : file(static_cast<underlying>(file - 'a')) {}
+    constexpr File(int file) : file(static_cast<underlying>(file)) {}
 
     constexpr underlying internal() const { return file; }
 
@@ -46,7 +46,7 @@ class File {
         return static_cast<int>(file) < static_cast<int>(rhs.file);
     }
 
-    explicit operator char() const { return static_cast<char>(static_cast<int>(file) + 'a'); }
+    explicit operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(file) + 'a')); }
 
     static constexpr underlying FILE_A  = underlying::FILE_A;
     static constexpr underlying FILE_B  = underlying::FILE_B;
@@ -78,7 +78,7 @@ class Rank {
 
     constexpr Rank() : rank(underlying::NO_RANK) {}
     constexpr Rank(underlying rank) : rank(rank) {}
-    constexpr Rank(char rank) : rank(static_cast<underlying>(rank - '1')) {}
+    constexpr Rank(int rank) : rank(static_cast<underlying>(rank)) {}
 
     constexpr underlying internal() const { return rank; }
 
@@ -93,6 +93,10 @@ class Rank {
     }
     constexpr bool operator<=(const Rank& rhs) const {
         return static_cast<int>(rank) <= static_cast<int>(rhs.rank);
+    }
+
+     operator std::string() const { 
+        return std::string(1, static_cast<char>(static_cast<int>(rank) + '1'));
     }
 
     static constexpr underlying RANK_1  = underlying::RANK_1;
@@ -131,6 +135,7 @@ class Square {
     constexpr Square(File file, Rank rank)
         : sq(static_cast<underlying>(static_cast<std::uint8_t>(file.internal()) +
                                      static_cast<std::uint8_t>(rank.internal()) * 8)) {}
+
     constexpr Square(Rank rank, File file)
         : sq(static_cast<underlying>(static_cast<std::uint8_t>(file.internal()) +
                                      static_cast<std::uint8_t>(rank.internal()) * 8)) {}
@@ -165,16 +170,16 @@ class Square {
 
     operator std::string() const {
         std::string str;
-        str += static_cast<char>(static_cast<int>(file().internal()) + 'a');
-        str += static_cast<char>(static_cast<int>(rank().internal()) + '1');
+        str += static_cast<std::string>(file());
+        str += static_cast<std::string>(rank());
         return str;
     }
 
     constexpr underlying internal() const { return sq; }
-    constexpr int index() const { return static_cast<std::uint8_t>(sq); }
+    constexpr int index() const { return static_cast<int>(sq); }
 
-    constexpr File file() const { return File(static_cast<std::uint8_t>(sq) & 7); }
-    constexpr Rank rank() const { return Rank(static_cast<std::uint8_t>(sq) >> 3); }
+    constexpr File file() const { return File(index() & 7); }
+    constexpr Rank rank() const { return Rank(index() >> 3); }
 
     constexpr bool is_light() const {
         return (static_cast<std::int8_t>(sq) / 8 + static_cast<std::int8_t>(sq) % 8) % 2 == 0;
