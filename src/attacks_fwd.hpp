@@ -12,12 +12,12 @@ namespace chess {
 class attacks {
     using U64 = std::uint64_t;
     struct Magic {
-        Bitboard mask;
+        U64 mask;
         U64 magic;
         Bitboard *attacks;
         U64 shift;
 
-        U64 operator()(U64 b) const { return ((b & mask) * magic) >> shift; }
+        Bitboard operator()(Bitboard b) const { return (((b & mask)).getBits() * magic) >> shift; }
     };
 
     /// @brief [Internal Usage] Slow function to calculate bishop attacks
@@ -121,7 +121,7 @@ class attacks {
         0x0203000000000000, 0x0507000000000000, 0x0A0E000000000000, 0x141C000000000000,
         0x2838000000000000, 0x5070000000000000, 0xA0E0000000000000, 0x40C0000000000000};
 
-    static constexpr Bitboard RookMagics[64] = {
+    static constexpr U64 RookMagics[64] = {
         0x8a80104000800020ULL, 0x140002000100040ULL,  0x2801880a0017001ULL,  0x100081001000420ULL,
         0x200020010080420ULL,  0x3001c0002010008ULL,  0x8480008002000100ULL, 0x2080088004402900ULL,
         0x800098204000ULL,     0x2024401000200040ULL, 0x100802000801000ULL,  0x120800800801000ULL,
@@ -139,7 +139,7 @@ class attacks {
         0x280001040802101ULL,  0x2100190040002085ULL, 0x80c0084100102001ULL, 0x4024081001000421ULL,
         0x20030a0244872ULL,    0x12001008414402ULL,   0x2006104900a0804ULL,  0x1004081002402ULL};
 
-    static constexpr Bitboard BishopMagics[64] = {
+    static constexpr U64 BishopMagics[64] = {
         0x40040844404084ULL,   0x2004208a004208ULL,   0x10190041080202ULL,   0x108060845042010ULL,
         0x581104180800210ULL,  0x2112080446200010ULL, 0x1080820820060210ULL, 0x3c0808410220200ULL,
         0x4050404440404ULL,    0x21001420088ULL,      0x24d0080801082102ULL, 0x1020a0a020400ULL,

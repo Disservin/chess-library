@@ -63,23 +63,20 @@ template <Color::underlying c>
 /// @param sq
 /// @return
 [[nodiscard]] inline Bitboard attacks::pawn(Color c, Square sq) {
-    return PawnAttacks[int(c.internal())][static_cast<int>(sq.internal())];
+    return PawnAttacks[int(c.internal())][sq.index()];
 }
 
 /// @brief Returns the knight attacks for a given square
 /// @param sq
 /// @return
-[[nodiscard]] inline Bitboard attacks::knight(Square sq) {
-    return KnightAttacks[static_cast<int>(sq.internal())];
-}
+[[nodiscard]] inline Bitboard attacks::knight(Square sq) { return KnightAttacks[sq.index()]; }
 
 /// @brief Returns the bishop attacks for a given square
 /// @param sq
 /// @param occupied
 /// @return
 [[nodiscard]] inline Bitboard attacks::bishop(Square sq, Bitboard occupied) {
-    return BishopTable[static_cast<int>(sq.internal())]
-        .attacks[BishopTable[static_cast<int>(sq.internal())](occupied)];
+    return BishopTable[sq.index()].attacks[BishopTable[sq.index()](occupied).getBits()];
 }
 
 /// @brief Returns the rook attacks for a given square
@@ -87,8 +84,7 @@ template <Color::underlying c>
 /// @param occupied
 /// @return
 [[nodiscard]] inline Bitboard attacks::rook(Square sq, Bitboard occupied) {
-    return RookTable[static_cast<int>(sq.internal())]
-        .attacks[RookTable[static_cast<int>(sq.internal())](occupied)];
+    return RookTable[sq.index()].attacks[RookTable[sq.index()](occupied).getBits()];
 }
 
 /// @brief Returns the queen attacks for a given square
@@ -102,9 +98,7 @@ template <Color::underlying c>
 /// @brief Returns the king attacks for a given square
 /// @param sq
 /// @return
-[[nodiscard]] inline Bitboard attacks::king(Square sq) {
-    return KingAttacks[static_cast<int>(sq.internal())];
-}
+[[nodiscard]] inline Bitboard attacks::king(Square sq) { return KingAttacks[sq.index()]; }
 
 /// @brief Returns a bitboard with the origin squares of the attacking pieces set
 /// @param board
@@ -135,35 +129,35 @@ template <Color::underlying c>
 
     int r, f;
 
-    int br = static_cast<int>(sq.rank().internal());
-    int bf = static_cast<int>(sq.file().internal());
+    int br = sq.index() / 8;
+    int bf = sq.index() % 8;
 
     for (r = br + 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
          r++, f++) {
-        auto s = static_cast<int>(Square(static_cast<Rank>(r), static_cast<File>(f)).internal());
+        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
-        if (occupied.check(s)) break;
+        if ((occupied & (1ull << s)).getBits()) break;
     }
 
     for (r = br - 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
          r--, f++) {
-        auto s = static_cast<int>(Square(static_cast<Rank>(r), static_cast<File>(f)).internal());
+        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
-        if (occupied.check(s)) break;
+        if ((occupied & (1ull << s)).getBits()) break;
     }
 
     for (r = br + 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
          r++, f--) {
-        auto s = static_cast<int>(Square(static_cast<Rank>(r), static_cast<File>(f)).internal());
+        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
-        if (occupied.check(s)) break;
+        if ((occupied & (1ull << s)).getBits()) break;
     }
 
     for (r = br - 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
          r--, f--) {
-        auto s = static_cast<int>(Square(static_cast<Rank>(r), static_cast<File>(f)).internal());
+        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
-        if (occupied.check(s)) break;
+        if ((occupied & (1ull << s)).getBits()) break;
     }
 
     return attacks;
@@ -178,31 +172,31 @@ template <Color::underlying c>
 
     int r, f;
 
-    int rr = static_cast<int>(sq.rank().internal());
-    int rf = static_cast<int>(sq.file().internal());
+    int rr = sq.index() / 8;
+    int rf = sq.index() % 8;
 
     for (r = rr + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
-        auto s = static_cast<int>(Square(static_cast<Rank>(r), static_cast<File>(rf)).internal());
+        auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
         attacks |= (1ULL << s);
-        if (occupied.check(s)) break;
+        if ((occupied & (1ull << s)).getBits()) break;
     }
 
     for (r = rr - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
-        auto s = static_cast<int>(Square(static_cast<Rank>(r), static_cast<File>(rf)).internal());
+        auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
         attacks |= (1ULL << s);
-        if (occupied.check(s)) break;
+        if ((occupied & (1ull << s)).getBits()) break;
     }
 
     for (f = rf + 1; utils::validSq(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
-        auto s = static_cast<int>(Square(static_cast<Rank>(rr), static_cast<File>(f)).internal());
+        auto s = Square(static_cast<Rank>(rr), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
-        if (occupied.check(s)) break;
+        if ((occupied & (1ull << s)).getBits()) break;
     }
 
     for (f = rf - 1; utils::validSq(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
-        auto s = static_cast<int>(Square(static_cast<Rank>(rr), static_cast<File>(f)).internal());
+        auto s = Square(static_cast<Rank>(rr), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
-        if (occupied.check(s)) break;
+        if ((occupied & (1ull << s)).getBits()) break;
     }
 
     return attacks;
@@ -221,20 +215,20 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
         ((MASK_FILE[static_cast<int>(File::FILE_A)] | MASK_FILE[static_cast<int>(File::FILE_H)]) &
          ~MASK_FILE[static_cast<int>(sq.file().internal())]);
 
-    Bitboard occ   = 0ULL;
-    const auto sq_ = static_cast<int>(sq.internal());
+    U64 occ = 0ULL;
 
-    table[sq_].magic = magic;
-    table[sq_].mask  = attacks(sq, occ) & ~edges;
-    table[sq_].shift = 64 - table[sq_].mask.count();
+    table[sq.index()].magic = magic;
+    table[sq.index()].mask  = (attacks(sq, occ) & ~edges).getBits();
+    table[sq.index()].shift = 64 - Bitboard(table[sq.index()].mask).count();
 
     if (sq < 64 - 1) {
-        table[sq_ + 1].attacks = table[sq_].attacks + (1 << table[sq_].mask.count());
+        table[sq.index() + 1].attacks =
+            table[sq.index()].attacks + (1 << Bitboard(table[sq.index()].mask).count());
     }
 
     do {
-        table[sq_].attacks[table[sq_](occ)] = attacks(sq, occ);
-        occ                                 = (occ - table[sq_].mask) & table[sq_].mask;
+        table[sq.index()].attacks[table[sq.index()](occ).getBits()] = attacks(sq, occ);
+        occ = (occ - table[sq.index()].mask) & table[sq.index()].mask;
     } while (occ);
 }
 

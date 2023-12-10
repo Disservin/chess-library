@@ -14,6 +14,16 @@ class Bitboard {
     constexpr Bitboard() : bits(0) {}
     constexpr Bitboard(std::uint64_t bits) : bits(bits) {}
 
+    explicit operator bool() const { return bits != 0; }
+
+    constexpr Bitboard operator&(std::uint64_t rhs) const { return Bitboard(bits & rhs); }
+    constexpr Bitboard operator|(std::uint64_t rhs) const { return Bitboard(bits | rhs); }
+    constexpr Bitboard operator^(std::uint64_t rhs) const { return Bitboard(bits ^ rhs); }
+    constexpr Bitboard operator<<(std::uint64_t rhs) const { return Bitboard(bits << rhs); }
+    constexpr Bitboard operator>>(std::uint64_t rhs) const { return Bitboard(bits >> rhs); }
+    constexpr bool operator==(std::uint64_t rhs) const { return bits == rhs; }
+    constexpr bool operator!=(std::uint64_t rhs) const { return bits != rhs; }
+
     constexpr Bitboard operator&(const Bitboard& rhs) const { return Bitboard(bits & rhs.bits); }
     constexpr Bitboard operator|(const Bitboard& rhs) const { return Bitboard(bits | rhs.bits); }
     constexpr Bitboard operator^(const Bitboard& rhs) const { return Bitboard(bits ^ rhs.bits); }
@@ -37,31 +47,18 @@ class Bitboard {
     constexpr bool operator==(const Bitboard& rhs) const { return bits == rhs.bits; }
     constexpr bool operator!=(const Bitboard& rhs) const { return bits != rhs.bits; }
 
-    constexpr bool operator!=(std::uint64_t rhs) const { return bits != rhs; }
-
     constexpr bool operator||(const Bitboard& rhs) const { return bits || rhs.bits; }
     constexpr bool operator&&(const Bitboard& rhs) const { return bits && rhs.bits; }
 
-    constexpr Bitboard operator|(std::uint64_t rhs) const { return Bitboard(bits | rhs); }
-
-    constexpr Bitboard& set(std::uint8_t index) {
+    constexpr Bitboard& set(int index) {
         bits |= (1ULL << index);
         return *this;
     }
 
-    constexpr bool check(std::uint8_t index) const { return bits & (1ULL << index); }
+    constexpr bool check(int index) const { return bits & (1ULL << index); }
 
-    constexpr Bitboard& clear(std::uint8_t index) {
+    constexpr Bitboard& clear(int index) {
         bits &= ~(1ULL << index);
-        return *this;
-    }
-
-    constexpr Bitboard& set(std::uint8_t index, bool value) {
-        if (value) {
-            set(index);
-        } else {
-            clear(index);
-        }
         return *this;
     }
 
@@ -85,16 +82,6 @@ class Bitboard {
 
     constexpr std::uint64_t getBits() const { return bits; }
 
-    constexpr Bitboard north() const { return Bitboard(bits << 8); }
-    constexpr Bitboard south() const { return Bitboard(bits >> 8); }
-    constexpr Bitboard east() const { return Bitboard((bits & 0xfefefefefefefefe) >> 1); }
-    constexpr Bitboard west() const { return Bitboard((bits & 0x7f7f7f7f7f7f7f7f) << 1); }
-
-    constexpr Bitboard northEast() const { return Bitboard((bits & 0xfefefefefefefefe) << 7); }
-    constexpr Bitboard northWest() const { return Bitboard((bits & 0x7f7f7f7f7f7f7f7f) << 9); }
-    constexpr Bitboard southEast() const { return Bitboard((bits & 0xfefefefefefefefe) >> 9); }
-    constexpr Bitboard southWest() const { return Bitboard((bits & 0x7f7f7f7f7f7f7f7f) >> 7); }
-
     operator std::string() const {
         std::bitset<64> b(bits);
         std::string str_bitset = b.to_string();
@@ -109,15 +96,13 @@ class Bitboard {
         return str;
     }
 
-    friend std::ostream& operator<<(std::ostream& os , const Bitboard& bb);
-
-    operator bool() const { return bits; }
+    friend std::ostream& operator<<(std::ostream& os, const Bitboard& bb);
 
    private:
     std::uint64_t bits;
 };
 
- inline std::ostream& operator<<(std::ostream& os , const Bitboard& bb) {
+inline std::ostream& operator<<(std::ostream& os, const Bitboard& bb) {
     os << std::string(bb);
     return os;
 }

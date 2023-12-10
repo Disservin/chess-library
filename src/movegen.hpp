@@ -24,11 +24,12 @@ static auto init_squares_between = []() constexpr {
             else if (Square(sq1).file() == Square(sq2).file() ||
                      Square(sq1).rank() == Square(sq2).rank())
                 squares_between_bb[sq1][sq2] =
-                    attacks::rook(Square(sq1), sqs) & attacks::rook(Square(sq2), sqs);
+                    (attacks::rook(Square(sq1), sqs) & attacks::rook(Square(sq2), sqs)).getBits();
             else if (Square(sq1).diagonalOf() == Square(sq2).diagonalOf() ||
                      Square(sq1).antiDiagonalOf() == Square(sq2).antiDiagonalOf())
                 squares_between_bb[sq1][sq2] =
-                    attacks::bishop(Square(sq1), sqs) & attacks::bishop(Square(sq2), sqs);
+                    (attacks::bishop(Square(sq1), sqs) & attacks::bishop(Square(sq2), sqs))
+                        .getBits();
         }
     }
 
@@ -342,7 +343,8 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 
         const Square kSQ = board.kingSq(c);
         const Bitboard kingMask =
-            (1ull << kSQ.index()) & attacks::MASK_RANK[static_cast<int>(epPawn.rank().internal())];
+            (1ull << kSQ.index()) &
+            attacks::MASK_RANK[static_cast<int>(epPawn.rank().internal())].getBits();
         const Bitboard enemyQueenRook =
             board.pieces(PieceType::ROOK, ~c) | board.pieces(PieceType::QUEEN, ~c);
 
@@ -359,7 +361,9 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
              If the pawn is pinned but the en passant square is not on the
              pin mask then the move is illegal.
             */
-            if ((1ULL << from.index()) & pin_d && !(pin_d & Bitboard(1ull << ep.index()))) continue;
+            if (((1ULL << from.index()) & pin_d.getBits()) &&
+                !(pin_d & Bitboard(1ull << ep.index()).getBits()))
+                continue;
 
             const Bitboard connectingPawns = (1ull << epPawn.index()) | (1ull << from.index());
 
@@ -394,6 +398,8 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @return
 [[nodiscard]] inline Bitboard generateBishopMoves(Square sq, Bitboard pin_d, Bitboard occ_all) {
     // The Bishop is pinned diagonally thus can only move diagonally.
+    std::cout << attacks::bishop(sq, occ_all) << std::endl;
+    std::cout << occ_all << std::endl;
     if (pin_d & Bitboard(1ULL << int(sq.internal()))) return attacks::bishop(sq, occ_all) & pin_d;
     return attacks::bishop(sq, occ_all);
 }
@@ -481,11 +487,11 @@ template <Color::underlying c, MoveGenType mt>
 
         if ((not_attacked_path & empty_not_attacked) == not_attacked_path &&
             ((not_occ_path & ~board.occ()) == not_occ_path) &&
-            !((1ull << from_rook_sq.index()) & pinHV &
-              attacks::MASK_RANK[static_cast<int>(sq.rank().internal())]) &&
-            !((1ull << end_rook_sq.index()) & (withoutRook & withoutKing)) &&
+            !((1ull << from_rook_sq.index()) & pinHV.getBits() &
+              attacks::MASK_RANK[static_cast<int>(sq.rank().internal())].getBits()) &&
+            !((1ull << end_rook_sq.index()) & (withoutRook & withoutKing).getBits()) &&
             !((1ull << end_king_sq.index()) &
-              (seen | (withoutRook & Bitboard(~(1ull << sq.index())))))) {
+              (seen | (withoutRook & Bitboard(~(1ull << sq.index())))).getBits())) {
             moves |= (1ull << from_rook_sq.index());
         }
     }
@@ -521,9 +527,10 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
 
     int _doubleCheck = 0;
 
-    Bitboard _occ_us        = board.us(c);
-    Bitboard _occ_enemy     = board.us(~c);
-    Bitboard _occ_all       = _occ_us | _occ_enemy;
+    Bitboard _occ_us    = board.us(c);
+    Bitboard _occ_enemy = board.us(~c);
+    Bitboard _occ_all   = _occ_us | _occ_enemy;
+
     Bitboard _enemy_emptyBB = ~_occ_us;
 
     Bitboard _checkMask = checkMask<c>(board, king_sq, _doubleCheck);

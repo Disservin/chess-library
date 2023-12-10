@@ -12,16 +12,12 @@ int main(int argc, char const *argv[]) {
 
     board.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-std::cout << board << std::endl;
+    std::cout << board << std::endl;
 
     chess::Movelist moves;
     chess::movegen::legalmoves(moves, board);
 
     std::cout << "Legal moves: " << moves.size() << std::endl;
-
-    std::cout << board.us(chess::Color::WHITE) << std::endl;
-    std::cout << board.us(~chess::Color::WHITE) << std::endl;
-    std::cout << board.kingSq(chess::Color::WHITE) << std::endl;
 
     for (auto move : moves) {
         std::cout << move << std::endl;

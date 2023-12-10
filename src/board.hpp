@@ -246,7 +246,7 @@ class Board {
 
             const auto possible_ep = static_cast<Square>(move.to() ^ 8);
             if (std::abs(int(move.to().internal()) - int(move.from().internal())) == 16) {
-                U64 ep_mask = attacks::pawn(side_to_move_, possible_ep);
+                Bitboard ep_mask = attacks::pawn(side_to_move_, possible_ep);
 
                 if (ep_mask & pieces(PieceType::PAWN, ~side_to_move_)) {
                     enpassant_sq_ = possible_ep;
@@ -443,10 +443,7 @@ class Board {
     /// Faster than calling all() or
     /// us(board.sideToMove()) | them(board.sideToMove()).
     /// @return
-    [[nodiscard]] Bitboard occ() const {
-        assert(occ_all_ == all());
-        return occ_all_;
-    }
+    [[nodiscard]] Bitboard occ() const { return occ_bb_[0] | occ_bb_[1]; }
 
     /// @brief recalculate all bitboards
     /// @return
@@ -525,7 +522,7 @@ class Board {
         std::string ss;
 
         constexpr auto convert = [](Color c, File file) {
-            //return c == Color::WHITE ? char(file) + 65 : char(file) + 97;
+            // return c == Color::WHITE ? char(file) + 65 : char(file) + 97;
             return c == Color::WHITE ? char(file.internal()) + 'A' : char(file.internal()) + 'a';
         };
 
@@ -670,8 +667,9 @@ class Board {
     /// @brief Checks if the given color has at least 1 piece thats not pawn and not king
     /// @return
     [[nodiscard]] bool hasNonPawnMaterial(Color color) const {
-        return pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
-               pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color);
+        return (pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
+                pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color))
+            .getBits();
     }
 
     /// @brief Regenerates the zobrist hash key
@@ -715,7 +713,6 @@ class Board {
 
         pieces_bb_[static_cast<int>(piece.type().index())] |= (1ULL << (sq_));
         occ_bb_[static_cast<int>(piece.color().internal())] |= (1ULL << (sq_));
-        occ_all_ |= (1ULL << sq_);
 
         board_[sq_] = piece;
     }
@@ -726,7 +723,6 @@ class Board {
 
         pieces_bb_[static_cast<int>(piece.type().index())] &= ~(1ULL << (sq_));
         occ_bb_[static_cast<int>(piece.color().internal())] &= ~(1ULL << (sq_));
-        occ_all_ &= ~(1ULL << sq_);
 
         board_[sq_] = Piece::NONE;
     }
@@ -737,8 +733,7 @@ class Board {
     Bitboard occ_bb_[2]          = {};
     std::array<Piece, 64> board_ = {};
 
-    U64 hash_key_     = 0ULL;
-    Bitboard occ_all_ = 0ULL;
+    U64 hash_key_ = 0ULL;
 
     CastlingRights castling_rights_ = {};
     uint16_t plies_played_          = 0;
@@ -759,8 +754,6 @@ class Board {
 
         // find leading whitespaces and remove them
         while (fen[0] == ' ') fen.remove_prefix(1);
-
-        occ_all_ = 0ULL;
 
         for (int i = 0; i < 6; i++) {
             pieces_bb_[i] = 0ULL;
@@ -796,8 +789,6 @@ class Board {
             plies_played_++;
         }
 
-
-
         auto square = Square(56);
         for (char curr : position) {
             if (Piece(curr) != Piece::NONE) {
@@ -812,7 +803,6 @@ class Board {
                 square = Square(static_cast<int>(square.internal()) + (curr - '0'));
             }
         }
-
 
         castling_rights_.clear();
 
@@ -890,12 +880,9 @@ class Board {
         }
 
         hash_key_ = zobrist();
-        occ_all_  = all();
 
         prev_states_.clear();
         prev_states_.reserve(150);
-
-
     }
 
     std::string original_fen_;

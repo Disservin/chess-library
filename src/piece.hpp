@@ -9,7 +9,15 @@ namespace chess {
 
 class PieceType {
    public:
-    enum class underlying : std::uint8_t { NONE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING , NB };
+    enum class underlying : std::uint8_t {
+        PAWN,
+        KNIGHT,
+        BISHOP,
+        ROOK,
+        QUEEN,
+        KING,
+        NONE,
+    };
 
     constexpr PieceType() : pt(underlying::NONE) {}
     constexpr PieceType(underlying pt) : pt(pt) {}
@@ -61,8 +69,8 @@ class PieceType {
     constexpr bool operator==(const PieceType& rhs) const { return pt == rhs.pt; }
     constexpr bool operator!=(const PieceType& rhs) const { return pt != rhs.pt; }
 
-    //constexpr underlying internal() const { return pt; }
-    constexpr int index() const { return static_cast<int>(pt) -1; }
+    // constexpr underlying internal() const { return pt; }
+    constexpr int index() const { return static_cast<int>(pt); }
 
     static constexpr underlying PAWN   = underlying::PAWN;
     static constexpr underlying KNIGHT = underlying::KNIGHT;
@@ -71,7 +79,6 @@ class PieceType {
     static constexpr underlying QUEEN  = underlying::QUEEN;
     static constexpr underlying KING   = underlying::KING;
     static constexpr underlying NONE   = underlying::NONE;
-    static constexpr underlying NB   = underlying::NB;
 
    private:
     underlying pt;
@@ -85,20 +92,19 @@ inline std::ostream& operator<<(std::ostream& os, const PieceType& pt) {
 class Piece {
    public:
     enum class underlying : std::uint8_t {
-        NONE,
-        WHITE_PAWN   = 1,
-        WHITE_KNIGHT = 2,
-        WHITE_BISHOP = 3,
-        WHITE_ROOK   = 4,
-        WHITE_QUEEN  = 5,
-        WHITE_KING   = 6,
-        BLACK_PAWN   = 9,
-        BLACK_KNIGHT = 10,
-        BLACK_BISHOP = 11,
-        BLACK_ROOK   = 12,
-        BLACK_QUEEN  = 13,
-        BLACK_KING   = 14,
-        NB = 15
+        WHITE_PAWN,
+        WHITE_KNIGHT,
+        WHITE_BISHOP,
+        WHITE_ROOK,
+        WHITE_QUEEN,
+        WHITE_KING,
+        BLACK_PAWN,
+        BLACK_KNIGHT,
+        BLACK_BISHOP,
+        BLACK_ROOK,
+        BLACK_QUEEN,
+        BLACK_KING,
+        NONE
     };
 
     constexpr Piece() : piece(underlying::NONE) {}
@@ -151,12 +157,13 @@ class Piece {
         }
     }
 
-    constexpr PieceType type() const { return static_cast<PieceType::underlying>(int(piece) & 7); }
-    constexpr Color color() const { 
+    constexpr PieceType type() const { return static_cast<PieceType::underlying>(int(piece) % 6); }
+    constexpr Color color() const {
         if (piece == NONE) {
             return Color::NO_COLOR;
         }
-        return static_cast<Color>(static_cast<int>(piece) >> 3); }
+        return static_cast<Color>(static_cast<int>(piece) / 6);
+    }
 
     constexpr underlying internal() const { return piece; }
 
@@ -170,7 +177,6 @@ class Piece {
     constexpr bool operator!=(const PieceType& rhs) const { return type() != rhs; }
 
     constexpr bool operator<(const Piece& rhs) const { return piece < rhs.piece; }
-
 
     explicit operator char() const {
         switch (piece) {
@@ -217,7 +223,6 @@ class Piece {
     static constexpr underlying BLACK_ROOK   = underlying::BLACK_ROOK;
     static constexpr underlying BLACK_QUEEN  = underlying::BLACK_QUEEN;
     static constexpr underlying BLACK_KING   = underlying::BLACK_KING;
-    static constexpr underlying NB   = underlying::NB;
 
    private:
     underlying piece;
