@@ -14,7 +14,7 @@ class attacks {
     struct Magic {
         Bitboard mask;
         U64 magic;
-        U64 *attacks;
+        Bitboard *attacks;
         U64 shift;
 
         U64 operator()(U64 b) const { return ((b & mask) * magic) >> shift; }
@@ -181,16 +181,13 @@ class attacks {
     [[nodiscard]] static constexpr Bitboard shift(const Bitboard b);
 
     /// @brief Generate the left side pawn attacks.
-    /// @tparam c
     /// @param pawns
     /// @return
     [[nodiscard]] static Bitboard pawnLeftAttacks(Color c, const Bitboard pawns);
 
     /// @brief Generate the right side pawn attacks.
-    /// @tparam c
     /// @param pawns
     /// @return
-
     [[nodiscard]] static Bitboard pawnRightAttacks(Color c, const Bitboard pawns);
 
     /// @brief Returns the pawn attacks for a given color and square

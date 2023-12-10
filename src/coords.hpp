@@ -131,6 +131,9 @@ class Square {
     constexpr Square(File file, Rank rank)
         : sq(static_cast<underlying>(static_cast<std::uint8_t>(file.internal()) +
                                      static_cast<std::uint8_t>(rank.internal()) * 8)) {}
+    constexpr Square(Rank rank, File file)
+        : sq(static_cast<underlying>(static_cast<std::uint8_t>(file.internal()) +
+                                     static_cast<std::uint8_t>(rank.internal()) * 8)) {}
     constexpr Square(underlying sq) : sq(sq) {}
     constexpr Square(std::string_view str)
         : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {}

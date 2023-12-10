@@ -49,6 +49,8 @@ class Bitboard {
         return *this;
     }
 
+    constexpr bool check(std::uint8_t index) const { return bits & (1ULL << index); }
+
     constexpr Bitboard& clear(std::uint8_t index) {
         bits &= ~(1ULL << index);
         return *this;
