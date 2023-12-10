@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace chess {
 
@@ -23,6 +24,28 @@ class File {
     constexpr File(char file) : file(static_cast<underlying>(file - 'a')) {}
 
     constexpr underlying internal() const { return file; }
+
+    constexpr bool operator==(const File& rhs) const { return file == rhs.file; }
+    constexpr bool operator!=(const File& rhs) const { return file != rhs.file; }
+
+    constexpr bool operator==(const underlying& rhs) const { return file == rhs; }
+    constexpr bool operator!=(const underlying& rhs) const { return file != rhs; }
+
+    constexpr bool operator>=(const File& rhs) const {
+        return static_cast<int>(file) >= static_cast<int>(rhs.file);
+    }
+    constexpr bool operator<=(const File& rhs) const {
+        return static_cast<int>(file) <= static_cast<int>(rhs.file);
+    }
+
+    static constexpr underlying FILE_A = underlying::FILE_A;
+    static constexpr underlying FILE_B = underlying::FILE_B;
+    static constexpr underlying FILE_C = underlying::FILE_C;
+    static constexpr underlying FILE_D = underlying::FILE_D;
+    static constexpr underlying FILE_E = underlying::FILE_E;
+    static constexpr underlying FILE_F = underlying::FILE_F;
+    static constexpr underlying FILE_G = underlying::FILE_G;
+    static constexpr underlying FILE_H = underlying::FILE_H;
 
    private:
     underlying file;
@@ -47,6 +70,29 @@ class Rank {
     constexpr Rank(char rank) : rank(static_cast<underlying>(rank - '1')) {}
 
     constexpr underlying internal() const { return rank; }
+
+    constexpr bool operator==(const Rank& rhs) const { return rank == rhs.rank; }
+    constexpr bool operator!=(const Rank& rhs) const { return rank != rhs.rank; }
+
+    constexpr bool operator==(const underlying& rhs) const { return rank == rhs; }
+    constexpr bool operator!=(const underlying& rhs) const { return rank != rhs; }
+
+    constexpr bool operator>=(const Rank& rhs) const {
+        return static_cast<int>(rank) >= static_cast<int>(rhs.rank);
+    }
+    constexpr bool operator<=(const Rank& rhs) const {
+        return static_cast<int>(rank) <= static_cast<int>(rhs.rank);
+    }
+
+    static constexpr underlying RANK_1  = underlying::RANK_1;
+    static constexpr underlying RANK_2  = underlying::RANK_2;
+    static constexpr underlying RANK_3  = underlying::RANK_3;
+    static constexpr underlying RANK_4  = underlying::RANK_4;
+    static constexpr underlying RANK_5  = underlying::RANK_5;
+    static constexpr underlying RANK_6  = underlying::RANK_6;
+    static constexpr underlying RANK_7  = underlying::RANK_7;
+    static constexpr underlying RANK_8  = underlying::RANK_8;
+    static constexpr underlying NO_RANK = underlying::NO_RANK;
 
    private:
     underlying rank;
@@ -74,10 +120,17 @@ class Square {
         : sq(static_cast<underlying>(static_cast<std::uint8_t>(file.internal()) +
                                      static_cast<std::uint8_t>(rank.internal()) * 8)) {}
     constexpr Square(underlying sq) : sq(sq) {}
+    constexpr Square(std::string_view str)
+        : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {}
 
     constexpr Square operator^(int i) const {
         return Square(
             static_cast<underlying>(static_cast<std::uint8_t>(sq) ^ static_cast<std::uint8_t>(i)));
+    };
+
+    constexpr Square operator^(Square s) const {
+        return Square(static_cast<underlying>(static_cast<std::uint8_t>(sq) ^
+                                              static_cast<std::uint8_t>(s.internal())));
     };
 
     constexpr Square& operator^=(int i) {
@@ -85,22 +138,8 @@ class Square {
         return *this;
     }
 
-    constexpr File file() const { return File(static_cast<std::uint8_t>(sq) & 7); }
-    constexpr Rank rank() const { return Rank(static_cast<std::uint8_t>(sq) >> 3); }
-
     constexpr bool operator==(const Square& rhs) const { return sq == rhs.sq; }
     constexpr bool operator!=(const Square& rhs) const { return sq != rhs.sq; }
-
-    constexpr underlying internal() const { return sq; }
-
-    constexpr bool is_light() const {
-        return (static_cast<std::int8_t>(sq) / 8 + static_cast<std::int8_t>(sq) % 8) % 2 == 0;
-    }
-    constexpr bool is_dark() const { return !is_light(); }
-
-    constexpr bool is_valid() const { return static_cast<std::int8_t>(sq) < 64; }
-
-    static constexpr int max() { return 64; }
 
     operator std::string() const {
         std::string str;
@@ -109,9 +148,43 @@ class Square {
         return str;
     }
 
+    constexpr underlying internal() const { return sq; }
+
+    constexpr File file() const { return File(static_cast<std::uint8_t>(sq) & 7); }
+    constexpr Rank rank() const { return Rank(static_cast<std::uint8_t>(sq) >> 3); }
+
+    constexpr bool is_light() const {
+        return (static_cast<std::int8_t>(sq) / 8 + static_cast<std::int8_t>(sq) % 8) % 2 == 0;
+    }
+    constexpr bool is_dark() const { return !is_light(); }
+
+    constexpr bool is_valid() const { return static_cast<std::int8_t>(sq) < 64; }
+
+    constexpr int distance(Square sq) const {
+        return static_cast<std::int8_t>(std::max(file().internal(), sq.file().internal())) -
+               static_cast<std::int8_t>(std::min(file().internal(), sq.file().internal()));
+    }
+
+    constexpr int diagonalOf() const {
+        return 7 + static_cast<std::int8_t>(rank().internal()) -
+               static_cast<std::int8_t>(file().internal());
+    }
+
+    constexpr int antiDiagonalOf() const {
+        return static_cast<std::int8_t>(rank().internal()) +
+               static_cast<std::int8_t>(file().internal());
+    }
+
+    static constexpr int max() { return 64; }
+
    private:
     underlying sq;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Square& sq) {
+    os << static_cast<std::string>(sq);
+    return os;
+}
 
 enum class Direction : int8_t {
     NORTH      = 8,

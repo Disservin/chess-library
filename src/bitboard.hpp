@@ -2,6 +2,10 @@
 
 #include <cstdint>
 #include <bit>
+#include <string>
+#include <bitset>
+#include <algorithm>
+#include <iostream>
 
 namespace chess {
 
@@ -81,6 +85,19 @@ class Bitboard {
     constexpr Bitboard northWest() const { return Bitboard((bits & 0x7f7f7f7f7f7f7f7f) << 9); }
     constexpr Bitboard southEast() const { return Bitboard((bits & 0xfefefefefefefefe) >> 9); }
     constexpr Bitboard southWest() const { return Bitboard((bits & 0x7f7f7f7f7f7f7f7f) >> 7); }
+
+    operator std::string() const {
+        std::bitset<64> b(bits);
+        std::string str_bitset = b.to_string();
+
+        for (int i = 0; i < 64; i += 8) {
+            std::string x = str_bitset.substr(i, 8);
+            std::reverse(x.begin(), x.end());
+            std::cout << x << '\n';
+        }
+
+        std::cout << '\n' << std::endl;
+    }
 
    private:
     std::uint64_t bits;

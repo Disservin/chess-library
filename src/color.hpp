@@ -44,6 +44,10 @@ class Color {
 
     friend std::ostream& operator<<(std::ostream& os, const Color& color);
 
+    static constexpr underlying WHITE    = underlying::WHITE;
+    static constexpr underlying BLACK    = underlying::BLACK;
+    static constexpr underlying NO_COLOR = underlying::NO_COLOR;
+
    private:
     underlying color;
 };  // namespace chess
