@@ -41,6 +41,25 @@ class PieceType {
             case 'K':
                 pt = underlying::KING;
                 break;
+
+            case 'p':
+                pt = underlying::PAWN;
+                break;
+            case 'n':
+                pt = underlying::KNIGHT;
+                break;
+            case 'b':
+                pt = underlying::BISHOP;
+                break;
+            case 'r':
+                pt = underlying::ROOK;
+                break;
+            case 'q':
+                pt = underlying::QUEEN;
+                break;
+            case 'k':
+                pt = underlying::KING;
+                break;
             default:
                 pt = underlying::NONE;
                 break;

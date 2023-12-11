@@ -61,6 +61,14 @@ namespace utils {
     return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
 }
 
+[[nodiscard]] constexpr Square extractSquare(std::string_view square_str) {
+    char letter = square_str[0];
+    int file    = letter - 96;
+    int rank    = square_str[1] - 48;
+    int index   = (rank - 1) * 8 + file - 1;
+    return Square(index);
+}
+
 }  // namespace utils
 
 }  // namespace chess
