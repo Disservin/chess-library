@@ -6,6 +6,8 @@
 #include "attacks.hpp"
 #include "movegen_fwd.hpp"
 #include "movegen.hpp"
+#include "uci.hpp"
+#include "pgn.hpp"
 
 int main(int argc, char const *argv[]) {
     chess::Board board;

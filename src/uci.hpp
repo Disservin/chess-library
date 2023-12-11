@@ -13,6 +13,7 @@
 #include "board.hpp"
 #include "color.hpp"
 #include "move.hpp"
+#include "movegen_fwd.hpp"
 
 namespace chess::uci {
 
@@ -363,10 +364,10 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
         info.from_file = file_to;
     }
 
-    info.to = utils::fileRankSquare(file_to, rank_to);
+    info.to = Square(file_to, rank_to);
 
     if (info.from_file != File::NO_FILE && info.from_rank != Rank::NO_RANK) {
-        info.from = utils::fileRankSquare(info.from_file, info.from_rank);
+        info.from = Square(info.from_file, info.from_rank);
     }
 
     return;
@@ -383,9 +384,9 @@ template <bool PEDANTIC = false>
     moves.clear();
 
     if (info.capture) {
-        movegen::legalmoves<MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
+        movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
     } else {
-        movegen::legalmoves<MoveGenType::QUIET>(moves, board, pt_to_pgt(info.piece));
+        movegen::legalmoves<movegen::MoveGenType::QUIET>(moves, board, pt_to_pgt(info.piece));
     }
 
     if (info.castling_short || info.castling_long) {
@@ -411,7 +412,7 @@ template <bool PEDANTIC = false>
 
         if (info.promotion != PieceType::NONE) {
             if (move.typeOf() == Move::PROMOTION && info.promotion == move.promotionType()) {
-                if (utils::squareFile(move.from()) == info.from_file) {
+                if (move.from().file() == info.from_file) {
                     return move;
                 }
             }
@@ -425,12 +426,12 @@ template <bool PEDANTIC = false>
         }
 
         if (move.typeOf() == Move::ENPASSANT) {
-            if (utils::squareFile(move.from()) == info.from_file) return move;
+            if (move.from().file() == info.from_file) return move;
             continue;
         }
 
         // we know the from square, so we can check if it matches
-        if (info.from != NO_SQ) {
+        if (info.from != Square::underlying::NO_SQ) {
             if (move.from() == info.from) {
                 return move;
             }
@@ -438,8 +439,7 @@ template <bool PEDANTIC = false>
             continue;
         }
 
-        if ((utils::squareFile(move.from()) == info.from_file) ||
-            (utils::squareRank(move.from()) == info.from_rank)) {
+        if ((move.from().file() == info.from_file) || (move.from().rank() == info.from_rank)) {
             return move;
         }
     }
