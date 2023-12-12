@@ -270,8 +270,14 @@ class Board {
             const auto king = at(move.from());
             const auto rook = at(move.to());
 
+            if (!(king == Piece(PieceType::KING, side_to_move_)))  {
+                std::cout << *this << std::endl;
+            }
+            
             removePiece(king, move.from());
             removePiece(rook, move.to());
+
+
 
             assert(king == Piece(PieceType::KING, side_to_move_));
             assert(rook == Piece(PieceType::ROOK, side_to_move_));

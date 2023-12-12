@@ -66,7 +66,7 @@ class PieceType {
         }
     }
 
-    constexpr explicit operator std::string() const {
+     explicit operator std::string() const {
         switch (pt) {
             case underlying::PAWN:
                 return "p";
@@ -129,11 +129,9 @@ class Piece {
     constexpr Piece() : piece(underlying::NONE) {}
     constexpr Piece(underlying piece) : piece(piece) {}
     constexpr Piece(PieceType type, Color color)
-        : piece(static_cast<underlying>(static_cast<int>(type.index()) +
-                                        (static_cast<std::uint8_t>(color.internal()) << 3))) {}
+        : piece(static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type.index())) {}
     constexpr Piece(Color color, PieceType type)
-        : piece(static_cast<underlying>(static_cast<int>(type.index()) +
-                                        (static_cast<std::uint8_t>(color.internal()) << 3))) {}
+        : piece(static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type.index())) {}
     constexpr Piece(std::string_view p) {
         switch (p.data()[0]) {
             case 'P':
@@ -190,7 +188,7 @@ class Piece {
     constexpr bool operator==(const PieceType& rhs) const { return type() == rhs; }
     constexpr bool operator!=(const PieceType& rhs) const { return type() != rhs; }
 
-    constexpr explicit operator std::string() const {
+     explicit operator std::string() const {
         switch (piece) {
             case WHITEPAWN:
                 return "P";
