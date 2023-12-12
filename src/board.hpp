@@ -474,9 +474,9 @@ class Board {
     template <typename T = Piece>
     [[nodiscard]] T at(Square sq) const {
         if constexpr (std::is_same_v<T, PieceType>) {
-            return board_[static_cast<int>(sq.internal())].type();
+            return board_[sq.index()].type();
         } else {
-            return board_[static_cast<int>(sq.internal())];
+            return board_[sq.index()];
         }
     }
 
@@ -486,10 +486,6 @@ class Board {
     bool isCapture(const Move &move) const {
         return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) ||
                move.typeOf() == Move::ENPASSANT;
-    }
-
-    [[nodiscard]] static Color color(Piece piece) {
-        return static_cast<Color>(static_cast<int>(piece.internal()) / 6);
     }
 
     /// @brief Get the current hash key of the board
@@ -829,7 +825,7 @@ class Board {
                          sq <= static_cast<int>(sq_corner); sq++) {
                         if (at<PieceType>(Square(sq)) == PieceType::NONE) continue;
                         if (at<PieceType>(Square(sq)) == PieceType::ROOK &&
-                            int(at(Square(sq)).internal()) / 6 == int(color)) {
+                            at(Square(sq)).color() == color) {
                             castling_rights_.setCastlingRight(
                                 color, CastlingRights::Side::KING_SIDE, Square(sq).file());
                             break;
@@ -847,7 +843,7 @@ class Board {
                     for (int sq = int(king_sq.internal()) - 1; sq >= int(sq_corner); sq--) {
                         if (at<PieceType>(Square(sq)) == PieceType::NONE) continue;
                         if (at<PieceType>(Square(sq)) == PieceType::ROOK &&
-                            int(at(Square(sq)).internal()) / 6 == int(color)) {
+                            at(Square(sq)).color() == color) {
                             castling_rights_.setCastlingRight(
                                 color, CastlingRights::Side::QUEEN_SIDE, Square(sq).file());
                             break;

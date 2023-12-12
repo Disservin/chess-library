@@ -222,6 +222,8 @@ class Piece {
         }
     }
 
+    operator int() const { return static_cast<int>(piece); }
+
     constexpr PieceType type() const { return static_cast<PieceType::underlying>(int(piece) % 6); }
 
     constexpr Color color() const {

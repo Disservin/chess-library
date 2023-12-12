@@ -231,8 +231,7 @@ class Zobrist {
     /// @param square
     /// @return
     static U64 piece(Piece piece, Square square) {
-        return RANDOM_ARRAY[64 * MAP_HASH_PIECE[static_cast<int>(piece.internal())] +
-                            static_cast<int>(square.internal())];
+        return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + static_cast<int>(square.internal())];
     }
 
     /// @brief [Internal Usage]
