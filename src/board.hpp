@@ -269,15 +269,9 @@ class Board {
 
             const auto king = at(move.from());
             const auto rook = at(move.to());
-
-            if (!(king == Piece(PieceType::KING, side_to_move_)))  {
-                std::cout << *this << std::endl;
-            }
             
             removePiece(king, move.from());
             removePiece(rook, move.to());
-
-
 
             assert(king == Piece(PieceType::KING, side_to_move_));
             assert(rook == Piece(PieceType::ROOK, side_to_move_));
@@ -468,7 +462,7 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] Bitboard pieces(PieceType type, Color color) const {
-        return pieces_bb_[static_cast<int>(type.index())] &
+        return pieces_bb_[type.index()] &
                occ_bb_[static_cast<int>(color.internal())];
     }
 

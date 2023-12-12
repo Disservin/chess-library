@@ -118,7 +118,7 @@ template <Color::underlying c>
     Bitboard rook_attacks = attacks::rook(sq, occ_enemy) & (opp_rook | opp_queen);
 
     while (rook_attacks) {
-        const auto index = rook_attacks.lsb();
+        const auto index = rook_attacks.pop();
 
         const Bitboard possible_pin = SQUARES_BETWEEN_BB[sq.index()][index] | (1ULL << index);
         if ((possible_pin & occ_us).count() == 1) pin_hv |= possible_pin;
@@ -578,7 +578,7 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
     if (pieces & PieceGenType::KNIGHT) {
         // Prune knights that are pinned since these cannot move.
         Bitboard knights_mask = board.pieces(PieceType::KNIGHT, c) & ~(_pinD | _pinHV);
-
+    
         whileBitboardAdd(movelist, knights_mask,
                          [&](Square sq) { return generateKnightMoves(sq) & movable_square; });
     }

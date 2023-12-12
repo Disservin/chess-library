@@ -29,14 +29,7 @@ class Color {
     }
 
     constexpr Color operator~() const {
-        switch (color) {
-            case underlying::WHITE:
-                return Color(underlying::BLACK);
-            case underlying::BLACK:
-                return Color(underlying::WHITE);
-            default:
-                return Color(underlying::NO_COLOR);
-        }
+        return static_cast<Color>(static_cast<uint8_t>(color) ^ 1);
     }
 
     explicit operator std::string() const {

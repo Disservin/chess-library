@@ -6,6 +6,7 @@
 #include <bitset>
 #include <algorithm>
 #include <iostream>
+#include <cassert>
 
 namespace chess {
 
@@ -64,13 +65,17 @@ class Bitboard {
     constexpr bool operator&&(const Bitboard& rhs) const { return bits && rhs.bits; }
 
     constexpr Bitboard& set(int index) {
+        assert(index >= 0 && index < 64);
         bits |= (1ULL << index);
         return *this;
     }
 
-    constexpr bool check(int index) const { return bits & (1ULL << index); }
+    constexpr bool check(int index) const { 
+        assert(index >= 0 && index < 64);
+        return bits & (1ULL << index); }
 
     constexpr Bitboard& clear(int index) {
+        assert(index >= 0 && index < 64);
         bits &= ~(1ULL << index);
         return *this;
     }
@@ -82,12 +87,15 @@ class Bitboard {
 
     constexpr bool empty() const { return bits == 0; }
 
-    constexpr int lsb() const { return std::countr_zero(bits); }
+    constexpr int lsb() const { 
+        assert(bits != 0);
+        return std::countr_zero(bits); }
     constexpr int msb() const { return 63 - std::countl_zero(bits); }
 
     constexpr int count() const { return std::popcount(bits); }
 
     constexpr std::uint8_t pop() {
+        assert(bits != 0);
         std::uint8_t index = lsb();
         bits &= bits - 1;
         return index;
