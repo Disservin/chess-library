@@ -40,7 +40,7 @@ class Board {
         enum class Side : uint8_t { KING_SIDE, QUEEN_SIDE };
 
         void setCastlingRight(Color color, Side castle, File rook_file) {
-            rooks[static_cast<int>(color.internal())][static_cast<int>(castle)] = rook_file;
+            rooks[color][static_cast<int>(castle)] = rook_file;
         }
 
         void clear() {
@@ -49,7 +49,7 @@ class Board {
         }
 
         int clear(Color color, Side castle) {
-            rooks[static_cast<int>(color.internal())][static_cast<int>(castle)] = File::NO_FILE;
+            rooks[color][static_cast<int>(castle)] = File::NO_FILE;
 
             switch (castle) {
                 case Side::KING_SIDE:
@@ -62,22 +62,19 @@ class Board {
             }
         }
 
-        void clear(Color color) { rooks[static_cast<int>(color.internal())].fill(File::NO_FILE); }
+        void clear(Color color) { rooks[color].fill(File::NO_FILE); }
 
         bool has(Color color, Side castle) const {
-            return rooks[static_cast<int>(color.internal())][static_cast<int>(castle)] !=
-                   File::NO_FILE;
+            return rooks[color][static_cast<int>(castle)] != File::NO_FILE;
         }
 
         bool has(Color color) const {
-            return rooks[static_cast<int>(color.internal())][static_cast<int>(Side::KING_SIDE)] !=
-                       File::NO_FILE ||
-                   rooks[static_cast<int>(color.internal())][static_cast<int>(Side::QUEEN_SIDE)] !=
-                       File::NO_FILE;
+            return rooks[color][static_cast<int>(Side::KING_SIDE)] != File::NO_FILE ||
+                   rooks[color][static_cast<int>(Side::QUEEN_SIDE)] != File::NO_FILE;
         }
 
         File getRookFile(Color color, Side castle) const {
-            return rooks[static_cast<int>(color.internal())][static_cast<int>(castle)];
+            return rooks[color][static_cast<int>(castle)];
         }
 
         int hashIndex() const {
@@ -430,9 +427,7 @@ class Board {
     /// @brief Get the occupancy bitboard from us.
     /// @param color
     /// @return
-    [[nodiscard]] Bitboard us(Color color) const {
-        return occ_bb_[static_cast<int>(color.internal())];
-    }
+    [[nodiscard]] Bitboard us(Color color) const { return occ_bb_[color]; }
 
     /// @brief Get the occupancy bitboard of the enemy.
     /// @param color
@@ -462,7 +457,7 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] Bitboard pieces(PieceType type, Color color) const {
-        return pieces_bb_[type] & occ_bb_[static_cast<int>(color.internal())];
+        return pieces_bb_[type] & occ_bb_[color];
     }
 
     /// @brief Returns all pieces of a certain type

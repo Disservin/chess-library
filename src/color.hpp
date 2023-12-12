@@ -46,6 +46,8 @@ class Color {
     constexpr bool operator==(const Color& rhs) const { return color == rhs.color; }
     constexpr bool operator!=(const Color& rhs) const { return color != rhs.color; }
 
+    constexpr operator int() const { return static_cast<int>(color); }
+
     constexpr underlying internal() const { return color; }
 
     friend std::ostream& operator<<(std::ostream& os, const Color& color);
