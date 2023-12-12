@@ -129,8 +129,8 @@ template <Color::underlying c>
 
     int r, f;
 
-    int br = sq.index() / 8;
-    int bf = sq.index() % 8;
+    int br = static_cast<int>(sq.rank().internal());
+    int bf = static_cast<int>(sq.file().internal());
 
     for (r = br + 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
          r++, f++) {
@@ -172,8 +172,8 @@ template <Color::underlying c>
 
     int r, f;
 
-    int rr = sq.index() / 8;
-    int rf = sq.index() % 8;
+    int rr = static_cast<int>(sq.rank().internal());
+    int rf = static_cast<int>(sq.file().internal());
 
     for (r = rr + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
