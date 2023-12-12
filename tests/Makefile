@@ -3,7 +3,7 @@ CXX = g++
 
 NATIVE = -march=native
 
-CXXFLAGS = -O3 -flto -std=c++17 -Wall -Wextra
+CXXFLAGS = -O3 -flto -std=c++20 -Wall -Wextra -DNDEBUG
 
 
 # Detect Windows

@@ -398,8 +398,6 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @return
 [[nodiscard]] inline Bitboard generateBishopMoves(Square sq, Bitboard pin_d, Bitboard occ_all) {
     // The Bishop is pinned diagonally thus can only move diagonally.
-    std::cout << attacks::bishop(sq, occ_all) << std::endl;
-    std::cout << occ_all << std::endl;
     if (pin_d & Bitboard(1ULL << int(sq.internal()))) return attacks::bishop(sq, occ_all) & pin_d;
     return attacks::bishop(sq, occ_all);
 }

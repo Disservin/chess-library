@@ -23,7 +23,9 @@ class Move {
     [[nodiscard]] static constexpr Move make(Square source, Square target,
                                              PieceType pt = PieceType::KNIGHT) {
         return Move(
-            MoveType + ((std::uint16_t(pt.index()) - std::uint16_t(PieceType::KNIGHT)) << 12) +
+            MoveType +
+            ((std::uint16_t(pt.index()) - std::uint16_t(PieceType(PieceType::KNIGHT).index()))
+             << 12) +
             std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target.index()));
     }
 
@@ -45,7 +47,8 @@ class Move {
     /// PROMOTION.
     /// @return
     [[nodiscard]] constexpr PieceType promotionType() const {
-        return static_cast<PieceType>(((move_ >> 12) & 3) + static_cast<int>(PieceType::KNIGHT));
+        return static_cast<PieceType::underlying>(((move_ >> 12) & 3) +
+                                                  PieceType(PieceType::KNIGHT).index());
     }
 
     /// @brief Set the score for a move. Useful if you later want to sort the moves.
@@ -75,7 +78,7 @@ inline std::ostream &operator<<(std::ostream &os, const Move &move) {
     Square to_sq   = move.to();
 
     os << from_sq << to_sq;
-    
+
     if (move.typeOf() == Move::PROMOTION) {
         os << static_cast<char>(move.promotionType());
     }

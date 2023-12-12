@@ -1,6 +1,9 @@
 #include <memory>
+#include <string_view>
+#include <cassert>
+#include <fstream>
 
-#include "../include/chess.hpp"
+#include "../src/include.hpp"
 #include "doctest/doctest.hpp"
 
 using namespace chess;

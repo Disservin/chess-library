@@ -111,18 +111,18 @@ inline std::ostream& operator<<(std::ostream& os, const PieceType& pt) {
 class Piece {
    public:
     enum class underlying : std::uint8_t {
-        WHITE_PAWN,
-        WHITE_KNIGHT,
-        WHITE_BISHOP,
-        WHITE_ROOK,
-        WHITE_QUEEN,
-        WHITE_KING,
-        BLACK_PAWN,
-        BLACK_KNIGHT,
-        BLACK_BISHOP,
-        BLACK_ROOK,
-        BLACK_QUEEN,
-        BLACK_KING,
+        WHITEPAWN,
+        WHITEKNIGHT,
+        WHITEBISHOP,
+        WHITEROOK,
+        WHITEQUEEN,
+        WHITEKING,
+        BLACKPAWN,
+        BLACKKNIGHT,
+        BLACKBISHOP,
+        BLACKROOK,
+        BLACKQUEEN,
+        BLACKKING,
         NONE
     };
 
@@ -131,44 +131,47 @@ class Piece {
     constexpr Piece(PieceType type, Color color)
         : piece(static_cast<underlying>(static_cast<int>(type.index()) +
                                         (static_cast<std::uint8_t>(color.internal()) << 3))) {}
+    constexpr Piece(Color color, PieceType type)
+        : piece(static_cast<underlying>(static_cast<int>(type.index()) +
+                                        (static_cast<std::uint8_t>(color.internal()) << 3))) {}
     constexpr Piece(char p) {
         switch (p) {
             case 'P':
-                piece = WHITE_PAWN;
+                piece = WHITEPAWN;
                 break;
             case 'N':
-                piece = WHITE_KNIGHT;
+                piece = WHITEKNIGHT;
                 break;
             case 'B':
-                piece = WHITE_BISHOP;
+                piece = WHITEBISHOP;
                 break;
             case 'R':
-                piece = WHITE_ROOK;
+                piece = WHITEROOK;
                 break;
             case 'Q':
-                piece = WHITE_QUEEN;
+                piece = WHITEQUEEN;
                 break;
             case 'K':
-                piece = WHITE_KING;
+                piece = WHITEKING;
                 break;
             // black
             case 'p':
-                piece = BLACK_PAWN;
+                piece = BLACKPAWN;
                 break;
             case 'n':
-                piece = BLACK_KNIGHT;
+                piece = BLACKKNIGHT;
                 break;
             case 'b':
-                piece = BLACK_BISHOP;
+                piece = BLACKBISHOP;
                 break;
             case 'r':
-                piece = BLACK_ROOK;
+                piece = BLACKROOK;
                 break;
             case 'q':
-                piece = BLACK_QUEEN;
+                piece = BLACKQUEEN;
                 break;
             case 'k':
-                piece = BLACK_KING;
+                piece = BLACKKING;
                 break;
             default:
                 piece = NONE;
@@ -189,30 +192,30 @@ class Piece {
 
     constexpr explicit operator char() const {
         switch (piece) {
-            case WHITE_PAWN:
+            case WHITEPAWN:
                 return 'P';
-            case WHITE_KNIGHT:
+            case WHITEKNIGHT:
                 return 'N';
-            case WHITE_BISHOP:
+            case WHITEBISHOP:
                 return 'B';
-            case WHITE_ROOK:
+            case WHITEROOK:
                 return 'R';
-            case WHITE_QUEEN:
+            case WHITEQUEEN:
                 return 'Q';
-            case WHITE_KING:
+            case WHITEKING:
                 return 'K';
             // black
-            case BLACK_PAWN:
+            case BLACKPAWN:
                 return 'p';
-            case BLACK_KNIGHT:
+            case BLACKKNIGHT:
                 return 'n';
-            case BLACK_BISHOP:
+            case BLACKBISHOP:
                 return 'b';
-            case BLACK_ROOK:
+            case BLACKROOK:
                 return 'r';
-            case BLACK_QUEEN:
+            case BLACKQUEEN:
                 return 'q';
-            case BLACK_KING:
+            case BLACKKING:
                 return 'k';
             default:
                 return '.';
@@ -230,19 +233,19 @@ class Piece {
 
     constexpr underlying internal() const { return piece; }
 
-    static constexpr underlying NONE         = underlying::NONE;
-    static constexpr underlying WHITE_PAWN   = underlying::WHITE_PAWN;
-    static constexpr underlying WHITE_KNIGHT = underlying::WHITE_KNIGHT;
-    static constexpr underlying WHITE_BISHOP = underlying::WHITE_BISHOP;
-    static constexpr underlying WHITE_ROOK   = underlying::WHITE_ROOK;
-    static constexpr underlying WHITE_QUEEN  = underlying::WHITE_QUEEN;
-    static constexpr underlying WHITE_KING   = underlying::WHITE_KING;
-    static constexpr underlying BLACK_PAWN   = underlying::BLACK_PAWN;
-    static constexpr underlying BLACK_KNIGHT = underlying::BLACK_KNIGHT;
-    static constexpr underlying BLACK_BISHOP = underlying::BLACK_BISHOP;
-    static constexpr underlying BLACK_ROOK   = underlying::BLACK_ROOK;
-    static constexpr underlying BLACK_QUEEN  = underlying::BLACK_QUEEN;
-    static constexpr underlying BLACK_KING   = underlying::BLACK_KING;
+    static constexpr underlying NONE        = underlying::NONE;
+    static constexpr underlying WHITEPAWN   = underlying::WHITEPAWN;
+    static constexpr underlying WHITEKNIGHT = underlying::WHITEKNIGHT;
+    static constexpr underlying WHITEBISHOP = underlying::WHITEBISHOP;
+    static constexpr underlying WHITEROOK   = underlying::WHITEROOK;
+    static constexpr underlying WHITEQUEEN  = underlying::WHITEQUEEN;
+    static constexpr underlying WHITEKING   = underlying::WHITEKING;
+    static constexpr underlying BLACKPAWN   = underlying::BLACKPAWN;
+    static constexpr underlying BLACKKNIGHT = underlying::BLACKKNIGHT;
+    static constexpr underlying BLACKBISHOP = underlying::BLACKBISHOP;
+    static constexpr underlying BLACKROOK   = underlying::BLACKROOK;
+    static constexpr underlying BLACKQUEEN  = underlying::BLACKQUEEN;
+    static constexpr underlying BLACKKING   = underlying::BLACKKING;
 
    private:
     underlying piece;

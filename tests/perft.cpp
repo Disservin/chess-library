@@ -3,7 +3,7 @@
 #include <sstream>
 #include <tuple>
 
-#include "../include/chess.hpp"
+#include "../src/include.hpp"
 #include "doctest/doctest.hpp"
 
 using namespace chess;
@@ -19,7 +19,7 @@ class Perft {
             return moves.size();
         }
 
-        U64 nodes = 0;
+        uint64_t nodes = 0;
 
         for (const auto& move : moves) {
             board_.makeMove(move);

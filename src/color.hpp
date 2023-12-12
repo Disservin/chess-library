@@ -65,7 +65,7 @@ class Color {
     underlying color;
 };  // namespace chess
 
-std::ostream& operator<<(std::ostream& os, const Color& color) {
+inline std::ostream& operator<<(std::ostream& os, const Color& color) {
     return os << static_cast<std::string>(color);
 }
 

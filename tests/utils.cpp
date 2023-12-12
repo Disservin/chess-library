@@ -1,54 +1,54 @@
-#include "../include/chess.hpp"
+#include "../src/include.hpp"
 #include "doctest/doctest.hpp"
 
 using namespace chess;
 
 TEST_SUITE("Utilities") {
     TEST_CASE("extractSquare") {
-        CHECK(utils::extractSquare("a1") == Square::SQ_A1);
-        CHECK(utils::extractSquare("h8") == Square::SQ_H8);
+        CHECK(utils::extractSquare("a1") == Square::underlying::SQ_A1);
+        CHECK(utils::extractSquare("h8") == Square::underlying::SQ_H8);
     }
 
     TEST_CASE("fileRankSquare") {
-        CHECK(utils::fileRankSquare(File::FILE_A, Rank::RANK_8) == Square::SQ_A8);
-        CHECK(utils::fileRankSquare(File::FILE_H, Rank::RANK_1) == Square::SQ_H1);
+        CHECK(Square(File::FILE_A, Rank::RANK_8) == Square::underlying::SQ_A8);
+        CHECK(Square(File::FILE_H, Rank::RANK_1) == Square::underlying::SQ_H1);
     }
 
     TEST_CASE("squareRank") {
-        CHECK(utils::squareRank(Square::SQ_A1) == Rank::RANK_1);
-        CHECK(utils::squareRank(Square::SQ_H8) == Rank::RANK_8);
+        CHECK(Square(Square::underlying::SQ_A1).rank() == Rank::RANK_1);
+        CHECK(Square(Square::underlying::SQ_H8).rank() == Rank::RANK_8);
     }
 
     TEST_CASE("squareFile") {
-        CHECK(utils::squareFile(Square::SQ_A1) == File::FILE_A);
-        CHECK(utils::squareFile(Square::SQ_H8) == File::FILE_H);
+        CHECK(Square(Square::underlying::SQ_A1).file() == File::FILE_A);
+        CHECK(Square(Square::underlying::SQ_H8).file() == File::FILE_H);
     }
 
     TEST_CASE("squareDistance") {
-        CHECK(utils::squareDistance(Square::SQ_A1, Square::SQ_A2) == 1);
-        CHECK(utils::squareDistance(Square::SQ_A1, Square::SQ_A3) == 2);
+        CHECK(Square(Square::underlying::SQ_A1).distance(Square::underlying::SQ_A2) == 1);
+        CHECK(Square(Square::underlying::SQ_A1).distance(Square::underlying::SQ_A3) == 2);
     }
 
     TEST_CASE("typeOfPiece") {
-        CHECK(utils::typeOfPiece(Piece::WHITEPAWN) == PieceType::PAWN);
-        CHECK(utils::typeOfPiece(Piece::WHITEKING) == PieceType::KING);
+        CHECK(Piece(Piece::WHITEPAWN).type() == PieceType::PAWN);
+        CHECK(Piece(Piece::WHITEKING).type() == PieceType::KING);
 
-        CHECK(utils::typeOfPiece(Piece::BLACKPAWN) == PieceType::PAWN);
-        CHECK(utils::typeOfPiece(Piece::BLACKKING) == PieceType::KING);
+        CHECK(Piece(Piece::BLACKPAWN).type() == PieceType::PAWN);
+        CHECK(Piece(Piece::BLACKKING).type() == PieceType::KING);
     }
 
     TEST_CASE("makePiece") {
-        CHECK(utils::makePiece(Color::WHITE, PieceType::PAWN) == Piece::WHITEPAWN);
-        CHECK(utils::makePiece(Color::WHITE, PieceType::KING) == Piece::WHITEKING);
-        CHECK(utils::makePiece(Color::BLACK, PieceType::PAWN) == Piece::BLACKPAWN);
-        CHECK(utils::makePiece(Color::BLACK, PieceType::KING) == Piece::BLACKKING);
+        CHECK(Piece(Color::WHITE, PieceType::PAWN) == Piece::WHITEPAWN);
+        CHECK(Piece(Color::WHITE, PieceType::KING) == Piece::WHITEKING);
+        CHECK(Piece(Color::BLACK, PieceType::PAWN) == Piece::BLACKPAWN);
+        CHECK(Piece(Color::BLACK, PieceType::KING) == Piece::BLACKKING);
     }
 
     TEST_CASE("ourBackRank") {
-        CHECK(utils::ourBackRank(Square::SQ_A1, Color::WHITE));
-        CHECK(!utils::ourBackRank(Square::SQ_A2, Color::WHITE));
+        CHECK(utils::ourBackRank(Square::underlying::SQ_A1, Color::WHITE));
+        CHECK(!utils::ourBackRank(Square::underlying::SQ_A2, Color::WHITE));
 
-        CHECK(utils::ourBackRank(Square::SQ_A8, Color::BLACK));
-        CHECK(!utils::ourBackRank(Square::SQ_A7, Color::BLACK));
+        CHECK(utils::ourBackRank(Square::underlying::SQ_A8, Color::BLACK));
+        CHECK(!utils::ourBackRank(Square::underlying::SQ_A7, Color::BLACK));
     }
 }

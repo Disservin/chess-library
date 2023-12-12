@@ -379,7 +379,7 @@ template <bool PEDANTIC = false>
     SanMoveInformation info;
 
     parseSanInfo<PEDANTIC>(info, san);
-    constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (int(pt)); };
+    constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt.index()); };
 
     moves.clear();
 

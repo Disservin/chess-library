@@ -188,7 +188,7 @@ class Board {
 
     void makeMove(const Move &move) {
         // Validate side to move
-        assert((at(move.from()) < Piece::BLACK_PAWN) == (side_to_move_ == Color::WHITE));
+        assert((at(move.from()) < Piece::BLACKPAWN) == (side_to_move_ == Color::WHITE));
         const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
         const auto captured = at(move.to());
         const auto pt       = at<PieceType>(move.from());
@@ -581,7 +581,7 @@ class Board {
         const Board &board = *this;
 
         Movelist movelist;
-        // movegen::legalmoves<MoveGenType::ALL>(movelist, board);
+        movegen::legalmoves(movelist, board);
 
         if (movelist.empty() && inCheck()) {
             return {GameResultReason::CHECKMATE, GameResult::LOSE};
@@ -632,7 +632,7 @@ class Board {
         const Board &board = *this;
 
         Movelist movelist;
-        // movegen::legalmoves<MoveGenType::ALL>(movelist, board);
+        movegen::legalmoves(movelist, board);
 
         if (movelist.empty()) {
             if (inCheck()) return {GameResultReason::CHECKMATE, GameResult::LOSE};
