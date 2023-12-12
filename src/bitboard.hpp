@@ -14,7 +14,7 @@ class Bitboard {
     constexpr Bitboard() : bits(0) {}
     constexpr Bitboard(std::uint64_t bits) : bits(bits) {}
 
-    explicit operator bool() const { return bits != 0; }
+    operator std::uint64_t() const { return bits; }
 
     explicit operator std::string() const {
         std::bitset<64> b(bits);
