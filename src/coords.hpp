@@ -179,8 +179,8 @@ class Square {
     constexpr bool is_valid() const { return static_cast<std::int8_t>(sq) < 64; }
 
     constexpr int distance(Square sq) const {
-        return static_cast<std::int8_t>(std::max(file().internal(), sq.file().internal())) -
-               static_cast<std::int8_t>(std::min(file().internal(), sq.file().internal()));
+        return std::max(std::abs(int(file().internal()) - int(sq.file().internal())),
+                        std::abs(int(rank().internal()) - int(sq.rank().internal())));
     }
 
     constexpr int diagonalOf() const {
