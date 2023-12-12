@@ -114,10 +114,10 @@ namespace chess::uci {
         if (pt != PieceType::PAWN && m != move && board.at(m.from()) == board.at(move.from()) &&
             m.to() == move.to()) {
             if (m.from().file() == move.from().file()) {
-                san += std::to_string(int(move.from().rank().internal()) + 1);
+                san += std::to_string(move.from().rank() + 1);
                 break;
             } else {
-                san += repFile[int(move.from().file().internal())];
+                san += repFile[move.from().file()];
                 break;
             }
         }
@@ -125,14 +125,14 @@ namespace chess::uci {
 
     if (board.at(move.to()) != Piece::NONE || move.typeOf() == Move::ENPASSANT) {
         if (pt == PieceType::PAWN) {
-            san += repFile[int(move.from().file().internal())];
+            san += repFile[move.from().file()];
         }
 
         san += "x";
     }
 
-    san += repFile[int(move.to().file().internal())];
-    san += std::to_string(int(move.to().rank().internal()) + 1);
+    san += repFile[move.to().file()];
+    san += std::to_string(move.to().rank() + 1);
 
     if (move.typeOf() == Move::PROMOTION) {
         san += "=";
@@ -174,19 +174,19 @@ namespace chess::uci {
         lan += repPieceType[pt];
     }
 
-    lan += repFile[int(move.from().file().internal())];
-    lan += std::to_string(int(move.from().rank().internal()) + 1);
+    lan += repFile[move.from().file()];
+    lan += std::to_string(move.from().rank() + 1);
 
     if (board.at(move.to()) != Piece::NONE || move.typeOf() == Move::ENPASSANT) {
         if (pt == PieceType::PAWN) {
-            lan += repFile[int(move.from().file().internal())];
+            lan += repFile[move.from().file()];
         }
 
         lan += "x";
     }
 
-    lan += repFile[int(move.to().file().internal())];
-    lan += std::to_string(int(move.to().rank().internal()) + 1);
+    lan += repFile[move.to().file()];
+    lan += std::to_string(move.to().rank() + 1);
 
     if (move.typeOf() == Move::PROMOTION) {
         lan += "=";

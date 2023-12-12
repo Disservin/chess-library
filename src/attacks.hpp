@@ -63,7 +63,7 @@ template <Color::underlying c>
 /// @param sq
 /// @return
 [[nodiscard]] inline Bitboard attacks::pawn(Color c, Square sq) {
-    return PawnAttacks[int(c.internal())][sq.index()];
+    return PawnAttacks[c][sq.index()];
 }
 
 /// @brief Returns the knight attacks for a given square
@@ -129,8 +129,8 @@ template <Color::underlying c>
 
     int r, f;
 
-    int br = static_cast<int>(sq.rank().internal());
-    int bf = static_cast<int>(sq.file().internal());
+    int br = sq.rank();
+    int bf = sq.file();
 
     for (r = br + 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
          r++, f++) {
@@ -172,8 +172,8 @@ template <Color::underlying c>
 
     int r, f;
 
-    int rr = static_cast<int>(sq.rank().internal());
-    int rf = static_cast<int>(sq.file().internal());
+    int rr = sq.rank();
+    int rf = sq.file();
 
     for (r = rr + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
@@ -211,9 +211,9 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
                                  const std::function<Bitboard(Square, Bitboard)> &attacks) {
     const Bitboard edges =
         ((MASK_RANK[static_cast<int>(Rank::RANK_1)] | MASK_RANK[static_cast<int>(Rank::RANK_8)]) &
-         ~MASK_RANK[static_cast<int>(sq.rank().internal())]) |
+         ~MASK_RANK[sq.rank()]) |
         ((MASK_FILE[static_cast<int>(File::FILE_A)] | MASK_FILE[static_cast<int>(File::FILE_H)]) &
-         ~MASK_FILE[static_cast<int>(sq.file().internal())]);
+         ~MASK_FILE[sq.file()]);
 
     U64 occ = 0ULL;
 

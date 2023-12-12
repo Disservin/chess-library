@@ -231,15 +231,13 @@ class Zobrist {
     /// @param square
     /// @return
     static U64 piece(Piece piece, Square square) {
-        return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + static_cast<int>(square.internal())];
+        return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
     }
 
     /// @brief [Internal Usage]
     /// @param file
     /// @return
-    static U64 enpassant(File file) {
-        return RANDOM_ARRAY[772 + static_cast<int>(file.internal())];
-    }
+    static U64 enpassant(File file) { return RANDOM_ARRAY[772 + file]; }
 
     /// @brief [Internal Usage]
     /// @param castling

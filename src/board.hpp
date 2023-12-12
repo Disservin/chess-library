@@ -242,7 +242,7 @@ class Board {
             half_moves_ = 0;
 
             const auto possible_ep = static_cast<Square>(move.to() ^ 8);
-            if (std::abs(int(move.to().internal()) - int(move.from().internal())) == 16) {
+            if (std::abs(move.to().index() - move.from().index()) == 16) {
                 Bitboard ep_mask = attacks::pawn(side_to_move_, possible_ep);
 
                 if (ep_mask & pieces(PieceType::PAWN, ~side_to_move_)) {
@@ -303,9 +303,9 @@ class Board {
 
             const auto piece = Piece(PieceType::PAWN, ~side_to_move_);
 
-            removePiece(piece, Square(int(move.to().internal()) ^ 8));
+            removePiece(piece, Square(move.to().index() ^ 8));
 
-            hash_key_ ^= Zobrist::piece(piece, Square(int(move.to().internal()) ^ 8));
+            hash_key_ ^= Zobrist::piece(piece, Square(move.to().index() ^ 8));
         }
 
         hash_key_ ^= Zobrist::sideToMove();
@@ -512,8 +512,7 @@ class Board {
         std::string ss;
 
         constexpr auto convert = [](Color c, File file) {
-            // return c == Color::WHITE ? char(file) + 65 : char(file) + 97;
-            return c == Color::WHITE ? char(file.internal()) + 'A' : char(file.internal()) + 'a';
+            return c == Color::WHITE ? char(file) + 'A' : char(file) + 'a';
         };
 
         const auto get_file = [&](Color c, CastlingRights::Side side) {
@@ -702,17 +701,17 @@ class Board {
         assert(board_[sq_] == Piece::NONE);
 
         pieces_bb_[piece.type()] |= (1ULL << (sq_));
-        occ_bb_[static_cast<int>(piece.color().internal())] |= (1ULL << (sq_));
+        occ_bb_[piece.color()] |= (1ULL << (sq_));
 
         board_[sq_] = piece;
     }
 
     virtual void removePiece(Piece piece, Square sq) {
-        const auto sq_ = int(sq.internal());
+        const auto sq_ = sq.index();
         assert(board_[sq_] == piece && piece != Piece::NONE);
 
         pieces_bb_[piece.type()] &= ~(1ULL << (sq_));
-        occ_bb_[static_cast<int>(piece.color().internal())] &= ~(1ULL << (sq_));
+        occ_bb_[piece.color()] &= ~(1ULL << (sq_));
 
         board_[sq_] = Piece::NONE;
     }
@@ -787,11 +786,11 @@ class Board {
                 placePiece(piece, square);
                 hash_key_ ^= Zobrist::piece(piece, square);
 
-                square = Square(static_cast<int>(square.internal()) + 1);
+                square = Square(square.index() + 1);
             } else if (curr == '/')
-                square = Square(static_cast<int>(square.internal()) - 16);
+                square = Square(square.index() - 16);
             else if (isdigit(curr)) {
-                square = Square(static_cast<int>(square.internal()) + (curr - '0'));
+                square = Square(square.index() + (curr - '0'));
             }
         }
 
@@ -821,13 +820,11 @@ class Board {
                     const auto sq_corner = color == Color::WHITE ? Square::underlying::SQ_H1
                                                                  : Square::underlying::SQ_H8;
 
-                    for (int sq = static_cast<int>(king_sq.internal()) + 1;
-                         sq <= static_cast<int>(sq_corner); sq++) {
-                        if (at<PieceType>(Square(sq)) == PieceType::NONE) continue;
-                        if (at<PieceType>(Square(sq)) == PieceType::ROOK &&
-                            at(Square(sq)).color() == color) {
+                    for (Square sq = king_sq + 1; sq <= sq_corner; sq++) {
+                        if (at<PieceType>(sq) == PieceType::NONE) continue;
+                        if (at<PieceType>(sq) == PieceType::ROOK && at(sq).color() == color) {
                             castling_rights_.setCastlingRight(
-                                color, CastlingRights::Side::KING_SIDE, Square(sq).file());
+                                color, CastlingRights::Side::KING_SIDE, sq.file());
                             break;
                         }
                     }
@@ -840,12 +837,11 @@ class Board {
                     const auto sq_corner = color == Color::WHITE ? Square::underlying::SQ_A1
                                                                  : Square::underlying::SQ_A8;
 
-                    for (int sq = int(king_sq.internal()) - 1; sq >= int(sq_corner); sq--) {
-                        if (at<PieceType>(Square(sq)) == PieceType::NONE) continue;
-                        if (at<PieceType>(Square(sq)) == PieceType::ROOK &&
-                            at(Square(sq)).color() == color) {
+                    for (Square sq = king_sq - 1; sq >= sq_corner; sq--) {
+                        if (at<PieceType>(sq) == PieceType::NONE) continue;
+                        if (at<PieceType>(sq) == PieceType::ROOK && at(sq).color() == color) {
                             castling_rights_.setCastlingRight(
-                                color, CastlingRights::Side::QUEEN_SIDE, Square(sq).file());
+                                color, CastlingRights::Side::QUEEN_SIDE, sq.file());
                             break;
                         }
                     }
@@ -853,9 +849,8 @@ class Board {
                     const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
                     const auto king_sq = kingSq(color);
                     const auto file    = static_cast<File>(tolower(i) - 97);
-                    const auto side    = int(file.internal()) > int(king_sq.file().internal())
-                                             ? CastlingRights::Side::KING_SIDE
-                                             : CastlingRights::Side::QUEEN_SIDE;
+                    const auto side    = file > king_sq.file() ? CastlingRights::Side::KING_SIDE
+                                                               : CastlingRights::Side::QUEEN_SIDE;
                     castling_rights_.setCastlingRight(color, side, file);
                 }
             }
@@ -895,7 +890,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     os << "Castling rights: " << b.getCastleString() << "\n";
     os << "Halfmoves: " << b.halfMoveClock() << "\n";
     os << "Fullmoves: " << b.fullMoveNumber() << "\n";
-    os << "EP: " << static_cast<int>(b.enpassant_sq_.internal()) << "\n";
+    os << "EP: " << b.enpassant_sq_.index() << "\n";
     os << "Hash: " << b.hash_key_ << "\n";
 
     os << std::endl;

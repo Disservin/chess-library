@@ -47,6 +47,8 @@ class File {
         return static_cast<int>(file) < static_cast<int>(rhs.file);
     }
 
+    constexpr operator int() const { return static_cast<int>(file); }
+
     explicit operator std::string() const {
         return std::string(1, static_cast<char>(static_cast<int>(file) + 'a'));
     }
@@ -102,6 +104,8 @@ class Rank {
         return std::string(1, static_cast<char>(static_cast<int>(rank) + '1'));
     }
 
+    constexpr operator int() const { return static_cast<int>(rank); }
+
     static constexpr underlying RANK_1  = underlying::RANK_1;
     static constexpr underlying RANK_2  = underlying::RANK_2;
     static constexpr underlying RANK_3  = underlying::RANK_3;
@@ -135,27 +139,28 @@ class Square {
     constexpr Square() : sq(underlying::NO_SQ) {}
 
     constexpr Square(int sq) : sq(static_cast<underlying>(sq)) { assert(sq <= 64 && sq >= 0); }
-    constexpr Square(File file, Rank rank)
-        : sq(static_cast<underlying>(static_cast<int>(file.internal()) +
-                                     static_cast<int>(rank.internal()) * 8)) {}
-    constexpr Square(Rank rank, File file)
-        : sq(static_cast<underlying>(static_cast<int>(file.internal()) +
-                                     static_cast<int>(rank.internal()) * 8)) {}
+    constexpr Square(File file, Rank rank) : sq(static_cast<underlying>(file + rank * 8)) {}
+    constexpr Square(Rank rank, File file) : sq(static_cast<underlying>(file + rank * 8)) {}
     constexpr Square(underlying sq) : sq(sq) {}
     constexpr Square(std::string_view str)
         : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {}
 
     constexpr Square operator^(const Square& s) const {
-        return Square(
-            static_cast<underlying>(static_cast<int>(sq) ^ static_cast<int>(s.internal())));
+        return Square(static_cast<underlying>(static_cast<int>(sq) ^ s.index()));
     };
     constexpr bool operator==(const Square& rhs) const { return sq == rhs.sq; }
     constexpr bool operator!=(const Square& rhs) const { return sq != rhs.sq; }
     constexpr bool operator>(const Square& rhs) const {
         return static_cast<int>(sq) > static_cast<int>(rhs.sq);
     }
+    constexpr bool operator>=(const Square& rhs) const {
+        return static_cast<int>(sq) > static_cast<int>(rhs.sq);
+    }
     constexpr bool operator<(const Square& rhs) const {
         return static_cast<int>(sq) < static_cast<int>(rhs.sq);
+    }
+    constexpr bool operator<=(const Square& rhs) const {
+        return static_cast<int>(sq) <= static_cast<int>(rhs.sq);
     }
     constexpr Square operator+(const Square& rhs) const {
         return Square(static_cast<underlying>(static_cast<int>(sq) + static_cast<int>(rhs.sq)));
@@ -170,6 +175,15 @@ class Square {
     constexpr Square operator++(int) {
         Square tmp(*this);
         operator++();
+        return tmp;
+    }
+    constexpr Square operator--() {
+        sq = static_cast<underlying>(static_cast<int>(sq) - 1);
+        return *this;
+    }
+    constexpr Square operator--(int) {
+        Square tmp(*this);
+        operator--();
         return tmp;
     }
 
@@ -194,17 +208,12 @@ class Square {
     constexpr bool is_valid() const { return static_cast<std::int8_t>(sq) < 64; }
 
     constexpr int distance(Square sq) const {
-        return std::max(std::abs(int(file().internal()) - int(sq.file().internal())),
-                        std::abs(int(rank().internal()) - int(sq.rank().internal())));
+        return std::max(std::abs(file() - sq.file()), std::abs(rank() - sq.rank()));
     }
 
-    constexpr int diagonalOf() const {
-        return 7 + static_cast<int>(rank().internal()) - static_cast<int>(file().internal());
-    }
+    constexpr int diagonalOf() const { return 7 + rank() - file(); }
 
-    constexpr int antiDiagonalOf() const {
-        return static_cast<int>(rank().internal()) + static_cast<int>(file().internal());
-    }
+    constexpr int antiDiagonalOf() const { return rank() + file(); }
 
     static constexpr int max() { return 64; }
 

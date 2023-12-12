@@ -341,8 +341,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 
         const Square kSQ = board.kingSq(c);
         const Bitboard kingMask =
-            (1ull << kSQ.index()) &
-            attacks::MASK_RANK[static_cast<int>(epPawn.rank().internal())].getBits();
+            (1ull << kSQ.index()) & attacks::MASK_RANK[epPawn.rank()].getBits();
         const Bitboard enemyQueenRook =
             board.pieces(PieceType::ROOK, ~c) | board.pieces(PieceType::QUEEN, ~c);
 
@@ -396,7 +395,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @return
 [[nodiscard]] inline Bitboard generateBishopMoves(Square sq, Bitboard pin_d, Bitboard occ_all) {
     // The Bishop is pinned diagonally thus can only move diagonally.
-    if (pin_d & Bitboard(1ULL << int(sq.internal()))) return attacks::bishop(sq, occ_all) & pin_d;
+    if (pin_d & Bitboard(1ULL << sq.index())) return attacks::bishop(sq, occ_all) & pin_d;
     return attacks::bishop(sq, occ_all);
 }
 
@@ -408,7 +407,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @return
 [[nodiscard]] inline Bitboard generateRookMoves(Square sq, Bitboard pin_hv, Bitboard occ_all) {
     // The Rook is pinned horizontally thus can only move horizontally.
-    if (pin_hv & Bitboard(1ULL << int(sq.internal()))) return attacks::rook(sq, occ_all) & pin_hv;
+    if (pin_hv & Bitboard(1ULL << sq.index())) return attacks::rook(sq, occ_all) & pin_hv;
     return attacks::rook(sq, occ_all);
 }
 
@@ -423,9 +422,9 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
                                                  Bitboard occ_all) {
     Bitboard moves = 0ULL;
 
-    if (pin_d & Bitboard(1ULL << int(sq.internal())))
+    if (pin_d & Bitboard(1ULL << sq.index()))
         moves |= attacks::bishop(sq, occ_all) & pin_d;
-    else if (pin_hv & Bitboard(1ULL << int(sq.internal())))
+    else if (pin_hv & Bitboard(1ULL << sq.index()))
         moves |= attacks::rook(sq, occ_all) & pin_hv;
     else {
         moves |= attacks::rook(sq, occ_all);
