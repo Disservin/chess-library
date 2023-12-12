@@ -157,6 +157,21 @@ class Square {
     constexpr bool operator<(const Square& rhs) const {
         return static_cast<int>(sq) < static_cast<int>(rhs.sq);
     }
+    constexpr Square operator+(const Square& rhs) const {
+        return Square(static_cast<underlying>(static_cast<int>(sq) + static_cast<int>(rhs.sq)));
+    }
+    constexpr Square operator-(const Square& rhs) const {
+        return Square(static_cast<underlying>(static_cast<int>(sq) - static_cast<int>(rhs.sq)));
+    }
+    constexpr Square operator++() {
+        sq = static_cast<underlying>(static_cast<int>(sq) + 1);
+        return *this;
+    }
+    constexpr Square operator++(int) {
+        Square tmp(*this);
+        operator++();
+        return tmp;
+    }
 
     operator std::string() const {
         std::string str;

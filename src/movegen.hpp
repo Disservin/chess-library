@@ -16,20 +16,18 @@ static auto init_squares_between = []() constexpr {
     std::array<std::array<std::uint64_t, 64>, 64> squares_between_bb{};
     std::uint64_t sqs = 0;
 
-    for (int sq1 = 0; sq1 < 64; ++sq1) {
-        for (int sq2 = 0; sq2 < 64; ++sq2) {
-            sqs = (1ULL << sq1) | (1ULL << sq2);
+    for (Square sq1 = 0; sq1 < 64; ++sq1) {
+        for (Square sq2 = 0; sq2 < 64; ++sq2) {
+            sqs = (1ULL << sq1.index()) | (1ULL << sq2.index());
             if (sq1 == sq2)
-                squares_between_bb[sq1][sq2] = 0ull;
-            else if (Square(sq1).file() == Square(sq2).file() ||
-                     Square(sq1).rank() == Square(sq2).rank())
-                squares_between_bb[sq1][sq2] =
-                    (attacks::rook(Square(sq1), sqs) & attacks::rook(Square(sq2), sqs)).getBits();
-            else if (Square(sq1).diagonalOf() == Square(sq2).diagonalOf() ||
-                     Square(sq1).antiDiagonalOf() == Square(sq2).antiDiagonalOf())
-                squares_between_bb[sq1][sq2] =
-                    (attacks::bishop(Square(sq1), sqs) & attacks::bishop(Square(sq2), sqs))
-                        .getBits();
+                squares_between_bb[sq1.index()][sq2.index()] = 0ull;
+            else if (sq1.file() == sq2.file() || sq1.rank() == sq2.rank())
+                squares_between_bb[sq1.index()][sq2.index()] =
+                    (attacks::rook(sq1, sqs) & attacks::rook(sq2, sqs)).getBits();
+            else if (sq1.diagonalOf() == sq2.diagonalOf() ||
+                     sq1.antiDiagonalOf() == sq2.antiDiagonalOf())
+                squares_between_bb[sq1.index()][sq2.index()] =
+                    (attacks::bishop(sq1, sqs) & attacks::bishop(sq2, sqs)).getBits();
         }
     }
 
@@ -578,7 +576,7 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
     if (pieces & PieceGenType::KNIGHT) {
         // Prune knights that are pinned since these cannot move.
         Bitboard knights_mask = board.pieces(PieceType::KNIGHT, c) & ~(_pinD | _pinHV);
-    
+
         whileBitboardAdd(movelist, knights_mask,
                          [&](Square sq) { return generateKnightMoves(sq) & movable_square; });
     }
