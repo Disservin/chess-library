@@ -245,7 +245,7 @@ class Board {
             if (std::abs(move.to().index() - move.from().index()) == 16) {
                 Bitboard ep_mask = attacks::pawn(side_to_move_, possible_ep);
 
-                if (ep_mask & pieces(PieceType::PAWN, ~side_to_move_)) {
+                if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~side_to_move_))) {
                     enpassant_sq_ = possible_ep;
 
                     hash_key_ ^= Zobrist::enpassant(enpassant_sq_.file());
@@ -636,15 +636,17 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] bool isAttacked(Square square, Color color) const {
-        if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
-        if (attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
-        if (attacks::king(square) & pieces(PieceType::KING, color)) return true;
-
-        if (attacks::bishop(square, occ()) &
-            (pieces(PieceType::BISHOP, color) | pieces(PieceType::QUEEN, color)))
+        if (static_cast<bool>(attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)))
             return true;
-        if (attacks::rook(square, occ()) &
-            (pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color)))
+        if (static_cast<bool>(attacks::knight(square) & pieces(PieceType::KNIGHT, color)))
+            return true;
+        if (static_cast<bool>(attacks::king(square) & pieces(PieceType::KING, color))) return true;
+
+        if (static_cast<bool>(attacks::bishop(square, occ()) &
+                              (pieces(PieceType::BISHOP, color) | pieces(PieceType::QUEEN, color))))
+            return true;
+        if (static_cast<bool>(attacks::rook(square, occ()) &
+                              (pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color))))
             return true;
         return false;
     }

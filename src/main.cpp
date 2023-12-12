@@ -1,7 +1,7 @@
 
 #include <iostream>
 
-#include "include.hpp"
+#include "../single_header_output.h"
 
 int main(int argc, char const *argv[]) {
     chess::Board board;

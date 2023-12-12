@@ -15,7 +15,7 @@ class Bitboard {
     constexpr Bitboard() : bits(0) {}
     constexpr Bitboard(std::uint64_t bits) : bits(bits) {}
 
-    operator std::uint64_t() const { return bits; }
+    explicit operator bool() const { return bits != 0; }
 
     explicit operator std::string() const {
         std::bitset<64> b(bits);
@@ -70,9 +70,10 @@ class Bitboard {
         return *this;
     }
 
-    constexpr bool check(int index) const { 
+    constexpr bool check(int index) const {
         assert(index >= 0 && index < 64);
-        return bits & (1ULL << index); }
+        return bits & (1ULL << index);
+    }
 
     constexpr Bitboard& clear(int index) {
         assert(index >= 0 && index < 64);
@@ -87,9 +88,10 @@ class Bitboard {
 
     constexpr bool empty() const { return bits == 0; }
 
-    constexpr int lsb() const { 
+    constexpr int lsb() const {
         assert(bits != 0);
-        return std::countr_zero(bits); }
+        return std::countr_zero(bits);
+    }
     constexpr int msb() const { return 63 - std::countl_zero(bits); }
 
     constexpr int count() const { return std::popcount(bits); }
