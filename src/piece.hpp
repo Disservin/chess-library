@@ -21,8 +21,8 @@ class PieceType {
 
     constexpr PieceType() : pt(underlying::NONE) {}
     constexpr PieceType(underlying pt) : pt(pt) {}
-    constexpr explicit PieceType(char type) {
-        switch (type) {
+    constexpr explicit PieceType(std::string_view type) {
+        switch (type.data()[0]) {
             case 'P':
                 pt = underlying::PAWN;
                 break;
@@ -66,22 +66,22 @@ class PieceType {
         }
     }
 
-    constexpr explicit operator char() const {
+    constexpr explicit operator std::string() const {
         switch (pt) {
             case underlying::PAWN:
-                return 'p';
+                return "p";
             case underlying::KNIGHT:
-                return 'n';
+                return "n";
             case underlying::BISHOP:
-                return 'b';
+                return "b";
             case underlying::ROOK:
-                return 'r';
+                return "r";
             case underlying::QUEEN:
-                return 'q';
+                return "q";
             case underlying::KING:
-                return 'k';
+                return "k";
             default:
-                return ' ';
+                return " ";
         }
     }
 
@@ -104,7 +104,7 @@ class PieceType {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const PieceType& pt) {
-    os << static_cast<char>(pt);
+    os << static_cast<std::string>(pt);
     return os;
 }
 
@@ -134,8 +134,8 @@ class Piece {
     constexpr Piece(Color color, PieceType type)
         : piece(static_cast<underlying>(static_cast<int>(type.index()) +
                                         (static_cast<std::uint8_t>(color.internal()) << 3))) {}
-    constexpr Piece(char p) {
-        switch (p) {
+    constexpr Piece(std::string_view p) {
+        switch (p.data()[0]) {
             case 'P':
                 piece = WHITEPAWN;
                 break;
@@ -190,35 +190,35 @@ class Piece {
     constexpr bool operator==(const PieceType& rhs) const { return type() == rhs; }
     constexpr bool operator!=(const PieceType& rhs) const { return type() != rhs; }
 
-    constexpr explicit operator char() const {
+    constexpr explicit operator std::string() const {
         switch (piece) {
             case WHITEPAWN:
-                return 'P';
+                return "P";
             case WHITEKNIGHT:
-                return 'N';
+                return "N";
             case WHITEBISHOP:
-                return 'B';
+                return "B";
             case WHITEROOK:
-                return 'R';
+                return "R";
             case WHITEQUEEN:
-                return 'Q';
+                return "Q";
             case WHITEKING:
-                return 'K';
+                return "K";
             // black
             case BLACKPAWN:
-                return 'p';
+                return "p";
             case BLACKKNIGHT:
-                return 'n';
+                return "n";
             case BLACKBISHOP:
-                return 'b';
+                return "b";
             case BLACKROOK:
-                return 'r';
+                return "r";
             case BLACKQUEEN:
-                return 'q';
+                return "q";
             case BLACKKING:
-                return 'k';
+                return "k";
             default:
-                return '.';
+                return ".";
         }
     }
 

@@ -80,7 +80,7 @@ inline std::ostream &operator<<(std::ostream &os, const Move &move) {
     os << from_sq << to_sq;
 
     if (move.typeOf() == Move::PROMOTION) {
-        os << static_cast<char>(move.promotionType());
+        os << static_cast<std::string>(move.promotionType());
     }
 
     return os;

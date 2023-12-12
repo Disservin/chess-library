@@ -138,7 +138,7 @@ class Board {
                     }
 
                     // Append the character representing the piece to the FEN string
-                    ss += static_cast<char>(piece);
+                    ss += static_cast<std::string>(piece);
                 } else {
                     // If there is no piece at the current square, increment the
                     // counter for the number of empty squares
@@ -791,8 +791,9 @@ class Board {
 
         auto square = Square(56);
         for (char curr : position) {
-            if (Piece(curr) != Piece::NONE) {
-                const Piece piece = Piece(curr);
+            auto piece_str = std::string_view(&curr, 1);
+            if (Piece(piece_str) != Piece::NONE) {
+                const Piece piece = Piece(piece_str);
                 placePiece(piece, square);
                 hash_key_ ^= Zobrist::piece(piece, square);
 
@@ -890,11 +891,14 @@ class Board {
 
 inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     for (int i = 63; i >= 0; i -= 8) {
-        os << " " << static_cast<char>(b.board_[i - 7]) << " " << static_cast<char>(b.board_[i - 6])
-           << " " << static_cast<char>(b.board_[i - 5]) << " " << static_cast<char>(b.board_[i - 4])
-           << " " << static_cast<char>(b.board_[i - 3]) << " " << static_cast<char>(b.board_[i - 2])
-           << " " << static_cast<char>(b.board_[i - 1]) << " " << static_cast<char>(b.board_[i])
-           << " \n";
+        os << " " << static_cast<std::string>(b.board_[i - 7]) << " "
+           << static_cast<std::string>(b.board_[i - 6]) << " "
+           << static_cast<std::string>(b.board_[i - 5]) << " "
+           << static_cast<std::string>(b.board_[i - 4]) << " "
+           << static_cast<std::string>(b.board_[i - 3]) << " "
+           << static_cast<std::string>(b.board_[i - 2]) << " "
+           << static_cast<std::string>(b.board_[i - 1]) << " "
+           << static_cast<std::string>(b.board_[i]) << " \n";
     }
     os << "\n\n";
     os << "Side to move: " << static_cast<int>(b.side_to_move_.internal()) << "\n";

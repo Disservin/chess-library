@@ -40,7 +40,7 @@ namespace chess::uci {
 
     // If the move is a promotion, add the promoted piece to the string stream
     if (move.typeOf() == Move::PROMOTION) {
-        ss << static_cast<char>(move.promotionType());
+        ss << static_cast<std::string>(move.promotionType());
     }
 
     return ss.str();
@@ -70,7 +70,8 @@ namespace chess::uci {
     // promotion
     if (piece == PieceType::PAWN && uci.length() == 5 &&
         target.rank() == (board.sideToMove() == Color::WHITE ? Rank::RANK_8 : Rank::RANK_1)) {
-        return Move::make<Move::PROMOTION>(source, target, PieceType(uci.at(4)));
+        std::string_view promotion = uci.substr(4, 1);
+        return Move::make<Move::PROMOTION>(source, target, PieceType(promotion));
     }
 
     switch (uci.length()) {
