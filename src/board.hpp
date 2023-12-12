@@ -269,7 +269,7 @@ class Board {
 
             const auto king = at(move.from());
             const auto rook = at(move.to());
-            
+
             removePiece(king, move.from());
             removePiece(rook, move.to());
 
@@ -462,8 +462,7 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] Bitboard pieces(PieceType type, Color color) const {
-        return pieces_bb_[type.index()] &
-               occ_bb_[static_cast<int>(color.internal())];
+        return pieces_bb_[type] & occ_bb_[static_cast<int>(color.internal())];
     }
 
     /// @brief Returns all pieces of a certain type
@@ -711,7 +710,7 @@ class Board {
         const auto sq_ = sq.index();
         assert(board_[sq_] == Piece::NONE);
 
-        pieces_bb_[static_cast<int>(piece.type().index())] |= (1ULL << (sq_));
+        pieces_bb_[piece.type()] |= (1ULL << (sq_));
         occ_bb_[static_cast<int>(piece.color().internal())] |= (1ULL << (sq_));
 
         board_[sq_] = piece;
@@ -721,7 +720,7 @@ class Board {
         const auto sq_ = int(sq.internal());
         assert(board_[sq_] == piece && piece != Piece::NONE);
 
-        pieces_bb_[static_cast<int>(piece.type().index())] &= ~(1ULL << (sq_));
+        pieces_bb_[piece.type()] &= ~(1ULL << (sq_));
         occ_bb_[static_cast<int>(piece.color().internal())] &= ~(1ULL << (sq_));
 
         board_[sq_] = Piece::NONE;

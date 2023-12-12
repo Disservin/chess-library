@@ -104,7 +104,7 @@ namespace chess::uci {
     std::string san;
 
     if (pt != PieceType::PAWN) {
-        san += repPieceType[pt.index()];
+        san += repPieceType[pt];
     }
 
     Movelist moves;
@@ -136,7 +136,7 @@ namespace chess::uci {
 
     if (move.typeOf() == Move::PROMOTION) {
         san += "=";
-        san += repPieceType[int(move.promotionType().index())];
+        san += repPieceType[move.promotionType()];
     }
 
     board.makeMove(move);
@@ -171,7 +171,7 @@ namespace chess::uci {
     std::string lan;
 
     if (pt != PieceType::PAWN) {
-        lan += repPieceType[int(pt.index())];
+        lan += repPieceType[pt];
     }
 
     lan += repFile[int(move.from().file().internal())];
@@ -190,7 +190,7 @@ namespace chess::uci {
 
     if (move.typeOf() == Move::PROMOTION) {
         lan += "=";
-        lan += repPieceType[int(move.promotionType().index())];
+        lan += repPieceType[move.promotionType()];
     }
 
     board.makeMove(move);
@@ -380,7 +380,7 @@ template <bool PEDANTIC = false>
     SanMoveInformation info;
 
     parseSanInfo<PEDANTIC>(info, san);
-    constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt.index()); };
+    constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
 
     moves.clear();
 

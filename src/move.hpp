@@ -23,9 +23,7 @@ class Move {
     [[nodiscard]] static constexpr Move make(Square source, Square target,
                                              PieceType pt = PieceType::KNIGHT) {
         return Move(
-            MoveType +
-            ((std::uint16_t(pt.index()) - std::uint16_t(PieceType(PieceType::KNIGHT).index()))
-             << 12) +
+            MoveType + ((std::uint16_t(pt) - std::uint16_t(PieceType(PieceType::KNIGHT))) << 12) +
             std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target.index()));
     }
 
@@ -48,7 +46,7 @@ class Move {
     /// @return
     [[nodiscard]] constexpr PieceType promotionType() const {
         return static_cast<PieceType::underlying>(((move_ >> 12) & 3) +
-                                                  PieceType(PieceType::KNIGHT).index());
+                                                  PieceType(PieceType::KNIGHT));
     }
 
     /// @brief Set the score for a move. Useful if you later want to sort the moves.
