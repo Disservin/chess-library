@@ -1,13 +1,7 @@
 
 #include <iostream>
-#include "color.hpp"
-#include "board.hpp"
-#include "attacks_fwd.hpp"
-#include "attacks.hpp"
-#include "movegen_fwd.hpp"
-#include "movegen.hpp"
-#include "uci.hpp"
-#include "pgn.hpp"
+
+#include "include.hpp"
 
 int main(int argc, char const *argv[]) {
     chess::Board board;
