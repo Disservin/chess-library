@@ -8,6 +8,8 @@
 #include <iostream>
 #include <cassert>
 
+#include "coords.hpp"
+
 namespace chess {
 
 class Bitboard {
@@ -86,6 +88,16 @@ class Bitboard {
         return *this;
     }
 
+    static constexpr Bitboard fromSquare(int index) {
+        assert(index >= 0 && index < 64);
+        return Bitboard(1ULL << index);
+    }
+
+    static constexpr Bitboard fromSquare(Square sq) {
+        assert(sq.index() >= 0 && sq.index() < 64);
+        return Bitboard(1ULL << sq.index());
+    }
+
     constexpr bool empty() const { return bits == 0; }
 
     constexpr int lsb() const {
@@ -115,4 +127,7 @@ inline std::ostream& operator<<(std::ostream& os, const Bitboard& bb) {
     os << std::string(bb);
     return os;
 }
+
+inline constexpr Bitboard operator&(std::uint64_t lhs, const Bitboard& rhs) { return rhs & lhs; }
+inline constexpr Bitboard operator|(std::uint64_t lhs, const Bitboard& rhs) { return rhs | lhs; }
 }  // namespace chess
