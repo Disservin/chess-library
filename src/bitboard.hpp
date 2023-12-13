@@ -16,6 +16,14 @@ class Bitboard {
    public:
     constexpr Bitboard() : bits(0) {}
     constexpr Bitboard(std::uint64_t bits) : bits(bits) {}
+    constexpr Bitboard(File file) : bits(0) {
+        assert(file != File::NO_FILE);
+        bits = 0x0101010101010101ULL << static_cast<int>(file.internal());
+    }
+    constexpr Bitboard(Rank rank) : bits(0) {
+        assert(rank != Rank::NO_RANK);
+        bits = 0xFFULL << (8 * static_cast<int>(rank.internal()));
+    }
 
     explicit operator bool() const { return bits != 0; }
 

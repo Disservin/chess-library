@@ -202,10 +202,10 @@ template <Color::underlying c>
 /// @param attacks
 inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
                                  const std::function<Bitboard(Square, Bitboard)> &attacks) {
-    const Bitboard edges = ((MASK_RANK[static_cast<int>(Rank::RANK_1)] | MASK_RANK[static_cast<int>(Rank::RANK_8)]) &
-                            ~MASK_RANK[sq.rank()]) |
-                           ((MASK_FILE[static_cast<int>(File::FILE_A)] | MASK_FILE[static_cast<int>(File::FILE_H)]) &
-                            ~MASK_FILE[sq.file()]);
+    // The edges of the board are not considered for the attacks
+    // i.e. for the sq h7 edges will be a1-h1, a1-a8, a8-h8, ignoring the edge of the current square
+    const Bitboard edges = ((Bitboard(Rank::RANK_1) | Bitboard(Rank::RANK_8)) & ~Bitboard(sq.rank())) |
+                           ((Bitboard(File::FILE_A) | Bitboard(File::FILE_H)) & ~Bitboard(sq.file()));
 
     U64 occ = 0ULL;
 
