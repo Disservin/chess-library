@@ -64,18 +64,14 @@ class Board {
 
         void clear(Color color) { rooks[color].fill(File::NO_FILE); }
 
-        bool has(Color color, Side castle) const {
-            return rooks[color][static_cast<int>(castle)] != File::NO_FILE;
-        }
+        bool has(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)] != File::NO_FILE; }
 
         bool has(Color color) const {
             return rooks[color][static_cast<int>(Side::KING_SIDE)] != File::NO_FILE ||
                    rooks[color][static_cast<int>(Side::QUEEN_SIDE)] != File::NO_FILE;
         }
 
-        File getRookFile(Color color, Side castle) const {
-            return rooks[color][static_cast<int>(castle)];
-        }
+        File getRookFile(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)]; }
 
         int hashIndex() const {
             return has(Color::WHITE, Side::KING_SIDE) + 2 * has(Color::WHITE, Side::QUEEN_SIDE) +
@@ -97,8 +93,8 @@ class Board {
         uint8_t half_moves;
         Piece captured_piece;
 
-        State(const U64 &hash, const CastlingRights &castling, const Square &enpassant,
-              const uint8_t &half_moves, const Piece &captured_piece)
+        State(const U64 &hash, const CastlingRights &castling, const Square &enpassant, const uint8_t &half_moves,
+              const Piece &captured_piece)
             : castling(castling),
               hash(hash),
               enpassant(enpassant),
@@ -190,14 +186,12 @@ class Board {
         const auto captured = at(move.to());
         const auto pt       = at<PieceType>(move.from());
 
-        prev_states_.emplace_back(hash_key_, castling_rights_, enpassant_sq_, half_moves_,
-                                  captured);
+        prev_states_.emplace_back(hash_key_, castling_rights_, enpassant_sq_, half_moves_, captured);
 
         half_moves_++;
         plies_played_++;
 
-        if (enpassant_sq_ != Square::underlying::NO_SQ)
-            hash_key_ ^= Zobrist::enpassant(enpassant_sq_.file());
+        if (enpassant_sq_ != Square::underlying::NO_SQ) hash_key_ ^= Zobrist::enpassant(enpassant_sq_.file());
         enpassant_sq_ = Square::underlying::NO_SQ;
 
         if (capture) {
@@ -208,12 +202,11 @@ class Board {
 
             const auto rank = move.to().rank();
 
-            if (captured.type() == PieceType::ROOK &&
-                ((rank == Rank::RANK_1 && side_to_move_ == Color::BLACK) ||
-                 (rank == Rank::RANK_8 && side_to_move_ == Color::WHITE))) {
+            if (captured.type() == PieceType::ROOK && ((rank == Rank::RANK_1 && side_to_move_ == Color::BLACK) ||
+                                                       (rank == Rank::RANK_8 && side_to_move_ == Color::WHITE))) {
                 const auto king_sq = kingSq(~side_to_move_);
-                const auto file    = move.to() > king_sq ? CastlingRights::Side::KING_SIDE
-                                                         : CastlingRights::Side::QUEEN_SIDE;
+                const auto file =
+                    move.to() > king_sq ? CastlingRights::Side::KING_SIDE : CastlingRights::Side::QUEEN_SIDE;
 
                 if (castling_rights_.getRookFile(~side_to_move_, file) == move.to().file()) {
                     const auto idx = castling_rights_.clear(~side_to_move_, file);
@@ -231,8 +224,8 @@ class Board {
 
         } else if (pt == PieceType::ROOK && utils::ourBackRank(move.from(), side_to_move_)) {
             const auto king_sq = kingSq(side_to_move_);
-            const auto file    = move.from() > king_sq ? CastlingRights::Side::KING_SIDE
-                                                       : CastlingRights::Side::QUEEN_SIDE;
+            const auto file =
+                move.from() > king_sq ? CastlingRights::Side::KING_SIDE : CastlingRights::Side::QUEEN_SIDE;
 
             if (castling_rights_.getRookFile(side_to_move_, file) == move.from().file()) {
                 const auto idx = castling_rights_.clear(side_to_move_, file);
@@ -259,10 +252,10 @@ class Board {
             assert(at<PieceType>(move.to()) == PieceType::ROOK);
 
             bool king_side = move.to() > move.from();
-            auto rookTo    = utils::relativeSquare(
-                side_to_move_, king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1);
-            auto kingTo = utils::relativeSquare(
-                side_to_move_, king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1);
+            auto rookTo =
+                utils::relativeSquare(side_to_move_, king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1);
+            auto kingTo =
+                utils::relativeSquare(side_to_move_, king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1);
 
             const auto king = at(move.from());
             const auto rook = at(move.to());
@@ -285,8 +278,7 @@ class Board {
             removePiece(piece_pawn, move.from());
             placePiece(piece_prom, move.to());
 
-            hash_key_ ^=
-                Zobrist::piece(piece_pawn, move.from()) ^ Zobrist::piece(piece_prom, move.to());
+            hash_key_ ^= Zobrist::piece(piece_pawn, move.from()) ^ Zobrist::piece(piece_prom, move.to());
         } else {
             assert(at(move.from()) != Piece::NONE);
             assert(at(move.to()) == Piece::NONE);
@@ -328,11 +320,9 @@ class Board {
         if (move.typeOf() == Move::CASTLING) {
             const bool king_side = move.to() > move.from();
 
-            const auto rook_from_sq =
-                Square(king_side ? File::FILE_F : File::FILE_D, move.from().rank());
+            const auto rook_from_sq = Square(king_side ? File::FILE_F : File::FILE_D, move.from().rank());
 
-            const auto king_to_sq =
-                Square(king_side ? File::FILE_G : File::FILE_C, move.from().rank());
+            const auto king_to_sq = Square(king_side ? File::FILE_G : File::FILE_C, move.from().rank());
 
             assert(at<PieceType>(rook_from_sq) == PieceType::ROOK);
             assert(at<PieceType>(king_to_sq) == PieceType::KING);
@@ -395,12 +385,10 @@ class Board {
 
     /// @brief Make a null move. (Switches the side to move)
     void makeNullMove() {
-        prev_states_.emplace_back(hash_key_, castling_rights_, enpassant_sq_, half_moves_,
-                                  Piece::NONE);
+        prev_states_.emplace_back(hash_key_, castling_rights_, enpassant_sq_, half_moves_, Piece::NONE);
 
         hash_key_ ^= Zobrist::sideToMove();
-        if (enpassant_sq_ != Square::underlying::NO_SQ)
-            hash_key_ ^= Zobrist::enpassant(enpassant_sq_.file());
+        if (enpassant_sq_ != Square::underlying::NO_SQ) hash_key_ ^= Zobrist::enpassant(enpassant_sq_.file());
         enpassant_sq_ = Square::underlying::NO_SQ;
 
         side_to_move_ = ~side_to_move_;
@@ -456,9 +444,7 @@ class Board {
     /// @param type
     /// @param color
     /// @return
-    [[nodiscard]] Bitboard pieces(PieceType type, Color color) const {
-        return pieces_bb_[type] & occ_bb_[color];
-    }
+    [[nodiscard]] Bitboard pieces(PieceType type, Color color) const { return pieces_bb_[type] & occ_bb_[color]; }
 
     /// @brief Returns all pieces of a certain type
     /// @param type
@@ -484,8 +470,7 @@ class Board {
     /// @param move
     /// @return
     bool isCapture(const Move &move) const {
-        return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) ||
-               move.typeOf() == Move::ENPASSANT;
+        return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) || move.typeOf() == Move::ENPASSANT;
     }
 
     /// @brief Get the current hash key of the board
@@ -516,9 +501,8 @@ class Board {
         };
 
         const auto get_file = [&](Color c, CastlingRights::Side side) {
-            return c == Color::WHITE
-                       ? convert(Color::WHITE, castling_rights_.getRookFile(Color::WHITE, side))
-                       : convert(Color::WHITE, castling_rights_.getRookFile(Color::BLACK, side));
+            return c == Color::WHITE ? convert(Color::WHITE, castling_rights_.getRookFile(Color::WHITE, side))
+                                     : convert(Color::WHITE, castling_rights_.getRookFile(Color::BLACK, side));
         };
 
         if (chess960_) {
@@ -587,15 +571,12 @@ class Board {
         if (count == 2) return true;
 
         if (count == 3) {
-            if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK))
-                return true;
-            if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK))
-                return true;
+            if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK)) return true;
+            if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK)) return true;
         }
 
         if (count == 4) {
-            if (pieces(PieceType::BISHOP, Color::WHITE) &&
-                pieces(PieceType::BISHOP, Color::BLACK) &&
+            if (pieces(PieceType::BISHOP, Color::WHITE) && pieces(PieceType::BISHOP, Color::BLACK) &&
                 utils::sameColor(pieces(PieceType::BISHOP, Color::WHITE).lsb(),
                                  pieces(PieceType::BISHOP, Color::BLACK).lsb()))
                 return true;
@@ -613,8 +594,7 @@ class Board {
             return getHalfMoveDrawType();
         }
 
-        if (isInsufficientMaterial())
-            return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
+        if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
 
         if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
 
@@ -636,10 +616,8 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] bool isAttacked(Square square, Color color) const {
-        if (static_cast<bool>(attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)))
-            return true;
-        if (static_cast<bool>(attacks::knight(square) & pieces(PieceType::KNIGHT, color)))
-            return true;
+        if (static_cast<bool>(attacks::pawn(~color, square) & pieces(PieceType::PAWN, color))) return true;
+        if (static_cast<bool>(attacks::knight(square) & pieces(PieceType::KNIGHT, color))) return true;
         if (static_cast<bool>(attacks::king(square) & pieces(PieceType::KING, color))) return true;
 
         if (static_cast<bool>(attacks::bishop(square, occ()) &
@@ -658,8 +636,8 @@ class Board {
     /// @brief Checks if the given color has at least 1 piece thats not pawn and not king
     /// @return
     [[nodiscard]] bool hasNonPawnMaterial(Color color) const {
-        return (pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
-                pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color))
+        return (pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) | pieces(PieceType::ROOK, color) |
+                pieces(PieceType::QUEEN, color))
             .getBits();
     }
 
@@ -681,8 +659,7 @@ class Board {
         }
 
         U64 ep_hash = 0ULL;
-        if (enpassant_sq_ != Square::underlying::NO_SQ)
-            ep_hash ^= Zobrist::enpassant(enpassant_sq_.file());
+        if (enpassant_sq_ != Square::underlying::NO_SQ) ep_hash ^= Zobrist::enpassant(enpassant_sq_.file());
 
         U64 side_to_move_hash = 0ULL;
         if (side_to_move_ == Color::WHITE) side_to_move_hash ^= Zobrist::sideToMove();
@@ -802,31 +779,26 @@ class Board {
             if (i == '-') break;
             if (!chess960_) {
                 if (i == 'K')
-                    castling_rights_.setCastlingRight(Color::WHITE, CastlingRights::Side::KING_SIDE,
-                                                      File::FILE_H);
+                    castling_rights_.setCastlingRight(Color::WHITE, CastlingRights::Side::KING_SIDE, File::FILE_H);
                 if (i == 'Q')
-                    castling_rights_.setCastlingRight(
-                        Color::WHITE, CastlingRights::Side::QUEEN_SIDE, File::FILE_A);
+                    castling_rights_.setCastlingRight(Color::WHITE, CastlingRights::Side::QUEEN_SIDE, File::FILE_A);
                 if (i == 'k')
-                    castling_rights_.setCastlingRight(Color::BLACK, CastlingRights::Side::KING_SIDE,
-                                                      File::FILE_H);
+                    castling_rights_.setCastlingRight(Color::BLACK, CastlingRights::Side::KING_SIDE, File::FILE_H);
                 if (i == 'q')
-                    castling_rights_.setCastlingRight(
-                        Color::BLACK, CastlingRights::Side::QUEEN_SIDE, File::FILE_A);
+                    castling_rights_.setCastlingRight(Color::BLACK, CastlingRights::Side::QUEEN_SIDE, File::FILE_A);
             } else {
                 if (i == 'K' || i == 'k') {
                     // find rook on the right side of the king
                     const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
                     const auto king_sq = kingSq(color);
 
-                    const auto sq_corner = color == Color::WHITE ? Square::underlying::SQ_H1
-                                                                 : Square::underlying::SQ_H8;
+                    const auto sq_corner =
+                        color == Color::WHITE ? Square::underlying::SQ_H1 : Square::underlying::SQ_H8;
 
                     for (Square sq = king_sq + 1; sq <= sq_corner; sq++) {
                         if (at<PieceType>(sq) == PieceType::NONE) continue;
                         if (at<PieceType>(sq) == PieceType::ROOK && at(sq).color() == color) {
-                            castling_rights_.setCastlingRight(
-                                color, CastlingRights::Side::KING_SIDE, sq.file());
+                            castling_rights_.setCastlingRight(color, CastlingRights::Side::KING_SIDE, sq.file());
                             break;
                         }
                     }
@@ -836,14 +808,13 @@ class Board {
                     const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
                     const auto king_sq = kingSq(color);
 
-                    const auto sq_corner = color == Color::WHITE ? Square::underlying::SQ_A1
-                                                                 : Square::underlying::SQ_A8;
+                    const auto sq_corner =
+                        color == Color::WHITE ? Square::underlying::SQ_A1 : Square::underlying::SQ_A8;
 
                     for (Square sq = king_sq - 1; sq >= sq_corner; sq--) {
                         if (at<PieceType>(sq) == PieceType::NONE) continue;
                         if (at<PieceType>(sq) == PieceType::ROOK && at(sq).color() == color) {
-                            castling_rights_.setCastlingRight(
-                                color, CastlingRights::Side::QUEEN_SIDE, sq.file());
+                            castling_rights_.setCastlingRight(color, CastlingRights::Side::QUEEN_SIDE, sq.file());
                             break;
                         }
                     }
@@ -851,8 +822,8 @@ class Board {
                     const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
                     const auto king_sq = kingSq(color);
                     const auto file    = static_cast<File>(tolower(i) - 97);
-                    const auto side    = file > king_sq.file() ? CastlingRights::Side::KING_SIDE
-                                                               : CastlingRights::Side::QUEEN_SIDE;
+                    const auto side =
+                        file > king_sq.file() ? CastlingRights::Side::KING_SIDE : CastlingRights::Side::QUEEN_SIDE;
                     castling_rights_.setCastlingRight(color, side, file);
                 }
             }
@@ -878,14 +849,10 @@ class Board {
 
 inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     for (int i = 63; i >= 0; i -= 8) {
-        os << " " << static_cast<std::string>(b.board_[i - 7]) << " "
-           << static_cast<std::string>(b.board_[i - 6]) << " "
-           << static_cast<std::string>(b.board_[i - 5]) << " "
-           << static_cast<std::string>(b.board_[i - 4]) << " "
-           << static_cast<std::string>(b.board_[i - 3]) << " "
-           << static_cast<std::string>(b.board_[i - 2]) << " "
-           << static_cast<std::string>(b.board_[i - 1]) << " "
-           << static_cast<std::string>(b.board_[i]) << " \n";
+        os << " " << static_cast<std::string>(b.board_[i - 7]) << " " << static_cast<std::string>(b.board_[i - 6])
+           << " " << static_cast<std::string>(b.board_[i - 5]) << " " << static_cast<std::string>(b.board_[i - 4])
+           << " " << static_cast<std::string>(b.board_[i - 3]) << " " << static_cast<std::string>(b.board_[i - 2])
+           << " " << static_cast<std::string>(b.board_[i - 1]) << " " << static_cast<std::string>(b.board_[i]) << " \n";
     }
     os << "\n\n";
     os << "Side to move: " << static_cast<int>(b.side_to_move_.internal()) << "\n";

@@ -20,11 +20,9 @@ class Move {
     /// @param pt
     /// @return
     template <std::uint16_t MoveType = 0>
-    [[nodiscard]] static constexpr Move make(Square source, Square target,
-                                             PieceType pt = PieceType::KNIGHT) {
-        return Move(
-            MoveType + ((std::uint16_t(pt) - std::uint16_t(PieceType(PieceType::KNIGHT))) << 12) +
-            std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target.index()));
+    [[nodiscard]] static constexpr Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT) {
+        return Move(MoveType + ((std::uint16_t(pt) - std::uint16_t(PieceType(PieceType::KNIGHT))) << 12) +
+                    std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target.index()));
     }
 
     /// @brief Get the source square of the move.
@@ -37,16 +35,13 @@ class Move {
 
     /// @brief Get the type of the move. Can be NORMAL, PROMOTION, ENPASSANT or CASTLING.
     /// @return
-    [[nodiscard]] constexpr std::uint16_t typeOf() const {
-        return static_cast<std::uint16_t>(move_ & (3 << 14));
-    }
+    [[nodiscard]] constexpr std::uint16_t typeOf() const { return static_cast<std::uint16_t>(move_ & (3 << 14)); }
 
     /// @brief Get the promotion piece of the move, should only be used if typeOf() returns
     /// PROMOTION.
     /// @return
     [[nodiscard]] constexpr PieceType promotionType() const {
-        return static_cast<PieceType::underlying>(((move_ >> 12) & 3) +
-                                                  PieceType(PieceType::KNIGHT));
+        return static_cast<PieceType::underlying>(((move_ >> 12) & 3) + PieceType(PieceType::KNIGHT));
     }
 
     /// @brief Set the score for a move. Useful if you later want to sort the moves.

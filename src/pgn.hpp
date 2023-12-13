@@ -107,8 +107,7 @@ class StreamParser {
         std::optional<char> get() {
             if (buffer_index_ == bytes_read_) {
                 const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++])
-                                               : std::nullopt;
+                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
             }
 
             return buffer_[buffer_index_++];

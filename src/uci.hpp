@@ -111,8 +111,7 @@ namespace chess::uci {
     movegen::legalmoves(moves, board);
 
     for (const auto &m : moves) {
-        if (pt != PieceType::PAWN && m != move && board.at(m.from()) == board.at(move.from()) &&
-            m.to() == move.to()) {
+        if (pt != PieceType::PAWN && m != move && board.at(m.from()) == board.at(move.from()) && m.to() == move.to()) {
             if (m.from().file() == move.from().file()) {
                 san += std::to_string(move.from().rank() + 1);
                 break;
@@ -245,8 +244,7 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
         }
     }
 
-    constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info,
-                                     char castling_char) {
+    constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info, char castling_char) {
         info.piece = PieceType::KING;
 
         san.remove_prefix(3);
@@ -254,8 +252,7 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
         info.castling_short = san.length() == 0 || (san.length() >= 1 && san[0] != '-');
         info.castling_long  = san.length() >= 2 && san[0] == '-' && san[1] == castling_char;
 
-        assert((info.castling_short && !info.castling_long) ||
-               (!info.castling_short && info.castling_long) ||
+        assert((info.castling_short && !info.castling_long) || (!info.castling_short && info.castling_long) ||
                (!info.castling_short && !info.castling_long));
     };
 
@@ -375,8 +372,7 @@ inline void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcep
 }
 
 template <bool PEDANTIC = false>
-[[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san,
-                                           Movelist &moves) noexcept(false) {
+[[nodiscard]] inline Move parseSanInternal(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
     SanMoveInformation info;
 
     parseSanInfo<PEDANTIC>(info, san);
@@ -400,8 +396,7 @@ template <bool PEDANTIC = false>
             }
         }
 
-        throw SanParseError("Failed to parse san. At step 2: " + std::string(san) + " " +
-                            board.getFen());
+        throw SanParseError("Failed to parse san. At step 2: " + std::string(san) + " " + board.getFen());
     }
 
     for (const auto &move : moves) {
@@ -457,8 +452,7 @@ template <bool PEDANTIC = false>
     std::cerr << ss.str();
 #endif
 
-    throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " +
-                        board.getFen());
+    throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
 }
 
 /// @brief Converts a SAN string to a move

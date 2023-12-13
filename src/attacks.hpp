@@ -62,9 +62,7 @@ template <Color::underlying c>
 /// @param c
 /// @param sq
 /// @return
-[[nodiscard]] inline Bitboard attacks::pawn(Color c, Square sq) {
-    return PawnAttacks[c][sq.index()];
-}
+[[nodiscard]] inline Bitboard attacks::pawn(Color c, Square sq) { return PawnAttacks[c][sq.index()]; }
 
 /// @brief Returns the knight attacks for a given square
 /// @param sq
@@ -106,8 +104,7 @@ template <Color::underlying c>
 /// @param square Attacked Square
 /// @param occupied
 /// @return
-[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square,
-                                                 Bitboard occupied) {
+[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square, Bitboard occupied) {
     const auto queens = board.pieces(PieceType::QUEEN, color);
 
     // using the fact that if we can attack PieceType from square, they can attack us back
@@ -132,29 +129,25 @@ template <Color::underlying c>
     int br = sq.rank();
     int bf = sq.file();
 
-    for (r = br + 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
-         r++, f++) {
+    for (r = br + 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f++) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (r = br - 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
-         r--, f++) {
+    for (r = br - 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f++) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (r = br + 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
-         r++, f--) {
+    for (r = br + 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f--) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (r = br - 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f));
-         r--, f--) {
+    for (r = br - 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f--) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
@@ -209,11 +202,10 @@ template <Color::underlying c>
 /// @param attacks
 inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
                                  const std::function<Bitboard(Square, Bitboard)> &attacks) {
-    const Bitboard edges =
-        ((MASK_RANK[static_cast<int>(Rank::RANK_1)] | MASK_RANK[static_cast<int>(Rank::RANK_8)]) &
-         ~MASK_RANK[sq.rank()]) |
-        ((MASK_FILE[static_cast<int>(File::FILE_A)] | MASK_FILE[static_cast<int>(File::FILE_H)]) &
-         ~MASK_FILE[sq.file()]);
+    const Bitboard edges = ((MASK_RANK[static_cast<int>(Rank::RANK_1)] | MASK_RANK[static_cast<int>(Rank::RANK_8)]) &
+                            ~MASK_RANK[sq.rank()]) |
+                           ((MASK_FILE[static_cast<int>(File::FILE_A)] | MASK_FILE[static_cast<int>(File::FILE_H)]) &
+                            ~MASK_FILE[sq.file()]);
 
     U64 occ = 0ULL;
 
@@ -222,8 +214,7 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
     table[sq.index()].shift = 64 - Bitboard(table[sq.index()].mask).count();
 
     if (sq < 64 - 1) {
-        table[sq.index() + 1].attacks =
-            table[sq.index()].attacks + (1 << Bitboard(table[sq.index()].mask).count());
+        table[sq.index() + 1].attacks = table[sq.index()].attacks + (1 << Bitboard(table[sq.index()].mask).count());
     }
 
     do {

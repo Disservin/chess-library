@@ -26,8 +26,8 @@ enum class MoveGenType : std::uint8_t { ALL, CAPTURE, QUIET };
 /// @param board
 template <MoveGenType mt = MoveGenType::ALL>
 void legalmoves(Movelist &movelist, const Board &board,
-                int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
-                             PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+                int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP | PieceGenType::ROOK |
+                             PieceGenType::QUEEN | PieceGenType::KING);
 
 }  // namespace movegen
 

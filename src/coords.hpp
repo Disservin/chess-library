@@ -9,17 +9,7 @@ namespace chess {
 
 class File {
    public:
-    enum class underlying : std::uint8_t {
-        FILE_A,
-        FILE_B,
-        FILE_C,
-        FILE_D,
-        FILE_E,
-        FILE_F,
-        FILE_G,
-        FILE_H,
-        NO_FILE
-    };
+    enum class underlying : std::uint8_t { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NO_FILE };
 
     constexpr File() : file(underlying::NO_FILE) {}
     constexpr File(underlying file) : file(file) {}
@@ -33,25 +23,15 @@ class File {
     constexpr bool operator==(const underlying& rhs) const { return file == rhs; }
     constexpr bool operator!=(const underlying& rhs) const { return file != rhs; }
 
-    constexpr bool operator>=(const File& rhs) const {
-        return static_cast<int>(file) >= static_cast<int>(rhs.file);
-    }
-    constexpr bool operator<=(const File& rhs) const {
-        return static_cast<int>(file) <= static_cast<int>(rhs.file);
-    }
+    constexpr bool operator>=(const File& rhs) const { return static_cast<int>(file) >= static_cast<int>(rhs.file); }
+    constexpr bool operator<=(const File& rhs) const { return static_cast<int>(file) <= static_cast<int>(rhs.file); }
 
-    constexpr bool operator>(const File& rhs) const {
-        return static_cast<int>(file) > static_cast<int>(rhs.file);
-    }
-    constexpr bool operator<(const File& rhs) const {
-        return static_cast<int>(file) < static_cast<int>(rhs.file);
-    }
+    constexpr bool operator>(const File& rhs) const { return static_cast<int>(file) > static_cast<int>(rhs.file); }
+    constexpr bool operator<(const File& rhs) const { return static_cast<int>(file) < static_cast<int>(rhs.file); }
 
     constexpr operator int() const { return static_cast<int>(file); }
 
-    explicit operator std::string() const {
-        return std::string(1, static_cast<char>(static_cast<int>(file) + 'a'));
-    }
+    explicit operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(file) + 'a')); }
 
     static constexpr underlying FILE_A  = underlying::FILE_A;
     static constexpr underlying FILE_B  = underlying::FILE_B;
@@ -69,17 +49,7 @@ class File {
 
 class Rank {
    public:
-    enum class underlying {
-        RANK_1,
-        RANK_2,
-        RANK_3,
-        RANK_4,
-        RANK_5,
-        RANK_6,
-        RANK_7,
-        RANK_8,
-        NO_RANK
-    };
+    enum class underlying { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NO_RANK };
 
     constexpr Rank() : rank(underlying::NO_RANK) {}
     constexpr Rank(underlying rank) : rank(rank) {}
@@ -93,16 +63,10 @@ class Rank {
     constexpr bool operator==(const underlying& rhs) const { return rank == rhs; }
     constexpr bool operator!=(const underlying& rhs) const { return rank != rhs; }
 
-    constexpr bool operator>=(const Rank& rhs) const {
-        return static_cast<int>(rank) >= static_cast<int>(rhs.rank);
-    }
-    constexpr bool operator<=(const Rank& rhs) const {
-        return static_cast<int>(rank) <= static_cast<int>(rhs.rank);
-    }
+    constexpr bool operator>=(const Rank& rhs) const { return static_cast<int>(rank) >= static_cast<int>(rhs.rank); }
+    constexpr bool operator<=(const Rank& rhs) const { return static_cast<int>(rank) <= static_cast<int>(rhs.rank); }
 
-    operator std::string() const {
-        return std::string(1, static_cast<char>(static_cast<int>(rank) + '1'));
-    }
+    operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(rank) + '1')); }
 
     constexpr operator int() const { return static_cast<int>(rank); }
 
@@ -142,26 +106,17 @@ class Square {
     constexpr Square(File file, Rank rank) : sq(static_cast<underlying>(file + rank * 8)) {}
     constexpr Square(Rank rank, File file) : sq(static_cast<underlying>(file + rank * 8)) {}
     constexpr Square(underlying sq) : sq(sq) {}
-    constexpr Square(std::string_view str)
-        : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {}
+    constexpr Square(std::string_view str) : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {}
 
     constexpr Square operator^(const Square& s) const {
         return Square(static_cast<underlying>(static_cast<int>(sq) ^ s.index()));
     };
     constexpr bool operator==(const Square& rhs) const { return sq == rhs.sq; }
     constexpr bool operator!=(const Square& rhs) const { return sq != rhs.sq; }
-    constexpr bool operator>(const Square& rhs) const {
-        return static_cast<int>(sq) > static_cast<int>(rhs.sq);
-    }
-    constexpr bool operator>=(const Square& rhs) const {
-        return static_cast<int>(sq) > static_cast<int>(rhs.sq);
-    }
-    constexpr bool operator<(const Square& rhs) const {
-        return static_cast<int>(sq) < static_cast<int>(rhs.sq);
-    }
-    constexpr bool operator<=(const Square& rhs) const {
-        return static_cast<int>(sq) <= static_cast<int>(rhs.sq);
-    }
+    constexpr bool operator>(const Square& rhs) const { return static_cast<int>(sq) > static_cast<int>(rhs.sq); }
+    constexpr bool operator>=(const Square& rhs) const { return static_cast<int>(sq) > static_cast<int>(rhs.sq); }
+    constexpr bool operator<(const Square& rhs) const { return static_cast<int>(sq) < static_cast<int>(rhs.sq); }
+    constexpr bool operator<=(const Square& rhs) const { return static_cast<int>(sq) <= static_cast<int>(rhs.sq); }
     constexpr Square operator+(const Square& rhs) const {
         return Square(static_cast<underlying>(static_cast<int>(sq) + static_cast<int>(rhs.sq)));
     }
