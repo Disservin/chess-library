@@ -90,8 +90,7 @@ class PieceType {
 
     constexpr operator int() const { return static_cast<int>(pt); }
 
-    // constexpr underlying internal() const { return pt; }
-    // constexpr int index() const { return static_cast<int>(pt); }
+    constexpr underlying internal() const { return pt; }
 
     static constexpr underlying PAWN   = underlying::PAWN;
     static constexpr underlying KNIGHT = underlying::KNIGHT;

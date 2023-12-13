@@ -106,7 +106,9 @@ class Square {
     constexpr Square(File file, Rank rank) : sq(static_cast<underlying>(file + rank * 8)) {}
     constexpr Square(Rank rank, File file) : sq(static_cast<underlying>(file + rank * 8)) {}
     constexpr Square(underlying sq) : sq(sq) {}
-    constexpr Square(std::string_view str) : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {}
+    constexpr Square(std::string_view str) : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {
+        assert(str.size() >= 2);
+    }
 
     constexpr Square operator^(const Square& s) const {
         return Square(static_cast<underlying>(static_cast<int>(sq) ^ s.index()));
@@ -161,6 +163,10 @@ class Square {
     constexpr bool is_dark() const { return !is_light(); }
 
     constexpr bool is_valid() const { return static_cast<std::int8_t>(sq) < 64; }
+
+    constexpr static bool is_valid(Rank r, File f) {
+        return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
+    }
 
     constexpr int distance(Square sq) const {
         return std::max(std::abs(file() - sq.file()), std::abs(rank() - sq.rank()));

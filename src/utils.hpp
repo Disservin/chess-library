@@ -12,8 +12,7 @@ namespace utils {
 /// @param string
 /// @param delimiter
 /// @return
-[[nodiscard]] inline std::vector<std::string_view> splitString(std::string_view string,
-                                                               const char &delimiter) {
+[[nodiscard]] inline std::vector<std::string_view> splitString(std::string_view string, const char &delimiter) {
     std::vector<std::string_view> result;
     size_t start = 0;
     size_t end   = string.find(delimiter);
@@ -36,9 +35,7 @@ namespace utils {
 /// @param sq1
 /// @param sq2
 /// @return
-[[nodiscard]] constexpr bool sameColor(Square sq1, Square sq2) {
-    return ((9 * (sq1 ^ sq2).index()) & 8) == 0;
-}
+[[nodiscard]] constexpr bool sameColor(Square sq1, Square sq2) { return ((9 * (sq1 ^ sq2).index()) & 8) == 0; }
 
 /// @brief Checks if a square is on the back rank of a color.
 /// @param sq
@@ -49,22 +46,6 @@ namespace utils {
         return sq.rank() == Rank::RANK_1;
     else
         return sq.rank() == Rank::RANK_8;
-}
-
-/// @brief
-/// @param r
-/// @param f
-/// @return
-[[nodiscard]] constexpr int validSq(Rank r, File f) {
-    return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
-}
-
-[[nodiscard]] constexpr Square extractSquare(std::string_view square_str) {
-    char letter = square_str[0];
-    int file    = letter - 96;
-    int rank    = square_str[1] - 48;
-    int index   = (rank - 1) * 8 + file - 1;
-    return Square(index);
 }
 
 }  // namespace utils

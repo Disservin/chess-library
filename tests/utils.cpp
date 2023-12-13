@@ -5,8 +5,8 @@ using namespace chess;
 
 TEST_SUITE("Utilities") {
     TEST_CASE("extractSquare") {
-        CHECK(utils::extractSquare("a1") == Square::underlying::SQ_A1);
-        CHECK(utils::extractSquare("h8") == Square::underlying::SQ_H8);
+        CHECK(Square("a1") == Square::underlying::SQ_A1);
+        CHECK(Square("h8") == Square::underlying::SQ_H8);
     }
 
     TEST_CASE("fileRankSquare") {

@@ -129,25 +129,25 @@ template <Color::underlying c>
     int br = sq.rank();
     int bf = sq.file();
 
-    for (r = br + 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f++) {
+    for (r = br + 1, f = bf + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r++, f++) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (r = br - 1, f = bf + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f++) {
+    for (r = br - 1, f = bf + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r--, f++) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (r = br + 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f)); r++, f--) {
+    for (r = br + 1, f = bf - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r++, f--) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (r = br - 1, f = bf - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(f)); r--, f--) {
+    for (r = br - 1, f = bf - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r--, f--) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
@@ -168,25 +168,25 @@ template <Color::underlying c>
     int rr = sq.rank();
     int rf = sq.file();
 
-    for (r = rr + 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
+    for (r = rr + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (r = rr - 1; utils::validSq(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
+    for (r = rr - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
         auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (f = rf + 1; utils::validSq(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
+    for (f = rf + 1; Square::is_valid(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
         auto s = Square(static_cast<Rank>(rr), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;
     }
 
-    for (f = rf - 1; utils::validSq(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
+    for (f = rf - 1; Square::is_valid(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
         auto s = Square(static_cast<Rank>(rr), static_cast<File>(f)).index();
         attacks |= (1ULL << s);
         if (occupied.check(s)) break;

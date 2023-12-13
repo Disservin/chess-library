@@ -51,8 +51,8 @@ namespace chess::uci {
 /// @param uci
 /// @return
 [[nodiscard]] inline Move uciToMove(const Board &board, const std::string &uci) {
-    Square source   = utils::extractSquare(uci.substr(0, 2));
-    Square target   = utils::extractSquare(uci.substr(2, 2));
+    Square source   = Square(uci.substr(0, 2));
+    Square target   = Square(uci.substr(2, 2));
     PieceType piece = board.at(source).type();
 
     // convert to king captures rook
