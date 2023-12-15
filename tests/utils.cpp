@@ -45,10 +45,10 @@ TEST_SUITE("Utilities") {
     }
 
     TEST_CASE("ourBackRank") {
-        CHECK(utils::ourBackRank(Square::underlying::SQ_A1, Color::WHITE));
-        CHECK(!utils::ourBackRank(Square::underlying::SQ_A2, Color::WHITE));
+        CHECK(Square::back_rank(Square::underlying::SQ_A1, Color::WHITE));
+        CHECK(!Square::back_rank(Square::underlying::SQ_A2, Color::WHITE));
 
-        CHECK(utils::ourBackRank(Square::underlying::SQ_A8, Color::BLACK));
-        CHECK(!utils::ourBackRank(Square::underlying::SQ_A7, Color::BLACK));
+        CHECK(Square::back_rank(Square::underlying::SQ_A8, Color::BLACK));
+        CHECK(!Square::back_rank(Square::underlying::SQ_A7, Color::BLACK));
     }
 }

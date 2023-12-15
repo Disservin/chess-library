@@ -5,6 +5,8 @@
 #include <string_view>
 #include <cassert>
 
+#include "color.hpp"
+
 namespace chess {
 
 class File {
@@ -173,6 +175,21 @@ class Square {
     }
 
     static constexpr bool same_color(Square sq, Square sq2) { return ((9 * (sq ^ sq2).index()) & 8) == 0; }
+
+    static constexpr bool back_rank(Square sq, Color color) {
+        if (color == Color::WHITE)
+            return sq.rank() == Rank::RANK_1;
+        else
+            return sq.rank() == Rank::RANK_8;
+    }
+
+    /// @brief Flips the square vertically.
+    constexpr void flip() { sq = static_cast<underlying>(static_cast<int>(sq) ^ 56); }
+
+    /// @brief Conditionally flips the square vertically.
+    /// @param c
+    /// @return
+    constexpr Square relative_square(Color c) const { return Square(static_cast<int>(sq) ^ (c * 56)); }
 
     constexpr int diagonal_of() const { return 7 + rank() - file(); }
 

@@ -29,25 +29,6 @@ namespace utils {
     return result;
 }
 
-[[nodiscard]] constexpr Square relativeSquare(Color c, Square s) { return Square(s ^ (c * 56)); }
-
-/// @brief Checks if two squares have the same color. I.e light or dark.
-/// @param sq1
-/// @param sq2
-/// @return
-[[nodiscard]] constexpr bool sameColor(Square sq1, Square sq2) { return ((9 * (sq1 ^ sq2).index()) & 8) == 0; }
-
-/// @brief Checks if a square is on the back rank of a color.
-/// @param sq
-/// @param color
-/// @return
-[[nodiscard]] constexpr bool ourBackRank(Square sq, Color color) {
-    if (color == Color::WHITE)
-        return sq.rank() == Rank::RANK_1;
-    else
-        return sq.rank() == Rank::RANK_8;
-}
-
 }  // namespace utils
 
 }  // namespace chess

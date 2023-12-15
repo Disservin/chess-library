@@ -222,7 +222,7 @@ class Board {
 
             hash_key_ ^= Zobrist::castling(castling_rights_.hashIndex());
 
-        } else if (pt == PieceType::ROOK && utils::ourBackRank(move.from(), side_to_move_)) {
+        } else if (pt == PieceType::ROOK && Square::back_rank(move.from(), side_to_move_)) {
             const auto king_sq = kingSq(side_to_move_);
             const auto file =
                 move.from() > king_sq ? CastlingRights::Side::KING_SIDE : CastlingRights::Side::QUEEN_SIDE;
@@ -252,10 +252,10 @@ class Board {
             assert(at<PieceType>(move.to()) == PieceType::ROOK);
 
             bool king_side = move.to() > move.from();
-            auto rookTo =
-                utils::relativeSquare(side_to_move_, king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1);
-            auto kingTo =
-                utils::relativeSquare(side_to_move_, king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1);
+            auto rookTo    = Square(king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1)
+                              .relative_square(side_to_move_);
+            auto kingTo = Square(king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1)
+                              .relative_square(side_to_move_);
 
             const auto king = at(move.from());
             const auto rook = at(move.to());

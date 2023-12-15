@@ -447,10 +447,13 @@ template <Color::underlying c, MoveGenType mt>
     for (const auto side : {Board::CastlingRights::Side::KING_SIDE, Board::CastlingRights::Side::QUEEN_SIDE}) {
         if (!rights.has(c, side)) continue;
 
-        const auto end_king_sq = utils::relativeSquare(
-            c, side == Board::CastlingRights::Side::KING_SIDE ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1);
-        const auto end_rook_sq = utils::relativeSquare(
-            c, side == Board::CastlingRights::Side::KING_SIDE ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1);
+        const auto end_king_sq = Square(side == Board::CastlingRights::Side::KING_SIDE ? Square::underlying::SQ_G1
+                                                                                       : Square::underlying::SQ_C1)
+                                     .relative_square(c);
+
+        const auto end_rook_sq = Square(side == Board::CastlingRights::Side::KING_SIDE ? Square::underlying::SQ_F1
+                                                                                       : Square::underlying::SQ_D1)
+                                     .relative_square(c);
 
         const auto from_rook_sq = Square(rights.getRookFile(c, side), sq.rank());
 
