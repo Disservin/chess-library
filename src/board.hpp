@@ -221,7 +221,6 @@ class Board {
             castling_rights_.clear(side_to_move_);
 
             hash_key_ ^= Zobrist::castling(castling_rights_.hashIndex());
-
         } else if (pt == PieceType::ROOK && Square::back_rank(move.from(), side_to_move_)) {
             const auto king_sq = kingSq(side_to_move_);
             const auto file =
