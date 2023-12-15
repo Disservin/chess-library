@@ -80,6 +80,10 @@ class Board {
 
         bool isEmpty() const { return !has(Color::WHITE) && !has(Color::BLACK); }
 
+        static constexpr Side closestSide(Square sq, Square pred) {
+            return sq > pred ? Side::KING_SIDE : Side::QUEEN_SIDE;
+        }
+
        private:
         // [color][side]
         std::array<std::array<File, 2>, 2> rooks;
@@ -180,11 +184,12 @@ class Board {
     }
 
     void makeMove(const Move &move) {
-        // Validate side to move
-        assert((at(move.from()) < Piece::BLACKPAWN) == (side_to_move_ == Color::WHITE));
         const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
         const auto captured = at(move.to());
         const auto pt       = at<PieceType>(move.from());
+
+        // Validate side to move
+        assert((at(move.from()) < Piece::BLACKPAWN) == (side_to_move_ == Color::WHITE));
 
         prev_states_.emplace_back(hash_key_, castling_rights_, enpassant_sq_, half_moves_, captured);
 
@@ -195,53 +200,47 @@ class Board {
         enpassant_sq_ = Square::underlying::NO_SQ;
 
         if (capture) {
-            half_moves_ = 0;
-
-            hash_key_ ^= Zobrist::piece(captured, move.to());
             removePiece(captured, move.to());
 
-            const auto rank = move.to().rank();
+            half_moves_ = 0;
+            hash_key_ ^= Zobrist::piece(captured, move.to());
 
-            if (captured.type() == PieceType::ROOK && ((rank == Rank::RANK_1 && side_to_move_ == Color::BLACK) ||
-                                                       (rank == Rank::RANK_8 && side_to_move_ == Color::WHITE))) {
+            // remove castling rights if rook is captured
+            if (captured.type() == PieceType::ROOK && Rank::back_rank(move.to().rank(), ~side_to_move_)) {
                 const auto king_sq = kingSq(~side_to_move_);
-                const auto file =
-                    move.to() > king_sq ? CastlingRights::Side::KING_SIDE : CastlingRights::Side::QUEEN_SIDE;
+                const auto file    = CastlingRights::closestSide(move.to(), king_sq);
 
                 if (castling_rights_.getRookFile(~side_to_move_, file) == move.to().file()) {
-                    const auto idx = castling_rights_.clear(~side_to_move_, file);
-                    hash_key_ ^= Zobrist::castlingIndex(idx);
+                    hash_key_ ^= Zobrist::castlingIndex(castling_rights_.clear(~side_to_move_, file));
                 }
             }
         }
 
+        // remove castling rights if king moves
         if (pt == PieceType::KING && castling_rights_.has(side_to_move_)) {
             hash_key_ ^= Zobrist::castling(castling_rights_.hashIndex());
-
             castling_rights_.clear(side_to_move_);
-
             hash_key_ ^= Zobrist::castling(castling_rights_.hashIndex());
         } else if (pt == PieceType::ROOK && Square::back_rank(move.from(), side_to_move_)) {
             const auto king_sq = kingSq(side_to_move_);
-            const auto file =
-                move.from() > king_sq ? CastlingRights::Side::KING_SIDE : CastlingRights::Side::QUEEN_SIDE;
+            const auto file    = CastlingRights::closestSide(move.from(), king_sq);
 
+            // remove castling rights if rook moves from back rank
             if (castling_rights_.getRookFile(side_to_move_, file) == move.from().file()) {
-                const auto idx = castling_rights_.clear(side_to_move_, file);
-                hash_key_ ^= Zobrist::castlingIndex(idx);
+                hash_key_ ^= Zobrist::castlingIndex(castling_rights_.clear(side_to_move_, file));
             }
         } else if (pt == PieceType::PAWN) {
             half_moves_ = 0;
 
-            const auto possible_ep = static_cast<Square>(move.to() ^ 8);
-            if (std::abs(move.to().index() - move.from().index()) == 16) {
-                Bitboard ep_mask = attacks::pawn(side_to_move_, possible_ep);
+            // double push
+            if (Square::value_distance(move.to(), move.from()) == 16) {
+                Bitboard ep_mask = attacks::pawn(side_to_move_, move.to().ep_square());
 
+                // add enpassant hash if enemy pawns are attacking the square
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~side_to_move_))) {
-                    enpassant_sq_ = possible_ep;
-
-                    hash_key_ ^= Zobrist::enpassant(enpassant_sq_.file());
-                    assert(at(enpassant_sq_) == Piece::NONE);
+                    assert(at(move.to().ep_square()) == Piece::NONE);
+                    enpassant_sq_ = move.to().ep_square();
+                    hash_key_ ^= Zobrist::enpassant(move.to().ep_square().file());
                 }
             }
         }
@@ -250,11 +249,9 @@ class Board {
             assert(at<PieceType>(move.from()) == PieceType::KING);
             assert(at<PieceType>(move.to()) == PieceType::ROOK);
 
-            bool king_side = move.to() > move.from();
-            auto rookTo    = Square(king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1)
-                              .relative_square(side_to_move_);
-            auto kingTo = Square(king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1)
-                              .relative_square(side_to_move_);
+            const bool king_side = move.to() > move.from();
+            const auto rookTo    = Square::castling_rook_square(king_side, side_to_move_);
+            const auto kingTo    = Square::castling_king_square(king_side, side_to_move_);
 
             const auto king = at(move.from());
             const auto rook = at(move.to());
@@ -281,6 +278,7 @@ class Board {
         } else {
             assert(at(move.from()) != Piece::NONE);
             assert(at(move.to()) == Piece::NONE);
+
             const auto piece = at(move.from());
 
             removePiece(piece, move.from());
@@ -290,13 +288,13 @@ class Board {
         }
 
         if (move.typeOf() == Move::ENPASSANT) {
-            assert(at<PieceType>(move.to() ^ 8) == PieceType::PAWN);
+            assert(at<PieceType>(move.to().ep_square()) == PieceType::PAWN);
 
             const auto piece = Piece(PieceType::PAWN, ~side_to_move_);
 
-            removePiece(piece, Square(move.to().index() ^ 8));
+            removePiece(piece, move.to().ep_square());
 
-            hash_key_ ^= Zobrist::piece(piece, Square(move.to().index() ^ 8));
+            hash_key_ ^= Zobrist::piece(piece, move.to().ep_square());
         }
 
         hash_key_ ^= Zobrist::sideToMove();

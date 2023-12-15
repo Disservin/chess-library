@@ -72,6 +72,13 @@ class Rank {
 
     constexpr operator int() const { return static_cast<int>(rank); }
 
+    static constexpr bool back_rank(Rank r, Color color) {
+        if (color == Color::WHITE)
+            return r == Rank::RANK_1;
+        else
+            return r == Rank::RANK_8;
+    }
+
     static constexpr underlying RANK_1  = underlying::RANK_1;
     static constexpr underlying RANK_2  = underlying::RANK_2;
     static constexpr underlying RANK_3  = underlying::RANK_3;
@@ -174,6 +181,8 @@ class Square {
         return std::max(std::abs(sq.file() - sq2.file()), std::abs(sq.rank() - sq2.rank()));
     }
 
+    static constexpr int value_distance(Square sq, Square sq2) { return std::abs(sq.index() - sq2.index()); }
+
     static constexpr bool same_color(Square sq, Square sq2) { return ((9 * (sq ^ sq2).index()) & 8) == 0; }
 
     static constexpr bool back_rank(Square sq, Color color) {
@@ -194,6 +203,23 @@ class Square {
     constexpr int diagonal_of() const { return 7 + rank() - file(); }
 
     constexpr int antidiagonal_of() const { return rank() + file(); }
+
+    constexpr Square ep_square() const {
+        assert(rank() == Rank::RANK_3     // capture
+               || rank() == Rank::RANK_4  // push
+               || rank() == Rank::RANK_5  // push
+               || rank() == Rank::RANK_6  // capture
+        );
+        return Square(static_cast<int>(sq) ^ 8);
+    }
+
+    static constexpr Square castling_king_square(bool is_king_side, Color c) {
+        return Square(is_king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1).relative_square(c);
+    }
+
+    static constexpr Square castling_rook_square(bool is_king_side, Color c) {
+        return Square(is_king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1).relative_square(c);
+    }
 
     static constexpr int max() { return 64; }
 
