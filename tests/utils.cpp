@@ -25,8 +25,8 @@ TEST_SUITE("Utilities") {
     }
 
     TEST_CASE("squareDistance") {
-        CHECK(Square(Square::underlying::SQ_A1).distance(Square::underlying::SQ_A2) == 1);
-        CHECK(Square(Square::underlying::SQ_A1).distance(Square::underlying::SQ_A3) == 2);
+        CHECK(Square::distance(Square::underlying::SQ_A1, Square::underlying::SQ_A2) == 1);
+        CHECK(Square::distance(Square::underlying::SQ_A1, Square::underlying::SQ_A3) == 2);
     }
 
     TEST_CASE("typeOfPiece") {

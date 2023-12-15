@@ -577,8 +577,8 @@ class Board {
 
         if (count == 4) {
             if (pieces(PieceType::BISHOP, Color::WHITE) && pieces(PieceType::BISHOP, Color::BLACK) &&
-                utils::sameColor(pieces(PieceType::BISHOP, Color::WHITE).lsb(),
-                                 pieces(PieceType::BISHOP, Color::BLACK).lsb()))
+                Square::same_color(pieces(PieceType::BISHOP, Color::WHITE).lsb(),
+                                   pieces(PieceType::BISHOP, Color::BLACK).lsb()))
                 return true;
         }
 

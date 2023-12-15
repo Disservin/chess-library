@@ -168,13 +168,15 @@ class Square {
         return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
     }
 
-    constexpr int distance(Square sq) const {
-        return std::max(std::abs(file() - sq.file()), std::abs(rank() - sq.rank()));
+    static constexpr int distance(Square sq, Square sq2) {
+        return std::max(std::abs(sq.file() - sq2.file()), std::abs(sq.rank() - sq2.rank()));
     }
 
-    constexpr int diagonalOf() const { return 7 + rank() - file(); }
+    static constexpr bool same_color(Square sq, Square sq2) { return ((9 * (sq ^ sq2).index()) & 8) == 0; }
 
-    constexpr int antiDiagonalOf() const { return rank() + file(); }
+    constexpr int diagonal_of() const { return 7 + rank() - file(); }
+
+    constexpr int antidiagonal_of() const { return rank() + file(); }
 
     static constexpr int max() { return 64; }
 

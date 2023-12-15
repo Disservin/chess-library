@@ -24,7 +24,7 @@ static auto init_squares_between = []() constexpr {
             else if (sq1.file() == sq2.file() || sq1.rank() == sq2.rank())
                 squares_between_bb[sq1.index()][sq2.index()] =
                     (attacks::rook(sq1, sqs) & attacks::rook(sq2, sqs)).getBits();
-            else if (sq1.diagonalOf() == sq2.diagonalOf() || sq1.antiDiagonalOf() == sq2.antiDiagonalOf())
+            else if (sq1.diagonal_of() == sq2.diagonal_of() || sq1.antidiagonal_of() == sq2.antidiagonal_of())
                 squares_between_bb[sq1.index()][sq2.index()] =
                     (attacks::bishop(sq1, sqs) & attacks::bishop(sq2, sqs)).getBits();
         }

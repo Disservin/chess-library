@@ -57,7 +57,7 @@ namespace chess::uci {
 
     // convert to king captures rook
     // in chess960 the move should be sent as king captures rook already!
-    if (piece == PieceType::KING && target.distance(source) == 2) {
+    if (piece == PieceType::KING && Square::distance(target, source) == 2) {
         target = Square(target > source ? File::FILE_H : File::FILE_A, source.rank());
         return Move::make<Move::CASTLING>(source, target);
     }
