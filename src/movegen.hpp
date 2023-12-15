@@ -13,27 +13,25 @@ namespace chess::movegen {
 // force initialization of squares between
 static auto init_squares_between = []() constexpr {
     // initialize squares between table
-    std::array<std::array<std::uint64_t, 64>, 64> squares_between_bb{};
-    std::uint64_t sqs = 0;
+    std::array<std::array<Bitboard, 64>, 64> squares_between_bb{};
+    Bitboard sqs = 0;
 
     for (Square sq1 = 0; sq1 < 64; ++sq1) {
         for (Square sq2 = 0; sq2 < 64; ++sq2) {
-            sqs = (1ULL << sq1.index()) | (1ULL << sq2.index());
+            sqs = Bitboard::fromSquare(sq1) | Bitboard::fromSquare(sq2);
             if (sq1 == sq2)
-                squares_between_bb[sq1.index()][sq2.index()] = 0ull;
+                squares_between_bb[sq1.index()][sq2.index()].clear();
             else if (sq1.file() == sq2.file() || sq1.rank() == sq2.rank())
-                squares_between_bb[sq1.index()][sq2.index()] =
-                    (attacks::rook(sq1, sqs) & attacks::rook(sq2, sqs)).getBits();
+                squares_between_bb[sq1.index()][sq2.index()] = attacks::rook(sq1, sqs) & attacks::rook(sq2, sqs);
             else if (sq1.diagonal_of() == sq2.diagonal_of() || sq1.antidiagonal_of() == sq2.antidiagonal_of())
-                squares_between_bb[sq1.index()][sq2.index()] =
-                    (attacks::bishop(sq1, sqs) & attacks::bishop(sq2, sqs)).getBits();
+                squares_between_bb[sq1.index()][sq2.index()] = attacks::bishop(sq1, sqs) & attacks::bishop(sq2, sqs);
         }
     }
 
     return squares_between_bb;
 };
 
-static const std::array<std::array<std::uint64_t, 64>, 64> SQUARES_BETWEEN_BB = init_squares_between();
+static const std::array<std::array<Bitboard, 64>, 64> SQUARES_BETWEEN_BB = init_squares_between();
 
 /// @brief [Internal Usage] Generate the checkmask.
 /// Returns a bitboard where the attacker path between the king and enemy piece is set.

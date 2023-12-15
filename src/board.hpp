@@ -673,16 +673,16 @@ class Board {
     virtual void placePiece(Piece piece, Square sq) {
         assert(board_[sq.index()] == Piece::NONE);
 
-        pieces_bb_[piece.type()] |= (1ULL << (sq.index()));
-        occ_bb_[piece.color()] |= (1ULL << (sq.index()));
+        pieces_bb_[piece.type()].set(sq.index());
+        occ_bb_[piece.color()].set(sq.index());
         board_[sq.index()] = piece;
     }
 
     virtual void removePiece(Piece piece, Square sq) {
         assert(board_[sq.index()] == piece && piece != Piece::NONE);
 
-        pieces_bb_[piece.type()] &= ~(1ULL << (sq.index()));
-        occ_bb_[piece.color()] &= ~(1ULL << (sq.index()));
+        pieces_bb_[piece.type()].clear(sq.index());
+        occ_bb_[piece.color()].clear(sq.index());
         board_[sq.index()] = Piece::NONE;
     }
 
