@@ -17,10 +17,10 @@ class PieceType {
     constexpr PieceType(underlying pt);
     constexpr explicit PieceType(std::string_view type);
 
-    explicit operator std::string() const;
-
     constexpr bool operator==(const PieceType& rhs) const;
     constexpr bool operator!=(const PieceType& rhs) const;
+
+    explicit operator std::string() const;
     constexpr operator int() const;
 
     constexpr underlying internal() const;
