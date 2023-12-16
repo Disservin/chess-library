@@ -1,1 +1,0 @@
-python shl.py ../src/include.hpp --header_search_paths ../src/ -o ../include/chess.hpp
