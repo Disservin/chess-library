@@ -80,7 +80,8 @@ class Board {
 
         bool isEmpty() const { return !has(Color::WHITE) && !has(Color::BLACK); }
 
-        static constexpr Side closestSide(Square sq, Square pred) {
+        template <typename T>
+        static constexpr Side closestSide(T sq, T pred) {
             return sq > pred ? Side::KING_SIDE : Side::QUEEN_SIDE;
         }
 
@@ -298,7 +299,6 @@ class Board {
         }
 
         key_ ^= Zobrist::sideToMove();
-
         stm_ = ~stm_;
     }
 
@@ -309,10 +309,8 @@ class Board {
         ep_sq_ = prev.enpassant;
         cr_    = prev.castling;
         hfm_   = prev.half_moves;
-
+        stm_   = ~stm_;
         plies_--;
-
-        stm_ = ~stm_;
 
         if (move.typeOf() == Move::CASTLING) {
             const bool king_side = move.to() > move.from();
@@ -649,6 +647,7 @@ class Board {
             const Square sq = wPieces.pop();
             hash_key ^= Zobrist::piece(at(sq), sq);
         }
+
         while (bPieces.getBits()) {
             const Square sq = bPieces.pop();
             hash_key ^= Zobrist::piece(at(sq), sq);
@@ -760,43 +759,41 @@ class Board {
                 if (i == 'k') cr_.setCastlingRight(Color::BLACK, CastlingRights::Side::KING_SIDE, File::FILE_H);
                 if (i == 'q') cr_.setCastlingRight(Color::BLACK, CastlingRights::Side::QUEEN_SIDE, File::FILE_A);
             } else {
+                const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
+                const auto king_sq = kingSq(color);
+
+                const auto find_rook = [&](const Board &board, CastlingRights::Side side) {
+                    const auto sq_corner = Square(side == CastlingRights::Side::KING_SIDE ? Square::underlying::SQ_H1
+                                                                                          : Square::underlying::SQ_A1)
+                                               .relative_square(color);
+                    const auto start = side == CastlingRights::Side::KING_SIDE ? king_sq + 1 : king_sq - 1;
+
+                    for (Square sq = start;
+                         (side == CastlingRights::Side::KING_SIDE ? sq <= sq_corner : sq >= sq_corner);
+                         (side == CastlingRights::Side::KING_SIDE ? sq++ : sq--)) {
+                        // if (board.at<PieceType>(sq) == PieceType::NONE) continue;
+                        if (board.at<PieceType>(sq) == PieceType::ROOK && board.at(sq).color() == color) {
+                            return sq.file();
+                        }
+                    }
+
+                    throw std::runtime_error("Invalid position");
+                };
+
+                // find rook on the right side of the king
                 if (i == 'K' || i == 'k') {
-                    // find rook on the right side of the king
-                    const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
-                    const auto king_sq = kingSq(color);
-
-                    const auto sq_corner =
-                        color == Color::WHITE ? Square::underlying::SQ_H1 : Square::underlying::SQ_H8;
-
-                    for (Square sq = king_sq + 1; sq <= sq_corner; sq++) {
-                        if (at<PieceType>(sq) == PieceType::NONE) continue;
-                        if (at<PieceType>(sq) == PieceType::ROOK && at(sq).color() == color) {
-                            cr_.setCastlingRight(color, CastlingRights::Side::KING_SIDE, sq.file());
-                            break;
-                        }
-                    }
-
-                } else if (i == 'Q' || i == 'q') {
-                    // find rook on the left side of the king
-                    const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
-                    const auto king_sq = kingSq(color);
-
-                    const auto sq_corner =
-                        color == Color::WHITE ? Square::underlying::SQ_A1 : Square::underlying::SQ_A8;
-
-                    for (Square sq = king_sq - 1; sq >= sq_corner; sq--) {
-                        if (at<PieceType>(sq) == PieceType::NONE) continue;
-                        if (at<PieceType>(sq) == PieceType::ROOK && at(sq).color() == color) {
-                            cr_.setCastlingRight(color, CastlingRights::Side::QUEEN_SIDE, sq.file());
-                            break;
-                        }
-                    }
-                } else {
-                    const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
-                    const auto king_sq = kingSq(color);
-                    const auto file    = static_cast<File>(tolower(i) - 97);
-                    const auto side =
-                        file > king_sq.file() ? CastlingRights::Side::KING_SIDE : CastlingRights::Side::QUEEN_SIDE;
+                    cr_.setCastlingRight(color, CastlingRights::Side::KING_SIDE,
+                                         find_rook(*this, CastlingRights::Side::KING_SIDE));
+                }
+                // find rook on the left side of the king
+                else if (i == 'Q' || i == 'q') {
+                    cr_.setCastlingRight(color, CastlingRights::Side::QUEEN_SIDE,
+                                         find_rook(*this, CastlingRights::Side::QUEEN_SIDE));
+                }
+                // frc castling
+                else {
+                    const auto file = static_cast<File>(tolower(i) - 97);
+                    const auto side = CastlingRights::closestSide(file, king_sq.file());
                     cr_.setCastlingRight(color, side, file);
                 }
             }
