@@ -6,8 +6,6 @@
 
 It can be used for any type of chess program, be it a chess engine, a chess GUI, or a chess data anaylsis tool.
 
-
-
 ### Why this library?
 
 - **Fast**: This library is fast enough for pretty much any purpose in C++ and it is faster than most other chess libraries in C++.
