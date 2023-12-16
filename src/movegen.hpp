@@ -519,10 +519,9 @@ void legalmoves(Movelist &movelist, const Board &board, int pieces) {
         whileBitboardAdd(movelist, Bitboard::fromSquare(king_sq),
                          [&](Square sq) { return generateKingMoves(sq, _seen, movable_square); });
 
-        if (king_sq.rank() == (c == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8) &&
-            (board.castlingRights().has(c) && _checkMask == constants::DEFAULT_CHECKMASK)) {
+        if (_checkMask == constants::DEFAULT_CHECKMASK && Square::back_rank(king_sq, c) &&
+            board.castlingRights().has(c)) {
             Bitboard moves_bb = generateCastleMoves<c, mt>(board, king_sq, _seen, _pinHV);
-
             while (moves_bb) {
                 Square to = moves_bb.pop();
                 movelist.add(Move::make<Move::CASTLING>(king_sq, to));
