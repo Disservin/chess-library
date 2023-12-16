@@ -232,7 +232,7 @@ class IncludeInliner:
         self.included_headers = []
         self.include_regex = re.compile('^\s*#(?:include|import)\s+["<]([^">]+)[">]')
         self.pragma_once_regex = re.compile("^\s*#pragma\s+once")
-        self.has_pragma_once = False
+        # self.has_pragma_once = False
         self.output_lines = []
 
     def run(self, full_header_path):
@@ -246,13 +246,15 @@ class IncludeInliner:
                 # Check if line is a #pragma once
                 result = self.pragma_once_regex.match(line)
                 if result:
-                    if self.has_pragma_once:
-                        print(lineInfo + "Removing unneeded #pragma once")
-                        continue
-
-                    self.output_lines.append(line)
-                    self.has_pragma_once = True
+                    print(lineInfo + "Removing unneeded #pragma once")
                     continue
+                # if self.has_pragma_once:
+                #     print(lineInfo + "Removing unneeded #pragma once")
+                #     continue
+
+                # self.output_lines.append(line)
+                # self.has_pragma_once = True
+                # continue
 
                 # Check if line is an #include
                 result = self.include_regex.match(line)

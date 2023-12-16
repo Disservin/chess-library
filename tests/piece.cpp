@@ -110,4 +110,11 @@ TEST_SUITE("Piece") {
 
         CHECK(Piece(PieceType::NONE, Color::BLACK).color() == Color::NO_COLOR);
     }
+
+    TEST_CASE("type") {
+        CHECK(Piece(Piece::WHITEPAWN).type() == PieceType::PAWN);
+        CHECK(Piece(Piece::WHITEKING).type() == PieceType::KING);
+        CHECK(Piece(Piece::BLACKPAWN).type() == PieceType::PAWN);
+        CHECK(Piece(Piece::BLACKKING).type() == PieceType::KING);
+    }
 }

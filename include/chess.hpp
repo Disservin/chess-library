@@ -1,4 +1,35 @@
-#pragma once
+/*
+MIT License
+
+Copyright (c) 2023 disservin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Source: https://github.com/Disservin/chess-library
+*/
+
+/*
+VERSION: 0.6.0
+*/
+
+#ifndef CHESS_HPP
+#define CHESS_HPP
 
 #include <cstdint>
 #include <functional>
@@ -196,7 +227,7 @@ class Square {
     constexpr bool operator==(const Square& rhs) const { return sq == rhs.sq; }
     constexpr bool operator!=(const Square& rhs) const { return sq != rhs.sq; }
     constexpr bool operator>(const Square& rhs) const { return static_cast<int>(sq) > static_cast<int>(rhs.sq); }
-    constexpr bool operator>=(const Square& rhs) const { return static_cast<int>(sq) > static_cast<int>(rhs.sq); }
+    constexpr bool operator>=(const Square& rhs) const { return static_cast<int>(sq) >= static_cast<int>(rhs.sq); }
     constexpr bool operator<(const Square& rhs) const { return static_cast<int>(sq) < static_cast<int>(rhs.sq); }
     constexpr bool operator<=(const Square& rhs) const { return static_cast<int>(sq) <= static_cast<int>(rhs.sq); }
     constexpr Square operator+(const Square& rhs) const {
@@ -264,7 +295,10 @@ class Square {
     }
 
     /// @brief Flips the square vertically.
-    constexpr void flip() { sq = static_cast<underlying>(static_cast<int>(sq) ^ 56); }
+    constexpr Square flip() {
+        sq = static_cast<underlying>(static_cast<int>(sq) ^ 56);
+        return *this;
+    }
 
     /// @brief Conditionally flips the square vertically.
     /// @param c
@@ -846,9 +880,13 @@ class Piece {
     constexpr Piece() : piece(underlying::NONE) {}
     constexpr Piece(underlying piece) : piece(piece) {}
     constexpr Piece(PieceType type, Color color)
-        : piece(static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
+        : piece(color == Color::NO_COLOR  ? Piece::NONE
+                : type == PieceType::NONE ? Piece::NONE
+                                          : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(Color color, PieceType type)
-        : piece(static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
+        : piece(color == Color::NO_COLOR  ? Piece::NONE
+                : type == PieceType::NONE ? Piece::NONE
+                                          : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(std::string_view p) : piece(underlying::NONE) {
         switch (p.data()[0]) {
             case 'P':
@@ -3796,3 +3834,5 @@ class uci {
     }
 };
 }  // namespace chess
+
+#endif
