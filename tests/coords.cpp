@@ -64,7 +64,9 @@ TEST_SUITE("Coords") {
         f = File::FILE_H;
         CHECK(static_cast<std::string>(f) == "h");
     }
+}
 
+TEST_SUITE("Rank") {
     TEST_CASE("Rank operator==") {
         Rank r = Rank::RANK_1;
         CHECK(r == Rank::RANK_1);
@@ -115,7 +117,9 @@ TEST_SUITE("Coords") {
         r = Rank::RANK_8;
         CHECK(static_cast<std::string>(r) == "8");
     }
+}
 
+TEST_SUITE("Square") {
     TEST_CASE("Square operator==") {
         Square s = Square::underlying::SQ_A1;
         CHECK(s == Square::underlying::SQ_A1);
