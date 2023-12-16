@@ -1,8 +1,12 @@
 # An extensive chess library for C++
 
+## [Documentation](https://disservin.github.io/chess-library)
+
 **chess-library** is a chess library for C++, with reasonably fast move generation for all purposes, written in **C++17**.
 
 It can be used for any type of chess program, be it a chess engine, a chess GUI, or a chess data anaylsis tool.
+
+
 
 ### Why this library?
 
