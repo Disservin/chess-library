@@ -125,7 +125,7 @@ class Square {
     constexpr bool operator==(const Square& rhs) const { return sq == rhs.sq; }
     constexpr bool operator!=(const Square& rhs) const { return sq != rhs.sq; }
     constexpr bool operator>(const Square& rhs) const { return static_cast<int>(sq) > static_cast<int>(rhs.sq); }
-    constexpr bool operator>=(const Square& rhs) const { return static_cast<int>(sq) > static_cast<int>(rhs.sq); }
+    constexpr bool operator>=(const Square& rhs) const { return static_cast<int>(sq) >= static_cast<int>(rhs.sq); }
     constexpr bool operator<(const Square& rhs) const { return static_cast<int>(sq) < static_cast<int>(rhs.sq); }
     constexpr bool operator<=(const Square& rhs) const { return static_cast<int>(sq) <= static_cast<int>(rhs.sq); }
     constexpr Square operator+(const Square& rhs) const {
@@ -193,7 +193,10 @@ class Square {
     }
 
     /// @brief Flips the square vertically.
-    constexpr void flip() { sq = static_cast<underlying>(static_cast<int>(sq) ^ 56); }
+    constexpr Square flip() {
+        sq = static_cast<underlying>(static_cast<int>(sq) ^ 56);
+        return *this;
+    }
 
     /// @brief Conditionally flips the square vertically.
     /// @param c
