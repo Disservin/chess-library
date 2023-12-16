@@ -110,11 +110,50 @@ class Bitboard {
 
     constexpr int lsb() const {
         assert(bits != 0);
+#if __cplusplus >= 202002L
         return std::countr_zero(bits);
+#else
+#if defined(__GNUC__)
+        return __builtin_ctzll(bits);
+#elif defined(_MSC_VER)
+        unsigned long idx;
+        _BitScanForward64(&idx, bits);
+        return static_cast<int>(idx);
+#else
+#error "Compiler not supported."
+#endif
+#endif
     }
-    constexpr int msb() const { return 63 - std::countl_zero(bits); }
 
-    constexpr int count() const { return std::popcount(bits); }
+    constexpr int msb() const {
+        assert(bits != 0);
+
+#if __cplusplus >= 202002L
+        return std::countl_zero(bits) ^ 63;
+#else
+#if defined(__GNUC__)
+        return 63 ^ __builtin_clzll(bits);
+#elif defined(_MSC_VER)
+        unsigned long idx;
+        _BitScanReverse64(&idx, bits);
+        return static_cast<int>(idx);
+#else
+#error "Compiler not supported."
+#endif
+#endif
+    }
+
+    constexpr int count() const {
+#if __cplusplus >= 202002L
+        return std::popcount(bits);
+#else
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+        return static_cast<int>(_mm_popcnt_u64(bits));
+#else
+        return __builtin_popcountll(bits);
+#endif
+#endif
+    }
 
     constexpr std::uint8_t pop() {
         assert(bits != 0);

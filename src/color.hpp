@@ -15,22 +15,16 @@ class Color {
     constexpr Color(underlying c) : color(c) {
         assert(c == underlying::WHITE || c == underlying::BLACK || c == underlying::NO_COLOR);
     }
-    constexpr Color(int c) : color(static_cast<underlying>(c)) {
-        assert(c == 0 || c == 1 || c == -1);
-    }
-    constexpr Color(std::string_view str) {
+    constexpr Color(int c) : color(static_cast<underlying>(c)) { assert(c == 0 || c == 1 || c == -1); }
+    constexpr Color(std::string_view str) : color(underlying::NO_COLOR) {
         if (str == "w") {
             color = underlying::WHITE;
         } else if (str == "b") {
             color = underlying::BLACK;
-        } else {
-            color = underlying::NO_COLOR;
         }
     }
 
-    constexpr Color operator~() const {
-        return static_cast<Color>(static_cast<uint8_t>(color) ^ 1);
-    }
+    constexpr Color operator~() const { return static_cast<Color>(static_cast<uint8_t>(color) ^ 1); }
 
     explicit operator std::string() const {
         switch (color) {
@@ -60,9 +54,7 @@ class Color {
     underlying color;
 };  // namespace chess
 
-inline std::ostream& operator<<(std::ostream& os, const Color& color) {
-    return os << static_cast<std::string>(color);
-}
+inline std::ostream& operator<<(std::ostream& os, const Color& color) { return os << static_cast<std::string>(color); }
 
 constexpr Color::underlying operator~(Color::underlying color) {
     switch (color) {

@@ -21,7 +21,7 @@ class PieceType {
 
     constexpr PieceType() : pt(underlying::NONE) {}
     constexpr PieceType(underlying pt) : pt(pt) {}
-    constexpr explicit PieceType(std::string_view type) {
+    constexpr explicit PieceType(std::string_view type) : pt(underlying::NONE) {
         switch (type.data()[0]) {
             case 'P':
                 pt = underlying::PAWN;
@@ -133,7 +133,7 @@ class Piece {
         : piece(static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(Color color, PieceType type)
         : piece(static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
-    constexpr Piece(std::string_view p) {
+    constexpr Piece(std::string_view p) : piece(underlying::NONE) {
         switch (p.data()[0]) {
             case 'P':
                 piece = WHITEPAWN;
