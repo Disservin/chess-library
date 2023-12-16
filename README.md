@@ -1,4 +1,4 @@
-# An extensive chess library for C++
+# An extensive SHL Chess Library for C++
 
 ## [Documentation](https://disservin.github.io/chess-library)
 
