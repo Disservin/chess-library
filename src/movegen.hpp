@@ -219,10 +219,10 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
     const Bitboard pinnedpawns_lr   = pawns_lr & pin_d;
 
     Bitboard l_pawns =
-        (attacks::pawnLeftAttacks<c>(unpinnedpawns_lr)) | (attacks::pawnLeftAttacks<c>(pinnedpawns_lr) & pin_d);
+        attacks::pawnLeftAttacks<c>(unpinnedpawns_lr) | (attacks::pawnLeftAttacks<c>(pinnedpawns_lr) & pin_d);
 
     Bitboard r_pawns =
-        (attacks::pawnRightAttacks<c>(unpinnedpawns_lr)) | (attacks::pawnRightAttacks<c>(pinnedpawns_lr) & pin_d);
+        attacks::pawnRightAttacks<c>(unpinnedpawns_lr) | (attacks::pawnRightAttacks<c>(pinnedpawns_lr) & pin_d);
 
     // Prune moves that don't capture a piece and are not on the checkmask.
     l_pawns &= occ_enemy & checkmask;
