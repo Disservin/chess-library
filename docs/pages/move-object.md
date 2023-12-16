@@ -19,11 +19,8 @@ struct Move {
     );
 
     Square from() const;
-
     Square to() const;
-
     uint16_t typeOf() const;
-
     PieceType promotionType() const;
 
     void setScore(int16_t score) { score_ = score; }
@@ -34,18 +31,14 @@ struct Move {
     bool operator==(const Move& rhs) const { return move_ == rhs.move_; }
     bool operator!=(const Move& rhs) const { return move_ != rhs.move_; }
 
-    uint16_t NO_MOVE = 0;
-    uint16_t NULL_MOVE = 65;
-    uint16_t NORMAL = 0;
-    uint16_t PROMOTION = 1 << 14;
-    uint16_t ENPASSANT = 2 << 14;
-    uint16_t CASTLING = 3 << 14;
+    static constexpr std::uint16_t NO_MOVE   = 0;
+    static constexpr std::uint16_t NULL_MOVE = 65;
+    static constexpr std::uint16_t NORMAL    = 0;
+    static constexpr std::uint16_t PROMOTION = 1 << 14;
+    static constexpr std::uint16_t ENPASSANT = 2 << 14;
+    static constexpr std::uint16_t CASTLING  = 3 << 14;
 
     friend std::ostream& operator<<(std::ostream& os, const Move& move);
-
-   private:
-    uint16_t move_;
-    int16_t score_;
 };
 ```
 
