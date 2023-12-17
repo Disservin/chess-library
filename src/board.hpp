@@ -161,7 +161,7 @@ class Board {
         // Append the appropriate characters to the FEN string to indicate
         // whether castling is allowed for each player
         if (cr_.isEmpty())
-            ss += '-';
+            ss += " -";
         else {
             ss += ' ';
             ss += getCastleString();
