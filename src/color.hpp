@@ -9,14 +9,14 @@ namespace chess {
 
 class Color {
    public:
-    enum class underlying : std::int8_t { WHITE = 0, BLACK = 1, NO_COLOR = -1 };
+    enum class underlying : std::int8_t { WHITE = 0, BLACK = 1, NONE = -1 };
 
-    constexpr Color() : color(underlying::NO_COLOR) {}
+    constexpr Color() : color(underlying::NONE) {}
     constexpr Color(underlying c) : color(c) {
-        assert(c == underlying::WHITE || c == underlying::BLACK || c == underlying::NO_COLOR);
+        assert(c == underlying::WHITE || c == underlying::BLACK || c == underlying::NONE);
     }
     constexpr Color(int c) : color(static_cast<underlying>(c)) { assert(c == 0 || c == 1 || c == -1); }
-    constexpr Color(std::string_view str) : color(underlying::NO_COLOR) {
+    constexpr Color(std::string_view str) : color(underlying::NONE) {
         if (str == "w") {
             color = underlying::WHITE;
         } else if (str == "b") {
@@ -33,7 +33,7 @@ class Color {
             case underlying::BLACK:
                 return "b";
             default:
-                return "NO_COLOR";
+                return "NONE";
         }
     }
 
@@ -48,7 +48,7 @@ class Color {
 
     static constexpr underlying WHITE    = underlying::WHITE;
     static constexpr underlying BLACK    = underlying::BLACK;
-    static constexpr underlying NO_COLOR = underlying::NO_COLOR;
+    static constexpr underlying NONE = underlying::NONE;
 
    private:
     underlying color;
@@ -63,7 +63,7 @@ constexpr Color::underlying operator~(Color::underlying color) {
         case Color::underlying::BLACK:
             return Color::underlying::WHITE;
         default:
-            return Color::underlying::NO_COLOR;
+            return Color::underlying::NONE;
     }
 }
 

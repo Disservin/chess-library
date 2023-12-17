@@ -49,14 +49,14 @@ namespace chess {
 
 class Color {
    public:
-    enum class underlying : std::int8_t { WHITE = 0, BLACK = 1, NO_COLOR = -1 };
+    enum class underlying : std::int8_t { WHITE = 0, BLACK = 1, NONE = -1 };
 
-    constexpr Color() : color(underlying::NO_COLOR) {}
+    constexpr Color() : color(underlying::NONE) {}
     constexpr Color(underlying c) : color(c) {
-        assert(c == underlying::WHITE || c == underlying::BLACK || c == underlying::NO_COLOR);
+        assert(c == underlying::WHITE || c == underlying::BLACK || c == underlying::NONE);
     }
     constexpr Color(int c) : color(static_cast<underlying>(c)) { assert(c == 0 || c == 1 || c == -1); }
-    constexpr Color(std::string_view str) : color(underlying::NO_COLOR) {
+    constexpr Color(std::string_view str) : color(underlying::NONE) {
         if (str == "w") {
             color = underlying::WHITE;
         } else if (str == "b") {
@@ -73,7 +73,7 @@ class Color {
             case underlying::BLACK:
                 return "b";
             default:
-                return "NO_COLOR";
+                return "NONE";
         }
     }
 
@@ -86,9 +86,9 @@ class Color {
 
     friend std::ostream& operator<<(std::ostream& os, const Color& color);
 
-    static constexpr underlying WHITE    = underlying::WHITE;
-    static constexpr underlying BLACK    = underlying::BLACK;
-    static constexpr underlying NO_COLOR = underlying::NO_COLOR;
+    static constexpr underlying WHITE = underlying::WHITE;
+    static constexpr underlying BLACK = underlying::BLACK;
+    static constexpr underlying NONE  = underlying::NONE;
 
    private:
     underlying color;
@@ -103,7 +103,7 @@ constexpr Color::underlying operator~(Color::underlying color) {
         case Color::underlying::BLACK:
             return Color::underlying::WHITE;
         default:
-            return Color::underlying::NO_COLOR;
+            return Color::underlying::NONE;
     }
 }
 
@@ -880,11 +880,11 @@ class Piece {
     constexpr Piece() : piece(underlying::NONE) {}
     constexpr Piece(underlying piece) : piece(piece) {}
     constexpr Piece(PieceType type, Color color)
-        : piece(color == Color::NO_COLOR  ? Piece::NONE
+        : piece(color == Color::NONE      ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(Color color, PieceType type)
-        : piece(color == Color::NO_COLOR  ? Piece::NONE
+        : piece(color == Color::NONE      ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(std::string_view p) : piece(underlying::NONE) {
@@ -981,7 +981,7 @@ class Piece {
 
     constexpr Color color() const {
         if (piece == NONE) {
-            return Color::NO_COLOR;
+            return Color::NONE;
         }
         return static_cast<Color>(static_cast<int>(piece) / 6);
     }
@@ -3525,7 +3525,91 @@ class uci {
     [[nodiscard]] static Move parseSan(const Board& board, std::string_view san) noexcept(false) {
         Movelist moves;
 
-        return parseSanInternal<PEDANTIC>(board, san, moves);
+        return parseSan<PEDANTIC>(board, san, moves);
+    }
+
+    template <bool PEDANTIC = false>
+    [[nodiscard]] static Move parseSan(const Board& board, std::string_view san, Movelist& moves) noexcept(false) {
+        SanMoveInformation info;
+
+        parseSanInfo<PEDANTIC>(info, san);
+        constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
+
+        moves.clear();
+
+        if (info.capture) {
+            movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
+        } else {
+            movegen::legalmoves<movegen::MoveGenType::QUIET>(moves, board, pt_to_pgt(info.piece));
+        }
+
+        if (info.castling_short || info.castling_long) {
+            for (const auto& move : moves) {
+                if (move.typeOf() == Move::CASTLING) {
+                    if ((info.castling_short && move.to() > move.from()) ||
+                        (info.castling_long && move.to() < move.from())) {
+                        return move;
+                    }
+                }
+            }
+
+            throw SanParseError("Failed to parse san. At step 2: " + std::string(san) + " " + board.getFen());
+        }
+
+        for (const auto& move : moves) {
+            // Skip all moves that are not to the correct square
+            // or are castling moves
+            if (move.to() != info.to || move.typeOf() == Move::CASTLING) {
+                continue;
+            }
+
+            if (info.promotion != PieceType::NONE) {
+                if (move.typeOf() == Move::PROMOTION && info.promotion == move.promotionType()) {
+                    if (move.from().file() == info.from_file) {
+                        return move;
+                    }
+                }
+
+                continue;
+            }
+
+            // For simple moves like Nf3
+            if (info.from_rank == Rank::NO_RANK && info.from_file == File::NO_FILE) {
+                return move;
+            }
+
+            if (move.typeOf() == Move::ENPASSANT) {
+                if (move.from().file() == info.from_file) return move;
+                continue;
+            }
+
+            // we know the from square, so we can check if it matches
+            if (info.from != Square::underlying::NO_SQ) {
+                if (move.from() == info.from) {
+                    return move;
+                }
+
+                continue;
+            }
+
+            if ((move.from().file() == info.from_file) || (move.from().rank() == info.from_rank)) {
+                return move;
+            }
+        }
+
+#ifdef DEBUG
+        std::stringstream ss;
+
+        ss << "pt " << int(info.piece) << "\n";
+        ss << "info.from_file " << int(info.from_file) << "\n";
+        ss << "info.from_rank " << int(info.from_rank) << "\n";
+        ss << "promotion " << int(info.promotion) << "\n";
+        ss << "to_sq " << squareToString[info.to] << "\n";
+
+        std::cerr << ss.str();
+#endif
+
+        throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
     }
 
    private:
@@ -3679,91 +3763,6 @@ class uci {
         }
 
         return;
-    }
-
-    template <bool PEDANTIC = false>
-    [[nodiscard]] static Move parseSanInternal(const Board& board, std::string_view san,
-                                               Movelist& moves) noexcept(false) {
-        SanMoveInformation info;
-
-        parseSanInfo<PEDANTIC>(info, san);
-        constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
-
-        moves.clear();
-
-        if (info.capture) {
-            movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
-        } else {
-            movegen::legalmoves<movegen::MoveGenType::QUIET>(moves, board, pt_to_pgt(info.piece));
-        }
-
-        if (info.castling_short || info.castling_long) {
-            for (const auto& move : moves) {
-                if (move.typeOf() == Move::CASTLING) {
-                    if ((info.castling_short && move.to() > move.from()) ||
-                        (info.castling_long && move.to() < move.from())) {
-                        return move;
-                    }
-                }
-            }
-
-            throw SanParseError("Failed to parse san. At step 2: " + std::string(san) + " " + board.getFen());
-        }
-
-        for (const auto& move : moves) {
-            // Skip all moves that are not to the correct square
-            // or are castling moves
-            if (move.to() != info.to || move.typeOf() == Move::CASTLING) {
-                continue;
-            }
-
-            if (info.promotion != PieceType::NONE) {
-                if (move.typeOf() == Move::PROMOTION && info.promotion == move.promotionType()) {
-                    if (move.from().file() == info.from_file) {
-                        return move;
-                    }
-                }
-
-                continue;
-            }
-
-            // For simple moves like Nf3
-            if (info.from_rank == Rank::NO_RANK && info.from_file == File::NO_FILE) {
-                return move;
-            }
-
-            if (move.typeOf() == Move::ENPASSANT) {
-                if (move.from().file() == info.from_file) return move;
-                continue;
-            }
-
-            // we know the from square, so we can check if it matches
-            if (info.from != Square::underlying::NO_SQ) {
-                if (move.from() == info.from) {
-                    return move;
-                }
-
-                continue;
-            }
-
-            if ((move.from().file() == info.from_file) || (move.from().rank() == info.from_rank)) {
-                return move;
-            }
-        }
-
-#ifdef DEBUG
-        std::stringstream ss;
-
-        ss << "pt " << int(info.piece) << "\n";
-        ss << "info.from_file " << int(info.from_file) << "\n";
-        ss << "info.from_rank " << int(info.from_rank) << "\n";
-        ss << "promotion " << int(info.promotion) << "\n";
-        ss << "to_sq " << squareToString[info.to] << "\n";
-
-        std::cerr << ss.str();
-#endif
-
-        throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
     }
 
     template <bool LAN = false>

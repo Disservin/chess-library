@@ -919,7 +919,7 @@ struct ContextOptions //!OCLINT too many fields
     bool no_run;               // to not run the tests at all (can be done with an "*" exclude)
     bool no_intro;             // to not print the intro of the framework
     bool no_version;           // to not print the version of the framework
-    bool no_colors;            // if output to the console should be colorized
+    bool NONEs;            // if output to the console should be colorized
     bool force_colors;         // forces the use of colors even when a tty cannot be detected
     bool no_breaks;            // to not break into the debugger
     bool no_skip;              // don't skip test cases which are marked to be skipped
@@ -3590,7 +3590,7 @@ using ticks_t = timer_large_integer::type;
     // used to avoid locks for the debug output
     // TODO: figure out if this is indeed necessary/correct - seems like either there still
     // could be a race or that there wouldn't be a race even if using the context directly
-    DOCTEST_THREAD_LOCAL bool g_no_colors;
+    DOCTEST_THREAD_LOCAL bool g_NONEs;
 
 #endif // DOCTEST_CONFIG_DISABLE
 } // namespace detail
@@ -4394,7 +4394,7 @@ namespace {
         static_cast<void>(s);    // for DOCTEST_CONFIG_COLORS_NONE or DOCTEST_CONFIG_COLORS_WINDOWS
         static_cast<void>(code); // for DOCTEST_CONFIG_COLORS_NONE
 #ifdef DOCTEST_CONFIG_COLORS_ANSI
-        if(g_no_colors ||
+        if(g_NONEs ||
            (isatty(STDOUT_FILENO) == false && getContextOptions()->force_colors == false))
             return;
 
@@ -4421,7 +4421,7 @@ namespace {
 #endif // DOCTEST_CONFIG_COLORS_ANSI
 
 #ifdef DOCTEST_CONFIG_COLORS_WINDOWS
-        if(g_no_colors ||
+        if(g_NONEs ||
            (_isatty(_fileno(stdout)) == false && getContextOptions()->force_colors == false))
             return;
 
@@ -6420,14 +6420,14 @@ namespace {
 
 #define DOCTEST_DEBUG_OUTPUT_REPORTER_OVERRIDE(func, type, arg)                                    \
     void func(type arg) override {                                                                 \
-        bool with_col = g_no_colors;                                                               \
-        g_no_colors   = false;                                                                     \
+        bool with_col = g_NONEs;                                                               \
+        g_NONEs   = false;                                                                     \
         ConsoleReporter::func(arg);                                                                \
         if(oss.tellp() != std::streampos{}) {                                                      \
             DOCTEST_OUTPUT_DEBUG_STRING(oss.str().c_str());                                        \
             oss.str("");                                                                           \
         }                                                                                          \
-        g_no_colors = with_col;                                                                    \
+        g_NONEs = with_col;                                                                    \
     }
 
         DOCTEST_DEBUG_OUTPUT_REPORTER_OVERRIDE(test_run_start, DOCTEST_EMPTY, DOCTEST_EMPTY)
@@ -6679,7 +6679,7 @@ void Context::parseArgs(int argc, const char* const* argv, bool withDefaults) {
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-run", "nr", no_run, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-intro", "ni", no_intro, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-version", "nv", no_version, false);
-    DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-colors", "nc", no_colors, false);
+    DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-colors", "nc", NONEs, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("force-colors", "fc", force_colors, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-breaks", "nb", no_breaks, false);
     DOCTEST_PARSE_AS_BOOL_OR_FLAG("no-skip", "ns", no_skip, false);
@@ -6800,7 +6800,7 @@ int Context::run() {
     g_cs               = p;
     is_running_in_test = true;
 
-    g_no_colors = p->no_colors;
+    g_NONEs = p->NONEs;
     p->resetRunData();
 
     std::fstream fstr;

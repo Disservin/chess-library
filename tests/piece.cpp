@@ -99,7 +99,7 @@ TEST_SUITE("Piece") {
         CHECK(Piece(PieceType::ROOK, Color::WHITE).color() == Color::WHITE);
         CHECK(Piece(PieceType::QUEEN, Color::WHITE).color() == Color::WHITE);
         CHECK(Piece(PieceType::KING, Color::WHITE).color() == Color::WHITE);
-        CHECK(Piece(PieceType::NONE, Color::WHITE).color() == Color::NO_COLOR);
+        CHECK(Piece(PieceType::NONE, Color::WHITE).color() == Color::NONE);
 
         CHECK(Piece(PieceType::PAWN, Color::BLACK).color() == Color::BLACK);
         CHECK(Piece(PieceType::KNIGHT, Color::BLACK).color() == Color::BLACK);
@@ -108,7 +108,7 @@ TEST_SUITE("Piece") {
         CHECK(Piece(PieceType::QUEEN, Color::BLACK).color() == Color::BLACK);
         CHECK(Piece(PieceType::KING, Color::BLACK).color() == Color::BLACK);
 
-        CHECK(Piece(PieceType::NONE, Color::BLACK).color() == Color::NO_COLOR);
+        CHECK(Piece(PieceType::NONE, Color::BLACK).color() == Color::NONE);
     }
 
     TEST_CASE("type") {

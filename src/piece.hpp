@@ -130,11 +130,11 @@ class Piece {
     constexpr Piece() : piece(underlying::NONE) {}
     constexpr Piece(underlying piece) : piece(piece) {}
     constexpr Piece(PieceType type, Color color)
-        : piece(color == Color::NO_COLOR  ? Piece::NONE
+        : piece(color == Color::NONE  ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(Color color, PieceType type)
-        : piece(color == Color::NO_COLOR  ? Piece::NONE
+        : piece(color == Color::NONE  ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(std::string_view p) : piece(underlying::NONE) {
@@ -231,7 +231,7 @@ class Piece {
 
     constexpr Color color() const {
         if (piece == NONE) {
-            return Color::NO_COLOR;
+            return Color::NONE;
         }
         return static_cast<Color>(static_cast<int>(piece) / 6);
     }
