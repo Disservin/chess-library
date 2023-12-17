@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.0
+VERSION: 0.6.1
 */
 
 #ifndef CHESS_HPP
@@ -578,7 +578,7 @@ class attacks {
         Bitboard *attacks;
         U64 shift;
 
-        Bitboard operator()(Bitboard b) const { return (((b & mask)).getBits() * magic) >> shift; }
+        U64 operator()(Bitboard b) const { return (((b & mask)).getBits() * magic) >> shift; }
     };
 
     /// @brief [Internal Usage] Slow function to calculate bishop attacks
@@ -2356,7 +2356,7 @@ template <Color::underlying c>
 /// @param occupied
 /// @return
 [[nodiscard]] inline Bitboard attacks::bishop(Square sq, Bitboard occupied) noexcept {
-    return BishopTable[sq.index()].attacks[BishopTable[sq.index()](occupied).getBits()];
+    return BishopTable[sq.index()].attacks[BishopTable[sq.index()](occupied)];
 }
 
 /// @brief Returns the rook attacks for a given square
@@ -2364,7 +2364,7 @@ template <Color::underlying c>
 /// @param occupied
 /// @return
 [[nodiscard]] inline Bitboard attacks::rook(Square sq, Bitboard occupied) noexcept {
-    return RookTable[sq.index()].attacks[RookTable[sq.index()](occupied).getBits()];
+    return RookTable[sq.index()].attacks[RookTable[sq.index()](occupied)];
 }
 
 /// @brief Returns the queen attacks for a given square
@@ -2503,9 +2503,8 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
     }
 
     do {
-        std::cout << table_sq(occ).getBits() << std::endl;
-        table_sq.attacks[table_sq(occ).getBits()] = attacks(sq, occ);
-        occ                                       = (occ - table_sq.mask) & table_sq.mask;
+        table_sq.attacks[table_sq(occ)] = attacks(sq, occ);
+        occ                             = (occ - table_sq.mask) & table_sq.mask;
     } while (occ);
 }
 
