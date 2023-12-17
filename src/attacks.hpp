@@ -74,7 +74,7 @@ template <Color::underlying c>
 /// @param occupied
 /// @return
 [[nodiscard]] inline Bitboard attacks::bishop(Square sq, Bitboard occupied) noexcept {
-    return BishopTable[sq.index()].attacks[BishopTable[sq.index()](occupied).getBits()];
+    return BishopTable[sq.index()].attacks[BishopTable[sq.index()](occupied)];
 }
 
 /// @brief Returns the rook attacks for a given square
@@ -82,7 +82,7 @@ template <Color::underlying c>
 /// @param occupied
 /// @return
 [[nodiscard]] inline Bitboard attacks::rook(Square sq, Bitboard occupied) noexcept {
-    return RookTable[sq.index()].attacks[RookTable[sq.index()](occupied).getBits()];
+    return RookTable[sq.index()].attacks[RookTable[sq.index()](occupied)];
 }
 
 /// @brief Returns the queen attacks for a given square
@@ -210,17 +210,19 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
 
     U64 occ = 0ULL;
 
-    table[sq.index()].magic = magic;
-    table[sq.index()].mask  = (attacks(sq, occ) & ~edges).getBits();
-    table[sq.index()].shift = 64 - Bitboard(table[sq.index()].mask).count();
+    auto &table_sq = table[sq.index()];
+
+    table_sq.magic = magic;
+    table_sq.mask  = (attacks(sq, occ) & ~edges).getBits();
+    table_sq.shift = 64 - Bitboard(table_sq.mask).count();
 
     if (sq < 64 - 1) {
-        table[sq.index() + 1].attacks = table[sq.index()].attacks + (1 << Bitboard(table[sq.index()].mask).count());
+        table[sq.index() + 1].attacks = table_sq.attacks + (1 << Bitboard(table_sq.mask).count());
     }
 
     do {
-        table[sq.index()].attacks[table[sq.index()](occ).getBits()] = attacks(sq, occ);
-        occ = (occ - table[sq.index()].mask) & table[sq.index()].mask;
+        table_sq.attacks[table_sq(occ)] = attacks(sq, occ);
+        occ                             = (occ - table_sq.mask) & table_sq.mask;
     } while (occ);
 }
 

@@ -2492,17 +2492,20 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
 
     U64 occ = 0ULL;
 
-    table[sq.index()].magic = magic;
-    table[sq.index()].mask  = (attacks(sq, occ) & ~edges).getBits();
-    table[sq.index()].shift = 64 - Bitboard(table[sq.index()].mask).count();
+    auto &table_sq = table[sq.index()];
+
+    table_sq.magic = magic;
+    table_sq.mask  = (attacks(sq, occ) & ~edges).getBits();
+    table_sq.shift = 64 - Bitboard(table_sq.mask).count();
 
     if (sq < 64 - 1) {
-        table[sq.index() + 1].attacks = table[sq.index()].attacks + (1 << Bitboard(table[sq.index()].mask).count());
+        table[sq.index() + 1].attacks = table_sq.attacks + (1 << Bitboard(table_sq.mask).count());
     }
 
     do {
-        table[sq.index()].attacks[table[sq.index()](occ).getBits()] = attacks(sq, occ);
-        occ = (occ - table[sq.index()].mask) & table[sq.index()].mask;
+        std::cout << table_sq(occ).getBits() << std::endl;
+        table_sq.attacks[table_sq(occ).getBits()] = attacks(sq, occ);
+        occ                                       = (occ - table_sq.mask) & table_sq.mask;
     } while (occ);
 }
 

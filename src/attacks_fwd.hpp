@@ -17,7 +17,7 @@ class attacks {
         Bitboard *attacks;
         U64 shift;
 
-        Bitboard operator()(Bitboard b) const { return (((b & mask)).getBits() * magic) >> shift; }
+        U64 operator()(Bitboard b) const { return (((b & mask)).getBits() * magic) >> shift; }
     };
 
     /// @brief [Internal Usage] Slow function to calculate bishop attacks
