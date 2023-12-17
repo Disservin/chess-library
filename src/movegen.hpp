@@ -332,7 +332,8 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
              If the pawn is pinned but the en passant square is not on the
              pin mask then the move is illegal.
             */
-            if ((Bitboard::fromSquare(from) & pin_d.getBits()) && !(pin_d & Bitboard::fromSquare(ep).getBits()))
+            if (static_cast<bool>((Bitboard::fromSquare(from) & pin_d.getBits())) &&
+                !(pin_d & Bitboard::fromSquare(ep).getBits()))
                 continue;
 
             const Bitboard connectingPawns = Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(from);

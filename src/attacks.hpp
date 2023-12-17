@@ -62,18 +62,18 @@ template <Color::underlying c>
 /// @param c
 /// @param sq
 /// @return
-[[nodiscard]] inline Bitboard attacks::pawn(Color c, Square sq) { return PawnAttacks[c][sq.index()]; }
+[[nodiscard]] inline Bitboard attacks::pawn(Color c, Square sq) noexcept { return PawnAttacks[c][sq.index()]; }
 
 /// @brief Returns the knight attacks for a given square
 /// @param sq
 /// @return
-[[nodiscard]] inline Bitboard attacks::knight(Square sq) { return KnightAttacks[sq.index()]; }
+[[nodiscard]] inline Bitboard attacks::knight(Square sq) noexcept { return KnightAttacks[sq.index()]; }
 
 /// @brief Returns the bishop attacks for a given square
 /// @param sq
 /// @param occupied
 /// @return
-[[nodiscard]] inline Bitboard attacks::bishop(Square sq, Bitboard occupied) {
+[[nodiscard]] inline Bitboard attacks::bishop(Square sq, Bitboard occupied) noexcept {
     return BishopTable[sq.index()].attacks[BishopTable[sq.index()](occupied).getBits()];
 }
 
@@ -81,7 +81,7 @@ template <Color::underlying c>
 /// @param sq
 /// @param occupied
 /// @return
-[[nodiscard]] inline Bitboard attacks::rook(Square sq, Bitboard occupied) {
+[[nodiscard]] inline Bitboard attacks::rook(Square sq, Bitboard occupied) noexcept {
     return RookTable[sq.index()].attacks[RookTable[sq.index()](occupied).getBits()];
 }
 
@@ -89,14 +89,14 @@ template <Color::underlying c>
 /// @param sq
 /// @param occupied
 /// @return
-[[nodiscard]] inline Bitboard attacks::queen(Square sq, Bitboard occupied) {
+[[nodiscard]] inline Bitboard attacks::queen(Square sq, Bitboard occupied) noexcept {
     return bishop(sq, occupied) | rook(sq, occupied);
 }
 
 /// @brief Returns the king attacks for a given square
 /// @param sq
 /// @return
-[[nodiscard]] inline Bitboard attacks::king(Square sq) { return KingAttacks[sq.index()]; }
+[[nodiscard]] inline Bitboard attacks::king(Square sq) noexcept { return KingAttacks[sq.index()]; }
 
 /// @brief Returns a bitboard with the origin squares of the attacking pieces set
 /// @param board
@@ -104,7 +104,8 @@ template <Color::underlying c>
 /// @param square Attacked Square
 /// @param occupied
 /// @return
-[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square, Bitboard occupied) {
+[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square,
+                                                 Bitboard occupied) noexcept {
     const auto queens = board.pieces(PieceType::QUEEN, color);
 
     // using the fact that if we can attack PieceType from square, they can attack us back
