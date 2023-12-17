@@ -167,14 +167,14 @@ class Board {
         // Append information about the en passant square (if any)
         // and the half-move clock and full move number to the FEN string
         if (ep_sq_ == Square::underlying::NO_SQ)
-            ss += " - ";
+            ss += " -";
         else {
             ss += ' ';
             ss += static_cast<std::string>(ep_sq_);
-            ss += ' ';
         }
 
         if (move_counters) {
+            ss += ' ';
             ss += std::to_string(halfMoveClock());
             ss += ' ';
             ss += std::to_string(fullMoveNumber());
