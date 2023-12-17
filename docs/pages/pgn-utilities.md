@@ -11,7 +11,7 @@ The `Visitor` class is defined as follows:
 
 ::: tip
 If you want to convert the `string_view move` to an internal move object, you can use `pgn::parseSan`.
-See [here](/pages/move-object.md#other-formats) for more information.
+See [here](/pages/move.md#other-formats) for more information.
 :::
 
 ```c++
