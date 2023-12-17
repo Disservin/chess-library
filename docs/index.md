@@ -21,9 +21,9 @@ hero:
 
 features:
   - title: Fast
-    details: Fast enough to use even for chess engines
+    details: Fast enough to use even for chess engines.
   - title: Extensive API
-    details: Provides a lot of utility functions to make your life easier
+    details: Provides a lot of utility functions to make your life easier.
   - title: PGN Parser
-    details: Able to parse PGN files very quickly
+    details: Able to parse PGN files very quickly.
 ---
