@@ -157,12 +157,15 @@ class Board {
         // Append " w " or " b " to the FEN string, depending on which player's turn it is
         ss += ' ';
         ss += (stm_ == Color::WHITE ? 'w' : 'b');
-        ss += ' ';
 
         // Append the appropriate characters to the FEN string to indicate
         // whether castling is allowed for each player
-        ss += getCastleString();
-        if (cr_.isEmpty()) ss += '-';
+        if (cr_.isEmpty())
+            ss += '-';
+        else {
+            ss += ' ';
+            ss += getCastleString();
+        }
 
         // Append information about the en passant square (if any)
         // and the half-move clock and full move number to the FEN string
