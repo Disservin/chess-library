@@ -1704,24 +1704,28 @@ inline std::string Board::getFen(bool move_counters) const {
     // Append " w " or " b " to the FEN string, depending on which player's turn it is
     ss += ' ';
     ss += (side_to_move_ == Color::WHITE ? 'w' : 'b');
-    ss += ' ';
 
     // Append the appropriate characters to the FEN string to indicate
     // whether castling is allowed for each player
-    ss += getCastleString();
-    if (castling_rights_.isEmpty()) ss += '-';
+
+    if (castling_rights_.isEmpty()) {
+        ss += " -";
+    } else {
+        ss += ' ';
+        ss += getCastleString();
+    }
 
     // Append information about the en passant square (if any)
     // and the half-move clock and full move number to the FEN string
     if (enpassant_sq_ == NO_SQ)
-        ss += " - ";
+        ss += " -";
     else {
         ss += ' ';
         ss += squareToString[enpassant_sq_];
-        ss += ' ';
     }
 
     if (move_counters) {
+        ss += ' ';
         ss += std::to_string(halfMoveClock());
         ss += ' ';
         ss += std::to_string(fullMoveNumber());
