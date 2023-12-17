@@ -1,6 +1,9 @@
 #include <memory>
+#include <string_view>
+#include <cassert>
+#include <fstream>
 
-#include "../include/chess.hpp"
+#include "../src/include.hpp"
 #include "doctest/doctest.hpp"
 
 using namespace chess;
@@ -40,7 +43,7 @@ class MyVisitor : public pgn::Visitor {
 
 TEST_SUITE("PGN StreamParser") {
     TEST_CASE("Basic PGN") {
-        const auto file  = "./pgns/basic.pgn";
+        const auto file  = "./tests/pgns/basic.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -54,7 +57,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Corrupted PGN") {
-        const auto file  = "./pgns/corrupted.pgn";
+        const auto file  = "./tests/pgns/corrupted.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -68,7 +71,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("No Moves PGN") {
-        const auto file  = "./pgns/no_moves.pgn";
+        const auto file  = "./tests/pgns/no_moves.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -82,7 +85,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Multiple") {
-        const auto file  = "./pgns/multiple.pgn";
+        const auto file  = "./tests/pgns/multiple.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -94,7 +97,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Skip") {
-        const auto file  = "./pgns/skip.pgn";
+        const auto file  = "./tests/pgns/skip.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -108,7 +111,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Newline by moves") {
-        const auto file  = "./pgns/newline.pgn";
+        const auto file  = "./tests/pgns/newline.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -122,7 +125,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Castling with 0-0") {
-        const auto file  = "./pgns/castling.pgn";
+        const auto file  = "./tests/pgns/castling.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -136,7 +139,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Black to move, and castling with 0-0-0") {
-        const auto file  = "./pgns/black2move.pgn";
+        const auto file  = "./tests/pgns/black2move.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -150,7 +153,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Skip Variations") {
-        const auto file  = "./pgns/variations.pgn";
+        const auto file  = "./tests/pgns/variations.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
@@ -164,7 +167,7 @@ TEST_SUITE("PGN StreamParser") {
     }
 
     TEST_CASE("Read Book") {
-        const auto file  = "./pgns/book.pgn";
+        const auto file  = "./tests/pgns/book.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();

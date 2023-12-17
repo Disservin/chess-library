@@ -1,5 +1,6 @@
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 
 #include "../include/chess.hpp"
 
@@ -39,12 +40,10 @@ int main(int argc, char const *argv[]) {
     const auto file_size_mb = std::filesystem::file_size(file) / 1000.0 / 1000.0;
 
     std::cout << "MB/s: "
-              << (file_size_mb /
-                  (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0))
+              << (file_size_mb / (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0))
               << "\n";
 
-    std::cout << (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0)
-              << "\n";
+    std::cout << (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0) << "\n";
 
     return 0;
 }

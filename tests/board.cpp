@@ -1,4 +1,4 @@
-#include "../include/chess.hpp"
+#include "../src/include.hpp"
 #include "doctest/doctest.hpp"
 
 using namespace chess;
@@ -6,17 +6,17 @@ using namespace chess;
 TEST_SUITE("Board") {
     TEST_CASE("makeMove") {
         Board board = Board();
-        board.makeMove(Move::make(Square::SQ_E2, Square::SQ_E4));
-        board.makeMove(Move::make(Square::SQ_E7, Square::SQ_E5));
+        board.makeMove(Move::make(Square::underlying::SQ_E2, Square::underlying::SQ_E4));
+        board.makeMove(Move::make(Square::underlying::SQ_E7, Square::underlying::SQ_E5));
 
-        CHECK(board.at(Square::SQ_E4) == Piece::WHITEPAWN);
-        CHECK(board.at(Square::SQ_E5) == Piece::BLACKPAWN);
+        CHECK(board.at(Square::underlying::SQ_E4) == Piece::WHITEPAWN);
+        CHECK(board.at(Square::underlying::SQ_E5) == Piece::BLACKPAWN);
 
-        board.unmakeMove(Move::make(Square::SQ_E7, Square::SQ_E5));
-        board.unmakeMove(Move::make(Square::SQ_E2, Square::SQ_E4));
+        board.unmakeMove(Move::make(Square::underlying::SQ_E7, Square::underlying::SQ_E5));
+        board.unmakeMove(Move::make(Square::underlying::SQ_E2, Square::underlying::SQ_E4));
 
-        CHECK(board.at(Square::SQ_E2) == Piece::WHITEPAWN);
-        CHECK(board.at(Square::SQ_E7) == Piece::BLACKPAWN);
+        CHECK(board.at(Square::underlying::SQ_E2) == Piece::WHITEPAWN);
+        CHECK(board.at(Square::underlying::SQ_E7) == Piece::BLACKPAWN);
 
         CHECK(board.zobrist() == Board().zobrist());
     }
@@ -71,5 +71,11 @@ TEST_SUITE("Board") {
 
         board.setFen("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w KQkq e3 0 1");
         CHECK(board.getFen() == "4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w KQkq e3 0 1");
+
+        board.setFen("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w KQkq e3 0 1");
+        CHECK(board.getFen(false) == "4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w KQkq e3");
+
+        board.setFen("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 3 24");
+        CHECK(board.getFen(false) == "4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - -");
     }
 }
