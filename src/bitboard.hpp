@@ -25,7 +25,7 @@ class Bitboard {
         bits = 0xFFULL << (8 * static_cast<int>(rank.internal()));
     }
 
-    explicit operator bool() const { return bits != 0; }
+    explicit operator bool() const noexcept { return bits != 0; }
 
     explicit operator std::string() const {
         std::bitset<64> b(bits);
@@ -41,74 +41,74 @@ class Bitboard {
         return str;
     }
 
-    constexpr Bitboard operator&(std::uint64_t rhs) const { return Bitboard(bits & rhs); }
-    constexpr Bitboard operator|(std::uint64_t rhs) const { return Bitboard(bits | rhs); }
-    constexpr Bitboard operator^(std::uint64_t rhs) const { return Bitboard(bits ^ rhs); }
-    constexpr Bitboard operator<<(std::uint64_t rhs) const { return Bitboard(bits << rhs); }
-    constexpr Bitboard operator>>(std::uint64_t rhs) const { return Bitboard(bits >> rhs); }
-    constexpr bool operator==(std::uint64_t rhs) const { return bits == rhs; }
-    constexpr bool operator!=(std::uint64_t rhs) const { return bits != rhs; }
+    constexpr Bitboard operator&(std::uint64_t rhs) const noexcept { return Bitboard(bits & rhs); }
+    constexpr Bitboard operator|(std::uint64_t rhs) const noexcept { return Bitboard(bits | rhs); }
+    constexpr Bitboard operator^(std::uint64_t rhs) const noexcept { return Bitboard(bits ^ rhs); }
+    constexpr Bitboard operator<<(std::uint64_t rhs) const noexcept { return Bitboard(bits << rhs); }
+    constexpr Bitboard operator>>(std::uint64_t rhs) const noexcept { return Bitboard(bits >> rhs); }
+    constexpr bool operator==(std::uint64_t rhs) const noexcept { return bits == rhs; }
+    constexpr bool operator!=(std::uint64_t rhs) const noexcept { return bits != rhs; }
 
-    constexpr Bitboard operator&(const Bitboard& rhs) const { return Bitboard(bits & rhs.bits); }
-    constexpr Bitboard operator|(const Bitboard& rhs) const { return Bitboard(bits | rhs.bits); }
-    constexpr Bitboard operator^(const Bitboard& rhs) const { return Bitboard(bits ^ rhs.bits); }
-    constexpr Bitboard operator~() const { return Bitboard(~bits); }
+    constexpr Bitboard operator&(const Bitboard& rhs) const noexcept { return Bitboard(bits & rhs.bits); }
+    constexpr Bitboard operator|(const Bitboard& rhs) const noexcept { return Bitboard(bits | rhs.bits); }
+    constexpr Bitboard operator^(const Bitboard& rhs) const noexcept { return Bitboard(bits ^ rhs.bits); }
+    constexpr Bitboard operator~() const noexcept { return Bitboard(~bits); }
 
-    constexpr Bitboard& operator&=(const Bitboard& rhs) {
+    constexpr Bitboard& operator&=(const Bitboard& rhs) noexcept {
         bits &= rhs.bits;
         return *this;
     }
 
-    constexpr Bitboard& operator|=(const Bitboard& rhs) {
+    constexpr Bitboard& operator|=(const Bitboard& rhs) noexcept {
         bits |= rhs.bits;
         return *this;
     }
 
-    constexpr Bitboard& operator^=(const Bitboard& rhs) {
+    constexpr Bitboard& operator^=(const Bitboard& rhs) noexcept {
         bits ^= rhs.bits;
         return *this;
     }
 
-    constexpr bool operator==(const Bitboard& rhs) const { return bits == rhs.bits; }
-    constexpr bool operator!=(const Bitboard& rhs) const { return bits != rhs.bits; }
-    constexpr bool operator||(const Bitboard& rhs) const { return bits || rhs.bits; }
-    constexpr bool operator&&(const Bitboard& rhs) const { return bits && rhs.bits; }
+    constexpr bool operator==(const Bitboard& rhs) const noexcept { return bits == rhs.bits; }
+    constexpr bool operator!=(const Bitboard& rhs) const noexcept { return bits != rhs.bits; }
+    constexpr bool operator||(const Bitboard& rhs) const noexcept { return bits || rhs.bits; }
+    constexpr bool operator&&(const Bitboard& rhs) const noexcept { return bits && rhs.bits; }
 
-    constexpr Bitboard& set(int index) {
+    constexpr Bitboard& set(int index) noexcept {
         assert(index >= 0 && index < 64);
         bits |= (1ULL << index);
         return *this;
     }
 
-    constexpr bool check(int index) const {
+    [[nodiscard]] constexpr bool check(int index) const noexcept {
         assert(index >= 0 && index < 64);
         return bits & (1ULL << index);
     }
 
-    constexpr Bitboard& clear(int index) {
+    constexpr Bitboard& clear(int index) noexcept {
         assert(index >= 0 && index < 64);
         bits &= ~(1ULL << index);
         return *this;
     }
 
-    constexpr Bitboard& clear() {
+    constexpr Bitboard& clear() noexcept {
         bits = 0;
         return *this;
     }
 
-    static constexpr Bitboard fromSquare(int index) {
+    [[nodiscard]] static constexpr Bitboard fromSquare(int index) noexcept {
         assert(index >= 0 && index < 64);
         return Bitboard(1ULL << index);
     }
 
-    static constexpr Bitboard fromSquare(Square sq) {
+    [[nodiscard]] static constexpr Bitboard fromSquare(Square sq) noexcept {
         assert(sq.index() >= 0 && sq.index() < 64);
         return Bitboard(1ULL << sq.index());
     }
 
-    constexpr bool empty() const { return bits == 0; }
+    [[nodiscard]] constexpr bool empty() const noexcept { return bits == 0; }
 
-    constexpr int lsb() const {
+    [[nodiscard]] constexpr int lsb() const noexcept {
         assert(bits != 0);
 #if __cplusplus >= 202002L
         return std::countr_zero(bits);
@@ -125,7 +125,7 @@ class Bitboard {
 #endif
     }
 
-    constexpr int msb() const {
+    [[nodiscard]] constexpr int msb() const noexcept {
         assert(bits != 0);
 
 #if __cplusplus >= 202002L
@@ -143,7 +143,7 @@ class Bitboard {
 #endif
     }
 
-    constexpr int count() const {
+    [[nodiscard]] constexpr int count() const noexcept {
 #if __cplusplus >= 202002L
         return std::popcount(bits);
 #else
@@ -155,14 +155,14 @@ class Bitboard {
 #endif
     }
 
-    constexpr std::uint8_t pop() {
+    [[nodiscard]] constexpr std::uint8_t pop() noexcept {
         assert(bits != 0);
         std::uint8_t index = lsb();
         bits &= bits - 1;
         return index;
     }
 
-    constexpr std::uint64_t getBits() const { return bits; }
+    [[nodiscard]] constexpr std::uint64_t getBits() const noexcept { return bits; }
 
     friend std::ostream& operator<<(std::ostream& os, const Bitboard& bb);
 

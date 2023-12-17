@@ -24,7 +24,7 @@ class Color {
         }
     }
 
-    constexpr Color operator~() const { return static_cast<Color>(static_cast<uint8_t>(color) ^ 1); }
+    constexpr Color operator~() const noexcept { return static_cast<Color>(static_cast<uint8_t>(color) ^ 1); }
 
     explicit operator std::string() const {
         switch (color) {
@@ -37,18 +37,18 @@ class Color {
         }
     }
 
-    constexpr bool operator==(const Color& rhs) const { return color == rhs.color; }
-    constexpr bool operator!=(const Color& rhs) const { return color != rhs.color; }
+    constexpr bool operator==(const Color& rhs) const noexcept { return color == rhs.color; }
+    constexpr bool operator!=(const Color& rhs) const noexcept { return color != rhs.color; }
 
-    constexpr operator int() const { return static_cast<int>(color); }
+    constexpr operator int() const noexcept { return static_cast<int>(color); }
 
-    constexpr underlying internal() const { return color; }
+    [[nodiscard]] constexpr underlying internal() const noexcept { return color; }
 
     friend std::ostream& operator<<(std::ostream& os, const Color& color);
 
-    static constexpr underlying WHITE    = underlying::WHITE;
-    static constexpr underlying BLACK    = underlying::BLACK;
-    static constexpr underlying NONE = underlying::NONE;
+    static constexpr underlying WHITE = underlying::WHITE;
+    static constexpr underlying BLACK = underlying::BLACK;
+    static constexpr underlying NONE  = underlying::NONE;
 
    private:
     underlying color;

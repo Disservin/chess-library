@@ -85,12 +85,12 @@ class PieceType {
         }
     }
 
-    constexpr bool operator==(const PieceType& rhs) const { return pt == rhs.pt; }
-    constexpr bool operator!=(const PieceType& rhs) const { return pt != rhs.pt; }
+    constexpr bool operator==(const PieceType& rhs) const noexcept { return pt == rhs.pt; }
+    constexpr bool operator!=(const PieceType& rhs) const noexcept { return pt != rhs.pt; }
 
-    constexpr operator int() const { return static_cast<int>(pt); }
+    constexpr operator int() const noexcept { return static_cast<int>(pt); }
 
-    constexpr underlying internal() const { return pt; }
+    [[nodiscard]] constexpr underlying internal() const noexcept { return pt; }
 
     static constexpr underlying PAWN   = underlying::PAWN;
     static constexpr underlying KNIGHT = underlying::KNIGHT;
@@ -130,11 +130,11 @@ class Piece {
     constexpr Piece() : piece(underlying::NONE) {}
     constexpr Piece(underlying piece) : piece(piece) {}
     constexpr Piece(PieceType type, Color color)
-        : piece(color == Color::NONE  ? Piece::NONE
+        : piece(color == Color::NONE      ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(Color color, PieceType type)
-        : piece(color == Color::NONE  ? Piece::NONE
+        : piece(color == Color::NONE      ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(std::string_view p) : piece(underlying::NONE) {
@@ -182,16 +182,16 @@ class Piece {
         }
     }
 
-    constexpr bool operator<(const Piece& rhs) const { return piece < rhs.piece; }
-    constexpr bool operator>(const Piece& rhs) const { return piece > rhs.piece; }
-    constexpr bool operator==(const Piece& rhs) const { return piece == rhs.piece; }
-    constexpr bool operator!=(const Piece& rhs) const { return piece != rhs.piece; }
+    constexpr bool operator<(const Piece& rhs) const noexcept { return piece < rhs.piece; }
+    constexpr bool operator>(const Piece& rhs) const noexcept { return piece > rhs.piece; }
+    constexpr bool operator==(const Piece& rhs) const noexcept { return piece == rhs.piece; }
+    constexpr bool operator!=(const Piece& rhs) const noexcept { return piece != rhs.piece; }
 
-    constexpr bool operator==(const underlying& rhs) const { return piece == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const { return piece != rhs; }
+    constexpr bool operator==(const underlying& rhs) const noexcept { return piece == rhs; }
+    constexpr bool operator!=(const underlying& rhs) const noexcept { return piece != rhs; }
 
-    constexpr bool operator==(const PieceType& rhs) const { return type() == rhs; }
-    constexpr bool operator!=(const PieceType& rhs) const { return type() != rhs; }
+    constexpr bool operator==(const PieceType& rhs) const noexcept { return type() == rhs; }
+    constexpr bool operator!=(const PieceType& rhs) const noexcept { return type() != rhs; }
 
     explicit operator std::string() const {
         switch (piece) {
@@ -225,18 +225,20 @@ class Piece {
         }
     }
 
-    operator int() const { return static_cast<int>(piece); }
+    operator int() const noexcept { return static_cast<int>(piece); }
 
-    constexpr PieceType type() const { return static_cast<PieceType::underlying>(int(piece) % 6); }
+    [[nodiscard]] constexpr PieceType type() const noexcept {
+        return static_cast<PieceType::underlying>(int(piece) % 6);
+    }
 
-    constexpr Color color() const {
+    [[nodiscard]] constexpr Color color() const noexcept {
         if (piece == NONE) {
             return Color::NONE;
         }
         return static_cast<Color>(static_cast<int>(piece) / 6);
     }
 
-    constexpr underlying internal() const { return piece; }
+    [[nodiscard]] constexpr underlying internal() const noexcept { return piece; }
 
     static constexpr underlying NONE        = underlying::NONE;
     static constexpr underlying WHITEPAWN   = underlying::WHITEPAWN;

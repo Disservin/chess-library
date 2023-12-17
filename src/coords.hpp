@@ -17,21 +17,29 @@ class File {
     constexpr File(underlying file) : file(file) {}
     constexpr File(int file) : file(static_cast<underlying>(file)) {}
 
-    constexpr underlying internal() const { return file; }
+    [[nodiscard]] constexpr underlying internal() const noexcept { return file; }
 
-    constexpr bool operator==(const File& rhs) const { return file == rhs.file; }
-    constexpr bool operator!=(const File& rhs) const { return file != rhs.file; }
+    constexpr bool operator==(const File& rhs) const noexcept { return file == rhs.file; }
+    constexpr bool operator!=(const File& rhs) const noexcept { return file != rhs.file; }
 
-    constexpr bool operator==(const underlying& rhs) const { return file == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const { return file != rhs; }
+    constexpr bool operator==(const underlying& rhs) const noexcept { return file == rhs; }
+    constexpr bool operator!=(const underlying& rhs) const noexcept { return file != rhs; }
 
-    constexpr bool operator>=(const File& rhs) const { return static_cast<int>(file) >= static_cast<int>(rhs.file); }
-    constexpr bool operator<=(const File& rhs) const { return static_cast<int>(file) <= static_cast<int>(rhs.file); }
+    constexpr bool operator>=(const File& rhs) const noexcept {
+        return static_cast<int>(file) >= static_cast<int>(rhs.file);
+    }
+    constexpr bool operator<=(const File& rhs) const noexcept {
+        return static_cast<int>(file) <= static_cast<int>(rhs.file);
+    }
 
-    constexpr bool operator>(const File& rhs) const { return static_cast<int>(file) > static_cast<int>(rhs.file); }
-    constexpr bool operator<(const File& rhs) const { return static_cast<int>(file) < static_cast<int>(rhs.file); }
+    constexpr bool operator>(const File& rhs) const noexcept {
+        return static_cast<int>(file) > static_cast<int>(rhs.file);
+    }
+    constexpr bool operator<(const File& rhs) const noexcept {
+        return static_cast<int>(file) < static_cast<int>(rhs.file);
+    }
 
-    constexpr operator int() const { return static_cast<int>(file); }
+    constexpr operator int() const noexcept { return static_cast<int>(file); }
 
     explicit operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(file) + 'a')); }
 
@@ -57,22 +65,26 @@ class Rank {
     constexpr Rank(underlying rank) : rank(rank) {}
     constexpr Rank(int rank) : rank(static_cast<underlying>(rank)) {}
 
-    constexpr underlying internal() const { return rank; }
+    [[nodiscard]] constexpr underlying internal() const noexcept { return rank; }
 
-    constexpr bool operator==(const Rank& rhs) const { return rank == rhs.rank; }
-    constexpr bool operator!=(const Rank& rhs) const { return rank != rhs.rank; }
+    constexpr bool operator==(const Rank& rhs) const noexcept { return rank == rhs.rank; }
+    constexpr bool operator!=(const Rank& rhs) const noexcept { return rank != rhs.rank; }
 
-    constexpr bool operator==(const underlying& rhs) const { return rank == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const { return rank != rhs; }
+    constexpr bool operator==(const underlying& rhs) const noexcept { return rank == rhs; }
+    constexpr bool operator!=(const underlying& rhs) const noexcept { return rank != rhs; }
 
-    constexpr bool operator>=(const Rank& rhs) const { return static_cast<int>(rank) >= static_cast<int>(rhs.rank); }
-    constexpr bool operator<=(const Rank& rhs) const { return static_cast<int>(rank) <= static_cast<int>(rhs.rank); }
+    constexpr bool operator>=(const Rank& rhs) const noexcept {
+        return static_cast<int>(rank) >= static_cast<int>(rhs.rank);
+    }
+    constexpr bool operator<=(const Rank& rhs) const noexcept {
+        return static_cast<int>(rank) <= static_cast<int>(rhs.rank);
+    }
 
     operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(rank) + '1')); }
 
-    constexpr operator int() const { return static_cast<int>(rank); }
+    constexpr operator int() const noexcept { return static_cast<int>(rank); }
 
-    static constexpr bool back_rank(Rank r, Color color) {
+    [[nodiscard]] static constexpr bool back_rank(Rank r, Color color) noexcept {
         if (color == Color::WHITE)
             return r == Rank::RANK_1;
         else
@@ -119,73 +131,97 @@ class Square {
         assert(str.size() >= 2);
     }
 
-    constexpr Square operator^(const Square& s) const {
+    constexpr Square operator^(const Square& s) const noexcept {
         return Square(static_cast<underlying>(static_cast<int>(sq) ^ s.index()));
     };
-    constexpr bool operator==(const Square& rhs) const { return sq == rhs.sq; }
-    constexpr bool operator!=(const Square& rhs) const { return sq != rhs.sq; }
-    constexpr bool operator>(const Square& rhs) const { return static_cast<int>(sq) > static_cast<int>(rhs.sq); }
-    constexpr bool operator>=(const Square& rhs) const { return static_cast<int>(sq) >= static_cast<int>(rhs.sq); }
-    constexpr bool operator<(const Square& rhs) const { return static_cast<int>(sq) < static_cast<int>(rhs.sq); }
-    constexpr bool operator<=(const Square& rhs) const { return static_cast<int>(sq) <= static_cast<int>(rhs.sq); }
-    constexpr Square operator+(const Square& rhs) const {
+
+    constexpr bool operator==(const Square& rhs) const noexcept { return sq == rhs.sq; }
+
+    constexpr bool operator!=(const Square& rhs) const noexcept { return sq != rhs.sq; }
+
+    constexpr bool operator>(const Square& rhs) const noexcept {
+        return static_cast<int>(sq) > static_cast<int>(rhs.sq);
+    }
+
+    constexpr bool operator>=(const Square& rhs) const noexcept {
+        return static_cast<int>(sq) >= static_cast<int>(rhs.sq);
+    }
+
+    constexpr bool operator<(const Square& rhs) const noexcept {
+        return static_cast<int>(sq) < static_cast<int>(rhs.sq);
+    }
+
+    constexpr bool operator<=(const Square& rhs) const noexcept {
+        return static_cast<int>(sq) <= static_cast<int>(rhs.sq);
+    }
+
+    constexpr Square operator+(const Square& rhs) const noexcept {
         return Square(static_cast<underlying>(static_cast<int>(sq) + static_cast<int>(rhs.sq)));
     }
-    constexpr Square operator-(const Square& rhs) const {
+
+    constexpr Square operator-(const Square& rhs) const noexcept {
         return Square(static_cast<underlying>(static_cast<int>(sq) - static_cast<int>(rhs.sq)));
     }
-    constexpr Square operator++() {
+
+    constexpr Square& operator++() noexcept {
         sq = static_cast<underlying>(static_cast<int>(sq) + 1);
         return *this;
     }
-    constexpr Square operator++(int) {
+
+    constexpr Square operator++(int) noexcept {
         Square tmp(*this);
         operator++();
         return tmp;
     }
-    constexpr Square operator--() {
+
+    constexpr Square& operator--() noexcept {
         sq = static_cast<underlying>(static_cast<int>(sq) - 1);
         return *this;
     }
-    constexpr Square operator--(int) {
+
+    [[nodiscard]] constexpr Square operator--(int) noexcept {
         Square tmp(*this);
         operator--();
         return tmp;
     }
 
-    operator std::string() const {
+    [[nodiscard]] operator std::string() const {
         std::string str;
         str += static_cast<std::string>(file());
         str += static_cast<std::string>(rank());
         return str;
     }
 
-    constexpr underlying internal() const { return sq; }
-    constexpr int index() const { return static_cast<int>(sq); }
+    [[nodiscard]] constexpr underlying internal() const noexcept { return sq; }
+    [[nodiscard]] constexpr int index() const noexcept { return static_cast<int>(sq); }
 
-    constexpr File file() const { return File(index() & 7); }
-    constexpr Rank rank() const { return Rank(index() >> 3); }
+    [[nodiscard]] constexpr File file() const noexcept { return File(index() & 7); }
+    [[nodiscard]] constexpr Rank rank() const noexcept { return Rank(index() >> 3); }
 
-    constexpr bool is_light() const {
+    [[nodiscard]] constexpr bool is_light() const noexcept {
         return (static_cast<std::int8_t>(sq) / 8 + static_cast<std::int8_t>(sq) % 8) % 2 == 0;
     }
-    constexpr bool is_dark() const { return !is_light(); }
+    [[nodiscard]] constexpr bool is_dark() const noexcept { return !is_light(); }
 
-    constexpr bool is_valid() const { return static_cast<std::int8_t>(sq) < 64; }
+    [[nodiscard]] constexpr bool is_valid() const noexcept { return static_cast<std::int8_t>(sq) < 64; }
 
-    constexpr static bool is_valid(Rank r, File f) {
+    [[nodiscard]] constexpr static bool is_valid(Rank r, File f) noexcept {
         return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
     }
 
-    static constexpr int distance(Square sq, Square sq2) {
+    [[nodiscard]] static constexpr int distance(Square sq, Square sq2) noexcept {
         return std::max(std::abs(sq.file() - sq2.file()), std::abs(sq.rank() - sq2.rank()));
     }
 
-    static constexpr int value_distance(Square sq, Square sq2) { return std::abs(sq.index() - sq2.index()); }
+    [[nodiscard]] static constexpr int value_distance(Square sq, Square sq2) noexcept {
+        return std::abs(sq.index() - sq2.index());
+    }
 
-    static constexpr bool same_color(Square sq, Square sq2) { return ((9 * (sq ^ sq2).index()) & 8) == 0; }
+    [[nodiscard]] static constexpr bool same_color(Square sq, Square sq2) noexcept {
+        return ((9 * (sq ^ sq2).index()) & 8) == 0;
+    }
 
-    static constexpr bool back_rank(Square sq, Color color) {
+    [[nodiscard]] static constexpr bool back_rank(Square sq, Color color) noexcept {
         if (color == Color::WHITE)
             return sq.rank() == Rank::RANK_1;
         else
@@ -193,7 +229,7 @@ class Square {
     }
 
     /// @brief Flips the square vertically.
-    constexpr Square flip() {
+    constexpr Square& flip() noexcept {
         sq = static_cast<underlying>(static_cast<int>(sq) ^ 56);
         return *this;
     }
@@ -201,13 +237,15 @@ class Square {
     /// @brief Conditionally flips the square vertically.
     /// @param c
     /// @return
-    constexpr Square relative_square(Color c) const { return Square(static_cast<int>(sq) ^ (c * 56)); }
+    [[nodiscard]] constexpr Square relative_square(Color c) const noexcept {
+        return Square(static_cast<int>(sq) ^ (c * 56));
+    }
 
-    constexpr int diagonal_of() const { return 7 + rank() - file(); }
+    [[nodiscard]] constexpr int diagonal_of() const noexcept { return 7 + rank() - file(); }
 
-    constexpr int antidiagonal_of() const { return rank() + file(); }
+    [[nodiscard]] constexpr int antidiagonal_of() const noexcept { return rank() + file(); }
 
-    constexpr Square ep_square() const {
+    [[nodiscard]] constexpr Square ep_square() const noexcept {
         assert(rank() == Rank::RANK_3     // capture
                || rank() == Rank::RANK_4  // push
                || rank() == Rank::RANK_5  // push
@@ -216,15 +254,15 @@ class Square {
         return Square(static_cast<int>(sq) ^ 8);
     }
 
-    static constexpr Square castling_king_square(bool is_king_side, Color c) {
+    [[nodiscard]] static constexpr Square castling_king_square(bool is_king_side, Color c) noexcept {
         return Square(is_king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1).relative_square(c);
     }
 
-    static constexpr Square castling_rook_square(bool is_king_side, Color c) {
+    [[nodiscard]] static constexpr Square castling_rook_square(bool is_king_side, Color c) noexcept {
         return Square(is_king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1).relative_square(c);
     }
 
-    static constexpr int max() { return 64; }
+    [[nodiscard]] static constexpr int max() noexcept { return 64; }
 
    private:
     underlying sq;

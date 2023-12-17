@@ -20,39 +20,41 @@ class Move {
     /// @param pt
     /// @return
     template <std::uint16_t MoveType = 0>
-    [[nodiscard]] static constexpr Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT) {
+    [[nodiscard]] static constexpr Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT) noexcept {
         return Move(MoveType + ((std::uint16_t(pt) - std::uint16_t(PieceType(PieceType::KNIGHT))) << 12) +
                     std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target.index()));
     }
 
     /// @brief Get the source square of the move.
     /// @return
-    [[nodiscard]] constexpr Square from() const { return static_cast<Square>((move_ >> 6) & 0x3F); }
+    [[nodiscard]] constexpr Square from() const noexcept { return static_cast<Square>((move_ >> 6) & 0x3F); }
 
     /// @brief Get the target square of the move.
     /// @return
-    [[nodiscard]] constexpr Square to() const { return static_cast<Square>(move_ & 0x3F); }
+    [[nodiscard]] constexpr Square to() const noexcept { return static_cast<Square>(move_ & 0x3F); }
 
     /// @brief Get the type of the move. Can be NORMAL, PROMOTION, ENPASSANT or CASTLING.
     /// @return
-    [[nodiscard]] constexpr std::uint16_t typeOf() const { return static_cast<std::uint16_t>(move_ & (3 << 14)); }
+    [[nodiscard]] constexpr std::uint16_t typeOf() const noexcept {
+        return static_cast<std::uint16_t>(move_ & (3 << 14));
+    }
 
     /// @brief Get the promotion piece of the move, should only be used if typeOf() returns
     /// PROMOTION.
     /// @return
-    [[nodiscard]] constexpr PieceType promotionType() const {
+    [[nodiscard]] constexpr PieceType promotionType() const noexcept {
         return static_cast<PieceType::underlying>(((move_ >> 12) & 3) + PieceType(PieceType::KNIGHT));
     }
 
     /// @brief Set the score for a move. Useful if you later want to sort the moves.
     /// @param score
-    constexpr void setScore(std::int16_t score) { score_ = score; }
+    constexpr void setScore(std::int16_t score) noexcept { score_ = score; }
 
-    [[nodiscard]] constexpr std::uint16_t move() const { return move_; }
-    [[nodiscard]] constexpr std::int16_t score() const { return score_; }
+    [[nodiscard]] constexpr std::uint16_t move() const noexcept { return move_; }
+    [[nodiscard]] constexpr std::int16_t score() const noexcept { return score_; }
 
-    bool operator==(const Move &rhs) const { return move_ == rhs.move_; }
-    bool operator!=(const Move &rhs) const { return move_ != rhs.move_; }
+    bool operator==(const Move &rhs) const noexcept { return move_ == rhs.move_; }
+    bool operator!=(const Move &rhs) const noexcept { return move_ != rhs.move_; }
 
     static constexpr std::uint16_t NO_MOVE   = 0;
     static constexpr std::uint16_t NULL_MOVE = 65;

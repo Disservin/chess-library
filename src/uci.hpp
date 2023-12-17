@@ -23,7 +23,7 @@ class uci {
     /// @param move
     /// @param chess960
     /// @return
-    [[nodiscard]] static std::string moveToUci(const Move &move, bool chess960 = false) {
+    [[nodiscard]] static std::string moveToUci(const Move &move, bool chess960 = false) noexcept(false) {
         std::stringstream ss;
 
         // Get the from and to squares
@@ -52,7 +52,7 @@ class uci {
     /// @param board
     /// @param uci
     /// @return
-    [[nodiscard]] static Move uciToMove(const Board &board, const std::string &uci) {
+    [[nodiscard]] static Move uciToMove(const Board &board, const std::string &uci) noexcept(false) {
         Square source   = Square(uci.substr(0, 2));
         Square target   = Square(uci.substr(2, 2));
         PieceType piece = board.at(source).type();
@@ -90,7 +90,7 @@ class uci {
     /// @param board
     /// @param move
     /// @return
-    [[nodiscard]] static std::string moveToSan(Board board, const Move &move) {
+    [[nodiscard]] static std::string moveToSan(Board board, const Move &move) noexcept(false) {
         std::string san;
         moveToRep<false>(board, move, san);
         return san;
@@ -100,7 +100,7 @@ class uci {
     /// @param board
     /// @param move
     /// @return
-    [[nodiscard]] static std::string moveToLan(Board board, const Move &move) {
+    [[nodiscard]] static std::string moveToLan(Board board, const Move &move) noexcept(false) {
         std::string lan;
         moveToRep<true>(board, move, lan);
         return lan;
