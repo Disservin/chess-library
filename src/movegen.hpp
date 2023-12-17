@@ -65,7 +65,7 @@ template <Color::underlying c>
     // check for bishop checks
     Bitboard bishop_attacks = attacks::bishop(sq, board.occ()) & (opp_bishop | opp_queen);
 
-    if (static_cast<bool>(bishop_attacks)) {
+    if (bishop_attacks) {
         const auto index = bishop_attacks.lsb();
 
         mask |= SQUARES_BETWEEN_BB[sq.index()][index] | Bitboard::fromSquare(index);
@@ -134,7 +134,7 @@ template <Color::underlying c>
     Bitboard bishop_attacks = attacks::bishop(sq, occ_enemy) & (opp_bishop | opp_queen);
     Bitboard pin_diag       = 0;
 
-    while (static_cast<bool>(bishop_attacks)) {
+    while (bishop_attacks) {
         const auto index = bishop_attacks.pop();
 
         const Bitboard possible_pin = SQUARES_BETWEEN_BB[sq.index()][index] | Bitboard::fromSquare(index);
@@ -167,17 +167,17 @@ template <Color::underlying c>
 
     Bitboard seen = attacks::pawnLeftAttacks<c>(pawns) | attacks::pawnRightAttacks<c>(pawns);
 
-    while (static_cast<bool>(knights)) {
+    while (knights) {
         const auto index = knights.pop();
         seen |= attacks::knight(index);
     }
 
-    while (static_cast<bool>(bishops)) {
+    while (bishops) {
         const auto index = bishops.pop();
         seen |= attacks::bishop(index, occ);
     }
 
-    while (static_cast<bool>(rooks)) {
+    while (rooks) {
         const auto index = rooks.pop();
         seen |= attacks::rook(index, occ);
     }
@@ -252,7 +252,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 
         // Skip capturing promotions if we are only generating quiet moves.
         // Generates at ALL and CAPTURE
-        while (mt != MoveGenType::QUIET && static_cast<bool>(promo_left)) {
+        while (mt != MoveGenType::QUIET && promo_left) {
             const auto index = promo_left.pop();
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::QUEEN));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::ROOK));
@@ -262,7 +262,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 
         // Skip capturing promotions if we are only generating quiet moves.
         // Generates at ALL and CAPTURE
-        while (mt != MoveGenType::QUIET && static_cast<bool>(promo_right)) {
+        while (mt != MoveGenType::QUIET && promo_right) {
             const auto index = promo_right.pop();
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::QUEEN));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::ROOK));
@@ -272,7 +272,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 
         // Skip quiet promotions if we are only generating captures.
         // Generates at ALL and QUIET
-        while (mt != MoveGenType::CAPTURE && static_cast<bool>(promo_push)) {
+        while (mt != MoveGenType::CAPTURE && promo_push) {
             const auto index = promo_push.pop();
             moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::QUEEN));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::ROOK));
@@ -285,22 +285,22 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
     l_pawns &= ~RANK_PROMO;
     r_pawns &= ~RANK_PROMO;
 
-    while (mt != MoveGenType::QUIET && static_cast<bool>(l_pawns)) {
+    while (mt != MoveGenType::QUIET && l_pawns) {
         const auto index = l_pawns.pop();
         moves.add(Move::make<Move::NORMAL>(index + DOWN_RIGHT, index));
     }
 
-    while (mt != MoveGenType::QUIET && static_cast<bool>(r_pawns)) {
+    while (mt != MoveGenType::QUIET && r_pawns) {
         const auto index = r_pawns.pop();
         moves.add(Move::make<Move::NORMAL>(index + DOWN_LEFT, index));
     }
 
-    while (mt != MoveGenType::CAPTURE && static_cast<bool>(single_push)) {
+    while (mt != MoveGenType::CAPTURE && single_push) {
         const auto index = single_push.pop();
         moves.add(Move::make<Move::NORMAL>(index + DOWN, index));
     }
 
-    while (mt != MoveGenType::CAPTURE && static_cast<bool>(double_push)) {
+    while (mt != MoveGenType::CAPTURE && double_push) {
         const auto index = double_push.pop();
         moves.add(Move::make<Move::NORMAL>(index + DOWN + DOWN, index));
     }
@@ -324,7 +324,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
         Bitboard epBB = attacks::pawn(~c, ep) & pawns_lr;
 
         // For one en passant square two pawns could potentially take there.
-        while (static_cast<bool>(epBB)) {
+        while (epBB) {
             const Square from = epBB.pop();
             const Square to   = ep;
 
@@ -332,8 +332,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
              If the pawn is pinned but the en passant square is not on the
              pin mask then the move is illegal.
             */
-            if (static_cast<bool>((Bitboard::fromSquare(from) & pin_d.getBits())) &&
-                !(pin_d & Bitboard::fromSquare(ep).getBits()))
+            if ((Bitboard::fromSquare(from) & pin_d.getBits()) && !(pin_d & Bitboard::fromSquare(ep).getBits()))
                 continue;
 
             const Bitboard connectingPawns = Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(from);
@@ -369,7 +368,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @return
 [[nodiscard]] inline Bitboard generateBishopMoves(Square sq, Bitboard pin_d, Bitboard occ_all) {
     // The Bishop is pinned diagonally thus can only move diagonally.
-    if (static_cast<bool>(pin_d & Bitboard::fromSquare(sq))) return attacks::bishop(sq, occ_all) & pin_d;
+    if (pin_d & Bitboard::fromSquare(sq)) return attacks::bishop(sq, occ_all) & pin_d;
     return attacks::bishop(sq, occ_all);
 }
 
@@ -381,7 +380,7 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 /// @return
 [[nodiscard]] inline Bitboard generateRookMoves(Square sq, Bitboard pin_hv, Bitboard occ_all) {
     // The Rook is pinned horizontally thus can only move horizontally.
-    if (static_cast<bool>(pin_hv & Bitboard::fromSquare(sq))) return attacks::rook(sq, occ_all) & pin_hv;
+    if (pin_hv & Bitboard::fromSquare(sq)) return attacks::rook(sq, occ_all) & pin_hv;
     return attacks::rook(sq, occ_all);
 }
 
@@ -395,9 +394,9 @@ void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitb
 [[nodiscard]] inline Bitboard generateQueenMoves(Square sq, Bitboard pin_d, Bitboard pin_hv, Bitboard occ_all) {
     Bitboard moves = 0ULL;
 
-    if (static_cast<bool>(pin_d & Bitboard::fromSquare(sq)))
+    if (pin_d & Bitboard::fromSquare(sq))
         moves |= attacks::bishop(sq, occ_all) & pin_d;
-    else if (static_cast<bool>(pin_hv & Bitboard::fromSquare(sq)))
+    else if (pin_hv & Bitboard::fromSquare(sq))
         moves |= attacks::rook(sq, occ_all) & pin_hv;
     else {
         moves |= attacks::rook(sq, occ_all);
@@ -464,10 +463,10 @@ template <Color::underlying c, MoveGenType mt>
 
 template <typename T>
 inline void whileBitboardAdd(Movelist &movelist, Bitboard mask, T func) {
-    while (static_cast<bool>(mask)) {
+    while (mask) {
         const Square from = mask.pop();
         auto moves        = func(from);
-        while (static_cast<bool>(moves)) {
+        while (moves) {
             const Square to = moves.pop();
             movelist.add(Move::make<Move::NORMAL>(from, to));
         }

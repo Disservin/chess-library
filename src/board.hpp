@@ -611,15 +611,13 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] bool isAttacked(Square square, Color color) const {
-        if (static_cast<bool>(attacks::pawn(~color, square) & pieces(PieceType::PAWN, color))) return true;
-        if (static_cast<bool>(attacks::knight(square) & pieces(PieceType::KNIGHT, color))) return true;
-        if (static_cast<bool>(attacks::king(square) & pieces(PieceType::KING, color))) return true;
+        if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
+        if (attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
+        if (attacks::king(square) & pieces(PieceType::KING, color)) return true;
 
-        if (static_cast<bool>(attacks::bishop(square, occ()) &
-                              (pieces(PieceType::BISHOP, color) | pieces(PieceType::QUEEN, color))))
+        if (attacks::bishop(square, occ()) & (pieces(PieceType::BISHOP, color) | pieces(PieceType::QUEEN, color)))
             return true;
-        if (static_cast<bool>(attacks::rook(square, occ()) &
-                              (pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color))))
+        if (attacks::rook(square, occ()) & (pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color)))
             return true;
         return false;
     }
@@ -631,8 +629,8 @@ class Board {
     /// @brief Checks if the given color has at least 1 piece thats not pawn and not king
     /// @return
     [[nodiscard]] bool hasNonPawnMaterial(Color color) const {
-        return static_cast<bool>((pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
-                                  pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color)));
+        return bool(pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
+                    pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color));
     }
 
     /// @brief Regenerates the zobrist hash key
