@@ -225,7 +225,7 @@ class Piece {
         }
     }
 
-    operator int() const noexcept { return static_cast<int>(piece); }
+    constexpr operator int() const noexcept { return static_cast<int>(piece); }
 
     [[nodiscard]] constexpr PieceType type() const noexcept {
         return static_cast<PieceType::underlying>(int(piece) % 6);

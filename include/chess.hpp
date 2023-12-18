@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.1
+VERSION: 0.6.2
 */
 
 #ifndef CHESS_HPP
@@ -42,6 +42,10 @@ VERSION: 0.6.1
 #include <algorithm>
 #include <iostream>
 #include <cassert>
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 
 #include <string_view>
@@ -285,7 +289,7 @@ class Square {
         return *this;
     }
 
-    [[nodiscard]] constexpr Square operator--(int) noexcept {
+    constexpr Square operator--(int) noexcept {
         Square tmp(*this);
         operator--();
         return tmp;
@@ -319,7 +323,7 @@ class Square {
         return std::max(std::abs(sq.file() - sq2.file()), std::abs(sq.rank() - sq2.rank()));
     }
 
-    [[nodiscard]] static constexpr int value_distance(Square sq, Square sq2) noexcept {
+    [[nodiscard]] static int value_distance(Square sq, Square sq2) noexcept {
         return std::abs(sq.index() - sq2.index());
     }
 
@@ -494,7 +498,12 @@ class Bitboard {
 
     [[nodiscard]] constexpr bool empty() const noexcept { return bits == 0; }
 
-    [[nodiscard]] constexpr int lsb() const noexcept {
+    [[nodiscard]]
+#if !defined(_MSC_VER)
+    constexpr
+#endif
+        int
+        lsb() const noexcept {
         assert(bits != 0);
 #if __cplusplus >= 202002L
         return std::countr_zero(bits);
@@ -511,7 +520,12 @@ class Bitboard {
 #endif
     }
 
-    [[nodiscard]] constexpr int msb() const noexcept {
+    [[nodiscard]]
+#if !defined(_MSC_VER)
+    constexpr
+#endif
+        int
+        msb() const noexcept {
         assert(bits != 0);
 
 #if __cplusplus >= 202002L
@@ -529,7 +543,12 @@ class Bitboard {
 #endif
     }
 
-    [[nodiscard]] constexpr int count() const noexcept {
+    [[nodiscard]]
+#if !defined(_MSC_VER)
+    constexpr
+#endif
+        int
+        count() const noexcept {
 #if __cplusplus >= 202002L
         return std::popcount(bits);
 #else
@@ -541,7 +560,12 @@ class Bitboard {
 #endif
     }
 
-    [[nodiscard]] constexpr std::uint8_t pop() noexcept {
+    [[nodiscard]]
+#if !defined(_MSC_VER)
+    constexpr
+#endif
+        std::uint8_t
+        pop() noexcept {
         assert(bits != 0);
         std::uint8_t index = lsb();
         bits &= bits - 1;
@@ -1021,7 +1045,7 @@ class Piece {
         }
     }
 
-    operator int() const noexcept { return static_cast<int>(piece); }
+    constexpr operator int() const noexcept { return static_cast<int>(piece); }
 
     [[nodiscard]] constexpr PieceType type() const noexcept {
         return static_cast<PieceType::underlying>(int(piece) % 6);
@@ -2499,7 +2523,7 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
     table_sq.shift = 64 - Bitboard(table_sq.mask).count();
 
     if (sq < 64 - 1) {
-        table[sq.index() + 1].attacks = table_sq.attacks + (1 << Bitboard(table_sq.mask).count());
+        table[sq.index() + 1].attacks = table_sq.attacks + (1ull << Bitboard(table_sq.mask).count());
     }
 
     do {

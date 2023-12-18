@@ -217,7 +217,7 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
     table_sq.shift = 64 - Bitboard(table_sq.mask).count();
 
     if (sq < 64 - 1) {
-        table[sq.index() + 1].attacks = table_sq.attacks + (1 << Bitboard(table_sq.mask).count());
+        table[sq.index() + 1].attacks = table_sq.attacks + (1ull << Bitboard(table_sq.mask).count());
     }
 
     do {
