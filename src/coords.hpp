@@ -179,7 +179,7 @@ class Square {
         return *this;
     }
 
-    [[nodiscard]] constexpr Square operator--(int) noexcept {
+    constexpr Square operator--(int) noexcept {
         Square tmp(*this);
         operator--();
         return tmp;
@@ -213,7 +213,7 @@ class Square {
         return std::max(std::abs(sq.file() - sq2.file()), std::abs(sq.rank() - sq2.rank()));
     }
 
-    [[nodiscard]] static constexpr int value_distance(Square sq, Square sq2) noexcept {
+    [[nodiscard]] static int value_distance(Square sq, Square sq2) noexcept {
         return std::abs(sq.index() - sq2.index());
     }
 

@@ -221,6 +221,8 @@ stl_headers = [
     "unordered_set",
     "utility",
     "vector",
+    "immintrin.h",
+    "intrin.h",
 ]
 
 

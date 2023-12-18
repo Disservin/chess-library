@@ -8,6 +8,10 @@
 #include <iostream>
 #include <cassert>
 
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
+
 #include "coords.hpp"
 
 namespace chess {
@@ -108,7 +112,12 @@ class Bitboard {
 
     [[nodiscard]] constexpr bool empty() const noexcept { return bits == 0; }
 
-    [[nodiscard]] constexpr int lsb() const noexcept {
+    [[nodiscard]]
+#if !defined(_MSC_VER)
+    constexpr
+#endif
+        int
+        lsb() const noexcept {
         assert(bits != 0);
 #if __cplusplus >= 202002L
         return std::countr_zero(bits);
@@ -125,7 +134,12 @@ class Bitboard {
 #endif
     }
 
-    [[nodiscard]] constexpr int msb() const noexcept {
+    [[nodiscard]]
+#if !defined(_MSC_VER)
+    constexpr
+#endif
+        int
+        msb() const noexcept {
         assert(bits != 0);
 
 #if __cplusplus >= 202002L
@@ -143,7 +157,12 @@ class Bitboard {
 #endif
     }
 
-    [[nodiscard]] constexpr int count() const noexcept {
+    [[nodiscard]]
+#if !defined(_MSC_VER)
+    constexpr
+#endif
+        int
+        count() const noexcept {
 #if __cplusplus >= 202002L
         return std::popcount(bits);
 #else
@@ -155,7 +174,12 @@ class Bitboard {
 #endif
     }
 
-    [[nodiscard]] constexpr std::uint8_t pop() noexcept {
+    [[nodiscard]]
+#if !defined(_MSC_VER)
+    constexpr
+#endif
+        std::uint8_t
+        pop() noexcept {
         assert(bits != 0);
         std::uint8_t index = lsb();
         bits &= bits - 1;
