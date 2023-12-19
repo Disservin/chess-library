@@ -69,6 +69,9 @@ The 3 other big chess libraries that I know of in C++ are:
 - UCI Chess Engine (~3.3k elo)
   https://github.com/rafid-dev/rice (old version)
 
+- Texel tuner for HCE engines
+  https://github.com/GediminasMasaitis/texel-tuner
+
 ### Benchmarks
 
 Tested on Ryzen 9 5950X:
