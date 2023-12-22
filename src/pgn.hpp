@@ -348,11 +348,11 @@ class StreamParser {
     Visitor *visitor = nullptr;
 
     // one time allocations
-    std::pair<LineBuffer, LineBuffer> header;
+    std::pair<LineBuffer, LineBuffer> header = {};
 
     // std::string move;
-    LineBuffer move;
-    LineBuffer comment;
+    LineBuffer move    = {};
+    LineBuffer comment = {};
 
     // buffer for the last two characters, cbuf[0] is the current character
     char c3 = '\0';
