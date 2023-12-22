@@ -348,7 +348,7 @@ class StreamParser {
     Visitor *visitor = nullptr;
 
     // one time allocations
-    std::pair<LineBuffer, LineBuffer> header = {};
+    std::pair<LineBuffer, LineBuffer> header = {LineBuffer{}, LineBuffer{}};
 
     // std::string move;
     LineBuffer move    = {};
