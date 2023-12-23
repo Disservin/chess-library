@@ -92,8 +92,8 @@ class Board {
 
    private:
     struct State {
-        CastlingRights castling;
         U64 hash;
+        CastlingRights castling;
         Square enpassant;
         uint8_t half_moves;
         Piece captured_piece;
