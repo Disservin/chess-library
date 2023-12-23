@@ -100,8 +100,8 @@ class Board {
 
         State(const U64 &hash, const CastlingRights &castling, const Square &enpassant, const uint8_t &half_moves,
               const Piece &captured_piece)
-            : castling(castling),
-              hash(hash),
+            : hash(hash),
+              castling(castling),
               enpassant(enpassant),
               half_moves(half_moves),
               captured_piece(captured_piece) {}
