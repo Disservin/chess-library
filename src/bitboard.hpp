@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#if __cplusplus >= 202002L
 #include <bit>
+#endif
 #include <string>
 #include <bitset>
 #include <algorithm>
