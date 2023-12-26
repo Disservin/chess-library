@@ -7,9 +7,9 @@ enum class MoveGenType : uint8_t { ALL, CAPTURE, QUIET };
 ```
 
 ```cpp
-namespace movegen {
+class movegen {
     template <MoveGenType mt>
-    void legalmoves(Movelist& movelist, const Board& board , int pieces = 63);
+    static void legalmoves(Movelist& movelist, const Board& board , int pieces = 63);
 }
 ```
 
