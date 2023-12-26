@@ -112,19 +112,19 @@ inline std::ostream& operator<<(std::ostream& os, const PieceType& pt) {
 class Piece {
    public:
     enum class underlying : std::uint8_t {
-        WHITEPAWN,
+        NONE,
+        WHITEPAWN = 1,
         WHITEKNIGHT,
         WHITEBISHOP,
         WHITEROOK,
         WHITEQUEEN,
         WHITEKING,
-        BLACKPAWN,
+        BLACKPAWN = 9,
         BLACKKNIGHT,
         BLACKBISHOP,
         BLACKROOK,
         BLACKQUEEN,
-        BLACKKING,
-        NONE
+        BLACKKING
     };
 
     constexpr Piece() : piece(underlying::NONE) {}
@@ -132,11 +132,13 @@ class Piece {
     constexpr Piece(PieceType type, Color color)
         : piece(color == Color::NONE      ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
-                                          : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
+                                          : static_cast<underlying>((static_cast<int>(color.internal()) << 3) |
+                                                                    (static_cast<int>(type.internal()) + 1))) {}
     constexpr Piece(Color color, PieceType type)
         : piece(color == Color::NONE      ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
-                                          : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
+                                          : static_cast<underlying>((static_cast<int>(color.internal()) << 3) |
+                                                                    (static_cast<int>(type.internal()) + 1))) {}
     constexpr Piece(std::string_view p) : piece(underlying::NONE) {
         switch (p.data()[0]) {
             case 'P':
@@ -225,17 +227,25 @@ class Piece {
         }
     }
 
-    constexpr operator int() const noexcept { return static_cast<int>(piece); }
+    /// @brief conversion to simple int indices for arrays, to avoid conversion use internal()
+    constexpr operator int() const noexcept {
+        if (piece == NONE) {
+            return 12;
+        }
+
+        return type() + 6 * static_cast<int>(color());
+    }
 
     [[nodiscard]] constexpr PieceType type() const noexcept {
-        return static_cast<PieceType::underlying>(int(piece) % 6);
+        return static_cast<PieceType::underlying>((static_cast<int>(piece) & 7) - 1);
     }
 
     [[nodiscard]] constexpr Color color() const noexcept {
         if (piece == NONE) {
             return Color::NONE;
         }
-        return static_cast<Color>(static_cast<int>(piece) / 6);
+
+        return static_cast<Color>(static_cast<int>(piece) >> 3);
     }
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return piece; }
