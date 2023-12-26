@@ -118,7 +118,7 @@ template <Color::underlying c>
     return atks & occupied;
 }
 
-/// @brief [Internal Usage] Slow function to calculate bishop attacks
+/// @brief Slow function to calculate bishop attacks
 /// @param sq
 /// @param occupied
 /// @return
@@ -157,7 +157,7 @@ template <Color::underlying c>
     return attacks;
 }
 
-/// @brief [Internal Usage] Slow function to calculate rook attacks
+/// @brief Slow function to calculate rook attacks
 /// @param sq
 /// @param occupied
 /// @return
@@ -196,7 +196,7 @@ template <Color::underlying c>
     return attacks;
 }
 
-/// @brief [Internal Usage] Initializes the magic bitboard tables for sliding pieces
+/// @brief Initializes the magic bitboard tables for sliding pieces
 /// @param sq
 /// @param table
 /// @param magic

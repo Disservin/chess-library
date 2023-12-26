@@ -30,7 +30,7 @@ inline auto movegen::init_squares_between() {
     return squares_between_bb;
 }
 
-/// @brief [Internal Usage] Generate the checkmask.
+/// @brief Generate the checkmask.
 /// Returns a bitboard where the attacker path between the king and enemy piece is set.
 /// @tparam c
 /// @param board
@@ -89,7 +89,7 @@ template <Color::underlying c>
     return mask;
 }
 
-/// @brief [Internal Usage] Generate the pin mask for horizontal and vertical pins.
+/// @brief Generate the pin mask for horizontal and vertical pins.
 /// Returns a bitboard where the ray between the king and the pinner is set.
 /// @tparam c
 /// @param board
@@ -115,7 +115,7 @@ template <Color::underlying c>
     return pin_hv;
 }
 
-/// @brief [Internal Usage] Generate the pin mask for diagonal pins.
+/// @brief Generate the pin mask for diagonal pins.
 /// Returns a bitboard where the ray between the king and the pinner is set.
 /// @tparam c
 /// @param board
@@ -142,7 +142,7 @@ template <Color::underlying c>
     return pin_diag;
 }
 
-/// @brief [Internal Usage] Returns the squares that are attacked by the enemy
+/// @brief Returns the squares that are attacked by the enemy
 /// @tparam c
 /// @param board
 /// @param enemy_empty
@@ -186,7 +186,7 @@ template <Color::underlying c>
     return seen;
 }
 
-/// @brief [Internal Usage] Generate pawn moves.
+/// @brief Generate pawn moves.
 /// @tparam c
 /// @tparam mt
 /// @param board
@@ -353,13 +353,13 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     }
 }
 
-/// @brief [Internal Usage] Generate knight moves.
+/// @brief Generate knight moves.
 /// @param sq
 /// @param movable
 /// @return
 [[nodiscard]] inline Bitboard movegen::generateKnightMoves(Square sq) { return attacks::knight(sq); }
 
-/// @brief [Internal Usage] Generate bishop moves.
+/// @brief Generate bishop moves.
 /// @param sq
 /// @param movable
 /// @param pin_d
@@ -371,7 +371,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     return attacks::bishop(sq, occ_all);
 }
 
-/// @brief [Internal Usage] Generate rook moves.
+/// @brief Generate rook moves.
 /// @param sq
 /// @param movable
 /// @param pin_hv
@@ -383,7 +383,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     return attacks::rook(sq, occ_all);
 }
 
-/// @brief [Internal Usage] Generate queen moves.
+/// @brief Generate queen moves.
 /// @param sq
 /// @param movable
 /// @param pin_d
@@ -406,7 +406,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     return moves;
 }
 
-/// @brief [Internal Usage] Generate king moves.
+/// @brief Generate king moves.
 /// @param sq
 /// @param _seen
 /// @param movable_square
@@ -415,7 +415,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     return attacks::king(sq) & movable_square & ~_seen;
 }
 
-/// @brief [Internal Usage] Generate castling moves.
+/// @brief Generate castling moves.
 /// @tparam c
 /// @tparam mt
 /// @param board
@@ -470,7 +470,7 @@ inline void movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func)
     }
 }
 
-/// @brief [Internal Usage] all legal moves for a position
+/// @brief all legal moves for a position
 /// @tparam c
 /// @tparam mt
 /// @param movelist

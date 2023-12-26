@@ -20,19 +20,19 @@ class attacks {
         U64 operator()(Bitboard b) const { return (((b & mask)).getBits() * magic) >> shift; }
     };
 
-    /// @brief [Internal Usage] Slow function to calculate bishop attacks
+    /// @brief Slow function to calculate bishop attacks
     /// @param sq
     /// @param occupied
     /// @return
     [[nodiscard]] static Bitboard bishopAttacks(Square sq, Bitboard occupied);
 
-    /// @brief [Internal Usage] Slow function to calculate rook attacks
+    /// @brief Slow function to calculate rook attacks
     /// @param sq
     /// @param occupied
     /// @return
     [[nodiscard]] static Bitboard rookAttacks(Square sq, Bitboard occupied);
 
-    /// @brief [Internal Usage] Initializes the magic bitboard tables for sliding pieces
+    /// @brief Initializes the magic bitboard tables for sliding pieces
     /// @param sq
     /// @param table
     /// @param magic
