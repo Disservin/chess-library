@@ -408,11 +408,11 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
 
 /// @brief Generate king moves.
 /// @param sq
-/// @param _seen
+/// @param seen
 /// @param movable_square
 /// @return
-[[nodiscard]] inline Bitboard movegen::generateKingMoves(Square sq, Bitboard _seen, Bitboard movable_square) {
-    return attacks::king(sq) & movable_square & ~_seen;
+[[nodiscard]] inline Bitboard movegen::generateKingMoves(Square sq, Bitboard seen, Bitboard movable_square) {
+    return attacks::king(sq) & movable_square & ~seen;
 }
 
 /// @brief Generate castling moves.
@@ -510,14 +510,14 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
         movable_square = ~occ_all;
 
     if (pieces & PieceGenType::KING) {
-        Bitboard _seen = seenSquares<~c>(board, opp_empty);
+        Bitboard seen = seenSquares<~c>(board, opp_empty);
 
         whileBitboardAdd(movelist, Bitboard::fromSquare(king_sq),
-                         [&](Square sq) { return generateKingMoves(sq, _seen, movable_square); });
+                         [&](Square sq) { return generateKingMoves(sq, seen, movable_square); });
 
         if (check_mask == constants::DEFAULT_CHECKMASK && Square::back_rank(king_sq, c) &&
             board.castlingRights().has(c)) {
-            Bitboard moves_bb = generateCastleMoves<c, mt>(board, king_sq, _seen, pin_hv);
+            Bitboard moves_bb = generateCastleMoves<c, mt>(board, king_sq, seen, pin_hv);
             while (moves_bb) {
                 Square to = moves_bb.pop();
                 movelist.add(Move::make<Move::CASTLING>(king_sq, to));

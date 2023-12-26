@@ -118,10 +118,10 @@ class movegen {
     [[nodiscard]] static Bitboard generateQueenMoves(Square sq, Bitboard pin_d, Bitboard pin_hv, Bitboard occ_all);
     /// @brief Generate king moves.
     /// @param sq
-    /// @param _seen
+    /// @param seen
     /// @param movable_square
     /// @return
-    [[nodiscard]] static Bitboard generateKingMoves(Square sq, Bitboard _seen, Bitboard movable_square);
+    [[nodiscard]] static Bitboard generateKingMoves(Square sq, Bitboard seen, Bitboard movable_square);
 
     /// @brief Generate castling moves.
     /// @tparam c
