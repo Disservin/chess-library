@@ -22,7 +22,7 @@ class Move {
     template <std::uint16_t MoveType = 0>
     [[nodiscard]] static constexpr Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT) noexcept {
         return Move(MoveType + ((std::uint16_t(pt) - std::uint16_t(PieceType(PieceType::KNIGHT))) << 12) +
-                    std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target.index()));
+                    std::uint16_t(std::uint16_t(source.index()) << 6) + std::uint16_t(target.index()));
     }
 
     /// @brief Get the source square of the move.

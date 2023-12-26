@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.10
+VERSION: 0.6.11
 */
 
 #ifndef CHESS_HPP
@@ -304,7 +304,6 @@ class Square {
         return str;
     }
 
-    [[nodiscard]] constexpr underlying internal() const noexcept { return sq; }
     [[nodiscard]] constexpr int index() const noexcept { return static_cast<int>(sq); }
 
     [[nodiscard]] constexpr File file() const noexcept { return File(index() & 7); }
@@ -1113,7 +1112,7 @@ class Move {
     template <std::uint16_t MoveType = 0>
     [[nodiscard]] static constexpr Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT) noexcept {
         return Move(MoveType + ((std::uint16_t(pt) - std::uint16_t(PieceType(PieceType::KNIGHT))) << 12) +
-                    std::uint16_t(std::uint16_t(source.internal()) << 6) + std::uint16_t(target.index()));
+                    std::uint16_t(std::uint16_t(source.index()) << 6) + std::uint16_t(target.index()));
     }
 
     /// @brief Get the source square of the move.

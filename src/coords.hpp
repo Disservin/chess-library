@@ -192,7 +192,6 @@ class Square {
         return str;
     }
 
-    [[nodiscard]] constexpr underlying internal() const noexcept { return sq; }
     [[nodiscard]] constexpr int index() const noexcept { return static_cast<int>(sq); }
 
     [[nodiscard]] constexpr File file() const noexcept { return File(index() & 7); }
