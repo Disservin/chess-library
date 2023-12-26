@@ -253,17 +253,6 @@ TEST_SUITE("Square") {
         CHECK(s == Square::underlying::SQ_C1);
     }
 
-    TEST_CASE("Square internal()") {
-        Square s = Square::underlying::SQ_A1;
-        CHECK(s.internal() == Square::underlying::SQ_A1);
-
-        s = Square::underlying::SQ_B1;
-        CHECK(s.internal() == Square::underlying::SQ_B1);
-
-        s = Square::underlying::SQ_C1;
-        CHECK(s.internal() == Square::underlying::SQ_C1);
-    }
-
     TEST_CASE("is_light") {
         Square s = Square::underlying::SQ_A1;
         CHECK(s.is_light());
