@@ -48,6 +48,8 @@ class Bitboard {
         return str;
     }
 
+    constexpr Bitboard operator&&(bool rhs) const noexcept { return Bitboard(bits && rhs); }
+
     constexpr Bitboard operator&(std::uint64_t rhs) const noexcept { return Bitboard(bits & rhs); }
     constexpr Bitboard operator|(std::uint64_t rhs) const noexcept { return Bitboard(bits | rhs); }
     constexpr Bitboard operator^(std::uint64_t rhs) const noexcept { return Bitboard(bits ^ rhs); }
