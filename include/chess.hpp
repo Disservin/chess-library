@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.25
+VERSION: 0.6.26
 */
 
 #ifndef CHESS_HPP
@@ -434,6 +434,8 @@ class Bitboard {
         }
         return str;
     }
+
+    constexpr Bitboard operator&&(bool rhs) const noexcept { return Bitboard(bits && rhs); }
 
     constexpr Bitboard operator&(std::uint64_t rhs) const noexcept { return Bitboard(bits & rhs); }
     constexpr Bitboard operator|(std::uint64_t rhs) const noexcept { return Bitboard(bits | rhs); }
@@ -2962,15 +2964,17 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
 
     const Square ep = board.enpassantSq();
     if (mt != MoveGenType::QUIET && ep != Square::underlying::NO_SQ) {
-        const Square epPawn    = ep + DOWN;
-        const Bitboard ep_mask = Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(ep);
+        assert((ep.rank() == Rank::RANK_3 && board.sideToMove() == Color::BLACK) ||
+               (ep.rank() == Rank::RANK_6 && board.sideToMove() == Color::WHITE));
+
+        const Square epPawn = ep + DOWN;
 
         /*
          In case the en passant square and the enemy pawn
          that just moved are not on the checkmask
          en passant is not available.
         */
-        if ((checkmask & ep_mask) == Bitboard(0)) return;
+        if ((checkmask & (Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(ep))) == Bitboard(0)) return;
 
         const Square kSQ              = board.kingSq(c);
         const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & attacks::MASK_RANK[epPawn.rank()].getBits();
@@ -2987,9 +2991,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
              If the pawn is pinned but the en passant square is not on the
              pin mask then the move is illegal.
             */
-            if (static_cast<bool>((Bitboard::fromSquare(from) & pin_d.getBits())) &&
-                !(pin_d & Bitboard::fromSquare(ep).getBits()))
-                continue;
+            if ((Bitboard::fromSquare(from) & pin_d) && !(pin_d & Bitboard::fromSquare(ep))) continue;
 
             const Bitboard connectingPawns = Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(from);
 
