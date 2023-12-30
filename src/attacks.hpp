@@ -238,7 +238,7 @@ inline void attacks::initAttacks() {
     }
 }
 
-static auto init = []() {
+inline auto init = []() {
     attacks::initAttacks();
     return 0;
 }();
