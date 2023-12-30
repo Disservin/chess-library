@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.12
+VERSION: 0.6.13
 */
 
 #ifndef CHESS_HPP
@@ -2660,7 +2660,7 @@ inline void attacks::initAttacks() {
     }
 }
 
-static auto init = []() {
+inline auto init = []() {
     attacks::initAttacks();
     return 0;
 }();
