@@ -11,7 +11,6 @@ struct Movelist {
     int size() const;
     bool empty() const;
     void clear();
-    void sort(int index = 0);
 
     Move operator[](int index) const;
     Move& operator[](int index);
