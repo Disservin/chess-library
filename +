@@ -226,6 +226,7 @@ class attacks {
     /// @param board
     /// @param color Attacker Color
     /// @param square Attacked Square
+    /// @param occupied
     /// @return
     [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
 

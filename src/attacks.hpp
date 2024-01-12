@@ -1,14 +1,14 @@
 #pragma once
 
-#include <cstdint>
 #include <cassert>
+#include <cstdint>
 #include <functional>
 
-#include "piece.hpp"
-#include "coords.hpp"
-#include "bitboard.hpp"
 #include "attacks_fwd.hpp"
+#include "bitboard.hpp"
 #include "board.hpp"
+#include "coords.hpp"
+#include "piece.hpp"
 
 namespace chess {
 
@@ -102,11 +102,10 @@ template <Color::underlying c>
 /// @param board
 /// @param color Attacker Color
 /// @param square Attacked Square
-/// @param occupied
 /// @return
-[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square,
-                                                 Bitboard occupied) noexcept {
-    const auto queens = board.pieces(PieceType::QUEEN, color);
+[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square) noexcept {
+    const auto queens   = board.pieces(PieceType::QUEEN, color);
+    const auto occupied = board.occ();
 
     // using the fact that if we can attack PieceType from square, they can attack us back
     auto atks = (pawn(~color, square) & board.pieces(PieceType::PAWN, color));

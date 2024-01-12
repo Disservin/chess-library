@@ -22,8 +22,7 @@ namespace attacks {
     /// @param board
     /// @param color Attacker Color
     /// @param square Attacked Square
-    /// @param occupied
     /// @return
-    Bitboard attackers(const Board &board, Color color, Square square, Bitboard occupied);
+    Bitboard attackers(const Board &board, Color color, Square square);
 }
 ```
