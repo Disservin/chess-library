@@ -25,11 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-<<<<<<< HEAD
-VERSION: 0.6.13
-=======
 VERSION: 0.6.14
->>>>>>> 5a010a6 (refactor)
 */
 
 #ifndef CHESS_HPP
@@ -816,14 +812,8 @@ class attacks {
     /// @param board
     /// @param color Attacker Color
     /// @param square Attacked Square
-<<<<<<< HEAD
-    /// @param occupied
-    /// @return
-    [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square, Bitboard occupied) noexcept;
-=======
     /// @return
     [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
->>>>>>> 5a010a6 (refactor)
 
     /// @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at
     /// startup.
@@ -833,14 +823,11 @@ class attacks {
 
 
 
-<<<<<<< HEAD
-=======
 #include <array>
 #include <vector>
 #include <charconv>
 
 
->>>>>>> 5a010a6 (refactor)
 
 
 namespace chess {
@@ -1097,14 +1084,6 @@ class Piece {
 };
 }  // namespace chess
 
-<<<<<<< HEAD
-#include <array>
-#include <vector>
-#include <charconv>
-
-
-=======
->>>>>>> 5a010a6 (refactor)
 
 namespace chess::constants {
 
@@ -2544,18 +2523,10 @@ template <Color::underlying c>
 /// @param board
 /// @param color Attacker Color
 /// @param square Attacked Square
-<<<<<<< HEAD
-/// @param occupied
-/// @return
-[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square,
-                                                 Bitboard occupied) noexcept {
-    const auto queens = board.pieces(PieceType::QUEEN, color);
-=======
 /// @return
 [[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square) noexcept {
     const auto queens   = board.pieces(PieceType::QUEEN, color);
     const auto occupied = board.occ();
->>>>>>> 5a010a6 (refactor)
 
     // using the fact that if we can attack PieceType from square, they can attack us back
     auto atks = (pawn(~color, square) & board.pieces(PieceType::PAWN, color));
@@ -4071,8 +4042,4 @@ class uci {
 };
 }  // namespace chess
 
-<<<<<<< HEAD
 #endif
-=======
-#endif
->>>>>>> 5a010a6 (refactor)
