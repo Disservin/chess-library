@@ -226,9 +226,8 @@ class attacks {
     /// @param board
     /// @param color Attacker Color
     /// @param square Attacked Square
-    /// @param occupied
     /// @return
-    [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square, Bitboard occupied) noexcept;
+    [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
 
     /// @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at
     /// startup.

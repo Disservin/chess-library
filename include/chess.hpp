@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.13
+VERSION: 0.6.14
 */
 
 #ifndef CHESS_HPP
@@ -812,9 +812,8 @@ class attacks {
     /// @param board
     /// @param color Attacker Color
     /// @param square Attacked Square
-    /// @param occupied
     /// @return
-    [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square, Bitboard occupied) noexcept;
+    [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
 
     /// @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at
     /// startup.
@@ -822,6 +821,11 @@ class attacks {
 };
 }  // namespace chess
 
+
+
+#include <array>
+#include <vector>
+#include <charconv>
 
 
 
@@ -1079,11 +1083,6 @@ class Piece {
     underlying piece;
 };
 }  // namespace chess
-
-#include <array>
-#include <vector>
-#include <charconv>
-
 
 
 namespace chess::constants {
@@ -2524,11 +2523,10 @@ template <Color::underlying c>
 /// @param board
 /// @param color Attacker Color
 /// @param square Attacked Square
-/// @param occupied
 /// @return
-[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square,
-                                                 Bitboard occupied) noexcept {
-    const auto queens = board.pieces(PieceType::QUEEN, color);
+[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square) noexcept {
+    const auto queens   = board.pieces(PieceType::QUEEN, color);
+    const auto occupied = board.occ();
 
     // using the fact that if we can attack PieceType from square, they can attack us back
     auto atks = (pawn(~color, square) & board.pieces(PieceType::PAWN, color));
