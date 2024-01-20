@@ -25,15 +25,18 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.14
+VERSION: 0.6.15
 */
 
 #ifndef CHESS_HPP
 #define CHESS_HPP
 
 
+#include <cassert>
 #include <cstdint>
 #include <functional>
+
+
 
 
 #if __cplusplus >= 202002L
@@ -43,7 +46,6 @@ VERSION: 0.6.14
 #include <bitset>
 #include <algorithm>
 #include <iostream>
-#include <cassert>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -820,8 +822,6 @@ class attacks {
     static inline void initAttacks();
 };
 }  // namespace chess
-
-
 
 #include <array>
 #include <vector>
@@ -3465,34 +3465,8 @@ class StreamParser {
 
     void processHeader() {
         stream_buffer.loop([this](char c) {
-            // skip carriage return
-            // if (c == '\r') {
-            //     return false;
-            // }
-
-            // if (c == '"') {
-            //     reading_value = !reading_value;
-            // } else if (c == '\n') {
-            //     reading_key   = false;
-            //     reading_value = false;
-            //     in_header     = false;
-            //     line_start    = true;
-
-            //     if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
-
-            //     header.first.clear();
-            //     header.second.clear();
-
-            //     return true;
-            // } else if (reading_key && c == ' ') {
-            //     reading_key = false;
-            // } else if (reading_key) {
-            //     header.first += c;
-            // } else if (reading_value) {
-            //     header.second += c;
-            // }
-
             switch (c) {
+                    // skip carriage return
                 case '\r':
                     break;
                 case '"':
