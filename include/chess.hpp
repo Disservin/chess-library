@@ -3658,6 +3658,7 @@ class StreamParser {
 };
 }  // namespace chess::pgn
 
+
 #include <sstream>
 #include <utility>
 
@@ -3779,7 +3780,9 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
-        const auto info          = parseSanInfo<PEDANTIC>(san);
+        SanMoveInformation info;
+
+        parseSanInfo<PEDANTIC>(info, san);
         constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
 
         moves.clear();
@@ -3878,9 +3881,7 @@ class uci {
     };
 
     template <bool PEDANTIC = false>
-    static SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
-        SanMoveInformation info;
-
+    static void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcept(false) {
         if constexpr (PEDANTIC) {
             if (san.length() < 2) {
                 throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
@@ -3907,7 +3908,7 @@ class uci {
 
         if (san[0] == 'O' || san[0] == '0') {
             parse_castle(san, info, san[0]);
-            return info;
+            return;
         } else if (isFile(san[0])) {
             index--;
             info.piece = PieceType::PAWN;
@@ -4011,7 +4012,7 @@ class uci {
             info.from = Square(info.from_file, info.from_rank);
         }
 
-        return info;
+        return;
     }
 
     template <bool LAN = false>
