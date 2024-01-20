@@ -3466,7 +3466,7 @@ class StreamParser {
     void processHeader() {
         stream_buffer.loop([this](char c) {
             switch (c) {
-                    // skip carriage return
+                // skip carriage return
                 case '\r':
                     break;
                 case '"':
