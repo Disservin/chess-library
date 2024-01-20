@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.15
+VERSION: 0.6.17
 */
 
 #ifndef CHESS_HPP
@@ -3509,6 +3509,8 @@ class StreamParser {
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
             switch (c) {
+                case '\r':
+                    break;
                 case '\n':
                     if (line_start) {
                         pgn_end = true;
@@ -3533,7 +3535,17 @@ class StreamParser {
                     }
 
                     break;
+                /*
+                The second kind starts with a left brace character and continues to the next right brace
+                character.
+                Brace comments do not nest; a left brace character appearing in a brace comment loses its
+                special meaning and is ignored. A semicolon appearing inside of a brace comment loses its
+                special meaning and is ignored. Braces appearing inside of a semicolon comments lose their
+                special meaning and are ignored.
+                */
                 case '{':
+                    stream_buffer.getNextByte();
+
                     stream_buffer.loop([this](char c) {
                         if (c == '}') {
                             callVisitorMoveFunction();
@@ -3549,7 +3561,6 @@ class StreamParser {
                     stream_buffer.moveBack();
 
                     break;
-
                 default:
                     cbuf[2] = cbuf[1];
                     cbuf[1] = cbuf[0];
