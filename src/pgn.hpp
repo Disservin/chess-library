@@ -86,6 +86,14 @@ class StreamParser {
             }
         }
 
+        void remove_suffix(std::size_t n) {
+            if (n > index_) {
+                throw std::runtime_error("LineBuffer underflow");
+            }
+
+            index_ -= n;
+        }
+
        private:
         // PGN lines are limited to 255 characters
         static constexpr int N      = 255;
@@ -229,34 +237,43 @@ class StreamParser {
 
     void processHeader() {
         stream_buffer.loop([this](char c) {
-            switch (c) {
-                // skip carriage return
-                case '\r':
-                    break;
-                case '"':
-                    reading_value = !reading_value;
-                    break;
-                case '\n':
-                    reading_key   = false;
-                    reading_value = false;
-                    in_header     = false;
-                    line_start    = true;
-
-                    if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
-
-                    header.first.clear();
-                    header.second.clear();
-
-                    return true;
-                default:
-                    if (reading_key && c == ' ') {
-                        reading_key = false;
-                    } else if (reading_key) {
-                        header.first += c;
-                    } else if (reading_value) {
-                        header.second += c;
-                    }
+            // skip carriage return
+            if (c == '\r') {
+                return false;
             }
+
+            // end of key
+            if (c == ' ') {
+                // skip whitespace and "
+                stream_buffer.getNextByte();
+                stream_buffer.getNextByte();
+
+                // read until end of line
+                stream_buffer.loop([this](char c) {
+                    if (c == '\n') {
+                        in_header  = false;
+                        line_start = true;
+
+                        header.second.remove_suffix(2);
+
+                        if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
+
+                        header.first.clear();
+                        header.second.clear();
+
+                        return true;
+                    }
+
+                    header.second += c;
+                    return false;
+                });
+
+                stream_buffer.moveBack();
+
+                return true;
+            }
+
+            header.first += c;
 
             return false;
         });
@@ -382,8 +399,6 @@ class StreamParser {
             }
 
             line_start = false;
-
-            reading_key = true;
 
             has_head = true;
 
