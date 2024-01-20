@@ -350,11 +350,6 @@ class StreamParser {
     }
 
     void processNextByte(char c) {
-        // save the last three characters across different buffers
-        cbuf[2] = cbuf[1];
-        cbuf[1] = cbuf[0];
-        cbuf[0] = c;
-
         // skip carriage return
         if (c == '\r') {
             return;

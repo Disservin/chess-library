@@ -3498,16 +3498,97 @@ class StreamParser {
         });
     }
 
-    void processNextByte(char c) {
-        // save the last three characters across different buffers
-        cbuf[2] = cbuf[1];
-        cbuf[1] = cbuf[0];
-        cbuf[0] = c;
+    void processBody() {
+        stream_buffer.loop([this](char c) {
+            cbuf[2] = cbuf[1];
+            cbuf[1] = cbuf[0];
+            cbuf[0] = c;
 
+            // skip carriage return
+            // if (c == '\r') {
+            //     return false;
+            // }
+
+            // PGN End
+            if (line_start && in_body && c == '\n') {
+                // buffer_index = i + 1;
+                pgn_end = true;
+
+                visitor->endPgn();
+                visitor->skipPgn(false);
+
+                reset_trackers();
+                return true;
+            }
+
+            // set line_start to true, since the next char will be first on
+            // a new line
+            if (c == '\n') {
+                line_start = true;
+            }
+
+            // make sure that the line_start is turned off again
+            if (line_start && c != '\n') {
+                line_start = false;
+            }
+
+            // whitespace while reading a move means that we have finished reading the move
+            if (c == '\n') {
+                reading_move    = false;
+                reading_comment = false;
+
+                callVisitorMoveFunction();
+            } else if (reading_move && c == ' ') {
+                reading_move = false;
+            } else if (reading_move) {
+                move += c;
+            } else if (!reading_comment && c == '{') {
+                reading_comment = true;
+            } else if (reading_comment && c == '}') {
+                reading_comment = false;
+
+                callVisitorMoveFunction();
+            }
+            // we are in empty space, when we encounter now a file or a piece, or a castling
+            // move, we try to parse the move
+            else if (!reading_move && !reading_comment) {
+                // skip variations
+                if (c == '(') {
+                    stream_buffer.readUntilMatchingDelimiter('(', ')');
+                    return false;
+                }
+
+                // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
+                // 0-0(-0) castling moves from results like 1-0 and 0-1.
+                if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
+                    callVisitorMoveFunction();
+
+                    reading_move = true;
+
+                    if (c == '0') {
+                        move += '0';
+                        move += '-';
+                        move += '0';
+                    } else {
+                        move += c;
+                    }
+                } else {
+                    // no new move detected
+                    return false;
+                }
+            } else if (reading_comment) {
+                comment += c;
+            }
+
+            return false;
+        });
+    }
+
+    void processNextByte(char c) {
         // skip carriage return
-        if (c == '\r') {
-            return;
-        }
+        // if (c == '\r') {
+        //     return;
+        // }
 
         // PGN Header
         if (line_start && c == '[') {
@@ -3580,53 +3661,12 @@ class StreamParser {
         // then read the second move in the group. After that a move_number will follow again.
         // @TODO implement like processHeader()
         if (in_body) {
-            // whitespace while reading a move means that we have finished reading the move
-            if (c == '\n') {
-                reading_move    = false;
-                reading_comment = false;
+            processBody();
 
-                callVisitorMoveFunction();
-            } else if (reading_move && c == ' ') {
-                reading_move = false;
-            } else if (reading_move) {
-                move += c;
-            } else if (!reading_comment && c == '{') {
-                reading_comment = true;
-            } else if (reading_comment && c == '}') {
-                reading_comment = false;
-
-                callVisitorMoveFunction();
-            }
-            // we are in empty space, when we encounter now a file or a piece, or a castling
-            // move, we try to parse the move
-            else if (!reading_move && !reading_comment) {
-                // skip variations
-                if (c == '(') {
-                    stream_buffer.readUntilMatchingDelimiter('(', ')');
-                    return;
-                }
-
-                // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
-                // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
-                    callVisitorMoveFunction();
-
-                    reading_move = true;
-
-                    if (c == '0') {
-                        move += '0';
-                        move += '-';
-                        move += '0';
-                    } else {
-                        move += c;
-                    }
-                } else {
-                    // no new move detected
-                    return;
-                }
-            } else if (reading_comment) {
-                comment += c;
-            }
+            // processBody() will move the buffer_index to the next character
+            // so we need to undo this
+            stream_buffer.moveBack();
+            return;
         }
     }
 
