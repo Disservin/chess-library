@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.15
+VERSION: 0.6.16
 */
 
 #ifndef CHESS_HPP
@@ -3314,13 +3314,11 @@ class StreamParser {
         std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
 
         void operator+=(char c) {
-            // if (index_ < N) {
-            //     buffer_[index_++] = c;
-            // } else {
-            //     throw std::runtime_error("LineBuffer overflow");
-            // }
-
-            buffer_[index_++] = c;
+            if (index_ < N) {
+                buffer_[index_++] = c;
+            } else {
+                throw std::runtime_error("LineBuffer overflow");
+            }
         }
 
        private:
