@@ -124,15 +124,19 @@ class StreamParser {
             int stack = 1;
 
             while (true) {
-                const auto ret = getNextByte();
+                if (buffer_index_ == bytes_read_) {
+                    const auto ret = fill();
 
-                if (!ret.has_value()) {
-                    return false;
+                    if (!ret.has_value() || !*ret) {
+                        return false;
+                    }
                 }
 
-                if (*ret == open_delim) {
+                const auto c = buffer_[buffer_index_++];
+
+                if (c == open_delim) {
                     stack++;
-                } else if (*ret == close_delim) {
+                } else if (c == close_delim) {
                     if (stack == 0) {
                         // Mismatched closing delimiter
                         return false;
@@ -151,15 +155,6 @@ class StreamParser {
         }
 
        private:
-        std::optional<char> getNextByte() {
-            if (buffer_index_ == bytes_read_) {
-                const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
-            }
-
-            return buffer_[buffer_index_++];
-        }
-
         std::optional<bool> fill() {
             if (!stream_.good()) return std::nullopt;
 
