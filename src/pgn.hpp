@@ -230,6 +230,11 @@ class StreamParser {
 
     void processHeader() {
         stream_buffer.loop([this](char c) {
+            // skip carriage return
+            if (c == '\r') {
+                return false;
+            }
+
             if (c == '"') {
                 reading_value = !reading_value;
             } else if (c == '\n') {
