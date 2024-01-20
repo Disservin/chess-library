@@ -1,7 +1,7 @@
-#include <memory>
-#include <string_view>
 #include <cassert>
 #include <fstream>
+#include <memory>
+#include <string_view>
 
 #include "../src/include.hpp"
 #include "doctest/doctest.hpp"
@@ -25,7 +25,15 @@ class MyVisitor : public pgn::Visitor {
         assert(end_count_ == game_count_ - 1);
     }
 
-    void move(std::string_view, std::string_view) { count_++; }
+    void move(std::string_view move, std::string_view comment) {
+        count_++;
+
+        if (comment.size() > 0) {
+            comments_.push_back(std::string(comment));
+        }
+
+        moves_.push_back(std::string(move));
+    }
 
     void endPgn() { end_count_++; }
 
@@ -33,8 +41,13 @@ class MyVisitor : public pgn::Visitor {
     int gameCount() const { return game_count_; }
     int endCount() const { return end_count_; }
     int moveStartCount() const { return move_start_count_; }
+    auto comments() const { return comments_; }
+    auto moves() const { return moves_; }
 
    private:
+    std::vector<std::string> comments_;
+    std::vector<std::string> moves_;
+
     int end_count_        = 0;
     int game_count_       = 0;
     int count_            = 0;
@@ -54,6 +67,18 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->gameCount() == 1);
         CHECK(vis->endCount() == 1);
         CHECK(vis->moveStartCount() == 1);
+
+        CHECK(vis->moves()[0] == "Bg2");
+        CHECK(vis->comments()[0] == "+1.55/16 0.70s");
+
+        CHECK(vis->moves()[1] == "O-O");
+        CHECK(vis->comments()[1] == "-1.36/18 0.78s");
+
+        CHECK(vis->moves()[2] == "O-O");
+        CHECK(vis->comments()[2] == "+1.84/16 0.42s");
+
+        CHECK(vis->moves()[3] == "a5");
+        CHECK(vis->comments()[3] == "-1.30/16 0.16s");
     }
 
     TEST_CASE("Corrupted PGN") {
