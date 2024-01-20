@@ -341,6 +341,7 @@ class StreamParser {
         // {move_number} {move} {comment} {move} {comment} {move_number} ...
         // So we need to skip the move_number then start reading the move, then save the comment
         // then read the second move in the group. After that a move_number will follow again.
+        // @TODO implement like processHeader()
         if (in_body) {
             // whitespace while reading a move means that we have finished reading the move
             if (c == '\n') {
