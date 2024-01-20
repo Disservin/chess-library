@@ -476,29 +476,6 @@ class StreamParser {
             return;
         }
 
-        // PGN End
-        if (line_start && in_body && c == '\n') {
-            // buffer_index = i + 1;
-            pgn_end = true;
-
-            visitor->endPgn();
-            visitor->skipPgn(false);
-
-            reset_trackers();
-            return;
-        }
-
-        // set line_start to true, since the next char will be first on
-        // a new line
-        if (c == '\n') {
-            line_start = true;
-        }
-
-        // make sure that the line_start is turned off again
-        if (line_start && c != '\n') {
-            line_start = false;
-        }
-
         // Pgn are build up in the following way.
         // {move_number} {move} {comment} {move} {comment} {move_number} ...
         // So we need to skip the move_number then start reading the move, then save the comment
