@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.18
+VERSION: 0.6.19
 */
 
 #ifndef CHESS_HPP
@@ -3355,15 +3355,23 @@ class StreamParser {
                     }
                 }
 
-                if constexpr (std::is_same_v<decltype(f(buffer_[buffer_index_])), bool>) {
-                    const auto res = f(buffer_[buffer_index_]);
+                const auto c = buffer_[buffer_index_];
+
+                // skip carriage return
+                if (c == '\r') {
+                    buffer_index_++;
+                    continue;
+                }
+
+                if constexpr (std::is_same_v<decltype(f(c)), bool>) {
+                    const auto res = f(c);
 
                     if (res) {
                         buffer_index_++;
                         return;
                     }
                 } else {
-                    f(buffer_[buffer_index_]);
+                    f(c);
                 }
 
                 buffer_index_++;
@@ -3453,10 +3461,6 @@ class StreamParser {
 
         in_header = false;
         in_body   = false;
-
-        // Header
-        reading_key   = false;
-        reading_value = false;
     }
 
     bool isLetter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
@@ -3472,11 +3476,6 @@ class StreamParser {
 
     void processHeader() {
         stream_buffer.loop([this](char c) {
-            // skip carriage return
-            if (c == '\r') {
-                return false;
-            }
-
             // end of key
             if (c == ' ') {
                 // skip whitespace and "
@@ -3526,8 +3525,6 @@ class StreamParser {
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
             switch (c) {
-                case '\r':
-                    break;
                 case '\n':
                     if (line_start) {
                         pgn_end = true;
@@ -3620,11 +3617,6 @@ class StreamParser {
     }
 
     void processNextByte(char c) {
-        // skip carriage return
-        if (c == '\r') {
-            return;
-        }
-
         // PGN Header
         if (line_start && c == '[') {
             if (pgn_end) {
@@ -3693,10 +3685,6 @@ class StreamParser {
 
     bool has_head = false;
     bool has_body = false;
-
-    // Header
-    bool reading_key   = false;
-    bool reading_value = false;
 
     bool pgn_end = true;
 };
