@@ -265,84 +265,163 @@ class StreamParser {
 
     void processBody() {
         stream_buffer.loop([this](char c) {
+            // skip carriage return
+            // if (c == '\r') {
+            //     return false;
+            // }
+
+            // cbuf[2] = cbuf[1];
+            // cbuf[1] = cbuf[0];
+            // cbuf[0] = c;
+
+            // // PGN End
+            // if (line_start && c == '\n') {
+            //     // buffer_index = i + 1;
+            //     pgn_end = true;
+
+            //     visitor->endPgn();
+            //     visitor->skipPgn(false);
+
+            //     reset_trackers();
+            //     return true;
+            // }
+
+            // // set line_start to true, since the next char will be first on
+            // // a new line
+            // if (c == '\n') {
+            //     line_start = true;
+            // }
+
+            // // make sure that the line_start is turned off again
+            // if (line_start && c != '\n') {
+            //     line_start = false;
+            // }
+
+            // // whitespace while reading a move means that we have finished reading the move
+            // if (c == '\n') {
+            //     reading_move    = false;
+            //     reading_comment = false;
+
+            //     callVisitorMoveFunction();
+            // } else if (reading_move && c == ' ') {
+            //     reading_move = false;
+            // } else if (reading_move) {
+            //     move += c;
+            // } else if (!reading_comment && c == '{') {
+            //     reading_comment = true;
+            // } else if (reading_comment && c == '}') {
+            //     reading_comment = false;
+
+            //     callVisitorMoveFunction();
+            // }
+            // // we are in empty space, when we encounter now a file or a piece, or a castling
+            // // move, we try to parse the move
+            // else if (!reading_move && !reading_comment) {
+            //     // skip variations
+            //     if (c == '(') {
+            //         stream_buffer.readUntilMatchingDelimiter('(', ')');
+            //         return false;
+            //     }
+
+            //     // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
+            //     // 0-0(-0) castling moves from results like 1-0 and 0-1.
+            //     if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
+            //         callVisitorMoveFunction();
+
+            //         reading_move = true;
+
+            //         if (c == '0') {
+            //             move += '0';
+            //             move += '-';
+            //             move += '0';
+            //         } else {
+            //             move += c;
+            //         }
+            //     } else {
+            //         // no new move detected
+            //         return false;
+            //     }
+            // } else if (reading_comment) {
+            //     comment += c;
+            // }
+
             cbuf[2] = cbuf[1];
             cbuf[1] = cbuf[0];
             cbuf[0] = c;
-
-            // skip carriage return
-            if (c == '\r') {
-                return false;
-            }
-
-            // PGN End
-            if (line_start && in_body && c == '\n') {
-                // buffer_index = i + 1;
-                pgn_end = true;
-
-                visitor->endPgn();
-                visitor->skipPgn(false);
-
-                reset_trackers();
-                return true;
-            }
-
-            // set line_start to true, since the next char will be first on
-            // a new line
-            if (c == '\n') {
-                line_start = true;
-            }
 
             // make sure that the line_start is turned off again
             if (line_start && c != '\n') {
                 line_start = false;
             }
 
-            // whitespace while reading a move means that we have finished reading the move
-            if (c == '\n') {
-                reading_move    = false;
-                reading_comment = false;
+            switch (c) {
+                case '\r':
+                    break;
+                case '\n':
+                    if (line_start) {
+                        pgn_end = true;
 
-                callVisitorMoveFunction();
-            } else if (reading_move && c == ' ') {
-                reading_move = false;
-            } else if (reading_move) {
-                move += c;
-            } else if (!reading_comment && c == '{') {
-                reading_comment = true;
-            } else if (reading_comment && c == '}') {
-                reading_comment = false;
+                        visitor->endPgn();
+                        visitor->skipPgn(false);
 
-                callVisitorMoveFunction();
-            }
-            // we are in empty space, when we encounter now a file or a piece, or a castling
-            // move, we try to parse the move
-            else if (!reading_move && !reading_comment) {
-                // skip variations
-                if (c == '(') {
-                    stream_buffer.readUntilMatchingDelimiter('(', ')');
-                    return false;
-                }
-
-                // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
-                // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
-                    callVisitorMoveFunction();
-
-                    reading_move = true;
-
-                    if (c == '0') {
-                        move += '0';
-                        move += '-';
-                        move += '0';
-                    } else {
-                        move += c;
+                        reset_trackers();
+                        return true;
                     }
-                } else {
-                    // no new move detected
-                    return false;
-                }
-            } else if (reading_comment) {
-                comment += c;
+
+                    line_start = true;
+
+                    reading_move    = false;
+                    reading_comment = false;
+
+                    callVisitorMoveFunction();
+                    break;
+                case ' ':
+                    if (reading_move) {
+                        reading_move = false;
+                    }
+                    break;
+                case '{':
+                    if (!reading_comment) {
+                        reading_comment = true;
+                    }
+                    break;
+                case '}':
+                    if (reading_comment) {
+                        reading_comment = false;
+
+                        callVisitorMoveFunction();
+                    }
+                    break;
+                default:
+                    if (reading_move) {
+                        move += c;
+                    } else if (!reading_move && !reading_comment) {
+                        // skip variations
+                        if (c == '(') {
+                            stream_buffer.readUntilMatchingDelimiter('(', ')');
+                            return false;
+                        }
+
+                        // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
+                        // 0-0(-0) castling moves from results like 1-0 and 0-1.
+                        if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
+                            callVisitorMoveFunction();
+
+                            reading_move = true;
+
+                            if (c == '0') {
+                                move += '0';
+                                move += '-';
+                                move += '0';
+                            } else {
+                                move += c;
+                            }
+                        }
+                    } else if (reading_comment) {
+                        comment += c;
+                    }
+
+                    break;
             }
 
             return false;
