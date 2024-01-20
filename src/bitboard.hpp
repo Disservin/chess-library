@@ -4,11 +4,11 @@
 #if __cplusplus >= 202002L
 #include <bit>
 #endif
-#include <algorithm>
-#include <bitset>
-#include <cassert>
-#include <iostream>
 #include <string>
+#include <bitset>
+#include <algorithm>
+#include <iostream>
+#include <cassert>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -189,8 +189,6 @@ class Bitboard {
     }
 
     [[nodiscard]] constexpr std::uint64_t getBits() const noexcept { return bits; }
-
-    static constexpr Bitboard all() noexcept { return Bitboard(0xFFFFFFFFFFFFFFFFULL); }
 
     friend std::ostream& operator<<(std::ostream& os, const Bitboard& bb);
 
