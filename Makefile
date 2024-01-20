@@ -33,6 +33,7 @@ default:
 	$(CXX) $(NATIVE) $(CXXFLAGS) -g3 -fno-omit-frame-pointer ./tests/*.cpp -o chess-library-tests $(LDFLAGS)
 
 showcase:
+	make shl
 	$(CXX) $(NATIVE) $(CXXFLAGS) -g3 -fno-omit-frame-pointer ./example/main.cpp -o chess-library-example $(LDFLAGS)
 
 shl:

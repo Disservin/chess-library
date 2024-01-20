@@ -52,9 +52,7 @@ class StreamParser {
     void readGames(Visitor &vis) {
         visitor = &vis;
 
-        stream_buffer.loop([this](char c) {
-            // processNextByte(c);
-        });
+        stream_buffer.loop([this](char c) { processNextByte(c); });
 
         if (!pgn_end && has_body) {
             pgn_end = true;
@@ -215,9 +213,9 @@ class StreamParser {
 
     void processNextByte(const char c) {
         // save the last three characters across different buffers
-        c3 = c2;
-        c2 = c1;
-        c1 = c;
+        cbuf[2] = cbuf[1];
+        cbuf[1] = cbuf[0];
+        cbuf[0] = c;
 
         // skip carriage return
         if (c == '\r') {
@@ -335,7 +333,7 @@ class StreamParser {
 
                 // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
                 // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                if (isLetter(c) || (c == '0' && c2 == '-' && c3 == '0')) {
+                if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
                     callVisitorMoveFunction();
 
                     reading_move = true;
@@ -369,9 +367,7 @@ class StreamParser {
     LineBuffer comment = {};
 
     // buffer for the last two characters, cbuf[0] is the current character
-    char c3 = '\0';
-    char c2 = '\0';
-    char c1 = '\0';
+    std::array<char, 3> cbuf = {'\0', '\0', '\0'};
 
     // State
 
