@@ -3418,7 +3418,14 @@ class StreamParser {
             return buffer_[buffer_index_++];
         }
 
-        char current() const noexcept { return buffer_[buffer_index_]; }
+        std::optional<char> current() {
+            if (buffer_index_ == bytes_read_) {
+                const auto ret = fill();
+                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_]) : std::nullopt;
+            }
+
+            return buffer_[buffer_index_];
+        }
 
        private:
         std::istream &stream_;
@@ -3524,7 +3531,10 @@ class StreamParser {
 
             // processHeader() will move the buffer_index to the next character
             // so we need to set c to the current character
-            c = stream_buffer.current();
+            const auto new_current = stream_buffer.current();
+
+            if (!new_current.has_value()) return;
+            c = *new_current;
 
             goto start;
         }
