@@ -181,13 +181,10 @@ class StreamParser {
             return buffer_[buffer_index_++];
         }
 
-        std::optional<char> current() {
-            if (buffer_index_ == bytes_read_) {
-                const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_]) : std::nullopt;
+        void moveBack() {
+            if (buffer_index_ > 0) {
+                buffer_index_--;
             }
-
-            return buffer_[buffer_index_];
         }
 
        private:
@@ -265,8 +262,6 @@ class StreamParser {
         cbuf[1] = cbuf[0];
         cbuf[0] = c;
 
-    start:
-
         // skip carriage return
         if (c == '\r') {
             return;
@@ -293,13 +288,9 @@ class StreamParser {
             processHeader();
 
             // processHeader() will move the buffer_index to the next character
-            // so we need to set c to the current character
-            const auto new_current = stream_buffer.current();
-
-            if (!new_current.has_value()) return;
-            c = *new_current;
-
-            goto start;
+            // so we need to undo this
+            stream_buffer.moveBack();
+            return;
         }
 
         // PGN Moves Start
