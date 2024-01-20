@@ -260,7 +260,7 @@ class uci {
 
         if (san[0] == 'O' || san[0] == '0') {
             parse_castle(san, info, san[0]);
-            return;
+            return info;
         } else if (isFile(san[0])) {
             index--;
             info.piece = PieceType::PAWN;
@@ -364,7 +364,7 @@ class uci {
             info.from = Square(info.from_file, info.from_rank);
         }
 
-        return;
+        return info;
     }
 
     template <bool LAN = false>

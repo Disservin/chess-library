@@ -39,11 +39,11 @@ VERSION: 0.6.14
 #if __cplusplus >= 202002L
 #include <bit>
 #endif
-#include <string>
-#include <bitset>
 #include <algorithm>
-#include <iostream>
+#include <bitset>
 #include <cassert>
+#include <iostream>
+#include <string>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -574,6 +574,8 @@ class Bitboard {
     }
 
     [[nodiscard]] constexpr std::uint64_t getBits() const noexcept { return bits; }
+
+    static constexpr Bitboard all() noexcept { return Bitboard(0xFFFFFFFFFFFFFFFFULL); }
 
     friend std::ostream& operator<<(std::ostream& os, const Bitboard& bb);
 
@@ -1251,7 +1253,8 @@ class movegen {
     template <MoveGenType mt = MoveGenType::ALL>
     void static legalmoves(Movelist &movelist, const Board &board,
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
-                                        PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+                                        PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING,
+                           Bitboard to_mask = Bitboard::all());
 
    private:
     static auto init_squares_between();
@@ -1367,7 +1370,7 @@ class movegen {
     /// @param movelist
     /// @param board
     template <Color::underlying c, MoveGenType mt>
-    static void legalmoves(Movelist &movelist, const Board &board, int pieces);
+    static void legalmoves(Movelist &movelist, const Board &board, int pieces, Bitboard to_mask);
 };
 
 }  // namespace chess
@@ -3133,38 +3136,35 @@ inline void movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func)
 /// @param movelist
 /// @param board
 template <Color::underlying c, movegen::MoveGenType mt>
-inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
+inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces, Bitboard to_mask) {
     /*
      The size of the movelist might not
      be 0! This is done on purpose since it enables
      you to append new move types to any movelist.
     */
-    auto king_sq = board.kingSq(c);
-
+    auto king_sq     = board.kingSq(c);
     int double_check = 0;
 
-    Bitboard occ_us  = board.us(c);
-    Bitboard occ_opp = board.us(~c);
-    Bitboard occ_all = occ_us | occ_opp;
-
+    Bitboard occ_us    = board.us(c);
+    Bitboard occ_opp   = board.us(~c);
+    Bitboard occ_all   = occ_us | occ_opp;
     Bitboard opp_empty = ~occ_us;
 
     Bitboard check_mask = checkMask<c>(board, king_sq, double_check);
     Bitboard pin_hv     = pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
-    Bitboard pin_d      = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
 
     assert(double_check <= 2);
 
     // Moves have to be on the checkmask
-    Bitboard movable_square;
+    Bitboard movable_square = ~occ_all;  // QUIET moves
 
     // Slider, Knights and King moves can only go to enemy or empty squares.
     if (mt == MoveGenType::ALL)
         movable_square = opp_empty;
     else if (mt == MoveGenType::CAPTURE)
         movable_square = occ_opp;
-    else  // QUIET moves
-        movable_square = ~occ_all;
+
+    movable_square &= to_mask;
 
     if (pieces & PieceGenType::KING) {
         Bitboard seen = seenSquares<~c>(board, opp_empty);
@@ -3181,6 +3181,8 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
             }
         }
     }
+
+    Bitboard pin_d = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
 
     movable_square &= check_mask;
 
@@ -3225,22 +3227,22 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
 }
 
 template <movegen::MoveGenType mt>
-inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
+inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces, Bitboard to_mask) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt>(movelist, board, pieces);
+        legalmoves<Color::WHITE, mt>(movelist, board, pieces, to_mask);
     else
-        legalmoves<Color::BLACK, mt>(movelist, board, pieces);
+        legalmoves<Color::BLACK, mt>(movelist, board, pieces, to_mask);
 }
 
 inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = movegen::init_squares_between();
 
 }  // namespace chess
 
+#include <istream>
 #include <optional>
 #include <stdexcept>
-#include <istream>
 
 namespace chess::pgn {
 
@@ -3287,34 +3289,28 @@ class StreamParser {
     void readGames(Visitor &vis) {
         visitor = &vis;
 
-        while (true) {
-            const auto c = stream_buffer.get();
+        stream_buffer.loop([this](char c) {
+            // processNextByte(c);
+        });
 
-            if (!c.has_value()) {
-                if (!pgn_end && has_body) {
-                    pgn_end = true;
+        if (!pgn_end && has_body) {
+            pgn_end = true;
 
-                    callVisitorMoveFunction();
+            callVisitorMoveFunction();
 
-                    visitor->endPgn();
-                    visitor->skipPgn(false);
-                }
-
-                return;
-            }
-
-            processNextByte(*c);
+            visitor->endPgn();
+            visitor->skipPgn(false);
         }
     }
 
    private:
     class LineBuffer {
        public:
-        bool empty() const { return index_ == 0; }
+        bool empty() const noexcept { return index_ == 0; }
 
-        void clear() { index_ = 0; }
+        void clear() noexcept { index_ = 0; }
 
-        std::string_view get() const { return std::string_view(buffer_.data(), index_); }
+        std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
 
         void operator+=(char c) {
             if (index_ < N) {
@@ -3333,30 +3329,30 @@ class StreamParser {
 
     class StreamBuffer {
        private:
-        static constexpr std::size_t N = 512;
+        static constexpr std::size_t N = 1024;
         using BufferType               = std::array<char, N * N>;
 
        public:
         StreamBuffer(std::istream &stream) : stream_(stream) {}
 
-        std::optional<char> get() {
-            if (buffer_index_ == bytes_read_) {
-                const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
+        template <typename FUNC>
+        void loop(FUNC f) {
+            const auto ret = fill();
+            if (!ret.has_value() || !*ret) {
+                return;
             }
 
-            return buffer_[buffer_index_++];
-        }
+            while (true) {
+                if (buffer_index_ == bytes_read_) {
+                    const auto ret = fill();
 
-        std::optional<bool> fill() {
-            if (!stream_.good()) return std::nullopt;
+                    if (!ret.has_value() || !*ret) {
+                        return;
+                    }
+                }
 
-            buffer_index_ = 0;
-
-            stream_.read(buffer_.data(), N * N);
-            bytes_read_ = stream_.gcount();
-
-            return std::optional<bool>(bytes_read_ > 0);
+                f(buffer_[buffer_index_++]);
+            }
         }
 
         /// @brief Assume that the current character is already the opening_delim
@@ -3367,7 +3363,7 @@ class StreamParser {
             int stack = 1;
 
             while (true) {
-                const auto ret = get();
+                const auto ret = getNextByte();
 
                 if (!ret.has_value()) {
                     return false;
@@ -3394,6 +3390,26 @@ class StreamParser {
         }
 
        private:
+        std::optional<char> getNextByte() {
+            if (buffer_index_ == bytes_read_) {
+                const auto ret = fill();
+                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
+            }
+
+            return buffer_[buffer_index_++];
+        }
+
+        std::optional<bool> fill() {
+            if (!stream_.good()) return std::nullopt;
+
+            buffer_index_ = 0;
+
+            stream_.read(buffer_.data(), N * N);
+            bytes_read_ = stream_.gcount();
+
+            return std::optional<bool>(bytes_read_ > 0);
+        }
+
         std::istream &stream_;
         BufferType buffer_;
         std::streamsize bytes_read_   = 0;
@@ -3616,7 +3632,6 @@ class StreamParser {
 };
 }  // namespace chess::pgn
 
-
 #include <sstream>
 #include <utility>
 
@@ -3738,9 +3753,7 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
-        SanMoveInformation info;
-
-        parseSanInfo<PEDANTIC>(info, san);
+        const auto info          = parseSanInfo<PEDANTIC>(info, san);
         constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
 
         moves.clear();
@@ -3839,7 +3852,9 @@ class uci {
     };
 
     template <bool PEDANTIC = false>
-    static void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcept(false) {
+    static SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
+        SanMoveInformation info;
+
         if constexpr (PEDANTIC) {
             if (san.length() < 2) {
                 throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
@@ -3866,7 +3881,7 @@ class uci {
 
         if (san[0] == 'O' || san[0] == '0') {
             parse_castle(san, info, san[0]);
-            return;
+            return info;
         } else if (isFile(san[0])) {
             index--;
             info.piece = PieceType::PAWN;
@@ -3970,7 +3985,7 @@ class uci {
             info.from = Square(info.from_file, info.from_rank);
         }
 
-        return;
+        return info;
     }
 
     template <bool LAN = false>

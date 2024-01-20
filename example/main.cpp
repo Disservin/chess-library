@@ -25,8 +25,8 @@ class MyVisitor : public pgn::Visitor {
 };
 
 int main(int argc, char const *argv[]) {
-    const auto file  = "..\\..\\..\\lichess_db_standard_rated_2014-01.pgn";
-    auto file_stream = std::ifstream(file);
+    const auto file  = "../../../lichess_db_standard_rated_2017-03.pgn";
+    auto file_stream = std::ifstream(file, std::ios::binary);
 
     auto vis = std::make_unique<MyVisitor>();
 

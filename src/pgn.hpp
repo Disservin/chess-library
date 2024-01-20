@@ -2,10 +2,10 @@
 
 #include <array>
 #include <iostream>
+#include <istream>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
-#include <istream>
 
 namespace chess::pgn {
 
@@ -52,34 +52,28 @@ class StreamParser {
     void readGames(Visitor &vis) {
         visitor = &vis;
 
-        while (true) {
-            const auto c = stream_buffer.get();
+        stream_buffer.loop([this](char c) {
+            // processNextByte(c);
+        });
 
-            if (!c.has_value()) {
-                if (!pgn_end && has_body) {
-                    pgn_end = true;
+        if (!pgn_end && has_body) {
+            pgn_end = true;
 
-                    callVisitorMoveFunction();
+            callVisitorMoveFunction();
 
-                    visitor->endPgn();
-                    visitor->skipPgn(false);
-                }
-
-                return;
-            }
-
-            processNextByte(*c);
+            visitor->endPgn();
+            visitor->skipPgn(false);
         }
     }
 
    private:
     class LineBuffer {
        public:
-        bool empty() const { return index_ == 0; }
+        bool empty() const noexcept { return index_ == 0; }
 
-        void clear() { index_ = 0; }
+        void clear() noexcept { index_ = 0; }
 
-        std::string_view get() const { return std::string_view(buffer_.data(), index_); }
+        std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
 
         void operator+=(char c) {
             if (index_ < N) {
@@ -98,30 +92,30 @@ class StreamParser {
 
     class StreamBuffer {
        private:
-        static constexpr std::size_t N = 512;
+        static constexpr std::size_t N = 1024;
         using BufferType               = std::array<char, N * N>;
 
        public:
         StreamBuffer(std::istream &stream) : stream_(stream) {}
 
-        std::optional<char> get() {
-            if (buffer_index_ == bytes_read_) {
-                const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
+        template <typename FUNC>
+        void loop(FUNC f) {
+            const auto ret = fill();
+            if (!ret.has_value() || !*ret) {
+                return;
             }
 
-            return buffer_[buffer_index_++];
-        }
+            while (true) {
+                if (buffer_index_ == bytes_read_) {
+                    const auto ret = fill();
 
-        std::optional<bool> fill() {
-            if (!stream_.good()) return std::nullopt;
+                    if (!ret.has_value() || !*ret) {
+                        return;
+                    }
+                }
 
-            buffer_index_ = 0;
-
-            stream_.read(buffer_.data(), N * N);
-            bytes_read_ = stream_.gcount();
-
-            return std::optional<bool>(bytes_read_ > 0);
+                f(buffer_[buffer_index_++]);
+            }
         }
 
         /// @brief Assume that the current character is already the opening_delim
@@ -132,7 +126,7 @@ class StreamParser {
             int stack = 1;
 
             while (true) {
-                const auto ret = get();
+                const auto ret = getNextByte();
 
                 if (!ret.has_value()) {
                     return false;
@@ -159,6 +153,26 @@ class StreamParser {
         }
 
        private:
+        std::optional<char> getNextByte() {
+            if (buffer_index_ == bytes_read_) {
+                const auto ret = fill();
+                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
+            }
+
+            return buffer_[buffer_index_++];
+        }
+
+        std::optional<bool> fill() {
+            if (!stream_.good()) return std::nullopt;
+
+            buffer_index_ = 0;
+
+            stream_.read(buffer_.data(), N * N);
+            bytes_read_ = stream_.gcount();
+
+            return std::optional<bool>(bytes_read_ > 0);
+        }
+
         std::istream &stream_;
         BufferType buffer_;
         std::streamsize bytes_read_   = 0;
