@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.16
+VERSION: 0.6.15
 */
 
 #ifndef CHESS_HPP
@@ -3436,8 +3436,7 @@ class StreamParser {
         move.clear();
         comment.clear();
 
-        reading_move    = false;
-        reading_comment = false;
+        reading_move = false;
 
         line_start = true;
 
@@ -3510,8 +3509,6 @@ class StreamParser {
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
             switch (c) {
-                case '\r':
-                    break;
                 case '\n':
                     if (line_start) {
                         pgn_end = true;
@@ -3525,8 +3522,7 @@ class StreamParser {
 
                     line_start = true;
 
-                    reading_move    = false;
-                    reading_comment = false;
+                    reading_move = false;
 
                     callVisitorMoveFunction();
                     break;
@@ -3538,18 +3534,22 @@ class StreamParser {
 
                     break;
                 case '{':
-                    if (!reading_comment) {
-                        reading_comment = true;
-                    }
+                    stream_buffer.loop([this](char c) {
+                        if (c == '}') {
+                            callVisitorMoveFunction();
+
+                            return true;
+                        }
+
+                        comment += c;
+
+                        return false;
+                    });
+
+                    stream_buffer.moveBack();
 
                     break;
-                case '}':
-                    if (reading_comment) {
-                        reading_comment = false;
 
-                        callVisitorMoveFunction();
-                    }
-                    break;
                 default:
                     cbuf[2] = cbuf[1];
                     cbuf[1] = cbuf[0];
@@ -3557,12 +3557,10 @@ class StreamParser {
 
                     if (reading_move) {
                         move += c;
-                    } else if (reading_comment) {
-                        comment += c;
                     }
                     // we are in empty space, when we encounter now a file or a piece, or a castling
                     // move, we try to parse the move
-                    else if (!reading_move && !reading_comment) {
+                    else if (!reading_move) {
                         // skip variations
                         if (c == '(') {
                             stream_buffer.readUntilMatchingDelimiter('(', ')');
@@ -3627,8 +3625,7 @@ class StreamParser {
         else if (line_start && has_head && !in_header && !in_body) {
             line_start = false;
 
-            reading_move    = false;
-            reading_comment = false;
+            reading_move = false;
 
             has_body = true;
 
@@ -3660,8 +3657,7 @@ class StreamParser {
 
     // State
 
-    bool reading_move    = false;
-    bool reading_comment = false;
+    bool reading_move = false;
 
     // True when at the start of a line
     bool line_start = true;
