@@ -251,8 +251,10 @@ class StreamParser {
                         in_header  = false;
                         line_start = true;
 
+                        // remove last "]
                         header.second.remove_suffix(2);
 
+                        // call visitor
                         if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
 
                         header.first.clear();
@@ -261,6 +263,7 @@ class StreamParser {
                         return true;
                     }
 
+                    // add to value
                     header.second += c;
                     return false;
                 });
@@ -270,6 +273,7 @@ class StreamParser {
                 return true;
             }
 
+            // add to key
             header.first += c;
 
             return false;
