@@ -2,10 +2,10 @@
 
 #include <array>
 #include <iostream>
+#include <istream>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
-#include <istream>
 
 namespace chess::pgn {
 
@@ -52,34 +52,31 @@ class StreamParser {
     void readGames(Visitor &vis) {
         visitor = &vis;
 
-        while (true) {
-            const auto c = stream_buffer.get();
+        const auto ret = stream_buffer.fill();
+        if (!ret.has_value() || !*ret) {
+            return;
+        }
 
-            if (!c.has_value()) {
-                if (!pgn_end && has_body) {
-                    pgn_end = true;
+        stream_buffer.loop([this](char c) { processNextByte(c); });
 
-                    callVisitorMoveFunction();
+        if (!pgn_end && has_body) {
+            pgn_end = true;
 
-                    visitor->endPgn();
-                    visitor->skipPgn(false);
-                }
+            callVisitorMoveFunction();
 
-                return;
-            }
-
-            processNextByte(*c);
+            visitor->endPgn();
+            visitor->skipPgn(false);
         }
     }
 
    private:
     class LineBuffer {
        public:
-        bool empty() const { return index_ == 0; }
+        bool empty() const noexcept { return index_ == 0; }
 
-        void clear() { index_ = 0; }
+        void clear() noexcept { index_ = 0; }
 
-        std::string_view get() const { return std::string_view(buffer_.data(), index_); }
+        std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
 
         void operator+=(char c) {
             if (index_ < N) {
@@ -98,30 +95,36 @@ class StreamParser {
 
     class StreamBuffer {
        private:
-        static constexpr std::size_t N = 512;
+        static constexpr std::size_t N = 1024;
         using BufferType               = std::array<char, N * N>;
 
        public:
         StreamBuffer(std::istream &stream) : stream_(stream) {}
 
-        std::optional<char> get() {
-            if (buffer_index_ == bytes_read_) {
-                const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
+        template <typename FUNC>
+        void loop(FUNC f) {
+            while (true) {
+                if (buffer_index_ >= bytes_read_) {
+                    const auto ret = fill();
+
+                    if (!ret.has_value() || !*ret) {
+                        return;
+                    }
+                }
+
+                if constexpr (std::is_same_v<decltype(f(buffer_[buffer_index_])), bool>) {
+                    const auto res = f(buffer_[buffer_index_]);
+
+                    if (res) {
+                        buffer_index_++;
+                        return;
+                    }
+                } else {
+                    f(buffer_[buffer_index_]);
+                }
+
+                buffer_index_++;
             }
-
-            return buffer_[buffer_index_++];
-        }
-
-        std::optional<bool> fill() {
-            if (!stream_.good()) return std::nullopt;
-
-            buffer_index_ = 0;
-
-            stream_.read(buffer_.data(), N * N);
-            bytes_read_ = stream_.gcount();
-
-            return std::optional<bool>(bytes_read_ > 0);
         }
 
         /// @brief Assume that the current character is already the opening_delim
@@ -129,10 +132,10 @@ class StreamParser {
         /// @param close_delim
         /// @return
         bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
-            int stack = 1;
+            int stack = 0;
 
             while (true) {
-                const auto ret = get();
+                const auto ret = getNextByte();
 
                 if (!ret.has_value()) {
                     return false;
@@ -156,6 +159,32 @@ class StreamParser {
 
             // If we reach this point, there are unmatched opening delimiters
             return false;
+        }
+
+        std::optional<bool> fill() {
+            if (!stream_.good()) return std::nullopt;
+
+            buffer_index_ = 0;
+
+            stream_.read(buffer_.data(), N * N);
+            bytes_read_ = stream_.gcount();
+
+            return std::optional<bool>(bytes_read_ > 0);
+        }
+
+        std::optional<char> getNextByte() {
+            if (buffer_index_ == bytes_read_) {
+                const auto ret = fill();
+                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
+            }
+
+            return buffer_[buffer_index_++];
+        }
+
+        void moveBack() {
+            if (buffer_index_ > 0) {
+                buffer_index_--;
+            }
         }
 
        private:
@@ -199,11 +228,46 @@ class StreamParser {
         }
     }
 
-    void processNextByte(const char c) {
+    void processHeader() {
+        stream_buffer.loop([this](char c) {
+            switch (c) {
+                // skip carriage return
+                case '\r':
+                    break;
+                case '"':
+                    reading_value = !reading_value;
+                    break;
+                case '\n':
+                    reading_key   = false;
+                    reading_value = false;
+                    in_header     = false;
+                    line_start    = true;
+
+                    if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
+
+                    header.first.clear();
+                    header.second.clear();
+
+                    return true;
+                default:
+                    if (reading_key && c == ' ') {
+                        reading_key = false;
+                    } else if (reading_key) {
+                        header.first += c;
+                    } else if (reading_value) {
+                        header.second += c;
+                    }
+            }
+
+            return false;
+        });
+    }
+
+    void processNextByte(char c) {
         // save the last three characters across different buffers
-        c3 = c2;
-        c2 = c1;
-        c1 = c;
+        cbuf[2] = cbuf[1];
+        cbuf[1] = cbuf[0];
+        cbuf[0] = c;
 
         // skip carriage return
         if (c == '\r') {
@@ -218,19 +282,28 @@ class StreamParser {
                 visitor->startPgn();
             }
 
+            line_start = false;
+
+            reading_key = true;
+
             has_head = true;
 
             in_header = true;
             in_body   = false;
 
-            reading_key = true;
+            if (!stream_buffer.getNextByte().has_value()) return;
+            processHeader();
 
-            line_start = false;
+            // processHeader() will move the buffer_index to the next character
+            // so we need to undo this
+            stream_buffer.moveBack();
             return;
         }
 
         // PGN Moves Start
         if (line_start && has_head && !in_header && !in_body) {
+            line_start = false;
+
             reading_move    = false;
             reading_comment = false;
 
@@ -238,8 +311,6 @@ class StreamParser {
 
             in_header = false;
             in_body   = true;
-
-            line_start = false;
 
             if (!visitor->skip()) visitor->startMoves();
             return;
@@ -268,31 +339,12 @@ class StreamParser {
             line_start = false;
         }
 
-        if (in_header) {
-            if (c == '"') {
-                reading_value = !reading_value;
-            } else if (reading_key && c == ' ') {
-                reading_key = false;
-            } else if (reading_key) {
-                header.first += c;
-            } else if (reading_value) {
-                header.second += c;
-            } else if (c == '\n') {
-                reading_key   = false;
-                reading_value = false;
-                in_header     = false;
-
-                if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
-
-                header.first.clear();
-                header.second.clear();
-            }
-        }
         // Pgn are build up in the following way.
         // {move_number} {move} {comment} {move} {comment} {move_number} ...
         // So we need to skip the move_number then start reading the move, then save the comment
         // then read the second move in the group. After that a move_number will follow again.
-        else if (in_body) {
+        // @TODO implement like processHeader()
+        if (in_body) {
             // whitespace while reading a move means that we have finished reading the move
             if (c == '\n') {
                 reading_move    = false;
@@ -321,7 +373,7 @@ class StreamParser {
 
                 // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
                 // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                if (isLetter(c) || (c == '0' && c2 == '-' && c3 == '0')) {
+                if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
                     callVisitorMoveFunction();
 
                     reading_move = true;
@@ -355,9 +407,7 @@ class StreamParser {
     LineBuffer comment = {};
 
     // buffer for the last two characters, cbuf[0] is the current character
-    char c3 = '\0';
-    char c2 = '\0';
-    char c1 = '\0';
+    std::array<char, 3> cbuf = {'\0', '\0', '\0'};
 
     // State
 

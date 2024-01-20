@@ -25,23 +25,23 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.14
+VERSION: 0.6.15
 */
 
 #ifndef CHESS_HPP
 #define CHESS_HPP
 
-#include "attacks_fwd.hpp"
 #include "attacks.hpp"
+#include "attacks_fwd.hpp"
 #include "bitboard.hpp"
-#include "board_fwd.hpp"
 #include "board.hpp"
+#include "board_fwd.hpp"
 #include "color.hpp"
 #include "constants.hpp"
 #include "coords.hpp"
 #include "move.hpp"
-#include "movegen_fwd.hpp"
 #include "movegen.hpp"
+#include "movegen_fwd.hpp"
 #include "movelist.hpp"
 #include "pgn.hpp"
 #include "piece.hpp"
