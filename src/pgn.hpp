@@ -231,30 +231,58 @@ class StreamParser {
     void processHeader() {
         stream_buffer.loop([this](char c) {
             // skip carriage return
-            if (c == '\r') {
-                return false;
-            }
+            // if (c == '\r') {
+            //     return false;
+            // }
 
-            if (c == '"') {
-                reading_value = !reading_value;
-            } else if (c == '\n') {
-                reading_key   = false;
-                reading_value = false;
-                in_header     = false;
-                line_start    = true;
+            // if (c == '"') {
+            //     reading_value = !reading_value;
+            // } else if (c == '\n') {
+            //     reading_key   = false;
+            //     reading_value = false;
+            //     in_header     = false;
+            //     line_start    = true;
 
-                if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
+            //     if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
 
-                header.first.clear();
-                header.second.clear();
+            //     header.first.clear();
+            //     header.second.clear();
 
-                return true;
-            } else if (reading_key && c == ' ') {
-                reading_key = false;
-            } else if (reading_key) {
-                header.first += c;
-            } else if (reading_value) {
-                header.second += c;
+            //     return true;
+            // } else if (reading_key && c == ' ') {
+            //     reading_key = false;
+            // } else if (reading_key) {
+            //     header.first += c;
+            // } else if (reading_value) {
+            //     header.second += c;
+            // }
+
+            switch (c) {
+                case '\r':
+                    break;
+                case '"':
+                    reading_value = !reading_value;
+                    break;
+                case '\n':
+                    reading_key   = false;
+                    reading_value = false;
+                    in_header     = false;
+                    line_start    = true;
+
+                    if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
+
+                    header.first.clear();
+                    header.second.clear();
+
+                    return true;
+                default:
+                    if (reading_key && c == ' ') {
+                        reading_key = false;
+                    } else if (reading_key) {
+                        header.first += c;
+                    } else if (reading_value) {
+                        header.second += c;
+                    }
             }
 
             return false;
