@@ -3,10 +3,10 @@
 #include <array>
 #include <cstdint>
 
-#include "coords.hpp"
 #include "attacks_fwd.hpp"
-#include "constants.hpp"
 #include "board.hpp"
+#include "constants.hpp"
+#include "coords.hpp"
 #include "movegen_fwd.hpp"
 
 namespace chess {
@@ -476,38 +476,35 @@ inline void movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func)
 /// @param movelist
 /// @param board
 template <Color::underlying c, movegen::MoveGenType mt>
-inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
+inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces, Bitboard to_mask) {
     /*
      The size of the movelist might not
      be 0! This is done on purpose since it enables
      you to append new move types to any movelist.
     */
-    auto king_sq = board.kingSq(c);
-
+    auto king_sq     = board.kingSq(c);
     int double_check = 0;
 
-    Bitboard occ_us  = board.us(c);
-    Bitboard occ_opp = board.us(~c);
-    Bitboard occ_all = occ_us | occ_opp;
-
+    Bitboard occ_us    = board.us(c);
+    Bitboard occ_opp   = board.us(~c);
+    Bitboard occ_all   = occ_us | occ_opp;
     Bitboard opp_empty = ~occ_us;
 
     Bitboard check_mask = checkMask<c>(board, king_sq, double_check);
     Bitboard pin_hv     = pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
-    Bitboard pin_d      = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
 
     assert(double_check <= 2);
 
     // Moves have to be on the checkmask
-    Bitboard movable_square;
+    Bitboard movable_square = ~occ_all;  // QUIET moves
 
     // Slider, Knights and King moves can only go to enemy or empty squares.
     if (mt == MoveGenType::ALL)
         movable_square = opp_empty;
     else if (mt == MoveGenType::CAPTURE)
         movable_square = occ_opp;
-    else  // QUIET moves
-        movable_square = ~occ_all;
+
+    movable_square &= to_mask;
 
     if (pieces & PieceGenType::KING) {
         Bitboard seen = seenSquares<~c>(board, opp_empty);
@@ -524,6 +521,8 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
             }
         }
     }
+
+    Bitboard pin_d = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
 
     movable_square &= check_mask;
 
@@ -568,13 +567,13 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
 }
 
 template <movegen::MoveGenType mt>
-inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
+inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces, Bitboard to_mask) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt>(movelist, board, pieces);
+        legalmoves<Color::WHITE, mt>(movelist, board, pieces, to_mask);
     else
-        legalmoves<Color::BLACK, mt>(movelist, board, pieces);
+        legalmoves<Color::BLACK, mt>(movelist, board, pieces, to_mask);
 }
 
 inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = movegen::init_squares_between();

@@ -1,15 +1,14 @@
 #pragma once
 
 #include <cassert>
-
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include "attacks_fwd.hpp"
 #include "attacks.hpp"
+#include "attacks_fwd.hpp"
 #include "bitboard.hpp"
 #include "board.hpp"
 #include "color.hpp"
@@ -133,9 +132,7 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
-        SanMoveInformation info;
-
-        parseSanInfo<PEDANTIC>(info, san);
+        const auto info          = parseSanInfo<PEDANTIC>(info, san);
         constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
 
         moves.clear();
@@ -234,7 +231,9 @@ class uci {
     };
 
     template <bool PEDANTIC = false>
-    static void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcept(false) {
+    static SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
+        SanMoveInformation info;
+
         if constexpr (PEDANTIC) {
             if (san.length() < 2) {
                 throw SanParseError("Failed to parse san. At step 0: " + std::string(san));

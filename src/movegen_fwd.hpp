@@ -27,7 +27,8 @@ class movegen {
     template <MoveGenType mt = MoveGenType::ALL>
     void static legalmoves(Movelist &movelist, const Board &board,
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
-                                        PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+                                        PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING,
+                           Bitboard to_mask = Bitboard::all());
 
    private:
     static auto init_squares_between();
@@ -143,7 +144,7 @@ class movegen {
     /// @param movelist
     /// @param board
     template <Color::underlying c, MoveGenType mt>
-    static void legalmoves(Movelist &movelist, const Board &board, int pieces);
+    static void legalmoves(Movelist &movelist, const Board &board, int pieces, Bitboard to_mask);
 };
 
 }  // namespace chess
