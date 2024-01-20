@@ -103,7 +103,7 @@ class StreamParser {
 
     class StreamBuffer {
        private:
-        static constexpr std::size_t N = 1024;
+        static constexpr std::size_t N = 512;
         using BufferType               = std::array<char, N * N>;
 
        public:
@@ -120,15 +120,23 @@ class StreamParser {
                     }
                 }
 
-                if constexpr (std::is_same_v<decltype(f(buffer_[buffer_index_])), bool>) {
-                    const auto res = f(buffer_[buffer_index_]);
+                const auto c = buffer_[buffer_index_];
+
+                // skip carriage return
+                if (c == '\r') {
+                    buffer_index_++;
+                    continue;
+                }
+
+                if constexpr (std::is_same_v<decltype(f(c)), bool>) {
+                    const auto res = f(c);
 
                     if (res) {
                         buffer_index_++;
                         return;
                     }
                 } else {
-                    f(buffer_[buffer_index_]);
+                    f(c);
                 }
 
                 buffer_index_++;
@@ -209,8 +217,6 @@ class StreamParser {
         move.clear();
         comment.clear();
 
-        reading_move = false;
-
         line_start = true;
 
         has_head = false;
@@ -218,10 +224,6 @@ class StreamParser {
 
         in_header = false;
         in_body   = false;
-
-        // Header
-        reading_key   = false;
-        reading_value = false;
     }
 
     bool isLetter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
@@ -237,11 +239,6 @@ class StreamParser {
 
     void processHeader() {
         stream_buffer.loop([this](char c) {
-            // skip carriage return
-            if (c == '\r') {
-                return false;
-            }
-
             // end of key
             if (c == ' ') {
                 // skip whitespace and "
@@ -291,8 +288,6 @@ class StreamParser {
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
             switch (c) {
-                case '\r':
-                    break;
                 case '\n':
                     if (line_start) {
                         pgn_end = true;
@@ -306,16 +301,6 @@ class StreamParser {
 
                     line_start = true;
 
-                    reading_move = false;
-
-                    callVisitorMoveFunction();
-                    break;
-                // whitespace while reading a move means that we have finished reading the move
-                case ' ':
-                    if (reading_move) {
-                        reading_move = false;
-                    }
-
                     break;
                 /*
                 The second kind starts with a left brace character and continues to the next right brace
@@ -326,8 +311,8 @@ class StreamParser {
                 special meaning and are ignored.
                 */
                 case '{':
+                    // skip brace
                     stream_buffer.getNextByte();
-
                     stream_buffer.loop([this](char c) {
                         if (c == '}') {
                             callVisitorMoveFunction();
@@ -348,33 +333,44 @@ class StreamParser {
                     cbuf[1] = cbuf[0];
                     cbuf[0] = c;
 
-                    if (reading_move) {
-                        move += c;
+                    // skip variations
+                    if (c == '(') {
+                        stream_buffer.readUntilMatchingDelimiter('(', ')');
+                        return false;
                     }
+
                     // we are in empty space, when we encounter now a file or a piece, or a castling
-                    // move, we try to parse the move
-                    else if (!reading_move) {
-                        // skip variations
-                        if (c == '(') {
-                            stream_buffer.readUntilMatchingDelimiter('(', ')');
-                            return false;
+                    // move, we try to parse the move.
+                    // When we encounter a 0, we first start reading once we are sure it qualifie
+                    // as a castling move, by checking the previous moves
+                    // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
+                    // 0-0(-0) castling moves from results like 1-0 and 0-1.
+
+                    if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
+                        if (c == '0') {
+                            move += '0';
+                            move += '-';
+                            move += '0';
+                        } else {
+                            move += c;
                         }
 
-                        // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
-                        // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                        if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
-                            callVisitorMoveFunction();
+                        // loop over remaining move string
 
-                            reading_move = true;
-
-                            if (c == '0') {
-                                move += '0';
-                                move += '-';
-                                move += '0';
-                            } else {
-                                move += c;
+                        stream_buffer.getNextByte();
+                        stream_buffer.loop([this](char c) {
+                            // whitespace while reading a move means that we have finished reading the move
+                            if (c == ' ' || c == '\n') {
+                                callVisitorMoveFunction();
+                                return true;
                             }
-                        }
+
+                            move += c;
+
+                            return false;
+                        });
+
+                        stream_buffer.moveBack();
                     }
 
                     break;
@@ -385,11 +381,6 @@ class StreamParser {
     }
 
     void processNextByte(char c) {
-        // skip carriage return
-        if (c == '\r') {
-            return;
-        }
-
         // PGN Header
         if (line_start && c == '[') {
             if (pgn_end) {
@@ -415,8 +406,6 @@ class StreamParser {
         // PGN Moves Start
         else if (line_start && has_head && !in_header && !in_body) {
             line_start = false;
-
-            reading_move = false;
 
             has_body = true;
 
@@ -448,8 +437,6 @@ class StreamParser {
 
     // State
 
-    bool reading_move = false;
-
     // True when at the start of a line
     bool line_start = true;
 
@@ -458,10 +445,6 @@ class StreamParser {
 
     bool has_head = false;
     bool has_body = false;
-
-    // Header
-    bool reading_key   = false;
-    bool reading_value = false;
 
     bool pgn_end = true;
 };

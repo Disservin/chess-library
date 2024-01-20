@@ -175,6 +175,12 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->endCount() == 1);
         CHECK(vis->moveStartCount() == 1);
         CHECK(vis->count() == 3);
+
+        CHECK(vis->moves()[0] == "0-0-0");
+
+        CHECK(vis->moves()[1] == "0-0");
+
+        CHECK(vis->moves()[2] == "Nc5");
     }
 
     TEST_CASE("Skip Variations") {
