@@ -3692,11 +3692,10 @@ class StreamParser {
             // processHeader() will move the buffer_index to the next character
             // so we need to undo this
             stream_buffer.moveBack();
-            return;
         }
 
         // PGN Moves Start
-        if (line_start && has_head && !in_header && !in_body) {
+        else if (line_start && has_head && !in_header && !in_body) {
             line_start = false;
 
             reading_move    = false;
@@ -3708,30 +3707,6 @@ class StreamParser {
             in_body   = true;
 
             if (!visitor->skip()) visitor->startMoves();
-            return;
-        }
-
-        // PGN End
-        if (line_start && in_body && c == '\n') {
-            // buffer_index = i + 1;
-            pgn_end = true;
-
-            visitor->endPgn();
-            visitor->skipPgn(false);
-
-            reset_trackers();
-            return;
-        }
-
-        // set line_start to true, since the next char will be first on
-        // a new line
-        if (c == '\n') {
-            line_start = true;
-        }
-
-        // make sure that the line_start is turned off again
-        if (line_start && c != '\n') {
-            line_start = false;
         }
 
         // Pgn are build up in the following way.
@@ -3739,13 +3714,12 @@ class StreamParser {
         // So we need to skip the move_number then start reading the move, then save the comment
         // then read the second move in the group. After that a move_number will follow again.
         // @TODO implement like processHeader()
-        if (in_body) {
+        else if (in_body) {
             processBody();
 
             // processBody() will move the buffer_index to the next character
             // so we need to undo this
             stream_buffer.moveBack();
-            return;
         }
     }
 
