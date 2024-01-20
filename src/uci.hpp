@@ -132,7 +132,7 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
-        const auto info          = parseSanInfo<PEDANTIC>(info, san);
+        const auto info          = parseSanInfo<PEDANTIC>(san);
         constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
 
         moves.clear();

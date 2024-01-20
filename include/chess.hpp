@@ -3289,6 +3289,11 @@ class StreamParser {
     void readGames(Visitor &vis) {
         visitor = &vis;
 
+        const auto ret = stream_buffer.fill();
+        if (!ret.has_value() || !*ret) {
+            return;
+        }
+
         stream_buffer.loop([this](char c) { processNextByte(c); });
 
         if (!pgn_end && has_body) {
@@ -3335,13 +3340,8 @@ class StreamParser {
 
         template <typename FUNC>
         void loop(FUNC f) {
-            const auto ret = fill();
-            if (!ret.has_value() || !*ret) {
-                return;
-            }
-
             while (true) {
-                if (buffer_index_ == bytes_read_) {
+                if (buffer_index_ >= bytes_read_) {
                     const auto ret = fill();
 
                     if (!ret.has_value() || !*ret) {
@@ -3349,7 +3349,18 @@ class StreamParser {
                     }
                 }
 
-                f(buffer_[buffer_index_++]);
+                if constexpr (std::is_same_v<decltype(f(buffer_[buffer_index_])), bool>) {
+                    const auto res = f(buffer_[buffer_index_]);
+
+                    if (res) {
+                        buffer_index_++;
+                        return;
+                    }
+                } else {
+                    f(buffer_[buffer_index_]);
+                }
+
+                buffer_index_++;
             }
         }
 
@@ -3358,22 +3369,18 @@ class StreamParser {
         /// @param close_delim
         /// @return
         bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
-            int stack = 1;
+            int stack = 0;
 
             while (true) {
-                if (buffer_index_ == bytes_read_) {
-                    const auto ret = fill();
+                const auto ret = getNextByte();
 
-                    if (!ret.has_value() || !*ret) {
-                        return false;
-                    }
+                if (!ret.has_value()) {
+                    return false;
                 }
 
-                const auto c = buffer_[buffer_index_++];
-
-                if (c == open_delim) {
+                if (*ret == open_delim) {
                     stack++;
-                } else if (c == close_delim) {
+                } else if (*ret == close_delim) {
                     if (stack == 0) {
                         // Mismatched closing delimiter
                         return false;
@@ -3391,16 +3398,6 @@ class StreamParser {
             return false;
         }
 
-       private:
-        std::optional<char> getNextByte() {
-            if (buffer_index_ == bytes_read_) {
-                const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
-            }
-
-            return buffer_[buffer_index_++];
-        }
-
         std::optional<bool> fill() {
             if (!stream_.good()) return std::nullopt;
 
@@ -3412,6 +3409,18 @@ class StreamParser {
             return std::optional<bool>(bytes_read_ > 0);
         }
 
+        std::optional<char> getNextByte() {
+            if (buffer_index_ == bytes_read_) {
+                const auto ret = fill();
+                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
+            }
+
+            return buffer_[buffer_index_++];
+        }
+
+        char current() const noexcept { return buffer_[buffer_index_]; }
+
+       private:
         std::istream &stream_;
         BufferType buffer_;
         std::streamsize bytes_read_   = 0;
@@ -3452,11 +3461,41 @@ class StreamParser {
         }
     }
 
-    void processNextByte(const char c) {
+    void processHeader() {
+        stream_buffer.loop([this](char c) {
+            if (c == '"') {
+                reading_value = !reading_value;
+            } else if (c == '\n') {
+                reading_key   = false;
+                reading_value = false;
+                in_header     = false;
+                line_start    = true;
+
+                if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
+
+                header.first.clear();
+                header.second.clear();
+
+                return true;
+            } else if (reading_key && c == ' ') {
+                reading_key = false;
+            } else if (reading_key) {
+                header.first += c;
+            } else if (reading_value) {
+                header.second += c;
+            }
+
+            return false;
+        });
+    }
+
+    void processNextByte(char c) {
         // save the last three characters across different buffers
         cbuf[2] = cbuf[1];
         cbuf[1] = cbuf[0];
         cbuf[0] = c;
+
+    start:
 
         // skip carriage return
         if (c == '\r') {
@@ -3471,19 +3510,29 @@ class StreamParser {
                 visitor->startPgn();
             }
 
+            line_start = false;
+
+            reading_key = true;
+
             has_head = true;
 
             in_header = true;
             in_body   = false;
 
-            reading_key = true;
+            if (!stream_buffer.getNextByte().has_value()) return;
+            processHeader();
 
-            line_start = false;
-            return;
+            // processHeader() will move the buffer_index to the next character
+            // so we need to set c to the current character
+            c = stream_buffer.current();
+
+            goto start;
         }
 
         // PGN Moves Start
         if (line_start && has_head && !in_header && !in_body) {
+            line_start = false;
+
             reading_move    = false;
             reading_comment = false;
 
@@ -3491,8 +3540,6 @@ class StreamParser {
 
             in_header = false;
             in_body   = true;
-
-            line_start = false;
 
             if (!visitor->skip()) visitor->startMoves();
             return;
@@ -3521,31 +3568,11 @@ class StreamParser {
             line_start = false;
         }
 
-        if (in_header) {
-            if (c == '"') {
-                reading_value = !reading_value;
-            } else if (reading_key && c == ' ') {
-                reading_key = false;
-            } else if (reading_key) {
-                header.first += c;
-            } else if (reading_value) {
-                header.second += c;
-            } else if (c == '\n') {
-                reading_key   = false;
-                reading_value = false;
-                in_header     = false;
-
-                if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
-
-                header.first.clear();
-                header.second.clear();
-            }
-        }
         // Pgn are build up in the following way.
         // {move_number} {move} {comment} {move} {comment} {move_number} ...
         // So we need to skip the move_number then start reading the move, then save the comment
         // then read the second move in the group. After that a move_number will follow again.
-        else if (in_body) {
+        if (in_body) {
             // whitespace while reading a move means that we have finished reading the move
             if (c == '\n') {
                 reading_move    = false;
@@ -3753,7 +3780,7 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
-        const auto info          = parseSanInfo<PEDANTIC>(info, san);
+        const auto info          = parseSanInfo<PEDANTIC>(san);
         constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
 
         moves.clear();
