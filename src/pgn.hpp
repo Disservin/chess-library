@@ -274,6 +274,8 @@ class StreamParser {
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
             switch (c) {
+                case '\r':
+                    break;
                 case '\n':
                     if (line_start) {
                         pgn_end = true;
