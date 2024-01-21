@@ -62,6 +62,8 @@ class StreamParser {
         while (true) {
             auto token = lexer.next();
 
+            // std::cout << token.toString() << " " << token.value().get() << "\n";
+
             if (token.type() == Lexer::Token::Type::None) {
                 return;
             }
@@ -130,9 +132,9 @@ class StreamParser {
 
                 const auto c = buffer_[buffer_index_];
 
-                // skip carriage return
-                if (c == '\r') {
-                    buffer_index_++;
+                // skip
+                if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                    // buffer_index_++;
                     continue;
                 }
 
@@ -140,14 +142,14 @@ class StreamParser {
                     const auto res = f(c);
 
                     if (res) {
-                        buffer_index_++;
+                        // buffer_index_++;
                         return;
                     }
                 } else {
                     f(c);
                 }
 
-                buffer_index_++;
+                // buffer_index_++;
             }
         }
 
@@ -171,6 +173,18 @@ class StreamParser {
             return buffer_[buffer_index_++];
         }
 
+        void advance() {
+            if (buffer_index_ == bytes_read_) {
+                const auto ret = fill();
+
+                if (!ret.has_value() || !*ret) {
+                    return;
+                }
+            }
+
+            buffer_index_++;
+        }
+
         std::optional<char> peek() {
             if (buffer_index_ == bytes_read_) {
                 // we cant fill the new buffer, so we just peek the stream
@@ -181,13 +195,35 @@ class StreamParser {
             return buffer_[buffer_index_ + 1];
         }
 
-        std::optional<char> current() {
+        char current() {
             if (buffer_index_ == bytes_read_) {
                 const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_]) : std::nullopt;
+                return ret.has_value() && *ret ? buffer_[buffer_index_] : 0;
             }
 
             return buffer_[buffer_index_];
+        }
+
+        char skipWhitespace() {
+            while (true) {
+                if (buffer_index_ >= bytes_read_) {
+                    const auto ret = fill();
+
+                    if (!ret.has_value() || !*ret) {
+                        return 0;
+                    }
+                }
+
+                const auto c = buffer_[buffer_index_];
+
+                // skip
+                if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                    buffer_index_++;
+                    continue;
+                }
+
+                return c;
+            }
         }
 
        private:
@@ -273,80 +309,104 @@ class StreamParser {
         };
 
         Token next() noexcept {
-            while (true) {
-                const auto curr = stream_buffer_.current();
+            // @TODO Dont return and just loop over all directly.
+            // while (true) {
+            //     const auto curr = stream_buffer_.current();
 
-                if (!curr.has_value()) {
-                    return Token(Token::Type::None, LineBuffer());
-                }
+            //     if (!curr.has_value()) {
+            //         return Token(Token::Type::None, LineBuffer());
+            //     }
 
-                if (is_space(*curr)) {
-                    stream_buffer_.get();
-                } else {
-                    break;
-                }
-            }
+            //     if (is_space(*curr)) {
+            //         stream_buffer_.get();
+            //     } else {
+            //         break;
+            //     }
+            // }
 
-            const auto c = stream_buffer_.current();
+            auto c = stream_buffer_.skipWhitespace();
 
-            if (!c.has_value()) {
+        start:
+            c = stream_buffer_.current();
+
+            if (c == 0) {
                 return Token(Token::Type::None, LineBuffer());
             }
 
-            switch (*c) {
+            switch (c) {
                 case '[':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::LBracket;
-                    return Token(last_token_type_, LineBuffer("["));
+                    // return Token(last_token_type_, LineBuffer("["));
+                    goto start;
                 case ']':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::RBracket;
-                    return Token(last_token_type_, LineBuffer("]"));
+                    // return Token(last_token_type_, LineBuffer("]"));
+                    goto start;
+
                 case '(':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::LParen;
-                    return Token(last_token_type_, LineBuffer("("));
+                    // return Token(last_token_type_, LineBuffer("("));
+                    goto start;
+
                 case ')':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::RParen;
-                    return Token(last_token_type_, LineBuffer(")"));
+                    // return Token(last_token_type_, LineBuffer(")"));
+                    goto start;
+
                 case '.':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::Dot;
-                    return Token(last_token_type_, LineBuffer("."));
+                    // return Token(last_token_type_, LineBuffer("."));
+                    goto start;
+
                 case '*':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::Asterisk;
-                    return Token(last_token_type_, LineBuffer("*"));
+                    // return Token(last_token_type_, LineBuffer("*"));
+                    goto start;
+
                 case '$':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::Dollar;
-                    return nag();
+                    nag(c);
+                    goto start;
+
                 case '{':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::LCurl;
-                    return Token(last_token_type_, LineBuffer("{"));
+                    // return Token(last_token_type_, LineBuffer("{"));
+                    goto start;
+
                 case '}':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::RCurl;
-                    return Token(last_token_type_, LineBuffer("}"));
+                    // return Token(last_token_type_, LineBuffer("}"));
+                    goto start;
+
                 case '"':
-                    stream_buffer_.get();
+                    stream_buffer_.advance();
                     last_token_type_ = Token::Type::String;
-                    return string();
+                    return string(c);
                 default:
                     if (last_token_type_ == Token::Type::LCurl) {
-                        return comment();
+                        return comment(c);
                     } else if (last_token_type_ == Token::Type::LParen) {
-                        return variation();
+                        return variation(c);
                     } else if (last_token_type_ == Token::Type::LBracket) {
                         last_token_type_ = Token::Type::Symbol;
-                        return symbol();
-                    } else if (is_digit(*c) || is_letter(*c)) {
+                        return symbol(c);
+                    } else if (is_digit(c) || is_letter(c)) {
                         last_token_type_ = Token::Type::Symbol;
-                        return symbol();
+                        return symbol(c);
+                    } else if (is_space(c)) {
+                        stream_buffer_.advance();
+                        goto start;
                     } else {
-                        stream_buffer_.get();
+                        stream_buffer_.advance();
                         last_token_type_ = Token::Type::Unknown;
                         return Token(last_token_type_, LineBuffer());
                     }
@@ -354,121 +414,122 @@ class StreamParser {
         }
 
        private:
-        Token variation() noexcept {
+        Token variation(char c) noexcept {
             Token token(Token::Type::Symbol, LineBuffer());
 
             while (true) {
-                const auto c = stream_buffer_.current();
-
-                if (!c.has_value()) {
+                if (c == 0) {
                     return token;
                 }
 
-                if (*c != ')') {
-                    stream_buffer_.get();
+                if (c != ')') {
+                    stream_buffer_.advance();
                 } else {
                     return token;
                 }
+
+                c = stream_buffer_.current();
             }
 
             return token;
         }
 
-        Token comment() noexcept {
+        Token comment(char c) noexcept {
             Token token(Token::Type::Comment, LineBuffer());
 
             while (true) {
-                const auto c = stream_buffer_.current();
-
-                if (!c.has_value()) {
+                if (c == 0) {
                     return token;
                 }
 
-                if (*c != '}') {
-                    token.value() += *c;
-                    stream_buffer_.get();
+                if (c != '}') {
+                    // token.value() += c;
+                    stream_buffer_.advance();
                 } else {
                     return token;
                 }
+
+                c = stream_buffer_.current();
             }
 
             return token;
         }
 
-        Token nag() noexcept {
+        Token nag(char c) noexcept {
             Token token(Token::Type::Dollar, LineBuffer());
 
             while (true) {
-                const auto c = stream_buffer_.current();
-
-                if (!c.has_value()) {
+                if (c == 0) {
                     return token;
                 }
 
-                if (is_digit(*c)) {
-                    token.value() += *c;
-                    stream_buffer_.get();
+                if (is_digit(c)) {
+                    // token.value() += *c;
+                    stream_buffer_.advance();
                 } else {
                     return token;
                 }
+
+                c = stream_buffer_.current();
             }
 
             return token;
         }
 
-        Token string() noexcept {
+        Token string(char c) noexcept {
             Token token(Token::Type::String, LineBuffer());
 
             while (true) {
-                const auto c = stream_buffer_.current();
-
-                if (!c.has_value()) {
+                if (c == 0) {
                     return token;
                 }
 
-                stream_buffer_.get();
+                stream_buffer_.advance();
 
-                if (*c != '"') {
-                    token.value() += *c;
+                if (c != '"') {
+                    token.value() += c;
                 } else {
                     return token;
                 }
+
+                c = stream_buffer_.current();
             }
 
             return token;
         }
 
-        Token symbol() noexcept {
+        Token symbol(char c) noexcept {
             Token token(Token::Type::Symbol, LineBuffer());
 
             while (true) {
-                const auto c = stream_buffer_.current();
-
-                if (!c.has_value()) {
+                if (c == 0) {
                     return token;
                 }
 
-                if (!is_space(*c)) {
-                    token.value() += *c;
-                    stream_buffer_.get();
+                if (!is_space(c)) {
+                    // token.value() += c;
+                    stream_buffer_.advance();
                 } else {
                     return token;
                 }
+
+                c = stream_buffer_.current();
             }
 
             return token;
         }
 
         bool is_space(const char c) noexcept {
-            switch (c) {
-                case ' ':
-                case '\t':
-                case '\n':
-                case '\r':
-                    return true;
-                default:
-                    return false;
-            }
+            // switch (c) {
+            //     case ' ':
+            //     case '\t':
+            //     case '\n':
+            //     case '\r':
+            //         return true;
+            //     default:
+            //         return false;
+            // }
+            return c == ' ' || c == '\t' || c == '\n' || c == '\r';
         }
 
         bool is_digit(char c) noexcept { return c >= '0' && c <= '9'; }
