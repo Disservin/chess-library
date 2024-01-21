@@ -3292,21 +3292,31 @@ class StreamParser {
             return;
         }
 
-        stream_buffer.loop([this](char c) { processNextByte(c); });
+        Lexer lexer(stream_buffer);
 
-        if (!pgn_end && has_body) {
-            pgn_end = true;
+        while (true) {
+            auto token = lexer.next();
 
-            callVisitorMoveFunction();
+            // std::cout << int(token.type()) << " " << token.toString() << " " << token.value().get() << "\n";
 
-            visitor->endPgn();
-            visitor->skipPgn(false);
+            if (token.type() == Lexer::Token::Type::None) {
+                return;
+            }
         }
     }
 
    private:
     class LineBuffer {
        public:
+        LineBuffer() = default;
+        LineBuffer(std::string_view str) : index_(str.size()) {
+            if (str.size() > N) {
+                throw std::runtime_error("LineBuffer overflow");
+            }
+
+            std::copy(str.begin(), str.end(), buffer_.begin());
+        }
+
         bool empty() const noexcept { return index_ == 0; }
 
         void clear() noexcept { index_ = 0; }
@@ -3378,40 +3388,6 @@ class StreamParser {
             }
         }
 
-        /// @brief Assume that the current character is already the opening_delim
-        /// @param open_delim
-        /// @param close_delim
-        /// @return
-        bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
-            int stack = 0;
-
-            while (true) {
-                const auto ret = getNextByte();
-
-                if (!ret.has_value()) {
-                    return false;
-                }
-
-                if (*ret == open_delim) {
-                    stack++;
-                } else if (*ret == close_delim) {
-                    if (stack == 0) {
-                        // Mismatched closing delimiter
-                        return false;
-                    } else {
-                        stack--;
-                        if (stack == 0) {
-                            // Matching closing delimiter found
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            // If we reach this point, there are unmatched opening delimiters
-            return false;
-        }
-
         std::optional<bool> fill() {
             if (!stream_.good()) return std::nullopt;
 
@@ -3423,7 +3399,7 @@ class StreamParser {
             return std::optional<bool>(bytes_read_ > 0);
         }
 
-        std::optional<char> getNextByte() {
+        std::optional<char> get() {
             if (buffer_index_ == bytes_read_) {
                 const auto ret = fill();
                 return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
@@ -3432,10 +3408,23 @@ class StreamParser {
             return buffer_[buffer_index_++];
         }
 
-        void moveBack() {
-            if (buffer_index_ > 0) {
-                buffer_index_--;
+        std::optional<char> peek() {
+            if (buffer_index_ == bytes_read_) {
+                // we cant fill the new buffer, so we just peek the stream
+                const auto c = stream_.peek();
+                return c == std::char_traits<char>::eof() ? std::nullopt : std::optional<char>(c);
             }
+
+            return buffer_[buffer_index_ + 1];
+        }
+
+        std::optional<char> current() {
+            if (buffer_index_ == bytes_read_) {
+                const auto ret = fill();
+                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_]) : std::nullopt;
+            }
+
+            return buffer_[buffer_index_];
         }
 
        private:
@@ -3445,248 +3434,292 @@ class StreamParser {
         std::streamsize buffer_index_ = 0;
     };
 
-    void reset_trackers() {
-        header.first.clear();
-        header.second.clear();
+    class Lexer {
+       public:
+        Lexer(StreamBuffer &stream_buffer) : stream_buffer_(stream_buffer) {}
 
-        move.clear();
-        comment.clear();
+        class Token {
+           public:
+            enum class Type {
+                None,
+                LBracket,
+                RBracket,
+                LParen,
+                RParen,
+                LCurl,
+                RCurl,
+                Dot,
+                Asterisk,
+                Dollar,
+                Number,
+                Symbol,   // tag name, move
+                String,   // value
+                Comment,  // move comment
+                // Identifier,  // tag name, move, value, move comment
+                Unknown,
+            };
 
-        reading_move = false;
+            Token() = default;
 
-        line_start = true;
+            Token(Type type, LineBuffer value) : type_(type), value_(value) {}
 
-        has_head = false;
-        has_body = false;
+            Type type() const noexcept { return type_; }
 
-        in_header = false;
-        in_body   = false;
-    }
+            LineBuffer &value() noexcept { return value_; }
 
-    bool isLetter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+            std::string toString() const noexcept {
+                switch (type_) {
+                    case Type::None:
+                        return "None";
+                    case Type::LBracket:
+                        return "LBracket";
+                    case Type::RBracket:
+                        return "RBracket";
+                    case Type::LParen:
+                        return "LParen";
+                    case Type::RParen:
+                        return "RParen";
+                    case Type::LCurl:
+                        return "LCurl";
+                    case Type::RCurl:
+                        return "RCurl";
+                    case Type::Dot:
+                        return "Dot";
+                    case Type::Asterisk:
+                        return "Asterisk";
+                    case Type::Dollar:
+                        return "Dollar";
+                    case Type::Number:
+                        return "Number";
+                    case Type::Symbol:
+                        return "Symbol";
+                    case Type::String:
+                        return "String";
+                    case Type::Comment:
+                        return "Comment";
+                    case Type::Unknown:
+                        return "Unknown";
+                }
 
-    void callVisitorMoveFunction() {
-        if (!move.empty()) {
-            if (!visitor->skip()) visitor->move(move.get(), comment.get());
-
-            move.clear();
-            comment.clear();
-        }
-    }
-
-    void processHeader() {
-        stream_buffer.loop([this](char c) {
-            // end of key
-            if (c == ' ') {
-                // skip whitespace and "
-                stream_buffer.getNextByte();
-                stream_buffer.getNextByte();
-
-                // read until end of line
-                stream_buffer.loop([this](char c) {
-                    if (c == '\n') {
-                        in_header  = false;
-                        line_start = true;
-
-                        header.second.remove_suffix(2);
-
-                        if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
-
-                        header.first.clear();
-                        header.second.clear();
-
-                        return true;
-                    }
-
-                    header.second += c;
-                    return false;
-                });
-
-                stream_buffer.moveBack();
-
-                return true;
+                return "Unknown";
             }
 
-            header.first += c;
+           private:
+            Type type_ = Type::None;
+            LineBuffer value_;
+        };
 
-            return false;
-        });
-    }
+        Token next() noexcept {
+            while (true) {
+                const auto curr = stream_buffer_.current();
 
-    void processBody() {
-        stream_buffer.loop([this](char c) {
-            // make sure that the line_start is turned off again
-            if (line_start && c != '\n') {
-                line_start = false;
+                if (!curr.has_value()) {
+                    return Token(Token::Type::None, LineBuffer());
+                }
+
+                if (is_space(*curr)) {
+                    stream_buffer_.get();
+                } else {
+                    break;
+                }
             }
 
-            // Pgn are build up in the following way.
-            // {move_number} {move} {comment} {move} {comment} {move_number} ...
-            // So we need to skip the move_number then start reading the move, then save the comment
-            // then read the second move in the group. After that a move_number will follow again.
-            switch (c) {
-                case '\n':
-                    if (line_start) {
-                        pgn_end = true;
+            const auto c = stream_buffer_.current();
 
-                        visitor->endPgn();
-                        visitor->skipPgn(false);
+            if (!c.has_value()) {
+                return Token(Token::Type::None, LineBuffer());
+            }
 
-                        reset_trackers();
-                        return true;
-                    }
-
-                    line_start = true;
-
-                    reading_move = false;
-
-                    callVisitorMoveFunction();
-                    break;
-                // whitespace while reading a move means that we have finished reading the move
-                case ' ':
-                    if (reading_move) {
-                        reading_move = false;
-                    }
-
-                    break;
-                /*
-                The second kind starts with a left brace character and continues to the next right brace
-                character.
-                Brace comments do not nest; a left brace character appearing in a brace comment loses its
-                special meaning and is ignored. A semicolon appearing inside of a brace comment loses its
-                special meaning and is ignored. Braces appearing inside of a semicolon comments lose their
-                special meaning and are ignored.
-                */
+            switch (*c) {
+                case '[':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::LBracket;
+                    return Token(last_token_type_, LineBuffer("["));
+                case ']':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::RBracket;
+                    return Token(last_token_type_, LineBuffer("]"));
+                case '(':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::LParen;
+                    return Token(last_token_type_, LineBuffer("("));
+                case ')':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::RParen;
+                    return Token(last_token_type_, LineBuffer(")"));
+                case '.':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::Dot;
+                    return Token(last_token_type_, LineBuffer("."));
+                case '*':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::Asterisk;
+                    return Token(last_token_type_, LineBuffer("*"));
+                case '$':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::Dollar;
+                    return nag();
                 case '{':
-                    stream_buffer.getNextByte();
-
-                    stream_buffer.loop([this](char c) {
-                        if (c == '}') {
-                            callVisitorMoveFunction();
-
-                            return true;
-                        }
-
-                        comment += c;
-
-                        return false;
-                    });
-
-                    stream_buffer.moveBack();
-
-                    break;
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::LCurl;
+                    return Token(last_token_type_, LineBuffer("{"));
+                case '}':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::RCurl;
+                    return Token(last_token_type_, LineBuffer("}"));
+                case '"':
+                    stream_buffer_.get();
+                    last_token_type_ = Token::Type::String;
+                    return string();
                 default:
-                    cbuf[2] = cbuf[1];
-                    cbuf[1] = cbuf[0];
-                    cbuf[0] = c;
-
-                    if (reading_move) {
-                        move += c;
+                    if (last_token_type_ == Token::Type::LCurl) {
+                        return comment();
+                    } else if (last_token_type_ == Token::Type::LParen) {
+                        return variation();
+                    } else if (last_token_type_ == Token::Type::LBracket) {
+                        last_token_type_ = Token::Type::Symbol;
+                        return symbol();
+                    } else if (is_digit(*c) || is_letter(*c)) {
+                        last_token_type_ = Token::Type::Symbol;
+                        return symbol();
+                    } else {
+                        stream_buffer_.get();
+                        last_token_type_ = Token::Type::Unknown;
+                        return Token(last_token_type_, LineBuffer());
                     }
-                    // we are in empty space, when we encounter now a file or a piece, or a castling
-                    // move, we try to parse the move
-                    else if (!reading_move) {
-                        // skip variations
-                        if (c == '(') {
-                            stream_buffer.readUntilMatchingDelimiter('(', ')');
-                            return false;
-                        }
+            }
+        }
 
-                        // O-O(-O) castling moves are caught by isLetter(c), and we need to distinguish
-                        // 0-0(-0) castling moves from results like 1-0 and 0-1.
-                        if (isLetter(c) || (c == '0' && cbuf[1] == '-' && cbuf[2] == '0')) {
-                            callVisitorMoveFunction();
+       private:
+        Token variation() noexcept {
+            Token token(Token::Type::Symbol, LineBuffer());
 
-                            reading_move = true;
+            while (true) {
+                const auto c = stream_buffer_.current();
 
-                            if (c == '0') {
-                                move += '0';
-                                move += '-';
-                                move += '0';
-                            } else {
-                                move += c;
-                            }
-                        }
-                    }
+                if (!c.has_value()) {
+                    return token;
+                }
 
-                    break;
+                if (*c != ')') {
+                    stream_buffer_.get();
+                } else {
+                    return token;
+                }
             }
 
-            return false;
-        });
-    }
+            return token;
+        }
 
-    void processNextByte(char c) {
-        // PGN Header
-        if (line_start && c == '[') {
-            if (pgn_end) {
-                pgn_end = false;
-                visitor->skipPgn(false);
-                visitor->startPgn();
+        Token comment() noexcept {
+            Token token(Token::Type::Comment, LineBuffer());
+
+            while (true) {
+                const auto c = stream_buffer_.current();
+
+                if (!c.has_value()) {
+                    return token;
+                }
+
+                if (*c != '}') {
+                    token.value() += *c;
+                    stream_buffer_.get();
+                } else {
+                    return token;
+                }
             }
 
-            line_start = false;
-
-            has_head = true;
-
-            in_header = true;
-            in_body   = false;
-
-            if (!stream_buffer.getNextByte().has_value()) return;
-            processHeader();
-
-            // processHeader() will move the buffer_index to the next character
-            // so we need to undo this
-            stream_buffer.moveBack();
+            return token;
         }
-        // PGN Moves Start
-        else if (line_start && has_head && !in_header && !in_body) {
-            line_start = false;
 
-            reading_move = false;
+        Token nag() noexcept {
+            Token token(Token::Type::Dollar, LineBuffer());
 
-            has_body = true;
+            while (true) {
+                const auto c = stream_buffer_.current();
 
-            in_header = false;
-            in_body   = true;
+                if (!c.has_value()) {
+                    return token;
+                }
 
-            if (!visitor->skip()) visitor->startMoves();
-        } else if (in_body) {
-            processBody();
+                if (is_digit(*c)) {
+                    token.value() += *c;
+                    stream_buffer_.get();
+                } else {
+                    return token;
+                }
+            }
 
-            // processBody() will move the buffer_index to the next character
-            // so we need to undo this
-            stream_buffer.moveBack();
+            return token;
         }
-    }
+
+        Token string() noexcept {
+            Token token(Token::Type::String, LineBuffer());
+
+            while (true) {
+                const auto c = stream_buffer_.current();
+
+                if (!c.has_value()) {
+                    return token;
+                }
+
+                stream_buffer_.get();
+
+                if (*c != '"') {
+                    token.value() += *c;
+                } else {
+                    return token;
+                }
+            }
+
+            return token;
+        }
+
+        Token symbol() noexcept {
+            Token token(Token::Type::Symbol, LineBuffer());
+
+            while (true) {
+                const auto c = stream_buffer_.current();
+
+                if (!c.has_value()) {
+                    return token;
+                }
+
+                if (!is_space(*c)) {
+                    token.value() += *c;
+                    stream_buffer_.get();
+                } else {
+                    return token;
+                }
+            }
+
+            return token;
+        }
+
+        bool is_space(const char c) noexcept {
+            switch (c) {
+                case ' ':
+                case '\t':
+                case '\n':
+                case '\r':
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        bool is_digit(char c) noexcept { return c >= '0' && c <= '9'; }
+
+        bool is_letter(char c) noexcept { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+
+        StreamBuffer &stream_buffer_;
+
+        Token::Type last_token_type_ = Token::Type::None;
+    };
 
     StreamBuffer stream_buffer;
 
     Visitor *visitor = nullptr;
-
-    // one time allocations
-    std::pair<LineBuffer, LineBuffer> header = {LineBuffer{}, LineBuffer{}};
-
-    LineBuffer move    = {};
-    LineBuffer comment = {};
-
-    // buffer for the last two characters, cbuf[0] is the current character
-    std::array<char, 3> cbuf = {'\0', '\0', '\0'};
-
-    // State
-
-    bool reading_move = false;
-
-    // True when at the start of a line
-    bool line_start = true;
-
-    bool in_header = false;
-    bool in_body   = false;
-
-    bool has_head = false;
-    bool has_body = false;
-
-    bool pgn_end = true;
 };
 }  // namespace chess::pgn
 
