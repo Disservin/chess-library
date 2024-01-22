@@ -1,6 +1,6 @@
 CXX = g++
 NATIVE = -march=native
-CXXFLAGS = -O3 -flto -std=c++17 -Wall -Wextra
+CXXFLAGS = -O3 -flto -std=c++17 -Wall -Wextra -DNDEBUG
 LDFLAGS =
 
 # Detect Windows
@@ -37,7 +37,7 @@ showcase:
 	$(CXX) $(NATIVE) $(CXXFLAGS) -g3 -fno-omit-frame-pointer ./example/main.cpp -o chess-library-example $(LDFLAGS)
 
 shl:
-	python ./tools/shl.py ./src/include.hpp --header_search_paths ./src/ -o ./include/chess.hpp
+	python3 ./tools/shl.py ./src/include.hpp --header_search_paths ./src/ -o ./include/chess.hpp
 
 clean:
 	rm *.o *.exe
