@@ -89,3 +89,8 @@ src/out
 *.pgn
 
 .idea
+
+chess-library-tests
+chess-library-example
+
+perf.*
