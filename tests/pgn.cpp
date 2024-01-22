@@ -81,6 +81,136 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->comments()[3] == "-1.30/16 0.16s");
     }
 
+    TEST_CASE("Basic PGN Buffer Size 1") {
+        const auto file  = "./tests/pgns/basic.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser<1> parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->count() == 130);
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+
+        CHECK(vis->moves()[0] == "Bg2");
+        CHECK(vis->comments()[0] == "+1.55/16 0.70s");
+
+        CHECK(vis->moves()[1] == "O-O");
+        CHECK(vis->comments()[1] == "-1.36/18 0.78s");
+
+        CHECK(vis->moves()[2] == "O-O");
+        CHECK(vis->comments()[2] == "+1.84/16 0.42s");
+
+        CHECK(vis->moves()[3] == "a5");
+        CHECK(vis->comments()[3] == "-1.30/16 0.16s");
+    }
+
+    TEST_CASE("Basic PGN Buffer Size 2") {
+        const auto file  = "./tests/pgns/basic.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser<2> parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->count() == 130);
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+
+        CHECK(vis->moves()[0] == "Bg2");
+        CHECK(vis->comments()[0] == "+1.55/16 0.70s");
+
+        CHECK(vis->moves()[1] == "O-O");
+        CHECK(vis->comments()[1] == "-1.36/18 0.78s");
+
+        CHECK(vis->moves()[2] == "O-O");
+        CHECK(vis->comments()[2] == "+1.84/16 0.42s");
+
+        CHECK(vis->moves()[3] == "a5");
+        CHECK(vis->comments()[3] == "-1.30/16 0.16s");
+    }
+
+    TEST_CASE("Basic PGN Buffer Size 3") {
+        const auto file  = "./tests/pgns/basic.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser<3> parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->count() == 130);
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+
+        CHECK(vis->moves()[0] == "Bg2");
+        CHECK(vis->comments()[0] == "+1.55/16 0.70s");
+
+        CHECK(vis->moves()[1] == "O-O");
+        CHECK(vis->comments()[1] == "-1.36/18 0.78s");
+
+        CHECK(vis->moves()[2] == "O-O");
+        CHECK(vis->comments()[2] == "+1.84/16 0.42s");
+
+        CHECK(vis->moves()[3] == "a5");
+        CHECK(vis->comments()[3] == "-1.30/16 0.16s");
+    }
+
+    TEST_CASE("Basic PGN Buffer Size 4") {
+        const auto file  = "./tests/pgns/basic.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser<4> parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->count() == 130);
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+
+        CHECK(vis->moves()[0] == "Bg2");
+        CHECK(vis->comments()[0] == "+1.55/16 0.70s");
+
+        CHECK(vis->moves()[1] == "O-O");
+        CHECK(vis->comments()[1] == "-1.36/18 0.78s");
+
+        CHECK(vis->moves()[2] == "O-O");
+        CHECK(vis->comments()[2] == "+1.84/16 0.42s");
+
+        CHECK(vis->moves()[3] == "a5");
+        CHECK(vis->comments()[3] == "-1.30/16 0.16s");
+    }
+
+    TEST_CASE("Basic PGN Buffer Size 5") {
+        const auto file  = "./tests/pgns/basic.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser<5> parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->count() == 130);
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+
+        CHECK(vis->moves()[0] == "Bg2");
+        CHECK(vis->comments()[0] == "+1.55/16 0.70s");
+
+        CHECK(vis->moves()[1] == "O-O");
+        CHECK(vis->comments()[1] == "-1.36/18 0.78s");
+
+        CHECK(vis->moves()[2] == "O-O");
+        CHECK(vis->comments()[2] == "+1.84/16 0.42s");
+
+        CHECK(vis->moves()[3] == "a5");
+        CHECK(vis->comments()[3] == "-1.30/16 0.16s");
+    }
+
     TEST_CASE("Corrupted PGN") {
         const auto file  = "./tests/pgns/corrupted.pgn";
         auto file_stream = std::ifstream(file);

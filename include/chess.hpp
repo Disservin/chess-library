@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.22
+VERSION: 0.6.23
 */
 
 #ifndef CHESS_HPP
@@ -3280,6 +3280,7 @@ class Visitor {
     bool skip_ = false;
 };
 
+template <std::size_t BUFFER_SIZE = 1024>
 class StreamParser {
    public:
     StreamParser(std::istream &stream) : stream_buffer(stream) {}
@@ -3345,7 +3346,7 @@ class StreamParser {
 
     class StreamBuffer {
        private:
-        static constexpr std::size_t N = 1024;
+        static constexpr std::size_t N = BUFFER_SIZE;
         using BufferType               = std::array<char, N * N>;
 
        public:
