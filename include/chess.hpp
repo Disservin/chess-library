@@ -3346,7 +3346,7 @@ class StreamParser {
 
         template <typename FUNC>
         void loop(FUNC f) {
-            while (true) {
+            while (bytes_read_) {
                 if (buffer_index_ >= bytes_read_) {
                     const auto ret = fill();
 
@@ -3355,26 +3355,28 @@ class StreamParser {
                     }
                 }
 
-                const auto c = buffer_[buffer_index_];
+                while (buffer_index_ < bytes_read_) {
+                    const auto c = buffer_[buffer_index_];
 
-                // skip carriage return
-                if (c == '\r') {
-                    buffer_index_++;
-                    continue;
-                }
-
-                if constexpr (std::is_same_v<decltype(f(c)), bool>) {
-                    const auto res = f(c);
-
-                    if (res) {
+                    // skip carriage return
+                    if (c == '\r') {
                         buffer_index_++;
-                        return;
+                        continue;
                     }
-                } else {
-                    f(c);
-                }
 
-                buffer_index_++;
+                    if constexpr (std::is_same_v<decltype(f(c)), bool>) {
+                        const auto res = f(c);
+
+                        if (res) {
+                            buffer_index_++;
+                            return;
+                        }
+                    } else {
+                        f(c);
+                    }
+
+                    buffer_index_++;
+                }
             }
         }
 
