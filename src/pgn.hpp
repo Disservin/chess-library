@@ -52,8 +52,7 @@ class StreamParser {
     void readGames(Visitor &vis) {
         visitor = &vis;
 
-        const auto ret = stream_buffer.fill();
-        if (!ret.has_value() || !*ret) {
+        if (!stream_buffer.fill()) {
             return;
         }
 
@@ -113,9 +112,7 @@ class StreamParser {
         void loop(FUNC f) {
             while (bytes_read_) {
                 if (buffer_index_ >= bytes_read_) {
-                    const auto ret = fill();
-
-                    if (!ret.has_value() || !*ret) {
+                    if (!fill()) {
                         return;
                     }
                 }
@@ -179,21 +176,20 @@ class StreamParser {
             return false;
         }
 
-        std::optional<bool> fill() {
-            if (!stream_.good()) return std::nullopt;
+        bool fill() {
+            if (!stream_.good()) return false;
 
             buffer_index_ = 0;
 
             stream_.read(buffer_.data(), N * N);
             bytes_read_ = stream_.gcount();
 
-            return std::optional<bool>(bytes_read_ > 0);
+            return bytes_read_ > 0;
         }
 
         std::optional<char> getNextByte() {
             if (buffer_index_ == bytes_read_) {
-                const auto ret = fill();
-                return ret.has_value() && *ret ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
+                return fill() ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
             }
 
             return buffer_[buffer_index_++];
