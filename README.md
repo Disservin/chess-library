@@ -59,16 +59,12 @@ The 3 other big chess libraries that I know of in C++ are:
 
 - Stockfish Winrate Model
   https://github.com/official-stockfish/WDL_model
-
 - CLI Tool for running chess engine matches
   https://github.com/Disservin/fast-chess
-
 - GUI-based Chess Player as well as a Chess Engine
   https://github.com/Orbital-Web/Raphael
-
-- UCI Chess Engine (~3.3k elo)
+- UCI Chess Engine (\~3.3k elo)
   https://github.com/rafid-dev/rice (old version)
-
 - Texel tuner for HCE engines
   https://github.com/GediminasMasaitis/texel-tuner
 
@@ -138,3 +134,29 @@ This is a single header library.
 
 You only need to include `chess.hpp` header!
 Aftewards you can access the chess logic over the `chess::` namespace.
+
+### Meson
+
+#### Setup
+
+```bash
+meson setup build
+```
+
+#### Compilation
+
+```bash
+meson compile -C build
+```
+
+#### Tests
+
+```bash
+meson test -C build
+```
+
+#### Example
+
+```bash
+./build/example/example
+```
