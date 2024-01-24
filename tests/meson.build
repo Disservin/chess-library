@@ -19,7 +19,7 @@ e = executable(
     cpp_args: ['-O3', '-std=c++17', '-g3', '-fno-omit-frame-pointer'],
     sources: srcs,
     dependencies: [],
-    link_args: ['-g3', '-fno-omit-frame-pointer'],
+    link_args: ['-O3', '-g3', '-fno-omit-frame-pointer'],
 )
 
 test(
