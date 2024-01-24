@@ -223,6 +223,7 @@ stl_headers = [
     "vector",
     "immintrin.h",
     "intrin.h",
+    "nmmintrin.h",
 ]
 
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <cstdint>
 
 #include "coords.hpp"
 #include "attacks_fwd.hpp"

@@ -6,11 +6,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
-#include "attacks_fwd.hpp"
-#include "attacks.hpp"
-#include "bitboard.hpp"
 #include "board.hpp"
 #include "color.hpp"
 #include "move.hpp"

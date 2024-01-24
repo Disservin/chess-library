@@ -32,11 +32,10 @@ VERSION: 0.6.23
 #define CHESS_HPP
 
 
-#include <cassert>
-#include <cstdint>
 #include <functional>
 
 
+#include <cstdint>
 
 
 #if __cplusplus >= 202002L
@@ -46,9 +45,11 @@ VERSION: 0.6.23
 #include <bitset>
 #include <algorithm>
 #include <iostream>
+#include <cassert>
 
 #if defined(_MSC_VER)
 #include <intrin.h>
+#include <nmmintrin.h>
 #endif
 
 
@@ -1371,7 +1372,6 @@ class movegen {
 };
 
 }  // namespace chess
-
 
 
 namespace chess {
