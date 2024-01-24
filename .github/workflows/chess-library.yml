@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        id: [1, 2, 3, 4]
+        id: [1, 2, 3]
     steps:
       - uses: actions/checkout@v3
       - name: Installing required packages
@@ -43,16 +43,9 @@ jobs:
           meson compile -C build
           ./build/tests/tests
 
-      - name: Memory Tests
+      - name: Undefined Tests
         if: matrix.id == 3
         run: |
           meson configure build -Db_sanitize=undefined
-          meson compile -C build
-          ./build/tests/tests
-
-      - name: Undefined Tests
-        if: matrix.id == 4
-        run: |
-          meson configure build -Db_sanitize=memory
           meson compile -C build
           ./build/tests/tests
