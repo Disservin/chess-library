@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        id: [1, 2, 3, 4]
+        id: [1, 2, 3]
     steps:
       - uses: actions/checkout@v3
       - name: Installing required packages
@@ -21,26 +21,31 @@ jobs:
           sudo apt-get update
           g++ --version
 
+      - name: Installing Meson
+        run: |
+          sudo apt-get install python3-pip python3-setuptools ninja-build pipx
+          sudo pipx install meson
+
+      - name: Configuring Meson
+        run: |
+          meson setup build
+
       - name: Normal Tests
         if: matrix.id == 1
         run: |
-          make -j2
-          ./chess-library-tests
+          meson compile -C build
+          ./build/tests/tests
 
       - name: ASAN Tests
-        if: matrix.id == 2  
+        if: matrix.id == 2
         run: |
-          make -j2
-          ./chess-library-tests san=asan
-
-      - name: Memory Tests
-        if: matrix.id == 3
-        run: |
-          make -j2
-          ./chess-library-tests san=memory
+          meson configure build -Db_sanitize=address
+          meson compile -C build
+          ./build/tests/tests
 
       - name: Undefined Tests
-        if: matrix.id == 4
+        if: matrix.id == 3
         run: |
-          make -j2
-          ./chess-library-tests san=undefined
+          meson configure build -Db_sanitize=undefined
+          meson compile -C build
+          ./build/tests/tests

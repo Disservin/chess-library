@@ -200,8 +200,7 @@ TEST_SUITE("SAN Parser") {
         Board b;
         b.setFen("2k2n2/4P1P1/8/8/8/8/8/2K5 w - - 0 1");
 
-        Move m = Move::make<Move::PROMOTION>(Square::underlying::SQ_E7, Square::underlying::SQ_F8,
-                                             PieceType::QUEEN);
+        Move m = Move::make<Move::PROMOTION>(Square::underlying::SQ_E7, Square::underlying::SQ_F8, PieceType::QUEEN);
 
         CHECK(uci::parseSan(b, "exf8=Q+") == m);
     }
@@ -219,8 +218,7 @@ TEST_SUITE("SAN Parser") {
         Board b;
         b.setFen("8/Pk6/8/5p2/8/8/8/2K5 w - - 1 781");
 
-        Move m = Move::make<Move::PROMOTION>(Square::underlying::SQ_A7, Square::underlying::SQ_A8,
-                                             PieceType::QUEEN);
+        Move m = Move::make<Move::PROMOTION>(Square::underlying::SQ_A7, Square::underlying::SQ_A8, PieceType::QUEEN);
 
         CHECK(uci::parseSan(b, "a8=Q+") == m);
     }

@@ -94,3 +94,6 @@ chess-library-tests
 chess-library-example
 
 perf.*
+
+builddir
+build
