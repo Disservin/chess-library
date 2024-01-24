@@ -4,6 +4,7 @@
 #include <ostream>
 #include <string>
 #include <cassert>
+#include <string_view>
 
 namespace chess {
 

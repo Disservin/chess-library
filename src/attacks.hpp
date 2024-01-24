@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cassert>
-#include <cstdint>
 #include <functional>
 
 #include "attacks_fwd.hpp"

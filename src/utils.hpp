@@ -3,9 +3,6 @@
 #include <vector>
 #include <string_view>
 
-#include "color.hpp"
-#include "coords.hpp"
-
 namespace chess {
 namespace utils {
 /// @brief Split a string into a vector of strings, using a delimiter.

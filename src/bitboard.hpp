@@ -12,6 +12,7 @@
 
 #if defined(_MSC_VER)
 #include <intrin.h>
+#include <nmmintrin.h>
 #endif
 
 #include "coords.hpp"
