@@ -12,7 +12,12 @@ class MyVisitor : public pgn::Visitor {
    public:
     ~MyVisitor() {}
 
-    void startPgn() { game_count_++; }
+    void startPgn() {
+        moves_.clear();
+        comments_.clear();
+        count_ = 0;
+        game_count_++;
+    }
 
     void header(std::string_view key, std::string_view value) {
         if (key == "Result" && value == "*") {
@@ -375,5 +380,24 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->endCount() == 1);
         CHECK(vis->moveStartCount() == 1);
         CHECK(vis->count() == 0);
+    }
+
+    TEST_CASE("No Moves With Game Termination Marker Multiple") {
+        const auto file  = "./tests/pgns/no_moves_but_game_termination_multiple.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 2);
+        CHECK(vis->endCount() == 2);
+        CHECK(vis->moveStartCount() == 2);
+
+        CHECK(vis->count() == 126);
+        CHECK(vis->moves()[0] == "d4");
+        CHECK(vis->moves()[1] == "e6");
+        CHECK(vis->moves()[vis->moves().size() - 1] == "Ke4");
+        CHECK(vis->moves()[vis->moves().size() - 2] == "Rd2+");
     }
 }

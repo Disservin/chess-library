@@ -308,21 +308,32 @@ class StreamParser {
     }
 
     void processBody() {
+        auto is_termination_symbol = false;
+
         /*
         Skip first move number or game termination
         Also skip - * / to fix games
         which directly start with a game termination
         this https://github.com/Disservin/chess-library/issues/68
         */
-
-        stream_buffer.loop([this](char c) {
-            if (is_space(c) || is_digit(c) || c == '-' || c == '*' || c == '/') {
+        stream_buffer.loop([this, &is_termination_symbol](char c) {
+            if (is_space(c) || is_digit(c)) {
+                stream_buffer.advance();
+                return false;
+            } else if (c == '-' || c == '*' || c == '/') {
+                is_termination_symbol = true;
                 stream_buffer.advance();
                 return false;
             }
 
             return true;
         });
+
+        // game had no moves, so we can skip it and call endPgn
+        if (is_termination_symbol) {
+            onEnd();
+            return;
+        }
 
         stream_buffer.loop([this](char) {
             // Pgn are build up in the following way.
