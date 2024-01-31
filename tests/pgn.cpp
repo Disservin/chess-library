@@ -334,4 +334,46 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->moveStartCount() == 1);
         CHECK(vis->count() == 16);
     }
+
+    TEST_CASE("No Moves With Game Termination Marker 0-1") {
+        const auto file  = "./tests/pgns/no_moves_but_game_termination.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+        CHECK(vis->count() == 0);
+    }
+
+    TEST_CASE("No Moves With Game Termination Marker 1/2-1/2") {
+        const auto file  = "./tests/pgns/no_moves_but_game_termination_2.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+        CHECK(vis->count() == 0);
+    }
+
+    TEST_CASE("No Moves With Game Termination Marker *") {
+        const auto file  = "./tests/pgns/no_moves_but_game_termination_3.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+        CHECK(vis->count() == 0);
+    }
 }

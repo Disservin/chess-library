@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.23
+VERSION: 0.6.24
 */
 
 #ifndef CHESS_HPP
@@ -3543,6 +3543,22 @@ class StreamParser {
     }
 
     void processBody() {
+        /*
+        Skip first move number or game termination
+        Also skip - * / to fix games
+        which directly start with a game termination
+        this https://github.com/Disservin/chess-library/issues/68
+        */
+
+        stream_buffer.loop([this](char c) {
+            if (is_space(c) || is_digit(c) || c == '-' || c == '*' || c == '/') {
+                stream_buffer.advance();
+                return false;
+            }
+
+            return true;
+        });
+
         stream_buffer.loop([this](char) {
             // Pgn are build up in the following way.
             // {move_number} {move} {comment} {move} {comment} {move_number} ...
