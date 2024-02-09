@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cassert>
-
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -40,7 +39,6 @@ class uci {
         if (move.typeOf() == Move::PROMOTION) {
             ss << static_cast<std::string>(move.promotionType());
         }
-
         return ss.str();
     }
 
@@ -129,12 +127,9 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
-        SanMoveInformation info;
+        SanMoveInformation info = parseSanInfo<PEDANTIC>(san);
 
-        parseSanInfo<PEDANTIC>(info, san);
         constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
-
-        moves.clear();
 
         if (info.capture) {
             movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
@@ -230,7 +225,9 @@ class uci {
     };
 
     template <bool PEDANTIC = false>
-    static void parseSanInfo(SanMoveInformation &info, std::string_view san) noexcept(false) {
+    [[nodiscard]] static SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
+        SanMoveInformation info;
+
         if constexpr (PEDANTIC) {
             if (san.length() < 2) {
                 throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
@@ -254,10 +251,9 @@ class uci {
 
         // set to 1 to skip piece type offset
         std::size_t index = 1;
-
         if (san[0] == 'O' || san[0] == '0') {
             parse_castle(san, info, san[0]);
-            return;
+            return info;
         } else if (isFile(san[0])) {
             index--;
             info.piece = PieceType::PAWN;
@@ -361,7 +357,7 @@ class uci {
             info.from = Square(info.from_file, info.from_rank);
         }
 
-        return;
+        return info;
     }
 
     template <bool LAN = false>

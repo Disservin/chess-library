@@ -21,6 +21,7 @@ class PieceType {
     constexpr PieceType() : pt(underlying::NONE) {}
     constexpr PieceType(underlying pt) : pt(pt) {}
     constexpr explicit PieceType(std::string_view type) : pt(underlying::NONE) {
+        assert(type.size() > 0);
         switch (type.data()[0]) {
             case 'P':
                 pt = underlying::PAWN;
