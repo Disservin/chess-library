@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cassert>
+#include <cctype>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -19,8 +21,6 @@ class uci {
     /// @param chess960
     /// @return
     [[nodiscard]] static std::string moveToUci(const Move &move, bool chess960 = false) noexcept(false) {
-        std::stringstream ss;
-
         // Get the from and to squares
         Square from_sq = move.from();
         Square to_sq   = move.to();
@@ -31,6 +31,8 @@ class uci {
             to_sq = Square(to_sq > from_sq ? File::FILE_G : File::FILE_C, from_sq.rank());
         }
 
+        std::stringstream ss;
+
         // Add the from and to squares to the string stream
         ss << from_sq;
         ss << to_sq;
@@ -39,6 +41,7 @@ class uci {
         if (move.typeOf() == Move::PROMOTION) {
             ss << static_cast<std::string>(move.promotionType());
         }
+
         return ss.str();
     }
 
@@ -72,10 +75,7 @@ class uci {
             case 4:
                 return Move::make<Move::NORMAL>(source, target);
             default:
-#ifdef DEBUG
-                std::cerr << "Warning; uci move cannot be converted to move!" << std::endl;
-#endif
-                return Move::make<Move::NORMAL>(source, target);
+                throw std::logic_error("UCI move has an unexpected length and cannot be safely converted." + uci);
         }
     }
 
@@ -83,7 +83,7 @@ class uci {
     /// @param board
     /// @param move
     /// @return
-    [[nodiscard]] static std::string moveToSan(Board board, const Move &move) noexcept(false) {
+    [[nodiscard]] static std::string moveToSan(const Board &board, const Move &move) noexcept(false) {
         std::string san;
         moveToRep<false>(board, move, san);
         return san;
@@ -93,7 +93,7 @@ class uci {
     /// @param board
     /// @param move
     /// @return
-    [[nodiscard]] static std::string moveToLan(Board board, const Move &move) noexcept(false) {
+    [[nodiscard]] static std::string moveToLan(const Board &board, const Move &move) noexcept(false) {
         std::string lan;
         moveToRep<true>(board, move, lan);
         return lan;
@@ -127,9 +127,8 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
-        SanMoveInformation info = parseSanInfo<PEDANTIC>(san);
-
-        constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
+        constexpr auto pt_to_pgt      = [](PieceType pt) { return 1 << (pt); };
+        const SanMoveInformation info = parseSanInfo<PEDANTIC>(san);
 
         if (info.capture) {
             movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
@@ -226,8 +225,6 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
-        SanMoveInformation info;
-
         if constexpr (PEDANTIC) {
             if (san.length() < 2) {
                 throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
@@ -248,9 +245,12 @@ class uci {
 
         constexpr auto isRank = [](char c) { return c >= '1' && c <= '8'; };
         constexpr auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
+        constexpr auto sw     = [](const char &c) { return std::string_view(&c, 1); };
+        SanMoveInformation info;
 
         // set to 1 to skip piece type offset
         std::size_t index = 1;
+
         if (san[0] == 'O' || san[0] == '0') {
             parse_castle(san, info, san[0]);
             return info;
@@ -258,25 +258,7 @@ class uci {
             index--;
             info.piece = PieceType::PAWN;
         } else {
-            switch (san[0]) {
-                case 'N':
-                    info.piece = PieceType::KNIGHT;
-                    break;
-                case 'B':
-                    info.piece = PieceType::BISHOP;
-                    break;
-                case 'R':
-                    info.piece = PieceType::ROOK;
-                    break;
-                case 'Q':
-                    info.piece = PieceType::QUEEN;
-                    break;
-                case 'K':
-                    info.piece = PieceType::KING;
-                    break;
-                default:
-                    break;
-            }
+            info.piece = PieceType(san);
         }
 
         File file_to = File::NO_FILE;
@@ -284,13 +266,13 @@ class uci {
 
         // check if san starts with a file, if so it will be start file
         if (index < san.size() && isFile(san[index])) {
-            info.from_file = File(san[index] - 'a');
+            info.from_file = File(sw(san[index]));
             index++;
         }
 
         // check if san starts with a rank, if so it will be start rank
         if (index < san.size() && isRank(san[index])) {
-            info.from_rank = Rank(san[index] - '1');
+            info.from_rank = Rank(sw(san[index]));
             index++;
         }
 
@@ -302,36 +284,24 @@ class uci {
 
         // to file
         if (index < san.size() && isFile(san[index])) {
-            file_to = File(san[index] - 'a');
+            file_to = File(sw(san[index]));
             index++;
         }
 
         // to rank
         if (index < san.size() && isRank(san[index])) {
-            rank_to = Rank(san[index] - '1');
+            rank_to = Rank(sw(san[index]));
             index++;
         }
 
         // promotion
         if (index < san.size() && san[index] == '=') {
             index++;
+            info.promotion = PieceType(sw(san[index]));
 
-            switch (san[index]) {
-                case 'N':
-                    info.promotion = PieceType::KNIGHT;
-                    break;
-                case 'B':
-                    info.promotion = PieceType::BISHOP;
-                    break;
-                case 'R':
-                    info.promotion = PieceType::ROOK;
-                    break;
-                case 'Q':
-                    info.promotion = PieceType::QUEEN;
-                    break;
-                default:
-                    throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
-            }
+            if (info.promotion == PieceType::KING || info.promotion == PieceType::PAWN ||
+                info.promotion == PieceType::NONE)
+                throw SanParseError("Failed to parse promotion, during san conversion." + std::string(san));
 
             index++;
         }
@@ -362,9 +332,6 @@ class uci {
 
     template <bool LAN = false>
     static void moveToRep(Board board, const Move &move, std::string &str) {
-        static const std::string repPieceType[] = {"", "N", "B", "R", "Q", "K"};
-        static const std::string repFile[]      = {"a", "b", "c", "d", "e", "f", "g", "h"};
-
         if (move.typeOf() == Move::CASTLING) {
             str = move.to() > move.from() ? "O-O" : "O-O-O";
             return;
@@ -375,12 +342,12 @@ class uci {
         assert(pt != PieceType::NONE);
 
         if (pt != PieceType::PAWN) {
-            str += repPieceType[pt];
+            str += std::toupper(static_cast<std::string>(pt)[0]);
         }
 
         if constexpr (LAN) {
-            str += repFile[move.from().file()];
-            str += std::to_string(move.from().rank() + 1);
+            str += static_cast<std::string>(move.from().file());
+            str += static_cast<std::string>(move.from().rank());
         } else {
             Movelist moves;
             movegen::legalmoves(moves, board);
@@ -390,10 +357,10 @@ class uci {
                 if (pt != PieceType::PAWN && m != move && board.at(m.from()) == board.at(move.from()) &&
                     m.to() == move.to()) {
                     if (m.from().file() == move.from().file()) {
-                        str += std::to_string(move.from().rank() + 1);
+                        str += static_cast<std::string>(move.from().rank());
                         break;
                     } else {
-                        str += repFile[move.from().file()];
+                        str += static_cast<std::string>(move.from().file());
                         break;
                     }
                 }
@@ -402,28 +369,32 @@ class uci {
 
         if (board.at(move.to()) != Piece::NONE || move.typeOf() == Move::ENPASSANT) {
             if (pt == PieceType::PAWN) {
-                str += repFile[move.from().file()];
+                str += static_cast<std::string>(move.from().file());
             }
 
-            str += "x";
+            str += 'x';
         }
 
-        str += repFile[move.to().file()];
-        str += std::to_string(move.to().rank() + 1);
+        str += static_cast<std::string>(move.to().file());
+        str += static_cast<std::string>(move.to().rank());
 
         if (move.typeOf() == Move::PROMOTION) {
-            str += "=";
-            str += repPieceType[move.promotionType()];
+            const auto promotion_pt = static_cast<std::string>(move.promotionType());
+
+            str += '=';
+            str += std::toupper(promotion_pt[0]);
         }
 
         board.makeMove(move);
 
-        if (board.inCheck()) {
-            if (board.isGameOver().second == GameResult::LOSE) {
-                str += "#";
-            } else {
-                str += "+";
-            }
+        if (!board.inCheck()) {
+            return;
+        }
+
+        if (board.isGameOver().second == GameResult::LOSE) {
+            str += '#';
+        } else {
+            str += '+';
         }
     }
 };
