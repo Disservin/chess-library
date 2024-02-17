@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.28
+VERSION: 0.6.29
 */
 
 #ifndef CHESS_HPP
@@ -2105,7 +2105,7 @@ class Board {
 
         const auto get_file = [&](Color c, CastlingRights::Side side) {
             return c == Color::WHITE ? convert(Color::WHITE, cr_.getRookFile(Color::WHITE, side))
-                                     : convert(Color::WHITE, cr_.getRookFile(Color::BLACK, side));
+                                     : convert(Color::BLACK, cr_.getRookFile(Color::BLACK, side));
         };
 
         if (chess960_) {

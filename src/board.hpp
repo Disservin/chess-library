@@ -500,7 +500,7 @@ class Board {
 
         const auto get_file = [&](Color c, CastlingRights::Side side) {
             return c == Color::WHITE ? convert(Color::WHITE, cr_.getRookFile(Color::WHITE, side))
-                                     : convert(Color::WHITE, cr_.getRookFile(Color::BLACK, side));
+                                     : convert(Color::BLACK, cr_.getRookFile(Color::BLACK, side));
         };
 
         if (chess960_) {
