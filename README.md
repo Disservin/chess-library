@@ -14,6 +14,13 @@ It can be used for any type of chess program, be it a chess engine, a chess GUI,
 - **PGN Support**: Read basic PGN Files.
 - **Namespace**: Everything is in the `chess::` namespace, so it won't pollute your namespace.
 
+### Usage
+
+This is a single header library.
+
+You only need to include `chess.hpp` header!
+Aftewards you can access the chess logic over the `chess::` namespace.
+
 ### Comparison to other chess libraries
 
 The 3 other big chess libraries that I know of in C++ are:
@@ -127,13 +134,6 @@ depth 5  time 388   nodes 15833292     nps 40702550  fen r3k2r/Pppp1ppp/1b3nbN/n
 depth 5  time 2909  nodes 89941194     nps 30907626  fen rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8
 depth 5  time 3403  nodes 164075551    nps 48200808  fen r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 11
 ```
-
-### Usage
-
-This is a single header library.
-
-You only need to include `chess.hpp` header!
-Aftewards you can access the chess logic over the `chess::` namespace.
 
 ### Meson
 
