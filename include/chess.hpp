@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.29
+VERSION: 0.6.30
 */
 
 #ifndef CHESS_HPP
@@ -831,8 +831,19 @@ class attacks {
 }  // namespace chess
 
 #include <array>
-#include <vector>
+#include <cctype>
 #include <charconv>
+#include <vector>
+
+
+
+namespace chess::constants {
+
+constexpr Bitboard DEFAULT_CHECKMASK = Bitboard(0xFFFFFFFFFFFFFFFFull);
+constexpr auto STARTPOS              = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+constexpr auto MAX_MOVES             = 256;
+}  // namespace chess::constants
+
 
 
 
@@ -1091,16 +1102,6 @@ class Piece {
     underlying piece;
 };
 }  // namespace chess
-
-
-namespace chess::constants {
-
-constexpr Bitboard DEFAULT_CHECKMASK = Bitboard(0xFFFFFFFFFFFFFFFFull);
-constexpr auto STARTPOS              = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-constexpr auto MAX_MOVES             = 256;
-}  // namespace chess::constants
-
-
 
 namespace chess {
 class Move {
@@ -2097,42 +2098,41 @@ class Board {
     /// @brief Get the castling rights as a string
     /// @return
     [[nodiscard]] std::string getCastleString() const {
-        std::string ss;
-
-        constexpr auto convert = [](Color c, File file) {
-            return c == Color::WHITE ? char(file) + 'A' : char(file) + 'a';
-        };
-
-        const auto get_file = [&](Color c, CastlingRights::Side side) {
-            return c == Color::WHITE ? convert(Color::WHITE, cr_.getRookFile(Color::WHITE, side))
-                                     : convert(Color::BLACK, cr_.getRookFile(Color::BLACK, side));
+        const auto get_file = [this](Color c, CastlingRights::Side side) {
+            auto file = static_cast<std::string>(cr_.getRookFile(c, side));
+            return c == Color::WHITE ? std::toupper(file[0]) : file[0];
         };
 
         if (chess960_) {
-            if (cr_.has(Color::WHITE, CastlingRights::Side::KING_SIDE))
-                ss += get_file(Color::WHITE, CastlingRights::Side::KING_SIDE);
-            if (cr_.has(Color::WHITE, CastlingRights::Side::QUEEN_SIDE))
-                ss += get_file(Color::WHITE, CastlingRights::Side::QUEEN_SIDE);
-            if (cr_.has(Color::BLACK, CastlingRights::Side::KING_SIDE))
-                ss += get_file(Color::BLACK, CastlingRights::Side::KING_SIDE);
-            if (cr_.has(Color::BLACK, CastlingRights::Side::QUEEN_SIDE))
-                ss += get_file(Color::BLACK, CastlingRights::Side::QUEEN_SIDE);
-        } else {
-            if (cr_.has(Color::WHITE, CastlingRights::Side::KING_SIDE)) ss += 'K';
-            if (cr_.has(Color::WHITE, CastlingRights::Side::QUEEN_SIDE)) ss += 'Q';
-            if (cr_.has(Color::BLACK, CastlingRights::Side::KING_SIDE)) ss += 'k';
-            if (cr_.has(Color::BLACK, CastlingRights::Side::QUEEN_SIDE)) ss += 'q';
+            std::string ss;
+
+            for (auto color : {Color::WHITE, Color::BLACK})
+                for (auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE})
+                    if (cr_.has(color, side)) ss += get_file(color, side);
+
+            return ss;
         }
+
+        std::string ss;
+
+        if (cr_.has(Color::WHITE, CastlingRights::Side::KING_SIDE)) ss += 'K';
+        if (cr_.has(Color::WHITE, CastlingRights::Side::QUEEN_SIDE)) ss += 'Q';
+        if (cr_.has(Color::BLACK, CastlingRights::Side::KING_SIDE)) ss += 'k';
+        if (cr_.has(Color::BLACK, CastlingRights::Side::QUEEN_SIDE)) ss += 'q';
 
         return ss;
     }
 
-    /// @brief Checks if the current position is a repetition, set this to 1 if you are writing
-    /// a chess engine.
+    /// @brief Checks if the current position is a repetition, set this to 1 if
+    /// you are writing a chess engine.
     /// @param count
     /// @return
     [[nodiscard]] bool isRepetition(int count = 2) const {
         uint8_t c = 0;
+
+        // We start the loop from the back and go forward in moves, at most to the
+        // last move which reset the half-move counter because repetitions cant
+        // be across half-moves.
 
         for (int i = static_cast<int>(prev_states_.size()) - 2;
              i >= 0 && i >= static_cast<int>(prev_states_.size()) - hfm_ - 1; i -= 2) {
@@ -2145,8 +2145,9 @@ class Board {
     }
 
     /// @brief Checks if the current position is a draw by 50 move rule.
-    /// Keep in mind that by the rules of chess, if the position has 50 half moves
-    /// it's not necessarily a draw, since checkmate has higher priority, call getHalfMoveDrawType,
+    /// Keep in mind that by the rules of chess, if the position has 50 half
+    /// moves it's not necessarily a draw, since checkmate has higher priority,
+    /// call getHalfMoveDrawType,
     /// to determine whether the position is a draw or checkmate.
     /// @return
     [[nodiscard]] bool isHalfMoveDraw() const { return hfm_ >= 100; }
@@ -2154,10 +2155,8 @@ class Board {
     /// @brief Only call this function if isHalfMoveDraw() returns true.
     /// @return
     [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const {
-        const Board &board = *this;
-
         Movelist movelist;
-        movegen::legalmoves(movelist, board);
+        movegen::legalmoves(movelist, *this);
 
         if (movelist.empty() && inCheck()) {
             return {GameResultReason::CHECKMATE, GameResult::LOSE};
@@ -2171,13 +2170,16 @@ class Board {
     [[nodiscard]] bool isInsufficientMaterial() const {
         const auto count = occ().count();
 
+        // only kings, draw
         if (count == 2) return true;
 
+        // only bishop + knight, cant mate
         if (count == 3) {
             if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK)) return true;
             if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK)) return true;
         }
 
+        // same colored bishops, cant mate
         if (count == 4) {
             if (pieces(PieceType::BISHOP, Color::WHITE) && pieces(PieceType::BISHOP, Color::BLACK) &&
                 Square::same_color(pieces(PieceType::BISHOP, Color::WHITE).lsb(),
@@ -2188,9 +2190,11 @@ class Board {
         return false;
     }
 
-    /// @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
-    /// This function calculates all legal moves for the current position to check if the game is
-    /// over. If you are writing you should not use this function.
+    /// @brief Checks if the game is over. Returns GameResultReason::NONE if
+    /// the game is not over. This function calculates all legal moves for the
+    /// current position to
+    /// check if the game is over. If you are writing you should not use this
+    /// function.
     /// @return
     [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const {
         if (isHalfMoveDraw()) {
@@ -2201,10 +2205,8 @@ class Board {
 
         if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
 
-        const Board &board = *this;
-
         Movelist movelist;
-        movegen::legalmoves(movelist, board);
+        movegen::legalmoves(movelist, *this);
 
         if (movelist.empty()) {
             if (inCheck()) return {GameResultReason::CHECKMATE, GameResult::LOSE};
@@ -2219,14 +2221,17 @@ class Board {
     /// @param color
     /// @return
     [[nodiscard]] bool isAttacked(Square square, Color color) const {
+        // cheap checks first
         if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
         if (attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
         if (attacks::king(square) & pieces(PieceType::KING, color)) return true;
 
         if (attacks::bishop(square, occ()) & (pieces(PieceType::BISHOP, color) | pieces(PieceType::QUEEN, color)))
             return true;
+
         if (attacks::rook(square, occ()) & (pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color)))
             return true;
+
         return false;
     }
 
@@ -2265,7 +2270,6 @@ class Board {
         U64 stm_hash = 0ULL;
         if (stm_ == Color::WHITE) stm_hash ^= Zobrist::sideToMove();
 
-        // Castle hash
         U64 castling_hash = 0ULL;
         castling_hash ^= Zobrist::castling(cr_.hashIndex());
 
@@ -2357,51 +2361,58 @@ class Board {
 
         cr_.clear();
 
+        const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) {
+            const auto king_side = CastlingRights::Side::KING_SIDE;
+            const auto king_sq   = board.kingSq(color);
+            const auto sq_corner = Square(side == king_side ? Square::underlying::SQ_H1 : Square::underlying::SQ_A1)
+                                       .relative_square(color);
+
+            const auto start = side == king_side ? king_sq + 1 : king_sq - 1;
+
+            for (Square sq = start; (side == king_side ? sq <= sq_corner : sq >= sq_corner);
+                 (side == king_side ? sq++ : sq--)) {
+                // if (board.at<PieceType>(sq) == PieceType::NONE) continue;
+                if (board.at<PieceType>(sq) == PieceType::ROOK && board.at(sq).color() == color) {
+                    return sq.file();
+                }
+            }
+
+            throw std::runtime_error("Invalid position");
+        };
+
         for (char i : castling) {
             if (i == '-') break;
+
+            const auto king_side  = CastlingRights::Side::KING_SIDE;
+            const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
+
             if (!chess960_) {
-                if (i == 'K') cr_.setCastlingRight(Color::WHITE, CastlingRights::Side::KING_SIDE, File::FILE_H);
-                if (i == 'Q') cr_.setCastlingRight(Color::WHITE, CastlingRights::Side::QUEEN_SIDE, File::FILE_A);
-                if (i == 'k') cr_.setCastlingRight(Color::BLACK, CastlingRights::Side::KING_SIDE, File::FILE_H);
-                if (i == 'q') cr_.setCastlingRight(Color::BLACK, CastlingRights::Side::QUEEN_SIDE, File::FILE_A);
-            } else {
-                const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
-                const auto king_sq = kingSq(color);
+                if (i == 'K') cr_.setCastlingRight(Color::WHITE, king_side, File::FILE_H);
+                if (i == 'Q') cr_.setCastlingRight(Color::WHITE, queen_side, File::FILE_A);
+                if (i == 'k') cr_.setCastlingRight(Color::BLACK, king_side, File::FILE_H);
+                if (i == 'q') cr_.setCastlingRight(Color::BLACK, queen_side, File::FILE_A);
 
-                const auto find_rook = [&](const Board &board, CastlingRights::Side side) {
-                    const auto sq_corner = Square(side == CastlingRights::Side::KING_SIDE ? Square::underlying::SQ_H1
-                                                                                          : Square::underlying::SQ_A1)
-                                               .relative_square(color);
-                    const auto start = side == CastlingRights::Side::KING_SIDE ? king_sq + 1 : king_sq - 1;
+                continue;
+            }
 
-                    for (Square sq = start;
-                         (side == CastlingRights::Side::KING_SIDE ? sq <= sq_corner : sq >= sq_corner);
-                         (side == CastlingRights::Side::KING_SIDE ? sq++ : sq--)) {
-                        // if (board.at<PieceType>(sq) == PieceType::NONE) continue;
-                        if (board.at<PieceType>(sq) == PieceType::ROOK && board.at(sq).color() == color) {
-                            return sq.file();
-                        }
-                    }
+            // chess960 castling detection
 
-                    throw std::runtime_error("Invalid position");
-                };
+            const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
+            const auto king_sq = kingSq(color);
 
-                // find rook on the right side of the king
-                if (i == 'K' || i == 'k') {
-                    cr_.setCastlingRight(color, CastlingRights::Side::KING_SIDE,
-                                         find_rook(*this, CastlingRights::Side::KING_SIDE));
-                }
-                // find rook on the left side of the king
-                else if (i == 'Q' || i == 'q') {
-                    cr_.setCastlingRight(color, CastlingRights::Side::QUEEN_SIDE,
-                                         find_rook(*this, CastlingRights::Side::QUEEN_SIDE));
-                }
-                // frc castling
-                else {
-                    const auto file = static_cast<File>(tolower(i) - 97);
-                    const auto side = CastlingRights::closestSide(file, king_sq.file());
-                    cr_.setCastlingRight(color, side, file);
-                }
+            // find rook on the right side of the king
+            if (i == 'K' || i == 'k') {
+                cr_.setCastlingRight(color, king_side, find_rook(*this, king_side, color));
+            }
+            // find rook on the left side of the king
+            else if (i == 'Q' || i == 'q') {
+                cr_.setCastlingRight(color, queen_side, find_rook(*this, queen_side, color));
+            }
+            // correct frc castling encoding
+            else {
+                const auto file = File(std::string_view(&i, 1));
+                const auto side = CastlingRights::closestSide(file, king_sq.file());
+                cr_.setCastlingRight(color, side, file);
             }
         }
 
@@ -2420,11 +2431,13 @@ class Board {
 
 inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     for (int i = 63; i >= 0; i -= 8) {
-        os << " " << static_cast<std::string>(b.board_[i - 7]) << " " << static_cast<std::string>(b.board_[i - 6])
-           << " " << static_cast<std::string>(b.board_[i - 5]) << " " << static_cast<std::string>(b.board_[i - 4])
-           << " " << static_cast<std::string>(b.board_[i - 3]) << " " << static_cast<std::string>(b.board_[i - 2])
-           << " " << static_cast<std::string>(b.board_[i - 1]) << " " << static_cast<std::string>(b.board_[i]) << " \n";
+        for (int j = 7; j >= 0; j--) {
+            os << " " << static_cast<std::string>(b.board_[i - j]);
+        }
+
+        os << " \n";
     }
+
     os << "\n\n";
     os << "Side to move: " << static_cast<int>(b.stm_.internal()) << "\n";
     os << "Castling rights: " << b.getCastleString() << "\n";
@@ -2434,6 +2447,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     os << "Hash: " << b.key_ << "\n";
 
     os << std::endl;
+
     return os;
 }
 }  // namespace  chess
@@ -3821,7 +3835,6 @@ class StreamParser {
 };
 }  // namespace chess::pgn
 
-#include <cctype>
 #include <sstream>
 #include <utility>
 
