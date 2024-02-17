@@ -1,9 +1,9 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include <cassert>
 
 #include "color.hpp"
 
@@ -16,6 +16,8 @@ class File {
     constexpr File() : file(underlying::NO_FILE) {}
     constexpr File(underlying file) : file(file) {}
     constexpr File(int file) : file(static_cast<underlying>(file)) {}
+    constexpr File(std::string_view sw)
+        : file(static_cast<underlying>(static_cast<char>(std::tolower(static_cast<unsigned char>(sw[0]))) - 'a')) {}
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return file; }
 
@@ -64,6 +66,8 @@ class Rank {
     constexpr Rank() : rank(underlying::NO_RANK) {}
     constexpr Rank(underlying rank) : rank(rank) {}
     constexpr Rank(int rank) : rank(static_cast<underlying>(rank)) {}
+    constexpr Rank(std::string_view sw)
+        : rank(static_cast<underlying>(static_cast<char>(std::tolower(static_cast<unsigned char>(sw[0]))) - '1')) {}
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return rank; }
 

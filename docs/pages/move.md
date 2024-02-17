@@ -67,9 +67,9 @@ std::string moveToUci(const Move& move, bool chess960 = false);
 
 Move uciToMove(const Board& board, const std::string& uci);
 
-std::string moveToSan(Board board, const Move& move);
+std::string moveToSan(const Board& board, const Move& move);
 
-std::string moveToLan(Board board, const Move& move);
+std::string moveToLan(const Board& board, const Move& move);
 
 Move parseSan(const Board& board, std::string_view san);
 
