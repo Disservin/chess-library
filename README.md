@@ -1,4 +1,6 @@
-# An extensive SHL Chess Library for C++
+# An extensive SHL Chess Library for C++ 
+
+[![Chess Library](https://github.com/Disservin/chess-library/actions/workflows/chess-library.yml/badge.svg)](https://github.com/Disservin/chess-library/actions/workflows/chess-library.yml)
 
 ## [Documentation](https://disservin.github.io/chess-library)
 
