@@ -4,7 +4,7 @@
 
 ## [Documentation](https://disservin.github.io/chess-library)
 
-**chess-library** is a chess library for C++, with reasonably fast move generation for all purposes, written in **C++17**.
+**chess-library** is a multi-purpose library for chess in C++17.
 
 It can be used for any type of chess program, be it a chess engine, a chess GUI, or a chess data anaylsis tool.
 
@@ -13,7 +13,7 @@ It can be used for any type of chess program, be it a chess engine, a chess GUI,
 - **Fast**: This library is fast enough for pretty much any purpose in C++ and it is faster than most other chess libraries in C++.
 - **Documentation**: Easy to browse **documentation** at https://disservin.github.io/chess-library
 - **Robust**: Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/official-stockfish/WDL_model).
-- **PGN Support**: Read basic PGN Files.
+- **PGN Support**: Parse basic PGN files.
 - **Namespace**: Everything is in the `chess::` namespace, so it won't pollute your namespace.
 
 ### Usage
@@ -137,8 +137,9 @@ depth 5  time 2909  nodes 89941194     nps 30907626  fen rnbq1k1r/pp1Pbppp/2p5/8
 depth 5  time 3403  nodes 164075551    nps 48200808  fen r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 11
 ```
 
-### Meson
+### Development Setup
 
+This project is using the meson build system. https://mesonbuild.com/
 #### Setup
 
 ```bash
