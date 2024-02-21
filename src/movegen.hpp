@@ -2,10 +2,10 @@
 
 #include <array>
 
-#include "coords.hpp"
 #include "attacks_fwd.hpp"
-#include "constants.hpp"
 #include "board.hpp"
+#include "constants.hpp"
+#include "coords.hpp"
 #include "movegen_fwd.hpp"
 
 namespace chess {
