@@ -26,6 +26,10 @@ namespace utils {
     return result;
 }
 
+constexpr char tolower(char c) {
+    return (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c;
+}
+
 }  // namespace utils
 
 }  // namespace chess

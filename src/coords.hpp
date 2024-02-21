@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "color.hpp"
+#include "utils.hpp"
 
 namespace chess {
 
@@ -17,7 +18,7 @@ class File {
     constexpr File(underlying file) : file(file) {}
     constexpr File(int file) : file(static_cast<underlying>(file)) {}
     constexpr File(std::string_view sw)
-        : file(static_cast<underlying>(static_cast<char>(std::tolower(static_cast<unsigned char>(sw[0]))) - 'a')) {}
+        : file(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - 'a')) {}
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return file; }
 
@@ -67,7 +68,7 @@ class Rank {
     constexpr Rank(underlying rank) : rank(rank) {}
     constexpr Rank(int rank) : rank(static_cast<underlying>(rank)) {}
     constexpr Rank(std::string_view sw)
-        : rank(static_cast<underlying>(static_cast<char>(std::tolower(static_cast<unsigned char>(sw[0]))) - '1')) {}
+        : rank(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - '1')) {}
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return rank; }
 
