@@ -29,6 +29,15 @@ class movegen {
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                                         PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
+    /// @brief Generates all psudo legal moves for a position.
+    /// @tparam mt
+    /// @param movelist
+    /// @param board
+    template <MoveGenType mt = MoveGenType::ALL>
+    void static pseudolegalmoves(Movelist &movelist, const Board &board,
+                           int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
+                                             PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+
    private:
     static auto init_squares_between();
     static const std::array<std::array<Bitboard, 64>, 64> SQUARES_BETWEEN_BB;
@@ -144,6 +153,14 @@ class movegen {
     /// @param board
     template <Color::underlying c, MoveGenType mt>
     static void legalmoves(Movelist &movelist, const Board &board, int pieces);
+
+    /// @brief all pseudo legal moves for a position
+    /// @tparam c
+    /// @tparam mt
+    /// @param movelist
+    /// @param board
+    template <Color::underlying c, MoveGenType mt>
+    static void pseudolegalmoves(Movelist &movelist, const Board &board, int pieces);
 };
 
 }  // namespace chess
