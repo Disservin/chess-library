@@ -2077,7 +2077,7 @@ class Board {
     /// @brief Checks if a move is a capture, enpassant moves are also considered captures.
     /// @param move
     /// @return
-    bool isCapture(const Move &move) const {
+    bool isCapture(const Move move) const {
         return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) || move.typeOf() == Move::ENPASSANT;
     }
 

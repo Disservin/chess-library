@@ -8,8 +8,8 @@ class Board {
         void setFen(std::string_view fen);
         std::string getFen(bool moveCounters = true);
 
-        void makeMove(const Move &move);
-        void unmakeMove(const Move &move);
+        void makeMove(const Move move);
+        void unmakeMove(const Move move);
 
         void makeNullMove();
         void unmakeNullMove();
@@ -34,7 +34,7 @@ class Board {
         /// @brief Checks if a move is a capture, enpassant moves are also considered captures.
         /// @param move
         /// @return
-        bool isCapture(const Move &move);
+        bool isCapture(const Move move);
 
         /// @brief Returns either the piece or the piece type on a square
         /// @tparam T
