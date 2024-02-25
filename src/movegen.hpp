@@ -499,13 +499,13 @@ inline void movegen::gen_moves(Movelist &movelist, const Board &board, int piece
         check_mask = checkMask<c>(board, king_sq, double_check);
         pin_hv     = pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
         pin_d      = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+        assert(double_check <= 2);
     } else {
         check_mask = constants::DEFAULT_CHECKMASK;
         pin_d      = 0;
         pin_hv     = 0;
     }
 
-    assert(double_check <= 2);
 
     // Moves have to be on the checkmask
     Bitboard movable_square;
@@ -552,7 +552,7 @@ inline void movegen::gen_moves(Movelist &movelist, const Board &board, int piece
     movable_square &= check_mask;
 
     // Early return for double check as described earlier
-    if (double_check == 2) return;
+    if (type == movegen::Type::LEGAL && double_check == 2) return;
 
     // Add the moves to the movelist.
     if (pieces & PieceGenType::PAWN) {
