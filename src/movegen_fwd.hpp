@@ -19,24 +19,16 @@ class Board;
 class movegen {
    public:
     enum class MoveGenType : std::uint8_t { ALL, CAPTURE, QUIET };
+    enum class Type : int { LEGAL, PSEUDO_LEGAL };
 
     /// @brief Generates all legal moves for a position.
     /// @tparam mt
     /// @param movelist
     /// @param board
-    template <MoveGenType mt = MoveGenType::ALL>
+    template <MoveGenType mt = MoveGenType::ALL, Type type = Type::LEGAL>
     void static legalmoves(Movelist &movelist, const Board &board,
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                                         PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
-
-    /// @brief Generates all psudo legal moves for a position.
-    /// @tparam mt
-    /// @param movelist
-    /// @param board
-    template <MoveGenType mt = MoveGenType::ALL>
-    void static pseudolegalmoves(Movelist &movelist, const Board &board,
-                           int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
-                                             PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
    private:
     static auto init_squares_between();
@@ -151,16 +143,8 @@ class movegen {
     /// @tparam mt
     /// @param movelist
     /// @param board
-    template <Color::underlying c, MoveGenType mt>
+    template <Color::underlying c, MoveGenType mt, Type type>
     static void legalmoves(Movelist &movelist, const Board &board, int pieces);
-
-    /// @brief all pseudo legal moves for a position
-    /// @tparam c
-    /// @tparam mt
-    /// @param movelist
-    /// @param board
-    template <Color::underlying c, MoveGenType mt>
-    static void pseudolegalmoves(Movelist &movelist, const Board &board, int pieces);
 };
 
 }  // namespace chess
