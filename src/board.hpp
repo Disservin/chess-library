@@ -188,7 +188,7 @@ class Board {
         return ss;
     }
 
-    void makeMove(const Move &move) {
+    void makeMove(const Move move) {
         const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
         const auto captured = at(move.to());
         const auto pt       = at<PieceType>(move.from());
@@ -306,7 +306,7 @@ class Board {
         stm_ = ~stm_;
     }
 
-    void unmakeMove(const Move &move) {
+    void unmakeMove(const Move move) {
         const auto prev = prev_states_.back();
         prev_states_.pop_back();
 
