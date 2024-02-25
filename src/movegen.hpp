@@ -591,14 +591,24 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
     }
 }
 
-template <movegen::MoveGenType mt, movegen::Type type>
+template <movegen::MoveGenType mt>
 inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt, type>(movelist, board, pieces);
+        legalmoves<Color::WHITE, mt, movegen::Type::LEGAL>(movelist, board, pieces);
     else
-        legalmoves<Color::BLACK, mt, type>(movelist, board, pieces);
+        legalmoves<Color::BLACK, mt, movegen::Type::LEGAL>(movelist, board, pieces);
+}
+
+template <movegen::MoveGenType mt>
+inline void movegen::pseudolegalmoves(Movelist &movelist, const Board &board, int pieces) {
+    movelist.clear();
+
+    if (board.sideToMove() == Color::WHITE)
+        legalmoves<Color::WHITE, mt, movegen::Type::PSEUDO_LEGAL>(movelist, board, pieces);
+    else
+        legalmoves<Color::BLACK, mt, movegen::Type::PSEUDO_LEGAL>(movelist, board, pieces);
 }
 
 inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = movegen::init_squares_between();

@@ -19,18 +19,28 @@ class Board;
 class movegen {
    public:
     enum class MoveGenType : std::uint8_t { ALL, CAPTURE, QUIET };
-    enum class Type : int { LEGAL, PSEUDO_LEGAL };
 
     /// @brief Generates all legal moves for a position.
     /// @tparam mt
     /// @param movelist
     /// @param board
-    template <MoveGenType mt = MoveGenType::ALL, Type type = Type::LEGAL>
+    template <MoveGenType mt = MoveGenType::ALL>
     void static legalmoves(Movelist &movelist, const Board &board,
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                                         PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
+    /// @brief Generates all pseudo legal moves for a position.
+    /// @tparam mt
+    /// @param movelist
+    /// @param board
+    template <MoveGenType mt = MoveGenType::ALL>
+    void static pseudolegalmoves(Movelist &movelist, const Board &board,
+                                  int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
+                                               PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+
    private:
+    enum class Type : int { LEGAL, PSEUDO_LEGAL };
+
     static auto init_squares_between();
     static const std::array<std::array<Bitboard, 64>, 64> SQUARES_BETWEEN_BB;
 

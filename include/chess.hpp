@@ -1284,18 +1284,28 @@ class Board;
 class movegen {
    public:
     enum class MoveGenType : std::uint8_t { ALL, CAPTURE, QUIET };
-    enum class Type : int { LEGAL, PSEUDO_LEGAL };
 
     /// @brief Generates all legal moves for a position.
     /// @tparam mt
     /// @param movelist
     /// @param board
-    template <MoveGenType mt = MoveGenType::ALL, Type type = Type::LEGAL>
+    template <MoveGenType mt = MoveGenType::ALL>
     void static legalmoves(Movelist &movelist, const Board &board,
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                                         PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
+    /// @brief Generates all pseudo legal moves for a position.
+    /// @tparam mt
+    /// @param movelist
+    /// @param board
+    template <MoveGenType mt = MoveGenType::ALL>
+    void static pseudolegalmoves(Movelist &movelist, const Board &board,
+                                  int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
+                                               PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+
    private:
+    enum class Type : int { LEGAL, PSEUDO_LEGAL };
+
     static auto init_squares_between();
     static const std::array<std::array<Bitboard, 64>, 64> SQUARES_BETWEEN_BB;
 
@@ -3275,14 +3285,24 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
     }
 }
 
-template <movegen::MoveGenType mt, movegen::Type type>
+template <movegen::MoveGenType mt>
 inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt, type>(movelist, board, pieces);
+        legalmoves<Color::WHITE, mt, movegen::Type::LEGAL>(movelist, board, pieces);
     else
-        legalmoves<Color::BLACK, mt, type>(movelist, board, pieces);
+        legalmoves<Color::BLACK, mt, movegen::Type::LEGAL>(movelist, board, pieces);
+}
+
+template <movegen::MoveGenType mt>
+inline void movegen::pseudolegalmoves(Movelist &movelist, const Board &board, int pieces) {
+    movelist.clear();
+
+    if (board.sideToMove() == Color::WHITE)
+        legalmoves<Color::WHITE, mt, movegen::Type::PSEUDO_LEGAL>(movelist, board, pieces);
+    else
+        legalmoves<Color::BLACK, mt, movegen::Type::PSEUDO_LEGAL>(movelist, board, pieces);
 }
 
 inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = movegen::init_squares_between();
