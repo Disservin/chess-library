@@ -469,13 +469,13 @@ inline void movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func)
     }
 }
 
-/// @brief all legal moves for a position
+/// @brief generate moves for a position
 /// @tparam c
 /// @tparam mt
 /// @param movelist
 /// @param board
 template <Color::underlying c, movegen::MoveGenType mt, movegen::Type type>
-inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
+inline void movegen::gen_moves(Movelist &movelist, const Board &board, int pieces) {
     /*
      The size of the movelist might not
      be 0! This is done on purpose since it enables
@@ -596,9 +596,9 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt, movegen::Type::LEGAL>(movelist, board, pieces);
+        gen_moves<Color::WHITE, mt, movegen::Type::LEGAL>(movelist, board, pieces);
     else
-        legalmoves<Color::BLACK, mt, movegen::Type::LEGAL>(movelist, board, pieces);
+        gen_moves<Color::BLACK, mt, movegen::Type::LEGAL>(movelist, board, pieces);
 }
 
 template <movegen::MoveGenType mt>
@@ -606,9 +606,9 @@ inline void movegen::pseudolegalmoves(Movelist &movelist, const Board &board, in
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt, movegen::Type::PSEUDO_LEGAL>(movelist, board, pieces);
+        gen_moves<Color::WHITE, mt, movegen::Type::PSEUDO_LEGAL>(movelist, board, pieces);
     else
-        legalmoves<Color::BLACK, mt, movegen::Type::PSEUDO_LEGAL>(movelist, board, pieces);
+        gen_moves<Color::BLACK, mt, movegen::Type::PSEUDO_LEGAL>(movelist, board, pieces);
 }
 
 inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = movegen::init_squares_between();

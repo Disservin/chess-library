@@ -35,8 +35,8 @@ class movegen {
     /// @param board
     template <MoveGenType mt = MoveGenType::ALL>
     void static pseudolegalmoves(Movelist &movelist, const Board &board,
-                                  int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
-                                               PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+                                 int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
+                                              PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
    private:
     enum class Type : int { LEGAL, PSEUDO_LEGAL };
@@ -154,7 +154,7 @@ class movegen {
     /// @param movelist
     /// @param board
     template <Color::underlying c, MoveGenType mt, Type type>
-    static void legalmoves(Movelist &movelist, const Board &board, int pieces);
+    static void gen_moves(Movelist &movelist, const Board &board, int pieces);
 };
 
 }  // namespace chess
