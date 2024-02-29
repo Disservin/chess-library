@@ -19,9 +19,13 @@ TEST_SUITE("Movelist") {
         moves.add(Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A3));
         moves.add(Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A4));
 
-        CHECK(moves.find(Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A2)) == 0);
-        CHECK(moves.find(Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A3)) == 1);
-        CHECK(moves.find(Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A4)) == 2);
-        CHECK(moves.find(Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A5)) == -1);
+        CHECK(std::find(moves.begin(), moves.end(), Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A2)) !=
+              moves.end());
+        CHECK(std::find(moves.begin(), moves.end(), Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A3)) !=
+              moves.end());
+        CHECK(std::find(moves.begin(), moves.end(), Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A4)) !=
+              moves.end());
+        CHECK(std::find(moves.begin(), moves.end(), Move::make(Square::underlying::SQ_A1, Square::underlying::SQ_A5)) ==
+              moves.end());
     }
 }
