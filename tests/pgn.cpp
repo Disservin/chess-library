@@ -415,11 +415,6 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->gameCount() == 3);
         CHECK(vis->endCount() == 3);
         CHECK(vis->moveStartCount() == 3);
-
-        for (const auto& header : vis->headers()) {
-            std::cout << header << std::endl;
-        }
-
         CHECK(vis->headers().size() == 6);
 
         CHECK(vis->headers()[0] == "FEN 5k2/3r1p2/1p3pp1/p2n3p/P6P/1PPR1PP1/3KN3/6b1 w - - 0 34");
