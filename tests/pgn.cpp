@@ -20,6 +20,7 @@ class MyVisitor : public pgn::Visitor {
     }
 
     void header(std::string_view key, std::string_view value) {
+        headers_.push_back(std::string(key) + " " + std::string(value));
         if (key == "Result" && value == "*") {
             this->skipPgn(true);
         }
@@ -46,12 +47,14 @@ class MyVisitor : public pgn::Visitor {
     int gameCount() const { return game_count_; }
     int endCount() const { return end_count_; }
     int moveStartCount() const { return move_start_count_; }
-    auto comments() const { return comments_; }
-    auto moves() const { return moves_; }
+    const auto& comments() const { return comments_; }
+    const auto& moves() const { return moves_; }
+    const auto& headers() const { return headers_; }
 
    private:
     std::vector<std::string> comments_;
     std::vector<std::string> moves_;
+    std::vector<std::string> headers_;
 
     int end_count_        = 0;
     int game_count_       = 0;
@@ -399,5 +402,33 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->moves()[1] == "e6");
         CHECK(vis->moves()[vis->moves().size() - 1] == "Ke4");
         CHECK(vis->moves()[vis->moves().size() - 2] == "Rd2+");
+    }
+
+    TEST_CASE("No Moves With Game Termination Marker Multiple 2") {
+        const auto file  = "./tests/pgns/no_moves_but_game_termination_multiple_2.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 3);
+        CHECK(vis->endCount() == 3);
+        CHECK(vis->moveStartCount() == 3);
+
+        for (const auto& header : vis->headers()) {
+            std::cout << header << std::endl;
+        }
+
+        CHECK(vis->headers().size() == 6);
+
+        CHECK(vis->headers()[0] == "FEN 5k2/3r1p2/1p3pp1/p2n3p/P6P/1PPR1PP1/3KN3/6b1 w - - 0 34");
+        CHECK(vis->headers()[1] == "Result 1/2-1/2");
+
+        CHECK(vis->headers()[2] == "FEN 5k2/5p2/4B2p/r5pn/4P3/5PPP/2NR2K1/8 b - - 0 59");
+        CHECK(vis->headers()[3] == "Result 1/2-1/2");
+
+        CHECK(vis->headers()[4] == "FEN 8/p3kp1p/1p4p1/2r2b2/2BR3P/1P3P2/P4PK1/8 b - - 0 28");
+        CHECK(vis->headers()[5] == "Result 1/2-1/2");
     }
 }
