@@ -293,7 +293,7 @@ class StreamParser {
                     in_header = false;
                     in_body   = true;
 
-                    visitor->startMoves();
+                    if (!visitor->skip()) visitor->startMoves();
 
                     stream_buffer.advance();
                     stream_buffer.advance();

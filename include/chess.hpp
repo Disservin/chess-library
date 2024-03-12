@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.35
+VERSION: 0.6.34
 */
 
 #ifndef CHESS_HPP
@@ -3617,7 +3617,7 @@ class StreamParser {
                     in_header = false;
                     in_body   = true;
 
-                    visitor->startMoves();
+                    if (!visitor->skip()) visitor->startMoves();
 
                     stream_buffer.advance();
                     stream_buffer.advance();

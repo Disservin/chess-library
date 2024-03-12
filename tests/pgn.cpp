@@ -269,7 +269,7 @@ TEST_SUITE("PGN StreamParser") {
 
         CHECK(vis->gameCount() == 2);
         CHECK(vis->endCount() == 2);
-        CHECK(vis->moveStartCount() == 2);
+        CHECK(vis->moveStartCount() == 1);
         CHECK(vis->count() == 130);
     }
 
