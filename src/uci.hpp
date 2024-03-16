@@ -133,8 +133,7 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
-        // if san starts with 0000, return a none move
-        if (san.empty() || (san.length() >= 4 && san.substr(0, 4) == "0000")) {
+        if (san.empty()) {
             return Move::NO_MOVE;
         }
 
