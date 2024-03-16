@@ -3665,7 +3665,7 @@ class StreamParser {
 
                 // the game has no moves, but a comment followed by a game termination
                 if (!visitor->skip()) {
-                    visitor->move("0000", comment.get());
+                    visitor->move("", comment.get());
 
                     comment.clear();
                 }
