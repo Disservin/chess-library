@@ -244,6 +244,6 @@ TEST_SUITE("SAN Parser") {
     TEST_CASE("Parse No Move") {
         Board b = Board();
 
-        CHECK(uci::parseSan(b, "0000") == Move::NO_MOVE);
+        CHECK(uci::parseSan(b, "") == Move::NO_MOVE);
     }
 }
