@@ -426,4 +426,18 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->headers()[4] == "FEN 8/p3kp1p/1p4p1/2r2b2/2BR3P/1P3P2/P4PK1/8 b - - 0 28");
         CHECK(vis->headers()[5] == "Result 1/2-1/2");
     }
+
+    TEST_CASE("No Moves But Comment Followed by Termination Marker") {
+        const auto file  = "./tests/pgns/no_moves_but_comment_followed_by_termination_marker.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 2);
+        CHECK(vis->endCount() == 2);
+        CHECK(vis->moveStartCount() == 2);
+        CHECK(vis->count() == 1);
+    }
 }
