@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.36
+VERSION: 0.6.37
 */
 
 #ifndef CHESS_HPP
@@ -3619,9 +3619,6 @@ class StreamParser {
 
                     if (!visitor->skip()) visitor->startMoves();
 
-                    stream_buffer.advance();
-                    stream_buffer.advance();
-
                     return true;
                 default:
                     break;
@@ -3634,14 +3631,16 @@ class StreamParser {
 
     void processBody() {
         auto is_termination_symbol = false;
+        auto has_comment           = false;
 
+    start:
         /*
         Skip first move number or game termination
         Also skip - * / to fix games
         which directly start with a game termination
         this https://github.com/Disservin/chess-library/issues/68
         */
-        stream_buffer.loop([this, &is_termination_symbol](char c) {
+        stream_buffer.loop([this, &is_termination_symbol, &has_comment](char c) {
             if (c == ' ' || is_digit(c)) {
                 stream_buffer.advance();
                 return false;
@@ -3649,10 +3648,36 @@ class StreamParser {
                 is_termination_symbol = true;
                 stream_buffer.advance();
                 return false;
+            } else if (c == '{') {
+                has_comment = true;
+
+                // reading comment
+                stream_buffer.advance();
+                stream_buffer.loop([this](char c) {
+                    stream_buffer.advance();
+
+                    if (c == '}') return true;
+
+                    comment += c;
+
+                    return false;
+                });
+
+                // the game has no moves, but a comment followed by a game termination
+                if (!visitor->skip()) {
+                    visitor->move("0000", comment.get());
+
+                    comment.clear();
+                }
             }
 
             return true;
         });
+
+        // we need to reparse the termination symbol
+        if (has_comment && !is_termination_symbol) {
+            goto start;
+        }
 
         // game had no moves, so we can skip it and call endPgn
         if (is_termination_symbol) {
@@ -4028,6 +4053,11 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
+        // if san starts with 0000, return a none move
+        if (san.length() >= 4 && san.substr(0, 4) == "0000") {
+            return Move::NO_MOVE;
+        }
+
         constexpr auto pt_to_pgt      = [](PieceType pt) { return 1 << (pt); };
         const SanMoveInformation info = parseSanInfo<PEDANTIC>(san);
 
