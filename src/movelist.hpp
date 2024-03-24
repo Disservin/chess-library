@@ -56,22 +56,22 @@ class Movelist {
 
     // Iterators
 
-    [[nodiscard]] constexpr iterator begin() noexcept { return moves_.begin(); }
-    [[nodiscard]] constexpr const_iterator begin() const noexcept { return moves_.begin(); }
+    [[nodiscard]] constexpr auto begin() noexcept { return moves_.begin(); }
+    [[nodiscard]] constexpr auto begin() const noexcept { return moves_.begin(); }
 
     [[nodiscard]] constexpr auto end() noexcept { return moves_.begin() + size_; }
-    [[nodiscard]] constexpr const_iterator end() const noexcept { return moves_.begin() + size_; }
+    [[nodiscard]] constexpr auto end() const noexcept { return moves_.begin() + size_; }
 
-    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept {
+    [[nodiscard]] constexpr auto rbegin() noexcept {
         return moves_.rbegin() + (constants::MAX_MOVES - size_);
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept {
+    [[nodiscard]] constexpr auto rbegin() const noexcept {
         return moves_.rbegin() + (constants::MAX_MOVES - size_);
     }
 
-    [[nodiscard]] constexpr reverse_iterator rend() noexcept { return moves_.rbegin() + constants::MAX_MOVES; }
-    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept {
+    [[nodiscard]] constexpr auto rend() noexcept { return moves_.rbegin() + constants::MAX_MOVES; }
+    [[nodiscard]] constexpr auto rend() const noexcept {
         return moves_.rbegin() + constants::MAX_MOVES;
     }
 
