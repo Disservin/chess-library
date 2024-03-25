@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.37
+VERSION: 0.6.38
 */
 
 #ifndef CHESS_HPP
@@ -1265,24 +1265,11 @@ class Movelist {
 
     // Iterators
 
-    [[nodiscard]] constexpr iterator begin() noexcept { return moves_.begin(); }
-    [[nodiscard]] constexpr const_iterator begin() const noexcept { return moves_.begin(); }
+    [[nodiscard]] constexpr iterator begin() noexcept { return &moves_[0]; }
+    [[nodiscard]] constexpr const_iterator begin() const noexcept { return &moves_[0]; }
 
-    [[nodiscard]] constexpr auto end() noexcept { return moves_.begin() + size_; }
-    [[nodiscard]] constexpr const_iterator end() const noexcept { return moves_.begin() + size_; }
-
-    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept {
-        return moves_.rbegin() + (constants::MAX_MOVES - size_);
-    }
-
-    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept {
-        return moves_.rbegin() + (constants::MAX_MOVES - size_);
-    }
-
-    [[nodiscard]] constexpr reverse_iterator rend() noexcept { return moves_.rbegin() + constants::MAX_MOVES; }
-    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept {
-        return moves_.rbegin() + constants::MAX_MOVES;
-    }
+    [[nodiscard]] constexpr iterator end() noexcept { return &moves_[0] + size_; }
+    [[nodiscard]] constexpr const_iterator end() const noexcept { return &moves_[0] + size_; }
 
     // Capacity
 
