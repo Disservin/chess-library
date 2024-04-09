@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.40
+VERSION: 0.6.41
 */
 
 #ifndef CHESS_HPP
@@ -2338,17 +2338,33 @@ class Board {
     virtual void placePiece(Piece piece, Square sq) {
         assert(board_[sq.index()] == Piece::NONE);
 
-        pieces_bb_[piece.type()].set(sq.index());
-        occ_bb_[piece.color()].set(sq.index());
-        board_[sq.index()] = piece;
+        auto type  = piece.type();
+        auto color = piece.color();
+        auto index = sq.index();
+
+        assert(type != PieceType::NONE);
+        assert(color != Color::NONE);
+        assert(index >= 0 && index < 64);
+
+        pieces_bb_[type].set(index);
+        occ_bb_[color].set(index);
+        board_[index] = piece;
     }
 
     virtual void removePiece(Piece piece, Square sq) {
         assert(board_[sq.index()] == piece && piece != Piece::NONE);
 
-        pieces_bb_[piece.type()].clear(sq.index());
-        occ_bb_[piece.color()].clear(sq.index());
-        board_[sq.index()] = Piece::NONE;
+        auto type  = piece.type();
+        auto color = piece.color();
+        auto index = sq.index();
+
+        assert(type != PieceType::NONE);
+        assert(color != Color::NONE);
+        assert(index >= 0 && index < 64);
+
+        pieces_bb_[type].clear(index);
+        occ_bb_[color].clear(index);
+        board_[index] = Piece::NONE;
     }
 
     std::vector<State> prev_states_;
