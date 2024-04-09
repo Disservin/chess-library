@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.39
+VERSION: 0.6.40
 */
 
 #ifndef CHESS_HPP
@@ -1104,13 +1104,12 @@ class Piece {
     constexpr operator int() const noexcept { return static_cast<int>(piece); }
 
     [[nodiscard]] constexpr PieceType type() const noexcept {
+        if (piece == NONE) return PieceType::NONE;
         return static_cast<PieceType::underlying>(int(piece) % 6);
     }
 
     [[nodiscard]] constexpr Color color() const noexcept {
-        if (piece == NONE) {
-            return Color::NONE;
-        }
+        if (piece == NONE) return Color::NONE;
         return static_cast<Color>(static_cast<int>(piece) / 6);
     }
 

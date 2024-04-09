@@ -116,5 +116,6 @@ TEST_SUITE("Piece") {
         CHECK(Piece(Piece::WHITEKING).type() == PieceType::KING);
         CHECK(Piece(Piece::BLACKPAWN).type() == PieceType::PAWN);
         CHECK(Piece(Piece::BLACKKING).type() == PieceType::KING);
+        CHECK(Piece(Piece::NONE).type() == PieceType::NONE);
     }
 }
