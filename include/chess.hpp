@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.42
+VERSION: 0.6.43
 */
 
 #ifndef CHESS_HPP
@@ -1772,6 +1772,43 @@ class Board {
    public:
     explicit Board(std::string_view fen = constants::STARTPOS) { setFenInternal(fen); }
     virtual void setFen(std::string_view fen) { setFenInternal(fen); }
+
+    static Board fromFen(std::string_view fen) { return Board(fen); }
+    static Board fromEpd(std::string_view epd) {
+        Board board;
+        board.setEpd(epd);
+        return board;
+    }
+
+    void setEpd(const std::string_view epd) {
+        auto parts = utils::splitString(epd, ' ');
+
+        if (parts.size() < 1) throw std::runtime_error("Invalid EPD");
+
+        int hm = 0;
+        int fm = 1;
+
+        if (auto it = std::find(parts.begin(), parts.end(), "hmvc"); it != parts.end()) {
+            auto num = *(it + 1);
+            auto max = num.size() - 1;
+
+            auto [p, ec] = std::from_chars(num.data(), num.data() + max, hm);
+            if (ec != std::errc()) throw std::runtime_error("Invalid EPD");
+        }
+
+        if (auto it = std::find(parts.begin(), parts.end(), "fmvn"); it != parts.end()) {
+            auto num     = *(it + 1);
+            auto max     = num.size() - 1;
+            auto [p, ec] = std::from_chars(num.data(), num.data() + max, fm);
+
+            if (ec != std::errc()) throw std::runtime_error("Invalid EPD");
+        }
+
+        auto fen = std::string(parts[0]) + " " + std::string(parts[1]) + " " + std::string(parts[2]) + " " +
+                   std::string(parts[3]) + " " + std::to_string(hm) + " " + std::to_string(fm);
+
+        setFen(fen);
+    }
 
     /// @brief Get the current FEN string.
     /// @return
