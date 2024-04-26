@@ -225,6 +225,19 @@ class Board {
         return ss;
     }
 
+    [[nodiscard]] std::string getEpd() const {
+        std::string ss;
+        ss.reserve(100);
+
+        ss += getFen(false);
+        ss += " hmvc ";
+        ss += std::to_string(halfMoveClock()) + ";";
+        ss += " fmvn ";
+        ss += std::to_string(fullMoveNumber()) + ";";
+
+        return ss;
+    }
+
     void makeMove(const Move move) {
         const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
         const auto captured = at(move.to());

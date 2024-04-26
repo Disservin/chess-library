@@ -86,6 +86,7 @@ TEST_SUITE("Board") {
         Board board = Board();
         board.setEpd("r1bqkb1r/pp3pp1/2nppn2/7p/3NP1PP/2N5/PPP2P2/R1BQKBR1 w Qkq - hmvc 0; fmvn 9;");
         CHECK(board.getFen() == "r1bqkb1r/pp3pp1/2nppn2/7p/3NP1PP/2N5/PPP2P2/R1BQKBR1 w Qkq - 0 9");
+        CHECK(board.getEpd() == "r1bqkb1r/pp3pp1/2nppn2/7p/3NP1PP/2N5/PPP2P2/R1BQKBR1 w Qkq - hmvc 0; fmvn 9;");
     }
 
     TEST_CASE("From Fen") {
@@ -96,11 +97,13 @@ TEST_SUITE("Board") {
     TEST_CASE("From EPD") {
         Board board = Board::fromEpd("r1bqkb1r/pp3pp1/2nppn2/7p/3NP1PP/2N5/PPP2P2/R1BQKBR1 w Qkq - hmvc 0; fmvn 9;");
         CHECK(board.getFen() == "r1bqkb1r/pp3pp1/2nppn2/7p/3NP1PP/2N5/PPP2P2/R1BQKBR1 w Qkq - 0 9");
+        CHECK(board.getEpd() == "r1bqkb1r/pp3pp1/2nppn2/7p/3NP1PP/2N5/PPP2P2/R1BQKBR1 w Qkq - hmvc 0; fmvn 9;");
     }
 
     TEST_CASE("From EPD with hmvc") {
         Board board =
             Board::fromEpd("r1bqk1nr/1p1p1ppp/p1n1pb2/8/4P3/1N1B2Q1/PPP2PPP/RNB1K2R w KQkq - hmvc 8; fmvn 9;");
         CHECK(board.getFen() == "r1bqk1nr/1p1p1ppp/p1n1pb2/8/4P3/1N1B2Q1/PPP2PPP/RNB1K2R w KQkq - 8 9");
+        CHECK(board.getEpd() == "r1bqk1nr/1p1p1ppp/p1n1pb2/8/4P3/1N1B2Q1/PPP2PPP/RNB1K2R w KQkq - hmvc 8; fmvn 9;");
     }
 }
