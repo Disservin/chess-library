@@ -3,7 +3,7 @@ project(
     'cpp',
     default_options: [
         'warning_level=3',
-        'buildtype=debug',
+        'buildtype=release',
     ],
 )
 
