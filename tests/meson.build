@@ -12,6 +12,7 @@ srcs = files(
     'pgn.cpp',
     'piece.cpp',
     'san.cpp',
+    'uci.cpp'
 )
 
 e = executable(
