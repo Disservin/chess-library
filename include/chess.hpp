@@ -2445,7 +2445,20 @@ class Board {
         // find leading whitespaces and remove them
         while (fen[0] == ' ') fen.remove_prefix(1);
 
-        const auto params = utils::splitString(fen, ' ');
+        static std::array<std::string_view, 6> params = [](std::string_view fen) constexpr {
+            std::array<std::string_view, 6> arr = {};
+            size_t i                            = 0;
+            size_t j                            = 0;
+            for (size_t k = 0; k < fen.size(); k++) {
+                if (fen[k] == ' ') {
+                    arr[i++] = fen.substr(j, k - j);
+                    j        = k + 1;
+                }
+            }
+            arr[i] = fen.substr(j);
+            return arr;
+        }(fen);
+
         assert(params.size() >= 1);
 
         const auto position   = params[0];
@@ -2470,20 +2483,19 @@ class Board {
 
         auto square = Square(56);
         for (char curr : position) {
-            auto piece_str = std::string_view(&curr, 1);
-            if (Piece(piece_str) != Piece::NONE) {
-                placePiece(Piece(piece_str), square);
-                square = Square(square.index() + 1);
-            } else if (curr == '/')
-                square = Square(square.index() - 16);
-            else if (isdigit(curr)) {
+            if (isdigit(curr)) {
                 square = Square(square.index() + (curr - '0'));
+            } else if (curr == '/') {
+                square = Square(square.index() - 16);
+            } else if (auto p = Piece(std::string_view(&curr, 1)); p != Piece::NONE) {
+                placePiece(p, square);
+                square = Square(square.index() + 1);
             }
         }
 
         cr_.clear();
 
-        const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) {
+        static const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) {
             const auto king_side = CastlingRights::Side::KING_SIDE;
             const auto king_sq   = board.kingSq(color);
             const auto sq_corner = Square(side == king_side ? Square::underlying::SQ_H1 : Square::underlying::SQ_A1)
