@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.44
+VERSION: 0.6.45
 */
 
 #ifndef CHESS_HPP
@@ -4039,8 +4039,17 @@ class uci {
     /// @param uci
     /// @return
     [[nodiscard]] static Move uciToMove(const Board &board, const std::string &uci) noexcept(false) {
-        Square source   = Square(uci.substr(0, 2));
-        Square target   = Square(uci.substr(2, 2));
+        if (uci.length() < 4) {
+            throw std::logic_error("UCI move has an unexpected length and cannot be safely converted." + uci);
+        }
+
+        Square source = Square(uci.substr(0, 2));
+        Square target = Square(uci.substr(2, 2));
+
+        if (!source.is_valid() || !target.is_valid()) {
+            throw std::logic_error("UCI move has an invalid square and cannot be safely converted." + uci);
+        }
+
         PieceType piece = board.at(source).type();
 
         // castling in chess960
