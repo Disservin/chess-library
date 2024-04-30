@@ -161,5 +161,9 @@ meson test -C build
 #### Example
 
 ```bash
+cd example
+meson setup build
+meson compile -C build
+
 ./build/example/example
 ```
