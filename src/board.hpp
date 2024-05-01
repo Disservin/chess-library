@@ -5,6 +5,7 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -109,7 +110,10 @@ class Board {
     };
 
    public:
-    explicit Board(std::string_view fen = constants::STARTPOS) { setFenInternal(fen); }
+    explicit Board(std::string_view fen = constants::STARTPOS) {
+        prev_states_.reserve(256);
+        setFenInternal(fen);
+    }
     virtual void setFen(std::string_view fen) { setFenInternal(fen); }
 
     static Board fromFen(std::string_view fen) { return Board(fen); }
@@ -784,45 +788,69 @@ class Board {
         // find leading whitespaces and remove them
         while (fen[0] == ' ') fen.remove_prefix(1);
 
-        const auto params = utils::splitString(fen, ' ');
-        assert(params.size() >= 1);
+        static auto split_fen = [](std::string_view fen) {
+            std::array<std::optional<std::string_view>, 6> arr = {};
 
-        const auto position   = params[0];
-        const auto move_right = params.size() > 1 ? params[1] : "w";
-        const auto castling   = params.size() > 2 ? params[2] : "-";
-        const auto en_passant = params.size() > 3 ? params[3] : "-";
-        const auto half_move  = params.size() > 4 ? params[4] : "0";
-        const auto full_move  = params.size() > 5 ? params[5] : "1";
+            size_t start = 0;
+            size_t end   = 0;
+
+            for (size_t i = 0; i < 6; i++) {
+                end = fen.find(' ', start);
+                if (end == std::string::npos) {
+                    if (i == 5) arr[i] = fen.substr(start);
+                    break;
+                }
+                arr[i] = fen.substr(start, end - start);
+                start  = end + 1;
+            }
+
+            return arr;
+        };
+
+        const auto params     = split_fen(fen);
+        const auto position   = params[0].has_value() ? *params[0] : "";
+        const auto move_right = params[1].has_value() ? *params[1] : "w";
+        const auto castling   = params[2].has_value() ? *params[2] : "-";
+        const auto en_passant = params[3].has_value() ? *params[3] : "-";
+        const auto half_move  = params[4].has_value() ? *params[4] : "0";
+        const auto full_move  = params[5].has_value() ? *params[5] : "1";
 
         // Half move clock
         std::from_chars(half_move.data(), half_move.data() + half_move.size(), hfm_);
 
         // Full move number
         std::from_chars(full_move.data(), full_move.data() + full_move.size(), plies_);
-        plies_ = plies_ * 2 - 2;
 
-        stm_ = (move_right == "w") ? Color::WHITE : Color::BLACK;
+        plies_ = plies_ * 2 - 2;
+        ep_sq_ = en_passant == "-" ? Square::underlying::NO_SQ : Square(en_passant);
+        stm_   = (move_right == "w") ? Color::WHITE : Color::BLACK;
+        key_   = 0ULL;
+        cr_.clear();
+        prev_states_.clear();
 
         if (stm_ == Color::BLACK) {
             plies_++;
+        } else {
+            key_ ^= Zobrist::sideToMove();
         }
 
-        auto square = Square(56);
+        if (ep_sq_ != Square::underlying::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
+
+        auto square = 56;
         for (char curr : position) {
-            auto piece_str = std::string_view(&curr, 1);
-            if (Piece(piece_str) != Piece::NONE) {
-                placePiece(Piece(piece_str), square);
-                square = Square(square.index() + 1);
-            } else if (curr == '/')
-                square = Square(square.index() - 16);
-            else if (isdigit(curr)) {
-                square = Square(square.index() + (curr - '0'));
+            if (isdigit(curr)) {
+                square += (curr - '0');
+            } else if (curr == '/') {
+                square -= 16;
+            } else {
+                auto p = Piece(std::string_view(&curr, 1));
+                placePiece(p, square);
+                key_ ^= Zobrist::piece(p, Square(square));
+                ++square;
             }
         }
 
-        cr_.clear();
-
-        const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) {
+        static const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) {
             const auto king_side = CastlingRights::Side::KING_SIDE;
             const auto king_sq   = board.kingSq(color);
             const auto sq_corner = Square(side == king_side ? Square::underlying::SQ_H1 : Square::underlying::SQ_A1)
@@ -832,7 +860,6 @@ class Board {
 
             for (Square sq = start; (side == king_side ? sq <= sq_corner : sq >= sq_corner);
                  (side == king_side ? sq++ : sq--)) {
-                // if (board.at<PieceType>(sq) == PieceType::NONE) continue;
                 if (board.at<PieceType>(sq) == PieceType::ROOK && board.at(sq).color() == color) {
                     return sq.file();
                 }
@@ -877,12 +904,9 @@ class Board {
             }
         }
 
-        ep_sq_ = en_passant == "-" ? Square::underlying::NO_SQ : Square(en_passant);
+        key_ ^= Zobrist::castling(cr_.hashIndex());
 
-        key_ = zobrist();
-
-        prev_states_.clear();
-        prev_states_.reserve(150);
+        assert(key_ == zobrist());
     }
 
     // store the original fen string
