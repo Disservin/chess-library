@@ -5,6 +5,7 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -784,28 +785,32 @@ class Board {
         // find leading whitespaces and remove them
         while (fen[0] == ' ') fen.remove_prefix(1);
 
-        static auto params = [](std::string_view fen) {
-            std::array<std::string_view, 6> arr = {};
-            size_t i                            = 0;
-            size_t j                            = 0;
-            for (size_t k = 0; k < fen.size(); k++) {
-                if (fen[k] == ' ') {
-                    arr[i++] = fen.substr(j, k - j);
-                    j        = k + 1;
+        static auto split_fen = [](std::string_view fen) {
+            std::array<std::optional<std::string_view>, 6> arr = {};
+
+            size_t start = 0;
+            size_t end   = 0;
+
+            for (size_t i = 0; i < 6; i++) {
+                end = fen.find(' ', start);
+                if (end == std::string::npos) {
+                    if (i == 5) arr[i] = fen.substr(start);
+                    break;
                 }
+                arr[i] = fen.substr(start, end - start);
+                start  = end + 1;
             }
-            arr[i] = fen.substr(j);
+
             return arr;
-        }(fen);
+        };
 
-        assert(params.size() >= 1);
-
-        const auto position   = params[0];
-        const auto move_right = params.size() > 1 ? params[1] : "w";
-        const auto castling   = params.size() > 2 ? params[2] : "-";
-        const auto en_passant = params.size() > 3 ? params[3] : "-";
-        const auto half_move  = params.size() > 4 ? params[4] : "0";
-        const auto full_move  = params.size() > 5 ? params[5] : "1";
+        const auto params     = split_fen(fen);
+        const auto position   = params[0].has_value() ? *params[0] : "";
+        const auto move_right = params[1].has_value() ? *params[1] : "w";
+        const auto castling   = params[2].has_value() ? *params[2] : "-";
+        const auto en_passant = params[3].has_value() ? *params[3] : "-";
+        const auto half_move  = params[4].has_value() ? *params[4] : "0";
+        const auto full_move  = params[5].has_value() ? *params[5] : "1";
 
         // Half move clock
         std::from_chars(half_move.data(), half_move.data() + half_move.size(), hfm_);
