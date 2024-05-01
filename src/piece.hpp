@@ -6,6 +6,8 @@
 
 namespace chess {
 
+constexpr static std::string_view pieces = "PNBRQKpnbrqk ";
+
 class PieceType {
    public:
     enum class underlying : std::uint8_t {
@@ -138,48 +140,15 @@ class Piece {
                 : type == PieceType::NONE ? Piece::NONE
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(std::string_view p) : piece(underlying::NONE) {
-        switch (p.data()[0]) {
-            case 'P':
-                piece = WHITEPAWN;
-                break;
-            case 'N':
-                piece = WHITEKNIGHT;
-                break;
-            case 'B':
-                piece = WHITEBISHOP;
-                break;
-            case 'R':
-                piece = WHITEROOK;
-                break;
-            case 'Q':
-                piece = WHITEQUEEN;
-                break;
-            case 'K':
-                piece = WHITEKING;
-                break;
-            // black
-            case 'p':
-                piece = BLACKPAWN;
-                break;
-            case 'n':
-                piece = BLACKKNIGHT;
-                break;
-            case 'b':
-                piece = BLACKBISHOP;
-                break;
-            case 'r':
-                piece = BLACKROOK;
-                break;
-            case 'q':
-                piece = BLACKQUEEN;
-                break;
-            case 'k':
-                piece = BLACKKING;
-                break;
-            default:
-                piece = NONE;
-                break;
+        for (std::size_t i = 0; i < pieces.size(); i++) {
+            if (p[0] == pieces[i]) {
+                piece = static_cast<underlying>(i);
+                return;
+            }
         }
+
+        piece = NONE;
+        return;
     }
 
     constexpr bool operator<(const Piece& rhs) const noexcept { return piece < rhs.piece; }
