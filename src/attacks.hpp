@@ -234,9 +234,4 @@ inline void attacks::initAttacks() {
         initSliders(static_cast<Square>(i), RookTable, RookMagics[i], rookAttacks);
     }
 }
-
-inline auto init = []() {
-    attacks::initAttacks();
-    return 0;
-}();
 }  // namespace chess
