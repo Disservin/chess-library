@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.46
+VERSION: 0.6.47
 */
 
 #ifndef CHESS_HPP
@@ -2793,11 +2793,6 @@ inline void attacks::initAttacks() {
         initSliders(static_cast<Square>(i), RookTable, RookMagics[i], rookAttacks);
     }
 }
-
-inline auto init = []() {
-    attacks::initAttacks();
-    return 0;
-}();
 }  // namespace chess
 
 
@@ -3370,7 +3365,10 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
         legalmoves<Color::BLACK, mt>(movelist, board, pieces);
 }
 
-inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = movegen::init_squares_between();
+inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = [] {
+    attacks::initAttacks();
+    return movegen::init_squares_between();
+}();
 
 }  // namespace chess
 
