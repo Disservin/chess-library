@@ -62,6 +62,35 @@ class MyVisitor : public pgn::Visitor {
     int move_start_count_ = 0;
 };
 
+class MockVisitorGameover : public pgn::Visitor {
+   public:
+    ~MockVisitorGameover() {}
+
+    void startPgn() {}
+
+    void header(std::string_view key, std::string_view value) {
+        if (key == "FEN") {
+            board_.setFen(value);
+        }
+    }
+
+    void startMoves() {}
+
+    void move(std::string_view move, std::string_view comment) {
+        auto m = uci::parseSan(board_, move);
+
+        board_.makeMove<true>(m);
+    }
+
+    void endPgn() { game_res_ = board_.isGameOver(); }
+
+    auto gameResult() const { return game_res_; }
+
+   private:
+    Board board_;
+    std::pair<GameResultReason, GameResult> game_res_;
+};
+
 TEST_SUITE("PGN StreamParser") {
     TEST_CASE("Basic PGN") {
         const auto file  = "./tests/pgns/basic.pgn";
@@ -439,5 +468,19 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->endCount() == 2);
         CHECK(vis->moveStartCount() == 2);
         CHECK(vis->count() == 1);
+    }
+
+    TEST_CASE("Threefold Repetition") {
+        const auto file  = "./tests/pgns/threefold_repetition.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MockVisitorGameover>();
+        pgn::StreamParser<1> parser(file_stream);
+        parser.readGames(*vis);
+
+        auto res = vis->gameResult();
+
+        CHECK(res.first == GameResultReason::THREEFOLD_REPETITION);
+        CHECK(res.second == GameResult::DRAW);
     }
 }
