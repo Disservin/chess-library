@@ -57,7 +57,7 @@ uint64_t perft(Board& board, int depth) {
 ## PGN Parser
 
 ```cpp
-#include <ifstream>
+#include <fstream>
 #include <memory>
 #include <string>
 
