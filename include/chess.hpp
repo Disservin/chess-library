@@ -3920,23 +3920,19 @@ class StreamParser {
         char c;
 
         while (stream_buffer.bytes_read_) {
-            if (stream_buffer.buffer_index_ + 2 < stream_buffer.bytes_read_) {
-                move += stream_buffer.buffer_[stream_buffer.buffer_index_];
-                move += stream_buffer.buffer_[stream_buffer.buffer_index_ + 1];
-
-                stream_buffer.buffer_index_ += 2;
-            }
-
             if (stream_buffer.buffer_index_ >= stream_buffer.bytes_read_ && !stream_buffer.fill()) {
                 onEnd();
                 return true;
             }
 
+            c = stream_buffer.buffer_[stream_buffer.buffer_index_];
+            ++stream_buffer.buffer_index_;
+
             while (stream_buffer.buffer_index_ < stream_buffer.bytes_read_) {
                 c = stream_buffer.buffer_[stream_buffer.buffer_index_];
                 ++stream_buffer.buffer_index_;
 
-                if (c == ' ') {
+                if (is_space(c)) {
                     goto start;
                 }
 
@@ -3945,37 +3941,24 @@ class StreamParser {
         }
 
     start:
-        char curr = stream_buffer.buffer_[stream_buffer.buffer_index_];
-        if (stream_buffer.buffer_index_ >= stream_buffer.bytes_read_) {
-            if (!stream_buffer.fill()) {
-                onEnd();
-                return true;
-            }
-
-            curr = stream_buffer.buffer_[stream_buffer.buffer_index_];
+        auto curr = stream_buffer.current();
+        if (!curr.has_value()) {
+            onEnd();
+            return true;
         }
-
-        switch (curr) {
+        switch (*curr) {
             case '{':
                 // reading comment
-                ++stream_buffer.buffer_index_;
-                while (stream_buffer.bytes_read_) {
-                    if (stream_buffer.buffer_index_ >= stream_buffer.bytes_read_) {
-                        if (!stream_buffer.fill()) {
-                            onEnd();
-                            return true;
-                        }
-                    }
+                stream_buffer.advance();
+                stream_buffer.loop([this](char c) {
+                    stream_buffer.advance();
 
-                    c = stream_buffer.buffer_[stream_buffer.buffer_index_];
-                    ++stream_buffer.buffer_index_;
-
-                    if (c == '}') {
-                        break;
-                    }
+                    if (c == '}') return true;
 
                     comment += c;
-                }
+
+                    return false;
+                });
                 goto start;
             case '(':
                 stream_buffer.readUntilMatchingDelimiter('(', ')');
@@ -3989,23 +3972,14 @@ class StreamParser {
                 });
                 goto start;
             case ' ':
-                ++stream_buffer.buffer_index_;
-                while (stream_buffer.bytes_read_) {
-                    if (stream_buffer.buffer_index_ >= stream_buffer.bytes_read_) {
-                        if (!stream_buffer.fill()) {
-                            onEnd();
-                            return true;
-                        }
+                stream_buffer.loop([this](char c) {
+                    if (is_space(c)) {
+                        stream_buffer.advance();
+                        return false;
                     }
 
-                    c = stream_buffer.buffer_[stream_buffer.buffer_index_];
-                    ++stream_buffer.buffer_index_;
-
-                    if (!is_space(c)) {
-                        goto start;
-                    }
-                }
-
+                    return true;
+                });
                 goto start;
             default:
                 break;
