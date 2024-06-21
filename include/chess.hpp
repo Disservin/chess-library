@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.50
+VERSION: 0.6.51
 */
 
 #ifndef CHESS_HPP
@@ -3396,11 +3396,26 @@ inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_B
 
 namespace chess::pgn {
 
+inline std::uint64_t hits  = 0;
+inline std::uint64_t total = 0;
+
+inline void dbg_hit(bool hit) {
+    if (hit) {
+        ++hits;
+    }
+
+    ++total;
+}
+
+inline void dbg_print() {
+    std::cout << "Hits: " << hits << " Total: " << total << " Ratio: " << (hits / static_cast<double>(total)) << "\n";
+}
+
 /// @brief Visitor interface for parsing PGN files
 /// the order of the calls is as follows:
 class Visitor {
    public:
-    virtual ~Visitor(){};
+    virtual ~Visitor() {};
 
     /// @brief When true, the current PGN will be skipped and only
     /// endPgn will be called, this will also reset the skip flag to false.
@@ -3484,7 +3499,8 @@ class StreamParser {
 
         void operator+=(char c) {
             assert(index_ < N);
-            buffer_[index_++] = c;
+            buffer_[index_] = c;
+            ++index_;
         }
 
         void remove_suffix(std::size_t n) {
@@ -3493,6 +3509,15 @@ class StreamParser {
             }
 
             index_ -= n;
+        }
+
+        void copyN(const char *first, std::size_t n) {
+            // if (index_ + n > N) {
+            //     throw std::runtime_error("LineBuffer overflow");
+            // }
+
+            std::copy_n(first, n, buffer_.begin() + index_);
+            index_ += n;
         }
 
        private:
@@ -3523,7 +3548,7 @@ class StreamParser {
                     const auto c = buffer_[buffer_index_];
 
                     if (c == '\r') {
-                        buffer_index_++;
+                        ++buffer_index_;
                         continue;
                     }
 
@@ -3555,13 +3580,13 @@ class StreamParser {
                 }
 
                 if (*ret == open_delim) {
-                    stack++;
+                    ++stack;
                 } else if (*ret == close_delim) {
                     if (stack == 0) {
                         // Mismatched closing delimiter
                         return false;
                     } else {
-                        stack--;
+                        --stack;
                         if (stack == 0) {
                             // Matching closing delimiter found
                             return true;
@@ -3590,7 +3615,7 @@ class StreamParser {
                 fill();
             }
 
-            buffer_index_++;
+            ++buffer_index_;
         }
 
         char peek() {
@@ -3617,11 +3642,15 @@ class StreamParser {
             return buffer_[buffer_index_++];
         }
 
-       private:
-        std::istream &stream_;
+        std::streamsize index() const noexcept { return buffer_index_; }
+        std::streamsize size() const noexcept { return bytes_read_; }
+
         BufferType buffer_;
         std::streamsize bytes_read_   = 0;
         std::streamsize buffer_index_ = 0;
+
+       private:
+        std::istream &stream_;
     };
 
     void reset_trackers() {
@@ -3637,7 +3666,9 @@ class StreamParser {
 
     void callVisitorMoveFunction() {
         if (!move.empty()) {
-            if (!visitor->skip()) visitor->move(move.get(), comment.get());
+            if (!visitor->skip()) {
+                visitor->move(move.get(), comment.get());
+            }
 
             move.clear();
             comment.clear();
@@ -3841,7 +3872,7 @@ class StreamParser {
                     onEnd();
                     return true;
                 } else if (peek == '/') {
-                    for (size_t i = 0; i <= 6; i++) {
+                    for (size_t i = 0; i <= 6; ++i) {
                         stream_buffer.advance();
                     }
 
@@ -3886,17 +3917,28 @@ class StreamParser {
     }
 
     bool parseMove() {
-        // reading move
-        stream_buffer.loop([this](char c) {
-            if (is_space(c)) {
+        char c;
+
+        while (stream_buffer.bytes_read_) {
+            if (stream_buffer.buffer_index_ >= stream_buffer.bytes_read_ && !stream_buffer.fill()) {
+                onEnd();
                 return true;
             }
 
-            move += c;
+            c = stream_buffer.buffer_[stream_buffer.buffer_index_];
+            ++stream_buffer.buffer_index_;
 
-            stream_buffer.advance();
-            return false;
-        });
+            while (stream_buffer.buffer_index_ < stream_buffer.bytes_read_) {
+                c = stream_buffer.buffer_[stream_buffer.buffer_index_];
+                ++stream_buffer.buffer_index_;
+
+                if (is_space(c)) {
+                    goto start;
+                }
+
+                move += c;
+            }
+        }
 
     start:
         auto curr = stream_buffer.current();
@@ -3904,7 +3946,6 @@ class StreamParser {
             onEnd();
             return true;
         }
-
         switch (*curr) {
             case '{':
                 // reading comment
@@ -3959,7 +4000,7 @@ class StreamParser {
         pgn_end = true;
     }
 
-    bool is_space(const char c) noexcept {
+    static bool is_space(const char c) noexcept {
         switch (c) {
             case ' ':
             case '\t':
