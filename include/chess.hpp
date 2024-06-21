@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.49
+VERSION: 0.6.50
 */
 
 #ifndef CHESS_HPP
@@ -2441,10 +2441,10 @@ class Board {
         static auto split_fen = [](std::string_view fen) {
             std::array<std::optional<std::string_view>, 6> arr = {};
 
-            size_t start = 0;
-            size_t end   = 0;
+            std::size_t start = 0;
+            std::size_t end   = 0;
 
-            for (size_t i = 0; i < 6; i++) {
+            for (std::size_t i = 0; i < 6; i++) {
                 end = fen.find(' ', start);
                 if (end == std::string::npos) {
                     if (i == 5) arr[i] = fen.substr(start);
