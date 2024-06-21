@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.48
+VERSION: 0.6.49
 */
 
 #ifndef CHESS_HPP
@@ -1926,16 +1926,16 @@ class Board {
             if (Square::value_distance(move.to(), move.from()) == 16) {
                 Bitboard ep_mask = attacks::pawn(stm_, move.to().ep_square());
 
-                static constexpr auto is_legal = [](const Board &board, Move move) {
-                    static Movelist moves;
-                    movegen::legalmoves(moves, board);
-
-                    return std::find(moves.begin(), moves.end(), move) != moves.end();
-                };
-
                 // add enpassant hash if enemy pawns are attacking the square
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
                     if constexpr (EXACT) {
+                        static constexpr auto is_legal = [](const Board &board, Move move) {
+                            static Movelist moves;
+                            movegen::legalmoves(moves, board);
+
+                            return std::find(moves.begin(), moves.end(), move) != moves.end();
+                        };
+
                         while (ep_mask) {
                             const auto possible_move = Move::make(ep_mask.pop(), move.to().ep_square());
                             if (is_legal(*this, possible_move)) {
