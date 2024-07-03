@@ -47,8 +47,12 @@ class Visitor {
 };
 
 template <std::size_t BUFFER_SIZE =
-#ifdef __unix__
+#if defined(__unix__) || defined(__unix) || defined(unix) || defined(__APPLE__) || defined(__MACH__)
+#    if defined(__APPLE__) || defined(__MACH__)
+              256
+#    else
               1024
+#    endif
 #else
               256
 #endif

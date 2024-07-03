@@ -3,3 +3,4 @@ ColumnLimit: 120
 IndentWidth: 4
 TabWidth: 4
 AlignConsecutiveAssignments: true
+IndentPPDirectives: AfterHash

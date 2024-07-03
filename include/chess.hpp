@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.50
+VERSION: 0.6.51
 */
 
 #ifndef CHESS_HPP
@@ -3433,8 +3433,12 @@ class Visitor {
 };
 
 template <std::size_t BUFFER_SIZE =
-#ifdef __unix__
+#if defined(__unix__) || defined(__unix) || defined(unix) || defined(__APPLE__) || defined(__MACH__)
+#    if defined(__APPLE__) || defined(__MACH__)
+              256
+#    else
               1024
+#    endif
 #else
               256
 #endif
