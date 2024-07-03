@@ -2,8 +2,8 @@
 
 #include <cstdint>
 
-#include "piece.hpp"
 #include "coords.hpp"
+#include "piece.hpp"
 
 namespace chess {
 class Zobrist {

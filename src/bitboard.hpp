@@ -2,17 +2,17 @@
 
 #include <cstdint>
 #if __cplusplus >= 202002L
-#include <bit>
+#    include <bit>
 #endif
-#include <string>
-#include <bitset>
 #include <algorithm>
-#include <iostream>
+#include <bitset>
 #include <cassert>
+#include <iostream>
+#include <string>
 
 #if defined(_MSC_VER)
-#include <intrin.h>
-#include <nmmintrin.h>
+#    include <intrin.h>
+#    include <nmmintrin.h>
 #endif
 
 #include "coords.hpp"
@@ -121,21 +121,20 @@ class Bitboard {
 #if !defined(_MSC_VER)
     constexpr
 #endif
-        int
-        lsb() const noexcept {
+        int lsb() const noexcept {
         assert(bits != 0);
 #if __cplusplus >= 202002L
         return std::countr_zero(bits);
 #else
-#if defined(__GNUC__)
+#    if defined(__GNUC__)
         return __builtin_ctzll(bits);
-#elif defined(_MSC_VER)
+#    elif defined(_MSC_VER)
         unsigned long idx;
         _BitScanForward64(&idx, bits);
         return static_cast<int>(idx);
-#else
-#error "Compiler not supported."
-#endif
+#    else
+#        error "Compiler not supported."
+#    endif
 #endif
     }
 
@@ -143,22 +142,21 @@ class Bitboard {
 #if !defined(_MSC_VER)
     constexpr
 #endif
-        int
-        msb() const noexcept {
+        int msb() const noexcept {
         assert(bits != 0);
 
 #if __cplusplus >= 202002L
         return std::countl_zero(bits) ^ 63;
 #else
-#if defined(__GNUC__)
+#    if defined(__GNUC__)
         return 63 ^ __builtin_clzll(bits);
-#elif defined(_MSC_VER)
+#    elif defined(_MSC_VER)
         unsigned long idx;
         _BitScanReverse64(&idx, bits);
         return static_cast<int>(idx);
-#else
-#error "Compiler not supported."
-#endif
+#    else
+#        error "Compiler not supported."
+#    endif
 #endif
     }
 
@@ -166,16 +164,15 @@ class Bitboard {
 #if !defined(_MSC_VER)
     constexpr
 #endif
-        int
-        count() const noexcept {
+        int count() const noexcept {
 #if __cplusplus >= 202002L
         return std::popcount(bits);
 #else
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+#    if defined(_MSC_VER) || defined(__INTEL_COMPILER)
         return static_cast<int>(_mm_popcnt_u64(bits));
-#else
+#    else
         return __builtin_popcountll(bits);
-#endif
+#    endif
 #endif
     }
 
@@ -183,8 +180,7 @@ class Bitboard {
 #if !defined(_MSC_VER)
     constexpr
 #endif
-        std::uint8_t
-        pop() noexcept {
+        std::uint8_t pop() noexcept {
         assert(bits != 0);
         std::uint8_t index = lsb();
         bits &= bits - 1;

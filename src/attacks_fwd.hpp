@@ -4,9 +4,9 @@
 #include <functional>
 
 #include "bitboard.hpp"
-#include "coords.hpp"
-#include "color.hpp"
 #include "board_fwd.hpp"
+#include "color.hpp"
+#include "coords.hpp"
 
 namespace chess {
 class attacks {

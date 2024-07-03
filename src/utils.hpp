@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <string_view>
+#include <vector>
 
 namespace chess {
 namespace utils {
@@ -26,9 +26,7 @@ namespace utils {
     return result;
 }
 
-constexpr char tolower(char c) {
-    return (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c;
-}
+constexpr char tolower(char c) { return (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c; }
 
 }  // namespace utils
 

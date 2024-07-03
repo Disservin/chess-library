@@ -1,9 +1,9 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <ostream>
 #include <string>
-#include <cassert>
 #include <string_view>
 
 namespace chess {
