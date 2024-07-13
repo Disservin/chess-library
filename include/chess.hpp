@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.51
+VERSION: 0.6.52
 */
 
 #ifndef CHESS_HPP
@@ -2441,7 +2441,7 @@ class Board {
             for (std::size_t i = 0; i < 6; i++) {
                 end = fen.find(' ', start);
                 if (end == std::string::npos) {
-                    if (i == 5) arr[i] = fen.substr(start);
+                    arr[i] = fen.substr(start);
                     break;
                 }
                 arr[i] = fen.substr(start, end - start);

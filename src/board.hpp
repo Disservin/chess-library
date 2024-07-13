@@ -817,7 +817,7 @@ class Board {
             for (std::size_t i = 0; i < 6; i++) {
                 end = fen.find(' ', start);
                 if (end == std::string::npos) {
-                    if (i == 5) arr[i] = fen.substr(start);
+                    arr[i] = fen.substr(start);
                     break;
                 }
                 arr[i] = fen.substr(start, end - start);
