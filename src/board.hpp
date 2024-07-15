@@ -130,16 +130,27 @@ class Board {
         int hm = 0;
         int fm = 1;
 
+        static auto parseStringViewToInt = [](std::string_view sv) -> std::optional<int> {
+            if (!sv.empty() && sv.back() == ';') sv.remove_suffix(1);
+            try {
+                size_t pos;
+                int value = std::stoi(std::string(sv), &pos);
+                if (pos == sv.size()) return value;
+            } catch (...) {
+            }
+            return std::nullopt;
+        };
+
         if (auto it = std::find(parts.begin(), parts.end(), "hmvc"); it != parts.end()) {
             auto num = *(it + 1);
 
-            hm = std::stoi(std::string(num));
+            hm = parseStringViewToInt(num).value_or(0);
         }
 
         if (auto it = std::find(parts.begin(), parts.end(), "fmvn"); it != parts.end()) {
             auto num = *(it + 1);
 
-            fm = std::stoi(std::string(num));
+            fm = parseStringViewToInt(num).value_or(1);
         }
 
         auto fen = std::string(parts[0]) + " " + std::string(parts[1]) + " " + std::string(parts[2]) + " " +
