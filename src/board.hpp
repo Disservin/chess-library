@@ -660,6 +660,16 @@ class Board {
                 Square::same_color(pieces(PieceType::BISHOP, Color::WHITE).lsb(),
                                    pieces(PieceType::BISHOP, Color::BLACK).lsb()))
                 return true;
+
+            // one side with two bishops which have the same color
+            auto white_bishops = pieces(PieceType::BISHOP, Color::WHITE);
+            auto black_bishops = pieces(PieceType::BISHOP, Color::BLACK);
+
+            if (white_bishops.count() == 2) {
+                if (Square::same_color(white_bishops.lsb(), white_bishops.msb())) return true;
+            } else if (black_bishops.count() == 2) {
+                if (Square::same_color(black_bishops.lsb(), black_bishops.msb())) return true;
+            }
         }
 
         return false;
