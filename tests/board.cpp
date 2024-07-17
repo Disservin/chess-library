@@ -106,4 +106,39 @@ TEST_SUITE("Board") {
         CHECK(board.getFen() == "r1bqk1nr/1p1p1ppp/p1n1pb2/8/4P3/1N1B2Q1/PPP2PPP/RNB1K2R w KQkq - 8 9");
         CHECK(board.getEpd() == "r1bqk1nr/1p1p1ppp/p1n1pb2/8/4P3/1N1B2Q1/PPP2PPP/RNB1K2R w KQkq - hmvc 8; fmvn 9;");
     }
+
+    TEST_CASE("Insufficient Material Two White Light Bishops") {
+        Board board = Board("8/6k1/8/8/4B3/3B4/8/1K6 w - - 0 1");
+        CHECK(board.isInsufficientMaterial());
+    }
+
+    TEST_CASE("Insufficient Material Two Black Light Bishops") {
+        Board board = Board("8/6k1/8/8/4b3/3b4/K7/8 w - - 0 1");
+        CHECK(board.isInsufficientMaterial());
+    }
+
+    TEST_CASE("Insufficient Material White Bishop") {
+        Board board = Board("8/7k/8/8/3B4/8/8/1K6 w - - 0 1");
+        CHECK(board.isInsufficientMaterial());
+    }
+
+    TEST_CASE("Insufficient Material Black Bishop") {
+        Board board = Board("8/7k/8/8/3b4/8/8/1K6 w - - 0 1");
+        CHECK(board.isInsufficientMaterial());
+    }
+
+    TEST_CASE("Insufficient Material White Knight") {
+        Board board = Board("8/7k/8/8/3N4/8/8/1K6 w - - 0 1");
+        CHECK(board.isInsufficientMaterial());
+    }
+
+    TEST_CASE("Insufficient Material Black Knight") {
+        Board board = Board("8/7k/8/8/3n4/8/8/1K6 w - - 0 1");
+        CHECK(board.isInsufficientMaterial());
+    }
+
+    TEST_CASE("Insufficient Material White Light Bishop and White Dark Bishop") {
+        Board board = Board("8/7k/8/8/3BB3/8/8/1K6 w - - 0 1");
+        CHECK(board.isInsufficientMaterial() == false);
+    }
 }
