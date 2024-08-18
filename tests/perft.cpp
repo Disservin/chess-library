@@ -22,7 +22,7 @@ class Perft {
         uint64_t nodes = 0;
 
         for (const auto& move : moves) {
-            board_.makeMove(move);
+            board_.makeMove<true>(move);
             nodes += perft(depth - 1);
             board_.unmakeMove(move);
         }
