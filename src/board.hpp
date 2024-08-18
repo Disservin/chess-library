@@ -248,7 +248,14 @@ class Board {
         return ss;
     }
 
-    template <bool EXACT = false>
+    /// @brief Make a move on the board. The move must be legal otherwise the
+    /// behavior is undefined. EXACT_EP_CHECK can be set to true to only record
+    /// the enpassant square if the enemy can legally capture the pawn on their
+    /// next move.
+    /// @param move
+    /// @tparam EXACT_EP_CHECK
+    /// @return
+    template <bool EXACT_EP_CHECK = false>
     void makeMove(const Move move) {
         const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
         const auto captured = at(move.to());
@@ -303,12 +310,19 @@ class Board {
                 // imaginary attacks from the ep square from the pawn which moved
                 Bitboard ep_mask = attacks::pawn(stm_, move.to().ep_square());
 
+                int found = -1;
+
                 // add enpassant hash if enemy pawns are attacking the square
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
-                    if constexpr (EXACT) {
+                    // check if the enemy can legally capture the pawn on the next move
+                    if constexpr (EXACT_EP_CHECK) {
+                        found = 0;
+
+                        // play the move
                         const auto piece = at(move.from());
                         removePiece(piece, move.from());
                         placePiece(piece, move.to());
+
                         stm_ = ~stm_;
 
                         int double_check = 0;
@@ -317,11 +331,12 @@ class Board {
                         Bitboard occ_opp   = us(~stm_);
                         Bitboard occ_all   = occ_us | occ_opp;
                         Bitboard opp_empty = ~occ_us;
-                        auto king_sq       = kingSq(stm_);
 
                         Bitboard checkmask;
                         Bitboard pin_hv;
                         Bitboard pin_d;
+
+                        Square king_sq = kingSq(stm_);
 
                         if (stm_ == Color::WHITE) {
                             checkmask = movegen::checkMask<Color::WHITE>(*this, king_sq, double_check);
@@ -336,28 +351,23 @@ class Board {
                         const auto pawns    = pieces(PieceType::PAWN, stm_);
                         const auto pawns_lr = pawns & ~pin_hv;
                         const auto ep       = move.to().ep_square();
-                        const auto m        = movegen::generateEPMove(*this, checkmask, pin_d, pawns_lr, ep, stm_);
-                        bool found          = false;
+                        const auto moves    = movegen::generateEPMove(*this, checkmask, pin_d, pawns_lr, ep, stm_);
 
-                        for (const auto &move : m) {
+                        for (const auto &move : moves) {
                             if (move != Move::NO_MOVE) {
-                                found = true;
+                                found = 1;
                                 break;
                             }
                         }
 
-                        // undo
+                        // undo the move
                         stm_ = ~stm_;
 
                         removePiece(piece, move.to());
                         placePiece(piece, move.from());
+                    }
 
-                        if (found) {
-                            assert(at(move.to().ep_square()) == Piece::NONE);
-                            ep_sq_ = move.to().ep_square();
-                            key_ ^= Zobrist::enpassant(move.to().ep_square().file());
-                        }
-                    } else {
+                    if (found != 0) {
                         assert(at(move.to().ep_square()) == Piece::NONE);
                         ep_sq_ = move.to().ep_square();
                         key_ ^= Zobrist::enpassant(move.to().ep_square().file());

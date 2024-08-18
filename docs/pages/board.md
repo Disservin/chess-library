@@ -8,6 +8,11 @@ class Board {
         void setFen(std::string_view fen);
         std::string getFen(bool moveCounters = true);
 
+        /// @brief Make a move on the board. The move must be legal otherwise the
+        /// behavior is undefined. EXACT_EP_CHECK can be set to true to only record
+        /// the enpassant square if the enemy can legally capture the pawn on their
+        /// next move.
+        template <bool EXACT_EP_CHECK = false>
         void makeMove(const Move move);
         void unmakeMove(const Move move);
 
