@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "movelist.hpp"
@@ -86,6 +87,9 @@ class movegen {
     static void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
                                   Bitboard checkmask, Bitboard occ_enemy);
 
+    [[nodiscard]] static std::array<Move, 2> generateEPMove(const Board &board, Bitboard checkmask, Bitboard pin_d,
+                                                            Bitboard pawns_lr, Square ep, Color c);
+
     /// @brief Generate knight moves.
     /// @param sq
     /// @param movable
@@ -144,6 +148,8 @@ class movegen {
     /// @param board
     template <Color::underlying c, MoveGenType mt>
     static void legalmoves(Movelist &movelist, const Board &board, int pieces);
+
+    friend class Board;
 };
 
 }  // namespace chess

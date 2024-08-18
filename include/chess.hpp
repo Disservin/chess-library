@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.55
+VERSION: 0.6.56
 */
 
 #ifndef CHESS_HPP
@@ -1366,6 +1366,9 @@ class movegen {
     static void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
                                   Bitboard checkmask, Bitboard occ_enemy);
 
+    [[nodiscard]] static std::array<Move, 2> generateEPMove(const Board &board, Bitboard checkmask, Bitboard pin_d,
+                                                            Bitboard pawns_lr, Square ep, Color c);
+
     /// @brief Generate knight moves.
     /// @param sq
     /// @param movable
@@ -1424,6 +1427,8 @@ class movegen {
     /// @param board
     template <Color::underlying c, MoveGenType mt>
     static void legalmoves(Movelist &movelist, const Board &board, int pieces);
+
+    friend class Board;
 };
 
 }  // namespace chess
@@ -1924,26 +1929,62 @@ class Board {
 
             // double push
             if (Square::value_distance(move.to(), move.from()) == 16) {
+                // imaginary attacks from the ep square from the pawn which moved
                 Bitboard ep_mask = attacks::pawn(stm_, move.to().ep_square());
 
                 // add enpassant hash if enemy pawns are attacking the square
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
                     if constexpr (EXACT) {
-                        static constexpr auto is_legal = [](const Board &board, Move move) {
-                            static Movelist moves;
-                            movegen::legalmoves(moves, board);
+                        const auto piece = at(move.from());
+                        removePiece(piece, move.from());
+                        placePiece(piece, move.to());
+                        stm_ = ~stm_;
 
-                            return std::find(moves.begin(), moves.end(), move) != moves.end();
-                        };
+                        int double_check = 0;
 
-                        while (ep_mask) {
-                            const auto possible_move = Move::make(ep_mask.pop(), move.to().ep_square());
-                            if (is_legal(*this, possible_move)) {
-                                assert(at(move.to().ep_square()) == Piece::NONE);
-                                ep_sq_ = move.to().ep_square();
-                                key_ ^= Zobrist::enpassant(move.to().ep_square().file());
+                        Bitboard occ_us    = us(stm_);
+                        Bitboard occ_opp   = us(~stm_);
+                        Bitboard occ_all   = occ_us | occ_opp;
+                        Bitboard opp_empty = ~occ_us;
+                        auto king_sq       = kingSq(stm_);
+
+                        Bitboard checkmask;
+                        Bitboard pin_hv;
+                        Bitboard pin_d;
+
+                        if (stm_ == Color::WHITE) {
+                            checkmask = movegen::checkMask<Color::WHITE>(*this, king_sq, double_check);
+                            pin_hv    = movegen::pinMaskRooks<Color::WHITE>(*this, king_sq, occ_opp, occ_us);
+                            pin_d     = movegen::pinMaskBishops<Color::WHITE>(*this, king_sq, occ_opp, occ_us);
+                        } else {
+                            checkmask = movegen::checkMask<Color::BLACK>(*this, king_sq, double_check);
+                            pin_hv    = movegen::pinMaskRooks<Color::BLACK>(*this, king_sq, occ_opp, occ_us);
+                            pin_d     = movegen::pinMaskBishops<Color::BLACK>(*this, king_sq, occ_opp, occ_us);
+                        }
+
+                        const auto pawns    = pieces(PieceType::PAWN, stm_);
+                        const auto pawns_lr = pawns & ~pin_hv;
+                        const auto ep       = move.to().ep_square();
+                        const auto m        = movegen::generateEPMove(*this, checkmask, pin_d, pawns_lr, ep, stm_);
+                        bool found          = false;
+
+                        for (const auto &move : m) {
+                            if (move != Move::NO_MOVE) {
+                                found = true;
                                 break;
                             }
+                        }
+
+                        // undo
+                        stm_ = ~stm_;
+
+                        removePiece(piece, move.to());
+                        placePiece(piece, move.from());
+
+                        if (found) {
+                            assert(at(move.to().ep_square()) == Piece::NONE);
+                            ep_sq_ = move.to().ep_square();
+                            key_ ^= Zobrist::enpassant(move.to().ep_square().file());
                         }
                     } else {
                         assert(at(move.to().ep_square()) == Piece::NONE);
@@ -3134,52 +3175,67 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
 
     const Square ep = board.enpassantSq();
     if (mt != MoveGenType::QUIET && ep != Square::underlying::NO_SQ) {
-        assert((ep.rank() == Rank::RANK_3 && board.sideToMove() == Color::BLACK) ||
-               (ep.rank() == Rank::RANK_6 && board.sideToMove() == Color::WHITE));
+        auto m = generateEPMove(board, checkmask, pin_d, pawns_lr, ep, c);
 
-        const Square epPawn = ep + DOWN;
-
-        /*
-         In case the en passant square and the enemy pawn
-         that just moved are not on the checkmask
-         en passant is not available.
-        */
-        if ((checkmask & (Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(ep))) == Bitboard(0)) return;
-
-        const Square kSQ              = board.kingSq(c);
-        const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & attacks::MASK_RANK[epPawn.rank()].getBits();
-        const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, ~c) | board.pieces(PieceType::QUEEN, ~c);
-
-        Bitboard epBB = attacks::pawn(~c, ep) & pawns_lr;
-
-        // For one en passant square two pawns could potentially take there.
-        while (epBB) {
-            const Square from = epBB.pop();
-            const Square to   = ep;
-
-            /*
-             If the pawn is pinned but the en passant square is not on the
-             pin mask then the move is illegal.
-            */
-            if ((Bitboard::fromSquare(from) & pin_d) && !(pin_d & Bitboard::fromSquare(ep))) continue;
-
-            const Bitboard connectingPawns = Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(from);
-
-            /*
-             7k/4p3/8/2KP3r/8/8/8/8 b - - 0 1
-             If e7e5 there will be a potential ep square for us on e6.
-             However, we cannot take en passant because that would put our king
-             in check. For this scenario we check if there's an enemy rook/queen
-             that would give check if the two pawns were removed.
-             If that's the case then the move is illegal and we can break immediately.
-            */
-            const bool isPossiblePin = kingMask && enemyQueenRook;
-            if (isPossiblePin && (attacks::rook(kSQ, board.occ() & ~connectingPawns) & enemyQueenRook) != Bitboard(0))
-                break;
-
-            moves.add(Move::make<Move::ENPASSANT>(from, to));
+        for (const auto &move : m) {
+            if (move != Move::NO_MOVE) moves.add(move);
         }
     }
+}
+
+[[nodiscard]] inline std::array<Move, 2> movegen::generateEPMove(const Board &board, Bitboard checkmask, Bitboard pin_d,
+                                                                 Bitboard pawns_lr, Square ep, Color c) {
+    assert((ep.rank() == Rank::RANK_3 && board.sideToMove() == Color::BLACK) ||
+           (ep.rank() == Rank::RANK_6 && board.sideToMove() == Color::WHITE));
+
+    std::array<Move, 2> moves = {Move::NO_MOVE, Move::NO_MOVE};
+    auto i                    = 0;
+
+    const Direction DOWN = c == Color::WHITE ? Direction::SOUTH : Direction::NORTH;
+    const Square epPawn  = ep + DOWN;
+
+    /*
+     In case the en passant square and the enemy pawn
+     that just moved are not on the checkmask
+     en passant is not available.
+    */
+    if ((checkmask & (Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(ep))) == Bitboard(0)) return moves;
+
+    const Square kSQ              = board.kingSq(c);
+    const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & attacks::MASK_RANK[epPawn.rank()].getBits();
+    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, ~c) | board.pieces(PieceType::QUEEN, ~c);
+
+    Bitboard epBB = attacks::pawn(~c, ep) & pawns_lr;
+
+    // For one en passant square two pawns could potentially take there.
+    while (epBB) {
+        const Square from = epBB.pop();
+        const Square to   = ep;
+
+        /*
+         If the pawn is pinned but the en passant square is not on the
+         pin mask then the move is illegal.
+        */
+        if ((Bitboard::fromSquare(from) & pin_d) && !(pin_d & Bitboard::fromSquare(ep))) continue;
+
+        const Bitboard connectingPawns = Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(from);
+
+        /*
+         7k/4p3/8/2KP3r/8/8/8/8 b - - 0 1
+         If e7e5 there will be a potential ep square for us on e6.
+         However, we cannot take en passant because that would put our king
+         in check. For this scenario we check if there's an enemy rook/queen
+         that would give check if the two pawns were removed.
+         If that's the case then the move is illegal and we can break immediately.
+        */
+        const bool isPossiblePin = kingMask && enemyQueenRook;
+        if (isPossiblePin && (attacks::rook(kSQ, board.occ() & ~connectingPawns) & enemyQueenRook) != Bitboard(0))
+            break;
+
+        moves[i++] = Move::make<Move::ENPASSANT>(from, to);
+    }
+
+    return moves;
 }
 
 /// @brief Generate knight moves.

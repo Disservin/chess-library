@@ -300,26 +300,62 @@ class Board {
 
             // double push
             if (Square::value_distance(move.to(), move.from()) == 16) {
+                // imaginary attacks from the ep square from the pawn which moved
                 Bitboard ep_mask = attacks::pawn(stm_, move.to().ep_square());
 
                 // add enpassant hash if enemy pawns are attacking the square
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
                     if constexpr (EXACT) {
-                        static constexpr auto is_legal = [](const Board &board, Move move) {
-                            static Movelist moves;
-                            movegen::legalmoves(moves, board);
+                        const auto piece = at(move.from());
+                        removePiece(piece, move.from());
+                        placePiece(piece, move.to());
+                        stm_ = ~stm_;
 
-                            return std::find(moves.begin(), moves.end(), move) != moves.end();
-                        };
+                        int double_check = 0;
 
-                        while (ep_mask) {
-                            const auto possible_move = Move::make(ep_mask.pop(), move.to().ep_square());
-                            if (is_legal(*this, possible_move)) {
-                                assert(at(move.to().ep_square()) == Piece::NONE);
-                                ep_sq_ = move.to().ep_square();
-                                key_ ^= Zobrist::enpassant(move.to().ep_square().file());
+                        Bitboard occ_us    = us(stm_);
+                        Bitboard occ_opp   = us(~stm_);
+                        Bitboard occ_all   = occ_us | occ_opp;
+                        Bitboard opp_empty = ~occ_us;
+                        auto king_sq       = kingSq(stm_);
+
+                        Bitboard checkmask;
+                        Bitboard pin_hv;
+                        Bitboard pin_d;
+
+                        if (stm_ == Color::WHITE) {
+                            checkmask = movegen::checkMask<Color::WHITE>(*this, king_sq, double_check);
+                            pin_hv    = movegen::pinMaskRooks<Color::WHITE>(*this, king_sq, occ_opp, occ_us);
+                            pin_d     = movegen::pinMaskBishops<Color::WHITE>(*this, king_sq, occ_opp, occ_us);
+                        } else {
+                            checkmask = movegen::checkMask<Color::BLACK>(*this, king_sq, double_check);
+                            pin_hv    = movegen::pinMaskRooks<Color::BLACK>(*this, king_sq, occ_opp, occ_us);
+                            pin_d     = movegen::pinMaskBishops<Color::BLACK>(*this, king_sq, occ_opp, occ_us);
+                        }
+
+                        const auto pawns    = pieces(PieceType::PAWN, stm_);
+                        const auto pawns_lr = pawns & ~pin_hv;
+                        const auto ep       = move.to().ep_square();
+                        const auto m        = movegen::generateEPMove(*this, checkmask, pin_d, pawns_lr, ep, stm_);
+                        bool found          = false;
+
+                        for (const auto &move : m) {
+                            if (move != Move::NO_MOVE) {
+                                found = true;
                                 break;
                             }
+                        }
+
+                        // undo
+                        stm_ = ~stm_;
+
+                        removePiece(piece, move.to());
+                        placePiece(piece, move.from());
+
+                        if (found) {
+                            assert(at(move.to().ep_square()) == Piece::NONE);
+                            ep_sq_ = move.to().ep_square();
+                            key_ ^= Zobrist::enpassant(move.to().ep_square().file());
                         }
                     } else {
                         assert(at(move.to().ep_square()) == Piece::NONE);
