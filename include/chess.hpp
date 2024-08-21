@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.56
+VERSION: 0.6.57
 */
 
 #ifndef CHESS_HPP
@@ -2427,6 +2427,153 @@ class Board {
     }
 
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
+
+    class Compressed {
+        friend class Board;
+
+       public:
+        Compressed() = default;
+
+        static Compressed encode(const Board &board) {
+            Compressed compressed;
+            compressed.encodeState(board);
+            return compressed;
+        }
+
+        static Board decode(const Compressed &compressed) {
+            Board board{};
+            compressed.decode(board);
+            return board;
+        }
+
+       private:
+        void encodeState(const Board &board) {
+            occupied_ = board.occ().getBits();
+
+            auto offset = 0;
+            auto occ    = board.occ();
+
+            while (occ) {
+                const auto sq = Square(occ.pop());
+
+                // we now fill the packed array, since our convertedpiece only actually needs 4 bits,
+                // we can store 2 pieces in one byte.
+                const auto shift = (offset % 2 == 0 ? 4 : 0);
+                packed_[offset / 2] |= convertMeaning(board, sq, board.at(sq)) << shift;
+                offset++;
+            }
+        }
+
+        void decode(Board &board) const {
+            Bitboard occupied = occupied_;
+
+            int offset = 0;
+
+            int white_castle_idx = 0, black_castle_idx = 0;
+            File white_castle[2] = {File::NO_FILE, File::NO_FILE};
+            File black_castle[2] = {File::NO_FILE, File::NO_FILE};
+
+            board.stm_ = Color::WHITE;
+            board.occ_bb_.fill(0ULL);
+            board.pieces_bb_.fill(0ULL);
+            board.board_.fill(Piece::NONE);
+            board.cr_.clear();
+
+            while (occupied) {
+                const auto sq     = Square(occupied.pop());
+                const auto nibble = packed_[offset / 2] >> (offset % 2 == 0 ? 4 : 0) & 0b1111;
+                const auto piece  = convertPiece(nibble);
+
+                if (piece != Piece::NONE) {
+                    board.placePiece(piece, sq);
+
+                    offset++;
+                    continue;
+                }
+
+                // ep
+                if (nibble == 12) {
+                    board.ep_sq_ = sq.ep_square();
+                    // depending on the rank this is a white or black pawn
+                    board.placePiece(Piece(PieceType::PAWN, sq.rank() == Rank::RANK_4 ? Color::WHITE : Color::BLACK),
+                                     sq);
+                }
+                // castling rights for white
+                else if (nibble == 13) {
+                    white_castle[white_castle_idx++] = sq.file();
+                    board.placePiece(Piece(PieceType::ROOK, Color::WHITE), sq);
+                }
+                // castling rights for black
+                else if (nibble == 14) {
+                    black_castle[black_castle_idx++] = sq.file();
+                    board.placePiece(Piece(PieceType::ROOK, Color::BLACK), sq);
+                }
+                // black to move
+                else if (nibble == 15) {
+                    board.stm_ = Color::BLACK;
+                    board.placePiece(Piece(PieceType::KING, Color::BLACK), sq);
+                }
+
+                offset++;
+            }
+
+            // reapply castling
+            for (int i = 0; i < 2; i++) {
+                if (white_castle[i] != File::NO_FILE) {
+                    const auto king_sq = board.kingSq(Color::WHITE);
+                    const auto file    = white_castle[i];
+                    const auto side    = CastlingRights::closestSide(file, king_sq.file());
+
+                    board.cr_.setCastlingRight(Color::WHITE, side, file);
+                }
+
+                if (black_castle[i] != File::NO_FILE) {
+                    const auto king_sq = board.kingSq(Color::BLACK);
+                    const auto file    = black_castle[i];
+                    const auto side    = CastlingRights::closestSide(file, king_sq.file());
+
+                    board.cr_.setCastlingRight(Color::BLACK, side, file);
+                }
+            }
+        }
+
+        static std::uint8_t convertPiece(Piece piece) { return int(piece.internal()); }
+
+        static Piece convertPiece(std::uint8_t piece) {
+            if (piece >= 12) return Piece::NONE;
+            return Piece(Piece::underlying(piece));
+        }
+
+        // 12 => theres an ep square behind the pawn, rank will be deduced from the rank
+        // 13 => any white rook with castling rights, side will be deduced from the file
+        // 14 => any black rook with castling rights, side will be deduced from the file
+        // 15 => black king and black is side to move
+        static std::uint8_t convertMeaning(const Board &board, Square sq, Piece piece) {
+            if (piece.type() == PieceType::PAWN && board.ep_sq_ != Square::underlying::NO_SQ) {
+                if (Square(static_cast<int>(sq.index()) ^ 8) == board.ep_sq_) return 12;
+            }
+
+            if (piece.type() == PieceType::ROOK) {
+                if (piece.color() == Color::WHITE &&
+                    (board.cr_.getRookFile(Color::WHITE, CastlingRights::Side::KING_SIDE) == sq.file() ||
+                     board.cr_.getRookFile(Color::WHITE, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
+                    return 13;
+                if (piece.color() == Color::BLACK &&
+                    (board.cr_.getRookFile(Color::BLACK, CastlingRights::Side::KING_SIDE) == sq.file() ||
+                     board.cr_.getRookFile(Color::BLACK, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
+                    return 14;
+            }
+
+            if (piece.type() == PieceType::KING && piece.color() == Color::BLACK && board.stm_ == Color::BLACK) {
+                return 15;
+            }
+
+            return convertPiece(piece);
+        }
+
+        std::uint64_t occupied_;
+        std::array<std::uint8_t, 16> packed_ = {};
+    };
 
    protected:
     virtual void placePiece(Piece piece, Square sq) {
