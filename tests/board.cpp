@@ -1,3 +1,5 @@
+#include <map>
+
 #include "../src/include.hpp"
 #include "doctest/doctest.hpp"
 
@@ -140,5 +142,70 @@ TEST_SUITE("Board") {
     TEST_CASE("Insufficient Material White Light Bishop and White Dark Bishop") {
         Board board = Board("8/7k/8/8/3BB3/8/8/1K6 w - - 0 1");
         CHECK(board.isInsufficientMaterial() == false);
+    }
+
+    TEST_CASE("Compressed State Normal") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
+        auto compressed = Board::Compressed::encode(board);
+        auto newboard   = Board::Compressed::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+        CHECK(sizeof(compressed) == 24);
+    }
+
+    TEST_CASE("Compressed State EP ") {
+        Board board     = Board("4k1n1/ppp1pppp/8/8/3pP3/8/PPPP1PPP/4K3 b - e3 0 1");
+        auto compressed = Board::Compressed::encode(board);
+        auto newboard   = Board::Compressed::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State White Castling Queen") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/R3K3 w Q - 0 1");
+        auto compressed = Board::Compressed::encode(board);
+        auto newboard   = Board::Compressed::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State White Castling King") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K2R w K - 0 1");
+        auto compressed = Board::Compressed::encode(board);
+        auto newboard   = Board::Compressed::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State Black Castling Queen") {
+        Board board     = Board("r3k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w q - 0 1");
+        auto compressed = Board::Compressed::encode(board);
+        auto newboard   = Board::Compressed::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State Black Castling King") {
+        Board board     = Board("4k1nr/pppppppp/8/8/8/8/PPPPPPPP/4K3 w k - 0 1");
+        auto compressed = Board::Compressed::encode(board);
+        auto newboard   = Board::Compressed::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State Black Side to Move") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 b - - 0 1");
+        auto compressed = Board::Compressed::encode(board);
+        auto newboard   = Board::Compressed::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State Usable in Map") {
+        std::map<int, Board::Compressed> compressed;
+
+        compressed.emplace(0, Board::Compressed::encode(Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1")));
+
+        CHECK(Board::Compressed::decode(compressed.at(0)).getFen() == "4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
     }
 }
