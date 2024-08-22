@@ -33,6 +33,7 @@ VERSION: 0.6.57
 
 
 #include <functional>
+#include <utility>
 
 
 #include <cstdint>
@@ -2866,6 +2867,15 @@ template <Direction direction>
         case Direction::SOUTH_EAST:
             return (b & ~MASK_FILE[7]) >> 7;
     }
+
+        // c++23
+#if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
+    std::unreachable();
+#endif
+
+    assert(false);
+
+    return {};
 }
 
 /// @brief [Internal Usage] Generate the left side pawn attacks.
@@ -4281,7 +4291,6 @@ class StreamParser {
 }  // namespace chess::pgn
 
 #include <sstream>
-#include <utility>
 
 
 namespace chess {
