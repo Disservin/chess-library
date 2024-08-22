@@ -153,6 +153,14 @@ TEST_SUITE("Board") {
         CHECK(sizeof(compressed) == 24);
     }
 
+    TEST_CASE("Compressed State Normal Same Zobrist") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.hash() == newboard.hash());
+    }
+
     TEST_CASE("Compressed State EP Black to Move") {
         Board board     = Board("4k1n1/ppp1pppp/8/8/3pP3/8/PPPP1PPP/4K3 b - e3 0 1");
         auto compressed = Board::Compact::encode(board);

@@ -951,6 +951,8 @@ class Board {
                     board.cr_.setCastlingRight(Color::BLACK, side, file);
                 }
             }
+
+            board.key_ = board.zobrist();
         }
 
         // 1:1 mapping of Piece::internal() to the compressed piece

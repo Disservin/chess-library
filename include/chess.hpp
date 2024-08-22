@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.57
+VERSION: 0.6.58
 */
 
 #ifndef CHESS_HPP
@@ -2581,6 +2581,8 @@ class Board {
                     board.cr_.setCastlingRight(Color::BLACK, side, file);
                 }
             }
+
+            board.key_ = board.zobrist();
         }
 
         // 1:1 mapping of Piece::internal() to the compressed piece
