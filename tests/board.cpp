@@ -1,3 +1,5 @@
+#include <map>
+
 #include "../src/include.hpp"
 #include "doctest/doctest.hpp"
 
@@ -140,5 +142,151 @@ TEST_SUITE("Board") {
     TEST_CASE("Insufficient Material White Light Bishop and White Dark Bishop") {
         Board board = Board("8/7k/8/8/3BB3/8/8/1K6 w - - 0 1");
         CHECK(board.isInsufficientMaterial() == false);
+    }
+
+    TEST_CASE("Compressed State Normal") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+        CHECK(sizeof(compressed) == 24);
+    }
+
+    TEST_CASE("Compressed State EP ") {
+        Board board     = Board("4k1n1/ppp1pppp/8/8/3pP3/8/PPPP1PPP/4K3 b - e3 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State White Castling Queen") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/R3K3 w Q - 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State White Castling King") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K2R w K - 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State Black Castling Queen") {
+        Board board     = Board("r3k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w q - 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State Black Castling King") {
+        Board board     = Board("4k1nr/pppppppp/8/8/8/8/PPPPPPPP/4K3 w k - 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State Black Side to Move") {
+        Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 b - - 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State Usable in Map") {
+        std::map<int, chess::PackedBoard> compressed;
+
+        compressed.emplace(0, Board::Compact::encode(Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1")));
+
+        CHECK(Board::Compact::decode(compressed.at(0)).getFen() == "4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
+    }
+
+    TEST_CASE("Chess960 Castling") {
+        Board board = Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w AHah - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Chess960 Castling 2") {
+        Board board = Board("1rqbkrbn/1ppppp1p/1n6/p1N3p1/8/2P4P/PP1PPPP1/1RQBKRBN w FBfb - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Chess960 Castling 3") {
+        Board board = Board("rbbqn1kr/pp2p1pp/6n1/2pp1p2/2P4P/P7/BP1PPPP1/R1BQNNKR w HAha - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Chess960 Castling 4") {
+        Board board = Board("rqbbknr1/1ppp2pp/p5n1/4pp2/P7/1PP5/1Q1PPPPP/R1BBKNRN w GAga - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Chess960 Castling 5") {
+        Board board = Board("4rrb1/1kp3b1/1p1p4/pP1Pn2p/5p2/1PR2P2/2P1NB1P/2KR1B2 w D - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Chess960 Castling 6") {
+        Board board = Board("1rkr3b/1ppn3p/3pB1n1/6q1/R2P4/4N1P1/1P5P/2KRQ1B1 b Dbd - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Chess960 Castling 7") {
+        Board board = Board("qbbnrkr1/p1pppppp/1p4n1/8/2P5/6N1/PPNPPPPP/1BRKBRQ1 b FCge - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Chess960 Castling 8") {
+        Board board = Board("rr6/2kpp3/1ppn2p1/p2b1q1p/P4P1P/1PNN2P1/2PP4/1K2R2R b E - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Chess960 Castling 9") {
+        Board board = Board("rr6/2kpp3/1ppnb1p1/p2Q1q1p/P4P1P/1PNN2P1/2PP4/1K2RR2 b E - 0 1", true);
+
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed, true);
+
+        CHECK(board.getFen() == newboard.getFen());
     }
 }
