@@ -153,8 +153,16 @@ TEST_SUITE("Board") {
         CHECK(sizeof(compressed) == 24);
     }
 
-    TEST_CASE("Compressed State EP ") {
+    TEST_CASE("Compressed State EP Black to Move") {
         Board board     = Board("4k1n1/ppp1pppp/8/8/3pP3/8/PPPP1PPP/4K3 b - e3 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
+    TEST_CASE("Compressed State EP White To Move") {
+        Board board     = Board("4k1n1/ppp1p1pp/8/4Pp2/3p4/8/PPPP1PPP/4K3 w - f6 0 1");
         auto compressed = Board::Compact::encode(board);
         auto newboard   = Board::Compact::decode(compressed);
 
