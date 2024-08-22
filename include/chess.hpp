@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.58
+VERSION: 0.6.59
 */
 
 #ifndef CHESS_HPP
@@ -1949,11 +1949,9 @@ class Board {
 
                         int double_check = 0;
 
-                        Bitboard occ_us    = us(stm_);
-                        Bitboard occ_opp   = us(~stm_);
-                        Bitboard occ_all   = occ_us | occ_opp;
-                        Bitboard opp_empty = ~occ_us;
-                        auto king_sq       = kingSq(stm_);
+                        Bitboard occ_us  = us(stm_);
+                        Bitboard occ_opp = us(~stm_);
+                        auto king_sq     = kingSq(stm_);
 
                         Bitboard checkmask;
                         Bitboard pin_hv;
