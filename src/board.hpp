@@ -890,6 +890,9 @@ class Board {
             board.board_.fill(Piece::NONE);
             board.cr_.clear();
             board.original_fen_.clear();
+            board.prev_states_.clear();
+            board.hfm_   = 0;
+            board.plies_ = 0;
 
             // place pieces back on the board
             while (occupied) {
@@ -948,6 +951,10 @@ class Board {
 
                     board.cr_.setCastlingRight(Color::BLACK, side, file);
                 }
+            }
+
+            if (board.stm_ == Color::BLACK) {
+                board.plies_++;
             }
 
             board.key_ = board.zobrist();
