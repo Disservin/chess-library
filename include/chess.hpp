@@ -1661,6 +1661,10 @@ enum class GameResultReason {
     NONE
 };
 
+// A compact representation of the board in 24 bytes,
+// does not include the half-move clock or full move number.
+using PackedBoard = std::array<std::uint8_t, 24>;
+
 class Board {
     using U64 = std::uint64_t;
 
@@ -1738,10 +1742,12 @@ class Board {
     };
 
    public:
-    explicit Board(std::string_view fen = constants::STARTPOS) {
+    explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
         prev_states_.reserve(256);
+        chess960_ = chess960;
         setFenInternal(fen);
     }
+
     virtual void setFen(std::string_view fen) { setFenInternal(fen); }
 
     static Board fromFen(std::string_view fen) { return Board(fen); }
@@ -2228,7 +2234,7 @@ class Board {
 
     void set960(bool is960) {
         chess960_ = is960;
-        setFen(original_fen_);
+        if (!original_fen_.empty()) setFen(original_fen_);
     }
 
     /// @brief Checks if the current position is a chess960, aka. FRC/DFRC position.
@@ -2428,23 +2434,46 @@ class Board {
 
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
 
-    // first 8 entries are for the occupated squares
-    using PackedBoard = std::array<std::uint8_t, 32>;
-
-    class Compressed {
+    /// @brief Compresses the board into a PackedBoard
+    class Compact {
         friend class Board;
-        Compressed() = default;
+        Compact() = default;
 
        public:
+        /// @brief Compresses the board into a PackedBoard
         static PackedBoard encode(const Board &board) { return encodeState(board); }
 
-        static Board decode(const PackedBoard &compressed) {
+        /// @brief Creates a Board object from a PackedBoard
+        /// @param compressed
+        /// @param chess960 If the board is a chess960 position, set this to true
+        static Board decode(const PackedBoard &compressed, bool chess960 = false) {
             Board board{};
+            board.chess960_ = chess960;
             decode(board, compressed);
             return board;
         }
 
        private:
+        /**
+         * A compact board representation can be achieved in 24 bytes,
+         * we use 8 bytes (64bit) to store the occupancy bitboard,
+         * and 16 bytes (128bit) to store the pieces (plus some special information).
+         *
+         * Each of the 16 bytes can store 2 pieces, since chess only has 12 different pieces,
+         * we can represent the pieces from 0 to 11 in 4 bits (a nibble) and use the other 4 bit for
+         * the next piece.
+         * Since we need to store information about enpassant, castling rights and the side to move,
+         * we can use the remaining 4 bits to store this information.
+         *
+         * However we need to store the information and the piece information together.
+         * This means in our case that
+         * 12 -> enpassant + a pawn, we can deduce the color of the pawn from the rank of the square
+         * 13 -> white rook with castling rights, we later use the file to deduce if it's a short or long castle
+         * 14 -> black rook with castling rights, we later use the file to deduce if it's a short or long castle
+         * 15 -> black king and black is side to move
+         *
+         * We will later deduce the square of the pieces from the occupancy bitboard.
+         */
         static PackedBoard encodeState(const Board &board) {
             PackedBoard packed{};
 
@@ -2457,18 +2486,19 @@ class Board {
             packed[6] = (board.occ().getBits() >> 8) & 0xFF;
             packed[7] = board.occ().getBits() & 0xFF;
 
-            auto offset = 8;
+            auto offset = 8 * 2;
             auto occ    = board.occ();
 
             while (occ) {
-                const auto sq = Square(occ.pop());
-
                 // we now fill the packed array, since our convertedpiece only actually needs 4 bits,
                 // we can store 2 pieces in one byte.
+                const auto sq    = Square(occ.pop());
                 const auto shift = (offset % 2 == 0 ? 4 : 0);
                 packed[offset / 2] |= convertMeaning(board, sq, board.at(sq)) << shift;
                 offset++;
             }
+
+            return packed;
         }
 
         static void decode(Board &board, const PackedBoard &compressed) {
@@ -2478,18 +2508,21 @@ class Board {
                 occupied |= Bitboard(compressed[i]) << (56 - i * 8);
             }
 
-            int offset = 8;
-
+            int offset           = 16;
             int white_castle_idx = 0, black_castle_idx = 0;
             File white_castle[2] = {File::NO_FILE, File::NO_FILE};
             File black_castle[2] = {File::NO_FILE, File::NO_FILE};
+
+            // clear board state
 
             board.stm_ = Color::WHITE;
             board.occ_bb_.fill(0ULL);
             board.pieces_bb_.fill(0ULL);
             board.board_.fill(Piece::NONE);
             board.cr_.clear();
+            board.original_fen_.clear();
 
+            // place pieces back on the board
             while (occupied) {
                 const auto sq     = Square(occupied.pop());
                 const auto nibble = compressed[offset / 2] >> (offset % 2 == 0 ? 4 : 0) & 0b1111;
@@ -2502,12 +2535,13 @@ class Board {
                     continue;
                 }
 
-                // ep
+                // Piece has a special meaning, interpret it from the raw integer
+                // pawn with ep square behind it
                 if (nibble == 12) {
                     board.ep_sq_ = sq.ep_square();
                     // depending on the rank this is a white or black pawn
-                    board.placePiece(Piece(PieceType::PAWN, sq.rank() == Rank::RANK_4 ? Color::WHITE : Color::BLACK),
-                                     sq);
+                    auto color = sq.rank() == Rank::RANK_4 ? Color::WHITE : Color::BLACK;
+                    board.placePiece(Piece(PieceType::PAWN, color), sq);
                 }
                 // castling rights for white
                 else if (nibble == 13) {
@@ -2548,8 +2582,10 @@ class Board {
             }
         }
 
+        // 1:1 mapping of Piece::internal() to the compressed piece
         static std::uint8_t convertPiece(Piece piece) { return int(piece.internal()); }
 
+        // for pieces with a special meaning return Piece::NONE since this is otherwise not used
         static Piece convertPiece(std::uint8_t piece) {
             if (piece >= 12) return Piece::NONE;
             return Piece(Piece::underlying(piece));
