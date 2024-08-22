@@ -1,6 +1,8 @@
 # Board
 
 ```cpp
+using PackedBoard = std::array<std::uint8_t, 24>;
+
 class Board {
     public:
         Board::Board(std::string_view fen)
@@ -90,5 +92,16 @@ class Board {
         /// @brief Recalculates the zobrist hash and return it.
         /// If you want get the zobrist hash use hash().
         U64 zobrist();
+
+        class Compact {
+            public:
+                /// @brief Compresses the board into a PackedBoard
+                static PackedBoard encode(const Board &board);
+
+                /// @brief Creates a Board object from a PackedBoard
+                /// @param compressed
+                /// @param chess960 If the board is a chess960 position, set this to true
+                static Board decode(const PackedBoard &compressed, bool chess960 = false);
+        }
 };
 ```

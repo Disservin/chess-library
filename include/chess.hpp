@@ -2428,29 +2428,36 @@ class Board {
 
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
 
+    // first 8 entries are for the occupated squares
+    using PackedBoard = std::array<std::uint8_t, 32>;
+
     class Compressed {
         friend class Board;
-
-       public:
         Compressed() = default;
 
-        static Compressed encode(const Board &board) {
-            Compressed compressed;
-            compressed.encodeState(board);
-            return compressed;
-        }
+       public:
+        static PackedBoard encode(const Board &board) { return encodeState(board); }
 
-        static Board decode(const Compressed &compressed) {
+        static Board decode(const PackedBoard &compressed) {
             Board board{};
-            compressed.decode(board);
+            decode(board, compressed);
             return board;
         }
 
        private:
-        void encodeState(const Board &board) {
-            occupied_ = board.occ().getBits();
+        static PackedBoard encodeState(const Board &board) {
+            PackedBoard packed{};
 
-            auto offset = 0;
+            packed[0] = board.occ().getBits() >> 56;
+            packed[1] = (board.occ().getBits() >> 48) & 0xFF;
+            packed[2] = (board.occ().getBits() >> 40) & 0xFF;
+            packed[3] = (board.occ().getBits() >> 32) & 0xFF;
+            packed[4] = (board.occ().getBits() >> 24) & 0xFF;
+            packed[5] = (board.occ().getBits() >> 16) & 0xFF;
+            packed[6] = (board.occ().getBits() >> 8) & 0xFF;
+            packed[7] = board.occ().getBits() & 0xFF;
+
+            auto offset = 8;
             auto occ    = board.occ();
 
             while (occ) {
@@ -2459,15 +2466,19 @@ class Board {
                 // we now fill the packed array, since our convertedpiece only actually needs 4 bits,
                 // we can store 2 pieces in one byte.
                 const auto shift = (offset % 2 == 0 ? 4 : 0);
-                packed_[offset / 2] |= convertMeaning(board, sq, board.at(sq)) << shift;
+                packed[offset / 2] |= convertMeaning(board, sq, board.at(sq)) << shift;
                 offset++;
             }
         }
 
-        void decode(Board &board) const {
-            Bitboard occupied = occupied_;
+        static void decode(Board &board, const PackedBoard &compressed) {
+            Bitboard occupied = 0ull;
 
-            int offset = 0;
+            for (int i = 0; i < 8; i++) {
+                occupied |= Bitboard(compressed[i]) << (56 - i * 8);
+            }
+
+            int offset = 8;
 
             int white_castle_idx = 0, black_castle_idx = 0;
             File white_castle[2] = {File::NO_FILE, File::NO_FILE};
@@ -2481,7 +2492,7 @@ class Board {
 
             while (occupied) {
                 const auto sq     = Square(occupied.pop());
-                const auto nibble = packed_[offset / 2] >> (offset % 2 == 0 ? 4 : 0) & 0b1111;
+                const auto nibble = compressed[offset / 2] >> (offset % 2 == 0 ? 4 : 0) & 0b1111;
                 const auto piece  = convertPiece(nibble);
 
                 if (piece != Piece::NONE) {
@@ -2570,9 +2581,6 @@ class Board {
 
             return convertPiece(piece);
         }
-
-        std::uint64_t occupied_;
-        std::array<std::uint8_t, 16> packed_ = {};
     };
 
    protected:

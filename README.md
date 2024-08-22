@@ -1,4 +1,4 @@
-# An extensive SHL Chess Library for C++ 
+# An extensive SHL Chess Library for C++
 
 [![Chess Library](https://github.com/Disservin/chess-library/actions/workflows/chess-library.yml/badge.svg)](https://github.com/Disservin/chess-library/actions/workflows/chess-library.yml)
 
@@ -15,6 +15,7 @@ It can be used for any type of chess program, be it a chess engine, a chess GUI,
 - **Robust**: Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/official-stockfish/WDL_model).
 - **PGN Support**: Parse basic PGN files.
 - **Namespace**: Everything is in the `chess::` namespace, so it won't pollute your namespace.
+- **Compact Board Representation in 24bytes**: The board state can be compressed into 24 bytes, using `PackedBoard` and `Board::Compact::encode`/`Board::Compact::decode`.
 
 ### Usage
 
@@ -140,6 +141,7 @@ depth 5  time 3403  nodes 164075551    nps 48200808  fen r4rk1/1pp1qppp/p1np1n2/
 ### Development Setup
 
 This project is using the meson build system. https://mesonbuild.com/
+
 #### Setup
 
 ```bash
