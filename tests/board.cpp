@@ -177,6 +177,14 @@ TEST_SUITE("Board") {
         CHECK(board.getFen() == newboard.getFen());
     }
 
+    TEST_CASE("Compressed State White Castling Bug") {
+        Board board     = Board("rnb1kbnR/pppp4/5q2/4pp2/8/8/PPPPPP1P/RNBQKBNR b KQq - 0 1");
+        auto compressed = Board::Compact::encode(board);
+        auto newboard   = Board::Compact::decode(compressed);
+
+        CHECK(board.getFen() == newboard.getFen());
+    }
+
     TEST_CASE("Compressed State White Castling Queen") {
         Board board     = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/R3K3 w Q - 0 1");
         auto compressed = Board::Compact::encode(board);

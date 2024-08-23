@@ -917,11 +917,13 @@ class Board {
                 }
                 // castling rights for white
                 else if (nibble == 13) {
+                    assert(white_castle_idx < 2);
                     white_castle[white_castle_idx++] = sq.file();
                     board.placePiece(Piece(PieceType::ROOK, Color::WHITE), sq);
                 }
                 // castling rights for black
                 else if (nibble == 14) {
+                    assert(black_castle_idx < 2);
                     black_castle[black_castle_idx++] = sq.file();
                     board.placePiece(Piece(PieceType::ROOK, Color::BLACK), sq);
                 }
@@ -979,11 +981,11 @@ class Board {
             }
 
             if (piece.type() == PieceType::ROOK) {
-                if (piece.color() == Color::WHITE &&
+                if (piece.color() == Color::WHITE && Square::back_rank(sq, Color::WHITE) &&
                     (board.cr_.getRookFile(Color::WHITE, CastlingRights::Side::KING_SIDE) == sq.file() ||
                      board.cr_.getRookFile(Color::WHITE, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
                     return 13;
-                if (piece.color() == Color::BLACK &&
+                if (piece.color() == Color::BLACK && Square::back_rank(sq, Color::BLACK) &&
                     (board.cr_.getRookFile(Color::BLACK, CastlingRights::Side::KING_SIDE) == sq.file() ||
                      board.cr_.getRookFile(Color::BLACK, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
                     return 14;
