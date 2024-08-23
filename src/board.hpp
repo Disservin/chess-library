@@ -812,6 +812,8 @@ class Board {
         /// @brief Compresses the board into a PackedBoard
         static PackedBoard encode(const Board &board) { return encodeState(board); }
 
+        static PackedBoard encode(std::string_view fen, bool chess960 = false) { return encodeState(fen, chess960); }
+
         /// @brief Creates a Board object from a PackedBoard
         /// @param compressed
         /// @param chess960 If the board is a chess960 position, set this to true
@@ -861,11 +863,91 @@ class Board {
             while (occ) {
                 // we now fill the packed array, since our convertedpiece only actually needs 4 bits,
                 // we can store 2 pieces in one byte.
-                const auto sq    = Square(occ.pop());
-                const auto shift = (offset % 2 == 0 ? 4 : 0);
-                packed[offset / 2] |= convertMeaning(board, sq, board.at(sq)) << shift;
+                const auto sq      = Square(occ.pop());
+                const auto shift   = (offset % 2 == 0 ? 4 : 0);
+                const auto meaning = convertMeaning(board.cr_, board.sideToMove(), board.ep_sq_, sq, board.at(sq));
+                const auto nibble  = meaning << shift;
+
+                packed[offset / 2] |= nibble;
                 offset++;
             }
+
+            return packed;
+        }
+
+        static PackedBoard encodeState(std::string_view fen, bool chess960 = false) {
+            // fallback to slower method
+            if (chess960) {
+                Board board = Board(fen, true);
+                return encodeState(board);
+            }
+
+            PackedBoard packed{};
+
+            while (fen[0] == ' ') fen.remove_prefix(1);
+
+            const auto params     = split_string_view<6>(fen);
+            const auto position   = params[0].has_value() ? *params[0] : "";
+            const auto move_right = params[1].has_value() ? *params[1] : "w";
+            const auto castling   = params[2].has_value() ? *params[2] : "-";
+            const auto en_passant = params[3].has_value() ? *params[3] : "-";
+
+            const auto ep  = en_passant == "-" ? Square::underlying::NO_SQ : Square(en_passant);
+            const auto stm = (move_right == "w") ? Color::WHITE : Color::BLACK;
+
+            CastlingRights cr;
+
+            for (char i : castling) {
+                if (i == '-') break;
+
+                const auto king_side  = CastlingRights::Side::KING_SIDE;
+                const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
+
+                if (i == 'K') cr.setCastlingRight(Color::WHITE, king_side, File::FILE_H);
+                if (i == 'Q') cr.setCastlingRight(Color::WHITE, queen_side, File::FILE_A);
+                if (i == 'k') cr.setCastlingRight(Color::BLACK, king_side, File::FILE_H);
+                if (i == 'q') cr.setCastlingRight(Color::BLACK, queen_side, File::FILE_A);
+
+                assert(i == 'K' || i == 'Q' || i == 'k' || i == 'q');
+
+                continue;
+            }
+
+            const auto parts = split_string_view<8>(position, '/');
+
+            auto offset = 8 * 2;
+            auto square = 0;
+            auto occ    = Bitboard(0);
+
+            for (auto i = parts.rbegin(); i != parts.rend(); i++) {
+                auto part = *i;
+
+                for (char curr : *part) {
+                    if (isdigit(curr)) {
+                        square += (curr - '0');
+                    } else if (curr == '/') {
+                        square++;
+                    } else {
+                        const auto p     = Piece(std::string_view(&curr, 1));
+                        const auto shift = (offset % 2 == 0 ? 4 : 0);
+
+                        packed[offset / 2] |= convertMeaning(cr, stm, ep, Square(square), p) << shift;
+                        offset++;
+
+                        occ.set(square);
+                        ++square;
+                    }
+                }
+            }
+
+            packed[0] = occ.getBits() >> 56;
+            packed[1] = (occ.getBits() >> 48) & 0xFF;
+            packed[2] = (occ.getBits() >> 40) & 0xFF;
+            packed[3] = (occ.getBits() >> 32) & 0xFF;
+            packed[4] = (occ.getBits() >> 24) & 0xFF;
+            packed[5] = (occ.getBits() >> 16) & 0xFF;
+            packed[6] = (occ.getBits() >> 8) & 0xFF;
+            packed[7] = occ.getBits() & 0xFF;
 
             return packed;
         }
@@ -975,23 +1057,23 @@ class Board {
         // 13 => any white rook with castling rights, side will be deduced from the file
         // 14 => any black rook with castling rights, side will be deduced from the file
         // 15 => black king and black is side to move
-        static std::uint8_t convertMeaning(const Board &board, Square sq, Piece piece) {
-            if (piece.type() == PieceType::PAWN && board.ep_sq_ != Square::underlying::NO_SQ) {
-                if (Square(static_cast<int>(sq.index()) ^ 8) == board.ep_sq_) return 12;
+        static std::uint8_t convertMeaning(const CastlingRights &cr, Color stm, Square ep, Square sq, Piece piece) {
+            if (piece.type() == PieceType::PAWN && ep != Square::underlying::NO_SQ) {
+                if (Square(static_cast<int>(sq.index()) ^ 8) == ep) return 12;
             }
 
             if (piece.type() == PieceType::ROOK) {
                 if (piece.color() == Color::WHITE && Square::back_rank(sq, Color::WHITE) &&
-                    (board.cr_.getRookFile(Color::WHITE, CastlingRights::Side::KING_SIDE) == sq.file() ||
-                     board.cr_.getRookFile(Color::WHITE, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
+                    (cr.getRookFile(Color::WHITE, CastlingRights::Side::KING_SIDE) == sq.file() ||
+                     cr.getRookFile(Color::WHITE, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
                     return 13;
                 if (piece.color() == Color::BLACK && Square::back_rank(sq, Color::BLACK) &&
-                    (board.cr_.getRookFile(Color::BLACK, CastlingRights::Side::KING_SIDE) == sq.file() ||
-                     board.cr_.getRookFile(Color::BLACK, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
+                    (cr.getRookFile(Color::BLACK, CastlingRights::Side::KING_SIDE) == sq.file() ||
+                     cr.getRookFile(Color::BLACK, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
                     return 14;
             }
 
-            if (piece.type() == PieceType::KING && piece.color() == Color::BLACK && board.stm_ == Color::BLACK) {
+            if (piece.type() == PieceType::KING && piece.color() == Color::BLACK && stm == Color::BLACK) {
                 return 15;
             }
 
@@ -1060,26 +1142,7 @@ class Board {
         // find leading whitespaces and remove them
         while (fen[0] == ' ') fen.remove_prefix(1);
 
-        static auto split_fen = [](std::string_view fen) {
-            std::array<std::optional<std::string_view>, 6> arr = {};
-
-            std::size_t start = 0;
-            std::size_t end   = 0;
-
-            for (std::size_t i = 0; i < 6; i++) {
-                end = fen.find(' ', start);
-                if (end == std::string::npos) {
-                    arr[i] = fen.substr(start);
-                    break;
-                }
-                arr[i] = fen.substr(start, end - start);
-                start  = end + 1;
-            }
-
-            return arr;
-        };
-
-        const auto params     = split_fen(fen);
+        const auto params     = split_string_view<6>(fen);
         const auto position   = params[0].has_value() ? *params[0] : "";
         const auto move_right = params[1].has_value() ? *params[1] : "w";
         const auto castling   = params[2].has_value() ? *params[2] : "-";
@@ -1190,6 +1253,27 @@ class Board {
         key_ ^= Zobrist::castling(cr_.hashIndex());
 
         assert(key_ == zobrist());
+    }
+
+    template <int N>
+    std::array<std::optional<std::string_view>, N> static split_string_view(std::string_view fen,
+                                                                            char delimiter = ' ') {
+        std::array<std::optional<std::string_view>, N> arr = {};
+
+        std::size_t start = 0;
+        std::size_t end   = 0;
+
+        for (std::size_t i = 0; i < N; i++) {
+            end = fen.find(delimiter, start);
+            if (end == std::string::npos) {
+                arr[i] = fen.substr(start);
+                break;
+            }
+            arr[i] = fen.substr(start, end - start);
+            start  = end + 1;
+        }
+
+        return arr;
     }
 
     // store the original fen string
