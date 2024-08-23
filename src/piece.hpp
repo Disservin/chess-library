@@ -6,8 +6,6 @@
 
 namespace chess {
 
-constexpr static std::string_view pieces = "PNBRQKpnbrqk ";
-
 class PieceType {
    public:
     enum class underlying : std::uint8_t {
@@ -139,17 +137,7 @@ class Piece {
         : piece(color == Color::NONE      ? Piece::NONE
                 : type == PieceType::NONE ? Piece::NONE
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
-    constexpr Piece(std::string_view p) : piece(underlying::NONE) {
-        for (std::size_t i = 0; i < pieces.size(); i++) {
-            if (p[0] == pieces[i]) {
-                piece = static_cast<underlying>(i);
-                return;
-            }
-        }
-
-        piece = NONE;
-        return;
-    }
+    constexpr Piece(std::string_view p) : piece(underlying::NONE) { piece = convertCharToUnderlying(p[0]); }
 
     constexpr bool operator<(const Piece& rhs) const noexcept { return piece < rhs.piece; }
     constexpr bool operator>(const Piece& rhs) const noexcept { return piece > rhs.piece; }
@@ -224,5 +212,36 @@ class Piece {
 
    private:
     underlying piece;
+
+    [[nodiscard]] constexpr static underlying convertCharToUnderlying(char c) {
+        switch (c) {
+            case 'P':
+                return WHITEPAWN;
+            case 'N':
+                return WHITEKNIGHT;
+            case 'B':
+                return WHITEBISHOP;
+            case 'R':
+                return WHITEROOK;
+            case 'Q':
+                return WHITEQUEEN;
+            case 'K':
+                return WHITEKING;
+            case 'p':
+                return BLACKPAWN;
+            case 'n':
+                return BLACKKNIGHT;
+            case 'b':
+                return BLACKBISHOP;
+            case 'r':
+                return BLACKROOK;
+            case 'q':
+                return BLACKQUEEN;
+            case 'k':
+                return BLACKKING;
+            default:
+                return NONE;
+        }
+    }
 };
 }  // namespace chess
