@@ -679,18 +679,25 @@ class Board {
 
         return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
 
-    /// @brief Checks if the current position is winnable from current pov.
+    /// @brief Checks if the current position is winnable with any set of legal moves from one side.
     /// @return
-    [[nodiscard]] bool isWinImpossible() const {
-        const auto count = us(board.sideToMove()).count();
+    [[nodiscard]] bool isWinImpossible(Color color) const {
+        const auto count = us(color).count();
 
         // lone king, win not possible
         if (count == 1) return true;
 
-        // lone king with bishop/knight, win not possible
+        // king with bishop/knight, win not possible
         if (count == 2) {
-            if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK)) return true;
-            if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK)) return true;
+            if (pieces(PieceType::BISHOP, color) || pieces(PieceType::KNIGHT, color)) return true;
+        }
+
+        // king with same colored bishops, win not possible
+        if (count == 3) {
+            auto bishops = pieces(PieceType::BISHOP, color);
+            if (bishops.count() == 2) {
+                if (Square::same_color(bishops.lsb(), bishops.msb())) return true;
+            }
         }
 
         return false;
