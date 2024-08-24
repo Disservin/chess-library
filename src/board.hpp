@@ -678,6 +678,22 @@ class Board {
         }
 
         return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
+
+    /// @brief Checks if the current position is winnable from current pov.
+    /// @return
+    [[nodiscard]] bool isWinImpossible() const {
+        const auto count = us(board.sideToMove()).count();
+
+        // lone king, win not possible
+        if (count == 1) return true;
+
+        // lone king with bishop/knight, win not possible
+        if (count == 2) {
+            if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK)) return true;
+            if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK)) return true;
+        }
+
+        return false;
     }
 
     /// @brief Checks if the current position is a draw by insufficient material.
