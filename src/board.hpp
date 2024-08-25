@@ -678,6 +678,7 @@ class Board {
         }
 
         return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
+    }
 
     /// @brief Checks if the current position is winnable with any set of legal moves from one side.
     /// @return
