@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.63
+VERSION: 0.6.64
 */
 
 #ifndef CHESS_HPP
@@ -2331,39 +2331,34 @@ class Board {
         return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
     }
 
-    /// @brief Checks if the current position is a draw by insufficient material.
+    /// @brief Checks if the current position is winnable with any set of legal moves from one side.
     /// @return
-    [[nodiscard]] bool isInsufficientMaterial() const {
-        const auto count = occ().count();
+    [[nodiscard]] bool hasSufficientMatingMaterial(Color color) const {
+        const auto count = us(color).count();
 
-        // only kings, draw
-        if (count == 2) return true;
+        // lone king, win not possible
+        if (count == 1) return false;
 
-        // only bishop + knight, cant mate
-        if (count == 3) {
-            if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK)) return true;
-            if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK)) return true;
+        // king with bishop/knight, win not possible
+        if (count == 2) {
+            if (pieces(PieceType::BISHOP, color) || pieces(PieceType::KNIGHT, color)) return false;
         }
 
-        // same colored bishops, cant mate
-        if (count == 4) {
-            if (pieces(PieceType::BISHOP, Color::WHITE) && pieces(PieceType::BISHOP, Color::BLACK) &&
-                Square::same_color(pieces(PieceType::BISHOP, Color::WHITE).lsb(),
-                                   pieces(PieceType::BISHOP, Color::BLACK).lsb()))
-                return true;
-
-            // one side with two bishops which have the same color
-            auto white_bishops = pieces(PieceType::BISHOP, Color::WHITE);
-            auto black_bishops = pieces(PieceType::BISHOP, Color::BLACK);
-
-            if (white_bishops.count() == 2) {
-                if (Square::same_color(white_bishops.lsb(), white_bishops.msb())) return true;
-            } else if (black_bishops.count() == 2) {
-                if (Square::same_color(black_bishops.lsb(), black_bishops.msb())) return true;
+        // king with same colored bishops, win not possible
+        if (count == 3) {
+            auto bishops = pieces(PieceType::BISHOP, color);
+            if (bishops.count() == 2) {
+                if (Square::same_color(bishops.lsb(), bishops.msb())) return false;
             }
         }
 
-        return false;
+        return true;
+    }
+
+    /// @brief Checks if the current position is a draw by insufficient material.
+    /// @return
+    [[nodiscard]] bool isInsufficientMaterial() const {
+        return !hasSufficientMatingMaterial(Color::WHITE) && !hasSufficientMatingMaterial(Color::BLACK);
     }
 
     /// @brief Checks if the game is over. Returns GameResultReason::NONE if
