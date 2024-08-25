@@ -139,6 +139,31 @@ TEST_SUITE("Board") {
         }
     }
     TEST_CASE("Board Insufficient Material") {
+        SUBCASE("Has Sufficient Material Lone King") {
+            Board board = Board("5k2/8/4K3/3Q4/8/8/8/8 b - - 0 1");
+            CHECK(board.hasSufficientMaterial(board.sideToMove()) == false);
+        }
+
+        SUBCASE("Has Sufficient Material King + Bishop") {
+            Board board = Board("4k2n/8/3b4/8/8/8/6B1/4K3 w - - 0 1");
+            CHECK(board.hasSufficientMaterial(board.sideToMove()) == false);
+        }
+
+        SUBCASE("Has Sufficient Material King + Knight") {
+            Board board = Board("2r1k2n/8/8/8/8/2N5/8/4K3 w - - 0 1");
+            CHECK(board.hasSufficientMaterial(board.sideToMove()) == false);
+        }
+
+        SUBCASE("Has Sufficient Material King + 2 Bishops Same Color Square") {
+            Board board = Board("5k2/8/4K3/3Q4/8/8/3b4/2b5 b - - 0 1");
+            CHECK(board.hasSufficientMaterial(board.sideToMove()) == false);
+        }
+
+        SUBCASE("Has Sufficient Material King + 2 Knights") {
+            Board board = Board("8/8/4k3/8/6N1/3K1N2/8/8 w - - 0 1");
+            CHECK(board.hasSufficientMaterial(board.sideToMove()));
+        }
+
         SUBCASE("Insufficient Material Two White Light Bishops") {
             Board board = Board("8/6k1/8/8/4B3/3B4/8/1K6 w - - 0 1");
             CHECK(board.isInsufficientMaterial());
