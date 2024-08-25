@@ -707,9 +707,7 @@ class Board {
     /// @brief Checks if the current position is a draw by insufficient material.
     /// @return
     [[nodiscard]] bool isInsufficientMaterial() const {
-        if (!hasSufficientMatingMaterial(Color::WHITE) && !hasSufficientMatingMaterial(Color::BLACK))
-            return true;
-        return false;
+        return !hasSufficientMatingMaterial(Color::WHITE) && !hasSufficientMatingMaterial(Color::BLACK);
     }
 
     /// @brief Checks if the game is over. Returns GameResultReason::NONE if
