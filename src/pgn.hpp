@@ -14,7 +14,7 @@ namespace chess::pgn {
 /// the order of the calls is as follows:
 class Visitor {
    public:
-    virtual ~Visitor(){};
+    virtual ~Visitor() {};
 
     /// @brief When true, the current PGN will be skipped and only
     /// endPgn will be called, this will also reset the skip flag to false.

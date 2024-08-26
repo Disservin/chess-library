@@ -62,6 +62,57 @@ class MyVisitor : public pgn::Visitor {
     int move_start_count_ = 0;
 };
 
+class MyVisitor2 : public pgn::Visitor {
+   public:
+    ~MyVisitor2() {}
+
+    void startPgn() {
+        moves_.clear();
+        comments_.clear();
+        count_ = 0;
+        game_count_++;
+    }
+
+    void header(std::string_view key, std::string_view value) {
+        headers_.push_back(std::string(key) + " " + std::string(value));
+    }
+
+    void startMoves() {
+        move_start_count_++;
+        assert(end_count_ == game_count_ - 1);
+    }
+
+    void move(std::string_view move, std::string_view comment) {
+        count_++;
+
+        if (comment.size() > 0) {
+            comments_.push_back(std::string(comment));
+        }
+
+        moves_.push_back(std::string(move));
+    }
+
+    void endPgn() { end_count_++; }
+
+    int count() const { return count_; }
+    int gameCount() const { return game_count_; }
+    int endCount() const { return end_count_; }
+    int moveStartCount() const { return move_start_count_; }
+    const auto& comments() const { return comments_; }
+    const auto& moves() const { return moves_; }
+    const auto& headers() const { return headers_; }
+
+   private:
+    std::vector<std::string> comments_;
+    std::vector<std::string> moves_;
+    std::vector<std::string> headers_;
+
+    int end_count_        = 0;
+    int game_count_       = 0;
+    int count_            = 0;
+    int move_start_count_ = 0;
+};
+
 class MockVisitorGameover : public pgn::Visitor {
    public:
     ~MockVisitorGameover() {}
@@ -482,5 +533,22 @@ TEST_SUITE("PGN StreamParser") {
 
         CHECK(res.first == GameResultReason::THREEFOLD_REPETITION);
         CHECK(res.second == GameResult::DRAW);
+    }
+
+    TEST_CASE("No Result") {
+        const auto file  = "./tests/pgns/no_result.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor2>();
+        pgn::StreamParser<1> parser(file_stream);
+        parser.readGames(*vis);
+
+        const auto& headers = vis->headers();
+
+        CHECK(headers[7] == "FEN r1bqk2r/pp1p1pbp/2n2np1/4p3/4P3/2NP2P1/PP2NPBP/R1BQ1RK1 w kq - 0 9");
+
+        CHECK(headers.size() == 15);
+        CHECK(vis->moves()[0] == "");
+        CHECK(vis->comments()[0] == "No result");
     }
 }

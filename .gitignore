@@ -98,3 +98,5 @@ perf.*
 builddir
 build
 .cache
+
+!tests/pgns/*.pgn
