@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.63
+VERSION: 0.6.64
 */
 
 #ifndef CHESS_HPP
@@ -1763,6 +1763,11 @@ class Board {
               captured_piece(captured_piece) {}
     };
 
+    enum class PrivateCtor { CREATE };
+
+    // private constructor to avoid initialization
+    Board(PrivateCtor) {}
+
    public:
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
         prev_states_.reserve(256);
@@ -2469,7 +2474,7 @@ class Board {
         /// @param compressed
         /// @param chess960 If the board is a chess960 position, set this to true
         static Board decode(const PackedBoard &compressed, bool chess960 = false) {
-            Board board{};
+            Board board     = Board(PrivateCtor::CREATE);
             board.chess960_ = chess960;
             decode(board, compressed);
             return board;
@@ -3792,7 +3797,7 @@ namespace chess::pgn {
 /// the order of the calls is as follows:
 class Visitor {
    public:
-    virtual ~Visitor(){};
+    virtual ~Visitor() {};
 
     /// @brief When true, the current PGN will be skipped and only
     /// endPgn will be called, this will also reset the skip flag to false.
