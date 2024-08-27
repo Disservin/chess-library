@@ -114,7 +114,7 @@ class Board {
 
     enum class PrivateCtor { CREATE };
 
-    // private
+    // private constructor to avoid initialization
     Board(PrivateCtor) {}
 
    public:
