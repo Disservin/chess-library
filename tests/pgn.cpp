@@ -551,4 +551,21 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->moves()[0] == "");
         CHECK(vis->comments()[0] == "No result");
     }
+
+    // This is rather a bug in the pgn itself?
+    TEST_CASE("Should parse game even if newline is missing after last header") {
+        const auto file  = "./tests/pgns/no_moves_two_games.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor2>();
+        pgn::StreamParser<1> parser(file_stream);
+        parser.readGames(*vis);
+
+        const auto& headers = vis->headers();
+
+        CHECK(vis->endCount() == 2);
+        CHECK(vis->gameCount() == 2);
+        CHECK(vis->moveStartCount() == 2);
+        CHECK(vis->count() == 0);
+    }
 }
