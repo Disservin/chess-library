@@ -112,6 +112,11 @@ class Board {
               captured_piece(captured_piece) {}
     };
 
+    enum class PrivateCtor { CREATE };
+
+    // private
+    Board(PrivateCtor) {}
+
    public:
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
         prev_states_.reserve(256);
@@ -818,7 +823,7 @@ class Board {
         /// @param compressed
         /// @param chess960 If the board is a chess960 position, set this to true
         static Board decode(const PackedBoard &compressed, bool chess960 = false) {
-            Board board{};
+            Board board     = Board(PrivateCtor::CREATE);
             board.chess960_ = chess960;
             decode(board, compressed);
             return board;
