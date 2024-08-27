@@ -487,4 +487,143 @@ TEST_SUITE("Board") {
             CHECK("rr6/2kpp3/1ppnb1p1/p2Q1q1p/P4P1P/1PNN2P1/2PP4/1K2RR2 b E - 0 1" == newboard.getFen());
         }
     }
+
+    TEST_CASE("PackedBoard decodeToFen") {
+        SUBCASE("decodeToFen: encode and decode") {
+            auto compressed = Board::Compact::encode("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1" == newboard);
+            CHECK(sizeof(compressed) == 24);
+        }
+
+        SUBCASE("decodeToFen: encode and decode with ep square") {
+            auto compressed = Board::Compact::encode("4k1n1/ppp1pppp/8/8/3pP3/8/PPPP1PPP/4K3 b - e3 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("4k1n1/ppp1pppp/8/8/3pP3/8/PPPP1PPP/4K3 b - e3 0 1" == newboard);
+        }
+
+        SUBCASE("decodeToFen: encode and decode with white to move") {
+            auto compressed = Board::Compact::encode("4k1n1/ppp1p1pp/8/4Pp2/3p4/8/PPPP1PPP/4K3 w - f6 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("4k1n1/ppp1p1pp/8/4Pp2/3p4/8/PPPP1PPP/4K3 w - f6 0 1" == newboard);
+        }
+
+        SUBCASE("decodeToFen: encode and decode with white castling bug") {
+            auto compressed = Board::Compact::encode("rnb1kbnR/pppp4/5q2/4pp2/8/8/PPPPPP1P/RNBQKBNR b KQq - 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("rnb1kbnR/pppp4/5q2/4pp2/8/8/PPPPPP1P/RNBQKBNR b KQq - 0 1" == newboard);
+        }
+
+        SUBCASE("decodeToFen: encode and decode with white castling queen") {
+            auto compressed = Board::Compact::encode("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/R3K3 w Q - 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/R3K3 w Q - 0 1" == newboard);
+        }
+
+        SUBCASE("decodeToFen: encode and decode with white castling king") {
+            auto compressed = Board::Compact::encode("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K2R w K - 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K2R w K - 0 1" == newboard);
+        }
+
+        SUBCASE("decodeToFen: encode and decode with black castling queen") {
+            auto compressed = Board::Compact::encode("r3k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w q - 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("r3k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w q - 0 1" == newboard);
+        }
+
+        SUBCASE("decodeToFen: encode and decode with black castling king") {
+            auto compressed = Board::Compact::encode("4k1nr/pppppppp/8/8/8/8/PPPPPPPP/4K3 w k - 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("4k1nr/pppppppp/8/8/8/8/PPPPPPPP/4K3 w k - 0 1" == newboard);
+        }
+
+        SUBCASE("decodeToFen: encode and decode with black side to move") {
+            auto compressed = Board::Compact::encode("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 b - - 0 1");
+            auto newboard   = Board::Compact::decodeToFen(compressed);
+
+            CHECK("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 b - - 0 1" == newboard);
+        }
+    }
+
+    TEST_CASE("PackedBoard decodeToFen chess960") {
+        SUBCASE("castling") {
+            auto compressed = Board::Compact::encode("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w HAha - 0 1", true);
+            auto fen        = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w HAha - 0 1" == fen);
+        }
+
+        SUBCASE("castling 2") {
+            auto compressed =
+                Board::Compact::encode("1rqbkrbn/1ppppp1p/1n6/p1N3p1/8/2P4P/PP1PPPP1/1RQBKRBN w FBfb - 0 1", true);
+            auto fen = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("1rqbkrbn/1ppppp1p/1n6/p1N3p1/8/2P4P/PP1PPPP1/1RQBKRBN w FBfb - 0 1" == fen);
+        }
+
+        SUBCASE("castling 3") {
+            auto compressed =
+                Board::Compact::encode("rbbqn1kr/pp2p1pp/6n1/2pp1p2/2P4P/P7/BP1PPPP1/R1BQNNKR w HAha - 0 1", true);
+            auto fen = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("rbbqn1kr/pp2p1pp/6n1/2pp1p2/2P4P/P7/BP1PPPP1/R1BQNNKR w HAha - 0 1" == fen);
+        }
+
+        SUBCASE("castling 4") {
+            auto compressed =
+                Board::Compact::encode("rqbbknr1/1ppp2pp/p5n1/4pp2/P7/1PP5/1Q1PPPPP/R1BBKNRN w GAga - 0 1", true);
+            auto fen = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("rqbbknr1/1ppp2pp/p5n1/4pp2/P7/1PP5/1Q1PPPPP/R1BBKNRN w GAga - 0 1" == fen);
+        }
+
+        SUBCASE("castling 5") {
+            auto compressed =
+                Board::Compact::encode("4rrb1/1kp3b1/1p1p4/pP1Pn2p/5p2/1PR2P2/2P1NB1P/2KR1B2 w D - 0 1", true);
+            auto fen = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("4rrb1/1kp3b1/1p1p4/pP1Pn2p/5p2/1PR2P2/2P1NB1P/2KR1B2 w D - 0 1" == fen);
+        }
+
+        SUBCASE("castling 6") {
+            auto compressed =
+                Board::Compact::encode("1rkr3b/1ppn3p/3pB1n1/6q1/R2P4/4N1P1/1P5P/2KRQ1B1 b Ddb - 0 1", true);
+            auto fen = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("1rkr3b/1ppn3p/3pB1n1/6q1/R2P4/4N1P1/1P5P/2KRQ1B1 b Ddb - 0 1" == fen);
+        }
+
+        SUBCASE("castling 7") {
+            auto compressed =
+                Board::Compact::encode("qbbnrkr1/p1pppppp/1p4n1/8/2P5/6N1/PPNPPPPP/1BRKBRQ1 b FCge - 0 1", true);
+            auto fen = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("qbbnrkr1/p1pppppp/1p4n1/8/2P5/6N1/PPNPPPPP/1BRKBRQ1 b FCge - 0 1" == fen);
+        }
+
+        SUBCASE("castling 8") {
+            auto compressed =
+                Board::Compact::encode("rr6/2kpp3/1ppn2p1/p2b1q1p/P4P1P/1PNN2P1/2PP4/1K2R2R b E - 0 1", true);
+            auto fen = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("rr6/2kpp3/1ppn2p1/p2b1q1p/P4P1P/1PNN2P1/2PP4/1K2R2R b E - 0 1" == fen);
+        }
+
+        SUBCASE("castling 9") {
+            auto compressed =
+                Board::Compact::encode("rr6/2kpp3/1ppnb1p1/p2Q1q1p/P4P1P/1PNN2P1/2PP4/1K2RR2 b E - 0 1", true);
+            auto fen = Board::Compact::decodeToFen(compressed, true, true);
+
+            CHECK("rr6/2kpp3/1ppnb1p1/p2Q1q1p/P4P1P/1PNN2P1/2PP4/1K2RR2 b E - 0 1" == fen);
+        }
+    }
 }
