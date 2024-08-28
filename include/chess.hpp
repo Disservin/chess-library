@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.65
+VERSION: 0.6.66
 */
 
 #ifndef CHESS_HPP
@@ -4046,7 +4046,8 @@ class StreamParser {
     }
 
     void processHeader() {
-        stream_buffer.loop([this](char c) {
+        int stack = 0;
+        stream_buffer.loop([this, &stack](char c) {
             switch (c) {
                 // tag start
                 case '[':
@@ -4065,17 +4066,22 @@ class StreamParser {
                     stream_buffer.advance();
                     return false;
                 case '"':
+                    stack = 0;
                     stream_buffer.advance();
-                    stream_buffer.loop([this](char c) {
+                    stream_buffer.loop([this, &stack](char c) {
+                        if (c == '[') stack++;
                         if (c == ']') {
-                            stream_buffer.advance();
+                            if (stack == 0) {
+                                stream_buffer.advance();
+                                return true;
+                            }
 
-                            return true;
-                        } else {
-                            header.second += c;
-                            stream_buffer.advance();
-                            return false;
+                            stack--;
                         }
+
+                        header.second += c;
+                        stream_buffer.advance();
+                        return false;
                     });
 
                     // manually skip carriage return, otherwise we would be in the body

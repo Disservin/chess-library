@@ -566,4 +566,15 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->moveStartCount() == 2);
         CHECK(vis->count() == 0);
     }
+
+    TEST_CASE("Keep track of opening square braces") {
+        const auto file  = "./tests/pgns/square_braces_in_header.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor2>();
+        pgn::StreamParser<1> parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->headers()[0] == "Event Batch 10: s20red4c4_t3 vs master[!important]");
+    }
 }
