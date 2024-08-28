@@ -567,8 +567,8 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->count() == 0);
     }
 
-    TEST_CASE("Keep track of opening square braces") {
-        const auto file  = "./tests/pgns/square_braces_in_header.pgn";
+    TEST_CASE("Keep track of opening square bracket") {
+        const auto file  = "./tests/pgns/square_bracket_in_header.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor2>();
