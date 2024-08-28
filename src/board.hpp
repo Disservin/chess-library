@@ -617,31 +617,7 @@ class Board {
 
     /// @brief Get the castling rights as a string
     /// @return
-    [[nodiscard]] std::string getCastleString() const {
-        const auto get_file = [this](Color c, CastlingRights::Side side) {
-            auto file = static_cast<std::string>(cr_.getRookFile(c, side));
-            return c == Color::WHITE ? std::toupper(file[0]) : file[0];
-        };
-
-        if (chess960_) {
-            std::string ss;
-
-            for (auto color : {Color::WHITE, Color::BLACK})
-                for (auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE})
-                    if (cr_.has(color, side)) ss += get_file(color, side);
-
-            return ss;
-        }
-
-        std::string ss;
-
-        if (cr_.has(Color::WHITE, CastlingRights::Side::KING_SIDE)) ss += 'K';
-        if (cr_.has(Color::WHITE, CastlingRights::Side::QUEEN_SIDE)) ss += 'Q';
-        if (cr_.has(Color::BLACK, CastlingRights::Side::KING_SIDE)) ss += 'k';
-        if (cr_.has(Color::BLACK, CastlingRights::Side::QUEEN_SIDE)) ss += 'q';
-
-        return ss;
-    }
+    [[nodiscard]] std::string getCastleString() const { return getCastleStringInternal(cr_, chess960_); }
 
     /// @brief Checks if the current position is a repetition, set this to 1 if
     /// you are writing a chess engine.
@@ -827,6 +803,10 @@ class Board {
             board.chess960_ = chess960;
             decode(board, compressed);
             return board;
+        }
+
+        static std::string decodeToFen(const PackedBoard &compressed, bool movecounters = true, bool chess960 = false) {
+            return decodeFenInternal(compressed, movecounters, chess960);
         }
 
        private:
@@ -1049,6 +1029,167 @@ class Board {
             board.key_ = board.zobrist();
         }
 
+        static std::string decodeFenInternal(const PackedBoard &compressed, bool movecounters, bool _chess960) {
+            Bitboard occupied = 0ull;
+
+            for (int i = 0; i < 8; i++) {
+                occupied |= Bitboard(compressed[i]) << (56 - i * 8);
+            }
+
+            int offset           = 16;
+            int white_castle_idx = 0, black_castle_idx = 0;
+            File white_castle[2] = {File::NO_FILE, File::NO_FILE};
+            File black_castle[2] = {File::NO_FILE, File::NO_FILE};
+
+            Piece board[64] = {};
+            Square ep_sq    = Square::underlying::NO_SQ;
+            Color stm       = Color::WHITE;
+
+            Square king_sq_white = Square::underlying::NO_SQ;
+            Square king_sq_black = Square::underlying::NO_SQ;
+
+            CastlingRights cr{};
+
+            // place pieces back on the board
+            while (occupied) {
+                const auto sq     = Square(occupied.pop());
+                const auto nibble = compressed[offset / 2] >> (offset % 2 == 0 ? 4 : 0) & 0b1111;
+                const auto piece  = convertPiece(nibble);
+
+                if (piece != Piece::NONE) {
+                    board[sq.index()] = piece;
+
+                    if (piece.type() == PieceType::KING) {
+                        if (piece.color() == Color::WHITE) king_sq_white = sq;
+                        if (piece.color() == Color::BLACK) king_sq_black = sq;
+                    }
+
+                    offset++;
+                    continue;
+                }
+
+                // Piece has a special meaning, interpret it from the raw integer
+                // pawn with ep square behind it
+                if (nibble == 12) {
+                    ep_sq = sq.ep_square();
+                    // depending on the rank this is a white or black pawn
+                    auto color        = sq.rank() == Rank::RANK_4 ? Color::WHITE : Color::BLACK;
+                    board[sq.index()] = Piece(PieceType::PAWN, color);
+                }
+                // castling rights for white
+                else if (nibble == 13) {
+                    assert(white_castle_idx < 2);
+                    white_castle[white_castle_idx++] = sq.file();
+                    board[sq.index()]                = Piece(PieceType::ROOK, Color::WHITE);
+                }
+                // castling rights for black
+                else if (nibble == 14) {
+                    assert(black_castle_idx < 2);
+                    black_castle[black_castle_idx++] = sq.file();
+                    board[sq.index()]                = Piece(PieceType::ROOK, Color::BLACK);
+                }
+                // black to move
+                else if (nibble == 15) {
+                    stm               = Color::BLACK;
+                    board[sq.index()] = Piece(PieceType::KING, Color::BLACK);
+                    king_sq_black     = sq;
+                }
+
+                offset++;
+            }
+
+            // reapply castling
+            for (int i = 0; i < 2; i++) {
+                if (white_castle[i] != File::NO_FILE) {
+                    const auto file = white_castle[i];
+                    const auto side = CastlingRights::closestSide(file, king_sq_white.file());
+
+                    cr.setCastlingRight(Color::WHITE, side, file);
+                }
+
+                if (black_castle[i] != File::NO_FILE) {
+                    const auto file = black_castle[i];
+                    const auto side = CastlingRights::closestSide(file, king_sq_black.file());
+
+                    cr.setCastlingRight(Color::BLACK, side, file);
+                }
+            }
+
+            // now generate the FEN string
+
+            std::string ss;
+            ss.reserve(100);
+
+            // Loop through the ranks of the board in reverse order
+            for (int rank = 7; rank >= 0; rank--) {
+                std::uint32_t free_space = 0;
+
+                // Loop through the files of the board
+                for (int file = 0; file < 8; file++) {
+                    // Calculate the square index
+                    const int sq = rank * 8 + file;
+
+                    // If there is a piece at the current square
+                    if (Piece piece = board[sq]; piece != Piece::NONE) {
+                        // If there were any empty squares before this piece,
+                        // append the number of empty squares to the FEN string
+                        if (free_space) {
+                            ss += std::to_string(free_space);
+                            free_space = 0;
+                        }
+
+                        // Append the character representing the piece to the FEN string
+                        ss += static_cast<std::string>(piece);
+                    } else {
+                        // If there is no piece at the current square, increment the
+                        // counter for the number of empty squares
+                        free_space++;
+                    }
+                }
+
+                // If there are any empty squares at the end of the rank,
+                // append the number of empty squares to the FEN string
+                if (free_space != 0) {
+                    ss += std::to_string(free_space);
+                }
+
+                // Append a "/" character to the FEN string, unless this is the last rank
+                ss += (rank > 0 ? "/" : "");
+            }
+
+            // Append " w " or " b " to the FEN string, depending on which player's turn it is
+            ss += ' ';
+            ss += (stm == Color::WHITE ? 'w' : 'b');
+
+            // Append the appropriate characters to the FEN string to indicate
+            // whether castling is allowed for each player
+            if (cr.isEmpty())
+                ss += " -";
+            else {
+                ss += ' ';
+                ss += getCastleStringInternal(cr, _chess960);
+            }
+
+            // Append information about the en passant square (if any)
+            // and the half-move clock and full move number to the FEN string
+            if (ep_sq == Square::underlying::NO_SQ)
+                ss += " -";
+            else {
+                ss += ' ';
+                ss += static_cast<std::string>(ep_sq);
+            }
+
+            if (movecounters) {
+                ss += ' ';
+                ss += '0';
+                ss += ' ';
+                ss += '1';
+            }
+
+            // Return the resulting FEN string
+            return ss;
+        }
+
         // 1:1 mapping of Piece::internal() to the compressed piece
         static std::uint8_t convertPiece(Piece piece) { return int(piece.internal()); }
 
@@ -1135,6 +1276,34 @@ class Board {
     bool chess960_ = false;
 
    private:
+    /// @brief Get the castling rights as a string
+    /// @return
+    [[nodiscard]] static std::string getCastleStringInternal(const CastlingRights &cr, bool chess960) {
+        const auto get_file = [&cr](Color c, CastlingRights::Side side) {
+            auto file = static_cast<std::string>(cr.getRookFile(c, side));
+            return c == Color::WHITE ? std::toupper(file[0]) : file[0];
+        };
+
+        if (chess960) {
+            std::string ss;
+
+            for (auto color : {Color::WHITE, Color::BLACK})
+                for (auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE})
+                    if (cr.has(color, side)) ss += get_file(color, side);
+
+            return ss;
+        }
+
+        std::string ss;
+
+        if (cr.has(Color::WHITE, CastlingRights::Side::KING_SIDE)) ss += 'K';
+        if (cr.has(Color::WHITE, CastlingRights::Side::QUEEN_SIDE)) ss += 'Q';
+        if (cr.has(Color::BLACK, CastlingRights::Side::KING_SIDE)) ss += 'k';
+        if (cr.has(Color::BLACK, CastlingRights::Side::QUEEN_SIDE)) ss += 'q';
+
+        return ss;
+    }
+
     /// @brief [Internal Usage]
     /// @param fen
     void setFenInternal(std::string_view fen) {
