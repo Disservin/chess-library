@@ -561,8 +561,6 @@ TEST_SUITE("PGN StreamParser") {
         pgn::StreamParser<1> parser(file_stream);
         parser.readGames(*vis);
 
-        const auto& headers = vis->headers();
-
         CHECK(vis->endCount() == 2);
         CHECK(vis->gameCount() == 2);
         CHECK(vis->moveStartCount() == 2);
