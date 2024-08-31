@@ -295,12 +295,7 @@ class StreamParser {
 
                             // we should be now at ]
                             assert(stream_buffer.current().value() == ']');
-                            if (stream_buffer.current().value() == ']') {
-                                stream_buffer.advance();
-                            } else {
-                                throw std::runtime_error("Unexpected character at end of header" +
-                                                         stream_buffer.current().value());
-                            }
+                            stream_buffer.advance();
 
                             return true;
                         } else {
