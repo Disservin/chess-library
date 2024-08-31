@@ -566,4 +566,17 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->moveStartCount() == 2);
         CHECK(vis->count() == 0);
     }
+
+    TEST_CASE("Keep track of opening square bracket") {
+        const auto file  = "./tests/pgns/square_bracket_in_header.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor2>();
+        pgn::StreamParser<1> parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->headers()[0] == "Event Batch 10: s20red4c4_t3 vs master[!important]");
+        CHECK(vis->headers()[1] == "Variation closing ] opening");
+        CHECK(vis->headers()[5] == "White New-cfe8\"dsadsa\"ce842c");
+    }
 }

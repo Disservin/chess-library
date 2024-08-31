@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.65
+VERSION: 0.6.66
 */
 
 #ifndef CHESS_HPP
@@ -4046,7 +4046,8 @@ class StreamParser {
     }
 
     void processHeader() {
-        stream_buffer.loop([this](char c) {
+        bool backslash = false;
+        stream_buffer.loop([this, &backslash](char c) {
             switch (c) {
                 // tag start
                 case '[':
@@ -4066,16 +4067,27 @@ class StreamParser {
                     return false;
                 case '"':
                     stream_buffer.advance();
-                    stream_buffer.loop([this](char c) {
-                        if (c == ']') {
+                    stream_buffer.loop([this, &backslash](char c) {
+                        if (c == '\\') {
+                            backslash = true;
+                            // don't add backslash to header, is this really correct?
+                            stream_buffer.advance();
+                            return false;
+                        } else if (c == '"' && !backslash) {
+                            stream_buffer.advance();
+
+                            // we should be now at ]
+                            assert(stream_buffer.current().value() == ']');
                             stream_buffer.advance();
 
                             return true;
                         } else {
-                            header.second += c;
-                            stream_buffer.advance();
-                            return false;
+                            backslash = false;
                         }
+
+                        header.second += c;
+                        stream_buffer.advance();
+                        return false;
                     });
 
                     // manually skip carriage return, otherwise we would be in the body
@@ -4083,8 +4095,6 @@ class StreamParser {
                     if (stream_buffer.current() == '\r') {
                         stream_buffer.advance();
                     }
-
-                    header.second.remove_suffix(1);
 
                     if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
 
