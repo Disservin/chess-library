@@ -576,5 +576,6 @@ TEST_SUITE("PGN StreamParser") {
         parser.readGames(*vis);
 
         CHECK(vis->headers()[0] == "Event Batch 10: s20red4c4_t3 vs master[!important]");
+        CHECK(vis->headers()[1] == "Variation closing ] opening");
     }
 }
