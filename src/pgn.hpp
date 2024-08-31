@@ -287,6 +287,9 @@ class StreamParser {
                     stream_buffer.loop([this, &backslash](char c) {
                         if (c == '\\') {
                             backslash = true;
+                            // don't add backslash to header, is this really correct?
+                            stream_buffer.advance();
+                            return false;
                         } else if (c == '"' && !backslash) {
                             stream_buffer.advance();
 
@@ -295,7 +298,8 @@ class StreamParser {
                             if (stream_buffer.current().value() == ']') {
                                 stream_buffer.advance();
                             } else {
-                                throw std::runtime_error("Unexpected character at end of header");
+                                throw std::runtime_error("Unexpected character at end of header" +
+                                                         stream_buffer.current().value());
                             }
 
                             return true;
@@ -303,7 +307,6 @@ class StreamParser {
                             backslash = false;
                         }
 
-                        backslash = false;
                         header.second += c;
                         stream_buffer.advance();
                         return false;
