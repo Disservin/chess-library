@@ -4046,8 +4046,8 @@ class StreamParser {
     }
 
     void processHeader() {
-        int stack = 0;
-        stream_buffer.loop([this, &stack](char c) {
+        bool backslash = false;
+        stream_buffer.loop([this, &backslash](char c) {
             switch (c) {
                 // tag start
                 case '[':
@@ -4066,17 +4066,28 @@ class StreamParser {
                     stream_buffer.advance();
                     return false;
                 case '"':
-                    stack = 0;
                     stream_buffer.advance();
-                    stream_buffer.loop([this, &stack](char c) {
-                        if (c == '[') stack++;
-                        if (c == ']') {
-                            if (stack == 0) {
+                    stream_buffer.loop([this, &backslash](char c) {
+                        if (c == '\\') {
+                            backslash = true;
+                            // don't add backslash to header, is this really correct?
+                            stream_buffer.advance();
+                            return false;
+                        } else if (c == '"' && !backslash) {
+                            stream_buffer.advance();
+
+                            // we should be now at ]
+                            assert(stream_buffer.current().value() == ']');
+                            if (stream_buffer.current().value() == ']') {
                                 stream_buffer.advance();
-                                return true;
+                            } else {
+                                throw std::runtime_error("Unexpected character at end of header" +
+                                                         stream_buffer.current().value());
                             }
 
-                            stack--;
+                            return true;
+                        } else {
+                            backslash = false;
                         }
 
                         header.second += c;
@@ -4089,8 +4100,6 @@ class StreamParser {
                     if (stream_buffer.current() == '\r') {
                         stream_buffer.advance();
                     }
-
-                    header.second.remove_suffix(1);
 
                     if (!visitor->skip()) visitor->header(header.first.get(), header.second.get());
 
