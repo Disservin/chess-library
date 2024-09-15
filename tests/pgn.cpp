@@ -579,4 +579,18 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->headers()[1] == "Variation closing ] opening");
         CHECK(vis->headers()[5] == "White New-cfe8\"dsadsa\"ce842c");
     }
+
+    TEST_CASE("Empty Body") {
+        const auto file  = "./tests/pgns/empty_body.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser<1> parser(file_stream);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 2);
+
+            CHECK(vis->headers()[0] == "Event Batch 2690: probTTsv1 vs master");
+        CHECK(vis->headers()[7] == "Event Batch 269: probTTsv1 vs master");
+    }
 }
