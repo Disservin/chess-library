@@ -107,9 +107,11 @@ class StreamParser {
         }
 
         void remove_suffix(std::size_t n) {
+#ifndef CHESS_NO_EXCEPTIONS
             if (n > index_) {
                 throw std::runtime_error("LineBuffer underflow");
             }
+#endif
 
             index_ -= n;
         }
