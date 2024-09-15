@@ -136,7 +136,11 @@ class Board {
     void setEpd(const std::string_view epd) {
         auto parts = utils::splitString(epd, ' ');
 
+#ifndef CHESS_NO_EXCEPTIONS
         if (parts.size() < 1) throw std::runtime_error("Invalid EPD");
+#else
+        if (parts.size() < 1) return;
+#endif
 
         int hm = 0;
         int fm = 1;
@@ -1216,7 +1220,9 @@ class Board {
                 }
             }
 
+#ifndef CHESS_NO_EXCEPTIONS
             throw std::runtime_error("Invalid position");
+#endif
         };
 
         for (char i : castling) {

@@ -30,18 +30,22 @@ class Movelist {
     // Element access
 
     [[nodiscard]] constexpr reference at(size_type pos) {
+#ifndef CHESS_NO_EXCEPTIONS
         if (pos >= size_) {
             throw std::out_of_range("Movelist::at: pos (which is " + std::to_string(pos) + ") >= size (which is " +
                                     std::to_string(size_) + ")");
         }
+#endif
         return moves_[pos];
     }
 
     [[nodiscard]] constexpr const_reference at(size_type pos) const {
+#ifndef CHESS_NO_EXCEPTIONS
         if (pos >= size_) {
             throw std::out_of_range("Movelist::at: pos (which is " + std::to_string(pos) + ") >= size (which is " +
                                     std::to_string(size_) + ")");
         }
+#endif
         return moves_[pos];
     }
 

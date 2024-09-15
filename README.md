@@ -106,6 +106,11 @@ depth 6  time 2165  nodes 872323796    nps 402734901 fen 4rrb1/1kp3b1/1p1p4/pP1P
 depth 6  time 6382  nodes 2678022813   nps 419555508 fen 1rkr3b/1ppn3p/3pB1n1/6q1/R2P4/4N1P1/1P5P/2KRQ1B1 b Ddb - 0 14
 ```
 
+#### Exceptions
+
+This library might throw exceptions in some cases, for example when the input is invalid or things are not as expected.
+To disable exceptions, define `CHESS_NO_EXCEPTIONS` before including the header.
+
 #### PERFT Comparison
 
 [Benchmark implementation](./comparison/benchmark.cpp) for more information.

@@ -172,7 +172,9 @@ class uci {
                 }
             }
 
+#ifndef CHESS_NO_EXCEPTIONS
             throw SanParseError("Failed to parse san. At step 2: " + std::string(san) + " " + board.getFen());
+#endif
         }
 
         for (const auto &move : moves) {
@@ -228,7 +230,9 @@ class uci {
         std::cerr << ss.str();
 #endif
 
+#ifndef CHESS_NO_EXCEPTIONS
         throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
+#endif
     }
 
    private:
@@ -251,12 +255,13 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
+#ifndef CHESS_NO_EXCEPTIONS
         if constexpr (PEDANTIC) {
             if (san.length() < 2) {
                 throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
             }
         }
-
+#endif
         constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info, char castling_char) {
             info.piece = PieceType::KING;
 
@@ -325,9 +330,11 @@ class uci {
             index++;
             info.promotion = PieceType(sw(san[index]));
 
+#ifndef CHESS_NO_EXCEPTIONS
             if (info.promotion == PieceType::KING || info.promotion == PieceType::PAWN ||
                 info.promotion == PieceType::NONE)
                 throw SanParseError("Failed to parse promotion, during san conversion." + std::string(san));
+#endif
 
             index++;
         }
