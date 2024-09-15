@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.67
+VERSION: 0.6.68
 */
 
 #ifndef CHESS_HPP
@@ -1223,18 +1223,22 @@ class Movelist {
     // Element access
 
     [[nodiscard]] constexpr reference at(size_type pos) {
+#ifndef CHESS_NO_EXCEPTIONS
         if (pos >= size_) {
             throw std::out_of_range("Movelist::at: pos (which is " + std::to_string(pos) + ") >= size (which is " +
                                     std::to_string(size_) + ")");
         }
+#endif
         return moves_[pos];
     }
 
     [[nodiscard]] constexpr const_reference at(size_type pos) const {
+#ifndef CHESS_NO_EXCEPTIONS
         if (pos >= size_) {
             throw std::out_of_range("Movelist::at: pos (which is " + std::to_string(pos) + ") >= size (which is " +
                                     std::to_string(size_) + ")");
         }
+#endif
         return moves_[pos];
     }
 
@@ -1787,7 +1791,11 @@ class Board {
     void setEpd(const std::string_view epd) {
         auto parts = utils::splitString(epd, ' ');
 
+#ifndef CHESS_NO_EXCEPTIONS
         if (parts.size() < 1) throw std::runtime_error("Invalid EPD");
+#else
+        if (parts.size() < 1) return;
+#endif
 
         int hm = 0;
         int fm = 1;
@@ -2867,7 +2875,9 @@ class Board {
                 }
             }
 
+#ifndef CHESS_NO_EXCEPTIONS
             throw std::runtime_error("Invalid position");
+#endif
         };
 
         for (char i : castling) {
@@ -3890,9 +3900,11 @@ class StreamParser {
         }
 
         void remove_suffix(std::size_t n) {
+#ifndef CHESS_NO_EXCEPTIONS
             if (n > index_) {
                 throw std::runtime_error("LineBuffer underflow");
             }
+#endif
 
             index_ -= n;
         }
@@ -4607,7 +4619,9 @@ class uci {
                 }
             }
 
+#ifndef CHESS_NO_EXCEPTIONS
             throw SanParseError("Failed to parse san. At step 2: " + std::string(san) + " " + board.getFen());
+#endif
         }
 
         for (const auto &move : moves) {
@@ -4663,7 +4677,9 @@ class uci {
         std::cerr << ss.str();
 #endif
 
+#ifndef CHESS_NO_EXCEPTIONS
         throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
+#endif
     }
 
    private:
@@ -4686,12 +4702,13 @@ class uci {
 
     template <bool PEDANTIC = false>
     [[nodiscard]] static SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
+#ifndef CHESS_NO_EXCEPTIONS
         if constexpr (PEDANTIC) {
             if (san.length() < 2) {
                 throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
             }
         }
-
+#endif
         constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info, char castling_char) {
             info.piece = PieceType::KING;
 
@@ -4760,9 +4777,11 @@ class uci {
             index++;
             info.promotion = PieceType(sw(san[index]));
 
+#ifndef CHESS_NO_EXCEPTIONS
             if (info.promotion == PieceType::KING || info.promotion == PieceType::PAWN ||
                 info.promotion == PieceType::NONE)
                 throw SanParseError("Failed to parse promotion, during san conversion." + std::string(san));
+#endif
 
             index++;
         }
