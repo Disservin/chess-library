@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.66
+VERSION: 0.6.67
 */
 
 #ifndef CHESS_HPP
@@ -3866,7 +3866,8 @@ class StreamParser {
                 processBody();
             }
 
-            stream_buffer.advance();
+            if (!dont_advance_after_body) stream_buffer.advance();
+            dont_advance_after_body = false;
         });
 
         if (!pgn_end) {
@@ -4182,11 +4183,27 @@ class StreamParser {
             return;
         }
 
-        stream_buffer.loop([this](char) {
+        stream_buffer.loop([this](char cd) {
+            if (isspace(cd)) {
+                stream_buffer.advance();
+                return false;
+            }
+
+            return true;
+        });
+
+        stream_buffer.loop([this](char cd) {
             // Pgn are build up in the following way.
             // {move_number} {move} {comment} {move} {comment} {move_number} ...
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
+
+            // [ is unexpected here, it probably is a new pgn and the current one is finished
+            if (cd == '[') {
+                onEnd();
+                dont_advance_after_body = true;
+                return true;
+            }
 
             // skip move number digits
             stream_buffer.loop([this](char c) {
@@ -4423,6 +4440,8 @@ class StreamParser {
     bool in_body   = false;
 
     bool pgn_end = true;
+
+    bool dont_advance_after_body = false;
 };
 }  // namespace chess::pgn
 
