@@ -67,5 +67,8 @@ int main() {
 }
 ```
 
+> [!IMPORTANT]
+> If you do this you must call setFen after creating the board, otherwise the board won't use the overriden placePiece function.
+
 If this was still not enough for you, think about adding the desired functionality back to master, in case
 they are universal enough.
