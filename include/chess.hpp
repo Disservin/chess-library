@@ -1648,23 +1648,33 @@ class Zobrist {
     /// @param square
     /// @return
     [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
+        assert(int(piece) >= 0 && int(piece) < 12);
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
     }
 
     /// @brief [Internal Usage]
     /// @param file
     /// @return
-    [[nodiscard]] static U64 enpassant(File file) noexcept { return RANDOM_ARRAY[772 + file]; }
+    [[nodiscard]] static U64 enpassant(File file) noexcept {
+        assert(int(file) >= 0 && int(file) < 8);
+        return RANDOM_ARRAY[772 + file];
+    }
 
     /// @brief [Internal Usage]
     /// @param castling
     /// @return
-    [[nodiscard]] static U64 castling(int castling) noexcept { return castlingKey[castling]; }
+    [[nodiscard]] static U64 castling(int castling) noexcept {
+        assert(castling >= 0 && castling < 16);
+        return castlingKey[castling];
+    }
 
     /// @brief [Internal Usage]
     /// @param idx
     /// @return
-    [[nodiscard]] static U64 castlingIndex(int idx) noexcept { return RANDOM_ARRAY[768 + idx]; }
+    [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
+        assert(idx >= 0 && idx < 4);
+        return RANDOM_ARRAY[768 + idx];
+    }
 
     [[nodiscard]] static U64 sideToMove() noexcept { return RANDOM_ARRAY[780]; }
 
