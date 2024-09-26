@@ -1120,6 +1120,7 @@ class Piece {
 }  // namespace chess
 
 namespace chess {
+
 class Move {
    public:
     Move() = default;
@@ -1135,8 +1136,11 @@ class Move {
     /// @return
     template <std::uint16_t MoveType = 0>
     [[nodiscard]] static constexpr Move make(Square source, Square target, PieceType pt = PieceType::KNIGHT) noexcept {
-        return Move(MoveType + ((std::uint16_t(pt) - std::uint16_t(PieceType(PieceType::KNIGHT))) << 12) +
-                    std::uint16_t(std::uint16_t(source.index()) << 6) + std::uint16_t(target.index()));
+        assert(pt >= PieceType(PieceType::KNIGHT) && pt <= PieceType(PieceType::QUEEN));
+
+        std::uint16_t bits_promotion = static_cast<std::uint16_t>(pt - PieceType(PieceType::KNIGHT));
+
+        return Move(MoveType + (bits_promotion << 12) + (source.index() << 6) + target.index());
     }
 
     /// @brief Get the source square of the move.
