@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.68
+VERSION: 0.6.69
 */
 
 #ifndef CHESS_HPP
@@ -1776,7 +1776,7 @@ class Board {
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
         prev_states_.reserve(256);
         chess960_ = chess960;
-        setFenInternal(fen);
+        setFenInternal<true>(fen);
     }
 
     virtual void setFen(std::string_view fen) { setFenInternal(fen); }
@@ -2794,8 +2794,25 @@ class Board {
     bool chess960_ = false;
 
    private:
+    void placePieceInternal(Piece piece, Square sq) {
+        assert(board_[sq.index()] == Piece::NONE);
+
+        auto type  = piece.type();
+        auto color = piece.color();
+        auto index = sq.index();
+
+        assert(type != PieceType::NONE);
+        assert(color != Color::NONE);
+        assert(index >= 0 && index < 64);
+
+        pieces_bb_[type].set(index);
+        occ_bb_[color].set(index);
+        board_[index] = piece;
+    }
+
     /// @brief [Internal Usage]
     /// @param fen
+    template <bool ctor = false>
     void setFenInternal(std::string_view fen) {
         original_fen_ = fen;
 
@@ -2854,7 +2871,14 @@ class Board {
                 square -= 16;
             } else {
                 auto p = Piece(std::string_view(&curr, 1));
-                placePiece(p, square);
+
+                // prevent warnings about virtual method bypassing virtual dispatch
+                if constexpr (ctor) {
+                    placePieceInternal(p, Square(square));
+                } else {
+                    placePiece(p, square);
+                }
+
                 key_ ^= Zobrist::piece(p, Square(square));
                 ++square;
             }
