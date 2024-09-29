@@ -1183,8 +1183,6 @@ class Board {
             key_ ^= Zobrist::sideToMove();
         }
 
-        if (ep_sq_ != Square::underlying::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
-
         auto square = 56;
         for (char curr : position) {
             if (isdigit(curr)) {
@@ -1260,6 +1258,28 @@ class Board {
                 const auto side = CastlingRights::closestSide(file, king_sq.file());
                 cr_.setCastlingRight(color, side, file);
             }
+        }
+
+        // check if ep square itself is valid
+        if (ep_sq_ != Square::underlying::NO_SQ && !((ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
+                                                     (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE))) {
+            ep_sq_ = Square::underlying::NO_SQ;
+        }
+
+        // check if ep square is valid, i.e. if there is a pawn that can capture it
+        if (ep_sq_ != Square::underlying::NO_SQ) {
+            bool valid;
+
+            if (stm_ == Color::WHITE) {
+                valid = movegen::isEpSquareValid<Color::WHITE>(*this, ep_sq_);
+            } else {
+                valid = movegen::isEpSquareValid<Color::BLACK>(*this, ep_sq_);
+            }
+
+            if (!valid)
+                ep_sq_ = Square::underlying::NO_SQ;
+            else
+                key_ ^= Zobrist::enpassant(ep_sq_.file());
         }
 
         key_ ^= Zobrist::castling(cr_.hashIndex());
