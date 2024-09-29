@@ -590,7 +590,20 @@ TEST_SUITE("PGN StreamParser") {
 
         CHECK(vis->gameCount() == 2);
 
-            CHECK(vis->headers()[0] == "Event Batch 2690: probTTsv1 vs master");
+        CHECK(vis->headers()[0] == "Event Batch 2690: probTTsv1 vs master");
         CHECK(vis->headers()[7] == "Event Batch 269: probTTsv1 vs master");
+    }
+
+    TEST_CASE("Backslash In Header") {
+        const auto file  = "./tests/pgns/backslash_header.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        pgn::StreamParser<1> parser(file_stream);
+
+        CHECK_THROWS_AS_MESSAGE(parser.readGames(*vis), pgn::StreamParserException,
+                                "Invalid PGN, missing closing quote in header");
+
+        CHECK(vis->gameCount() == 1);
     }
 }

@@ -46,6 +46,20 @@ class Visitor {
     bool skip_ = false;
 };
 
+class StreamParserException : public std::exception {
+   public:
+    explicit StreamParserException(const char *message) : msg_(message) {}
+
+    explicit StreamParserException(const std::string &message) : msg_(message) {}
+
+    virtual ~StreamParserException() noexcept {}
+
+    virtual const char *what() const noexcept { return msg_.c_str(); }
+
+   protected:
+    std::string msg_;
+};
+
 template <std::size_t BUFFER_SIZE =
 #if defined(__unix__) || defined(__unix) || defined(unix) || defined(__APPLE__) || defined(__MACH__)
 #    if defined(__APPLE__) || defined(__MACH__)
@@ -59,6 +73,8 @@ template <std::size_t BUFFER_SIZE =
           >
 class StreamParser {
    public:
+    // Exception Class
+
     StreamParser(std::istream &stream) : stream_buffer(stream) {}
 
     void readGames(Visitor &vis) {
@@ -109,7 +125,7 @@ class StreamParser {
         void remove_suffix(std::size_t n) {
 #ifndef CHESS_NO_EXCEPTIONS
             if (n > index_) {
-                throw std::runtime_error("LineBuffer underflow");
+                throw StreamParserException("LineBuffer underflow");
             }
 #endif
 
@@ -301,7 +317,15 @@ class StreamParser {
                             stream_buffer.advance();
 
                             return true;
-                        } else {
+                        }
+#ifndef CHESS_NO_EXCEPTIONS
+                        else if (c == '\n') {
+                            // we missed the closing quote and read until the newline character
+                            // this is an invalid pgn, let's throw an error
+                            throw StreamParserException("Invalid PGN, missing closing quote in header");
+                        }
+#endif
+                        else {
                             backslash = false;
                         }
 
