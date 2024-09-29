@@ -591,6 +591,34 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
         legalmoves<Color::BLACK, mt>(movelist, board, pieces);
 }
 
+template <Color::underlying c>
+inline bool movegen::isEpSquareValid(const Board &board, Square ep) {
+    const auto stm   = board.sideToMove();
+    int double_check = 0;
+
+    Bitboard occ_us  = board.us(stm);
+    Bitboard occ_opp = board.us(~stm);
+    auto king_sq     = board.kingSq(stm);
+
+    Bitboard checkmask = movegen::checkMask<c>(board, king_sq, double_check);
+    Bitboard pin_hv    = movegen::pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
+    Bitboard pin_d     = movegen::pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+
+    const auto pawns    = board.pieces(PieceType::PAWN, stm);
+    const auto pawns_lr = pawns & ~pin_hv;
+    const auto m        = movegen::generateEPMove(board, checkmask, pin_d, pawns_lr, ep, stm);
+    bool found          = false;
+
+    for (const auto &move : m) {
+        if (move != Move::NO_MOVE) {
+            found = true;
+            break;
+        }
+    }
+
+    return found;
+}
+
 inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = [] {
     attacks::initAttacks();
     return movegen::init_squares_between();

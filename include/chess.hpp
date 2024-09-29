@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.70
+VERSION: 0.6.71
 */
 
 #ifndef CHESS_HPP
@@ -1458,6 +1458,9 @@ class movegen {
     template <Color::underlying c, MoveGenType mt>
     static void legalmoves(Movelist &movelist, const Board &board, int pieces);
 
+    template <Color::underlying c>
+    static bool isEpSquareValid(const Board &board, Square ep);
+
     friend class Board;
 };
 
@@ -1652,7 +1655,10 @@ class Zobrist {
     /// @param square
     /// @return
     [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
-        assert(int(piece) >= 0 && int(piece) < 12);
+        assert(piece < 12);
+#if __cplusplus >= 202207L
+        [[assume(x < 12)]];
+#endif
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
     }
 
@@ -1660,7 +1666,10 @@ class Zobrist {
     /// @param file
     /// @return
     [[nodiscard]] static U64 enpassant(File file) noexcept {
-        assert(int(file) >= 0 && int(file) < 8);
+        assert(int(file) < 8);
+#if __cplusplus >= 202207L
+        [[assume(x < 8)]];
+#endif
         return RANDOM_ARRAY[772 + file];
     }
 
@@ -1669,6 +1678,9 @@ class Zobrist {
     /// @return
     [[nodiscard]] static U64 castling(int castling) noexcept {
         assert(castling >= 0 && castling < 16);
+#if __cplusplus >= 202207L
+        [[assume(x < 16)]];
+#endif
         return castlingKey[castling];
     }
 
@@ -1677,6 +1689,9 @@ class Zobrist {
     /// @return
     [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
         assert(idx >= 0 && idx < 4);
+#if __cplusplus >= 202207L
+        [[assume(x < 4)]];
+#endif
         return RANDOM_ARRAY[768 + idx];
     }
 
@@ -1991,41 +2006,18 @@ class Board {
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
                     if constexpr (EXACT) {
                         const auto piece = at(move.from());
+
                         removePiece(piece, move.from());
                         placePiece(piece, move.to());
+
                         stm_ = ~stm_;
 
-                        int double_check = 0;
-
-                        Bitboard occ_us  = us(stm_);
-                        Bitboard occ_opp = us(~stm_);
-                        auto king_sq     = kingSq(stm_);
-
-                        Bitboard checkmask;
-                        Bitboard pin_hv;
-                        Bitboard pin_d;
+                        bool valid;
 
                         if (stm_ == Color::WHITE) {
-                            checkmask = movegen::checkMask<Color::WHITE>(*this, king_sq, double_check);
-                            pin_hv    = movegen::pinMaskRooks<Color::WHITE>(*this, king_sq, occ_opp, occ_us);
-                            pin_d     = movegen::pinMaskBishops<Color::WHITE>(*this, king_sq, occ_opp, occ_us);
+                            valid = movegen::isEpSquareValid<Color::WHITE>(*this, move.to().ep_square());
                         } else {
-                            checkmask = movegen::checkMask<Color::BLACK>(*this, king_sq, double_check);
-                            pin_hv    = movegen::pinMaskRooks<Color::BLACK>(*this, king_sq, occ_opp, occ_us);
-                            pin_d     = movegen::pinMaskBishops<Color::BLACK>(*this, king_sq, occ_opp, occ_us);
-                        }
-
-                        const auto pawns    = pieces(PieceType::PAWN, stm_);
-                        const auto pawns_lr = pawns & ~pin_hv;
-                        const auto ep       = move.to().ep_square();
-                        const auto m        = movegen::generateEPMove(*this, checkmask, pin_d, pawns_lr, ep, stm_);
-                        bool found          = false;
-
-                        for (const auto &move : m) {
-                            if (move != Move::NO_MOVE) {
-                                found = true;
-                                break;
-                            }
+                            valid = movegen::isEpSquareValid<Color::BLACK>(*this, move.to().ep_square());
                         }
 
                         // undo
@@ -2034,7 +2026,7 @@ class Board {
                         removePiece(piece, move.to());
                         placePiece(piece, move.from());
 
-                        if (found) {
+                        if (valid) {
                             assert(at(move.to().ep_square()) == Piece::NONE);
                             ep_sq_ = move.to().ep_square();
                             key_ ^= Zobrist::enpassant(move.to().ep_square().file());
@@ -2875,8 +2867,6 @@ class Board {
             key_ ^= Zobrist::sideToMove();
         }
 
-        if (ep_sq_ != Square::underlying::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
-
         auto square = 56;
         for (char curr : position) {
             if (isdigit(curr)) {
@@ -2952,6 +2942,28 @@ class Board {
                 const auto side = CastlingRights::closestSide(file, king_sq.file());
                 cr_.setCastlingRight(color, side, file);
             }
+        }
+
+        // check if ep square itself is valid
+        if (ep_sq_ != Square::underlying::NO_SQ && !((ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
+                                                     (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE))) {
+            ep_sq_ = Square::underlying::NO_SQ;
+        }
+
+        // check if ep square is valid, i.e. if there is a pawn that can capture it
+        if (ep_sq_ != Square::underlying::NO_SQ) {
+            bool valid;
+
+            if (stm_ == Color::WHITE) {
+                valid = movegen::isEpSquareValid<Color::WHITE>(*this, ep_sq_);
+            } else {
+                valid = movegen::isEpSquareValid<Color::BLACK>(*this, ep_sq_);
+            }
+
+            if (!valid)
+                ep_sq_ = Square::underlying::NO_SQ;
+            else
+                key_ ^= Zobrist::enpassant(ep_sq_.file());
         }
 
         key_ ^= Zobrist::castling(cr_.hashIndex());
@@ -3828,6 +3840,34 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
         legalmoves<Color::WHITE, mt>(movelist, board, pieces);
     else
         legalmoves<Color::BLACK, mt>(movelist, board, pieces);
+}
+
+template <Color::underlying c>
+inline bool movegen::isEpSquareValid(const Board &board, Square ep) {
+    const auto stm   = board.sideToMove();
+    int double_check = 0;
+
+    Bitboard occ_us  = board.us(stm);
+    Bitboard occ_opp = board.us(~stm);
+    auto king_sq     = board.kingSq(stm);
+
+    Bitboard checkmask = movegen::checkMask<c>(board, king_sq, double_check);
+    Bitboard pin_hv    = movegen::pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
+    Bitboard pin_d     = movegen::pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+
+    const auto pawns    = board.pieces(PieceType::PAWN, stm);
+    const auto pawns_lr = pawns & ~pin_hv;
+    const auto m        = movegen::generateEPMove(board, checkmask, pin_d, pawns_lr, ep, stm);
+    bool found          = false;
+
+    for (const auto &move : m) {
+        if (move != Move::NO_MOVE) {
+            found = true;
+            break;
+        }
+    }
+
+    return found;
 }
 
 inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = [] {
