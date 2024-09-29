@@ -149,6 +149,9 @@ class movegen {
     template <Color::underlying c, MoveGenType mt>
     static void legalmoves(Movelist &movelist, const Board &board, int pieces);
 
+    template <Color::underlying c>
+    static bool isEpSquareValid(const Board &board, Square ep);
+
     friend class Board;
 };
 

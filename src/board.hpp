@@ -322,41 +322,18 @@ class Board {
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
                     if constexpr (EXACT) {
                         const auto piece = at(move.from());
+
                         removePiece(piece, move.from());
                         placePiece(piece, move.to());
+
                         stm_ = ~stm_;
 
-                        int double_check = 0;
-
-                        Bitboard occ_us  = us(stm_);
-                        Bitboard occ_opp = us(~stm_);
-                        auto king_sq     = kingSq(stm_);
-
-                        Bitboard checkmask;
-                        Bitboard pin_hv;
-                        Bitboard pin_d;
+                        bool valid;
 
                         if (stm_ == Color::WHITE) {
-                            checkmask = movegen::checkMask<Color::WHITE>(*this, king_sq, double_check);
-                            pin_hv    = movegen::pinMaskRooks<Color::WHITE>(*this, king_sq, occ_opp, occ_us);
-                            pin_d     = movegen::pinMaskBishops<Color::WHITE>(*this, king_sq, occ_opp, occ_us);
+                            valid = movegen::isEpSquareValid<Color::WHITE>(*this, move.to().ep_square());
                         } else {
-                            checkmask = movegen::checkMask<Color::BLACK>(*this, king_sq, double_check);
-                            pin_hv    = movegen::pinMaskRooks<Color::BLACK>(*this, king_sq, occ_opp, occ_us);
-                            pin_d     = movegen::pinMaskBishops<Color::BLACK>(*this, king_sq, occ_opp, occ_us);
-                        }
-
-                        const auto pawns    = pieces(PieceType::PAWN, stm_);
-                        const auto pawns_lr = pawns & ~pin_hv;
-                        const auto ep       = move.to().ep_square();
-                        const auto m        = movegen::generateEPMove(*this, checkmask, pin_d, pawns_lr, ep, stm_);
-                        bool found          = false;
-
-                        for (const auto &move : m) {
-                            if (move != Move::NO_MOVE) {
-                                found = true;
-                                break;
-                            }
+                            valid = movegen::isEpSquareValid<Color::BLACK>(*this, move.to().ep_square());
                         }
 
                         // undo
@@ -365,7 +342,7 @@ class Board {
                         removePiece(piece, move.to());
                         placePiece(piece, move.from());
 
-                        if (found) {
+                        if (valid) {
                             assert(at(move.to().ep_square()) == Piece::NONE);
                             ep_sq_ = move.to().ep_square();
                             key_ ^= Zobrist::enpassant(move.to().ep_square().file());
