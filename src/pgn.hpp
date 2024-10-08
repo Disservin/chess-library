@@ -398,28 +398,61 @@ class StreamParser {
         which directly start with a game termination
         this https://github.com/Disservin/chess-library/issues/68
         */
-        stream_buffer.loop([this, &is_termination_symbol, &has_comment](char c) {
-            if (c == ' ' || is_digit(c)) {
+        // stream_buffer.loop([this, &is_termination_symbol, &has_comment](char c) {
+        //     if (c == ' ' || is_digit(c)) {
+        //         stream_buffer.advance();
+        //         return false;
+        //     } else if (c == '-' || c == '*' || c == '/') {
+        //         is_termination_symbol = true;
+        //         stream_buffer.advance();
+        //         return false;
+        //     } else if (c == '{') {
+        //         has_comment = true;
+
+        //         // reading comment
+        //         stream_buffer.advance();
+
+        //         while (auto c = stream_buffer.some()) {
+        //             stream_buffer.advance();
+
+        //             if (*c == '}') {
+        //                 break;
+        //             }
+
+        //             comment += *c;
+        //         }
+
+        //         // the game has no moves, but a comment followed by a game termination
+        //         if (!visitor->skip()) {
+        //             visitor->move("", comment.get());
+
+        //             comment.clear();
+        //         }
+        //     }
+
+        //     return true;
+        // });
+
+        while (auto c = stream_buffer.some()) {
+            if (*c == ' ' || is_digit(*c)) {
                 stream_buffer.advance();
-                return false;
-            } else if (c == '-' || c == '*' || c == '/') {
+            } else if (*c == '-' || *c == '*' || c == '/') {
                 is_termination_symbol = true;
                 stream_buffer.advance();
-                return false;
-            } else if (c == '{') {
+            } else if (*c == '{') {
                 has_comment = true;
 
                 // reading comment
                 stream_buffer.advance();
 
-                while (auto c = stream_buffer.some()) {
+                while (auto k = stream_buffer.some()) {
                     stream_buffer.advance();
 
-                    if (*c == '}') {
+                    if (*k == '}') {
                         break;
                     }
 
-                    comment += *c;
+                    comment += *k;
                 }
 
                 // the game has no moves, but a comment followed by a game termination
@@ -428,10 +461,10 @@ class StreamParser {
 
                     comment.clear();
                 }
+            } else {
+                break;
             }
-
-            return true;
-        });
+        }
 
         // we need to reparse the termination symbol
         if (has_comment && !is_termination_symbol) {
@@ -453,17 +486,18 @@ class StreamParser {
             break;
         }
 
-        stream_buffer.loop([this](char cd) {
+        while (auto cd = stream_buffer.some()) {
             // Pgn are build up in the following way.
             // {move_number} {move} {comment} {move} {comment} {move_number} ...
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
 
             // [ is unexpected here, it probably is a new pgn and the current one is finished
-            if (cd == '[') {
+            if (*cd == '[') {
                 onEnd();
                 dont_advance_after_body = true;
-                return true;
+                // break;
+                break;
             }
 
             // skip move number digits
@@ -495,7 +529,7 @@ class StreamParser {
 
             // parse move
             if (parseMove()) {
-                return true;
+                break;
             }
 
             // skip spaces
@@ -512,7 +546,7 @@ class StreamParser {
 
             if (!curr.has_value()) {
                 onEnd();
-                return true;
+                break;
             }
 
             // game termination
@@ -520,7 +554,7 @@ class StreamParser {
                 onEnd();
                 stream_buffer.advance();
 
-                return true;
+                break;
             }
 
             const auto peek = stream_buffer.peek();
@@ -531,14 +565,16 @@ class StreamParser {
                     stream_buffer.advance();
 
                     onEnd();
-                    return true;
+                    // return true;
+                    break;
                 } else if (peek == '/') {
                     for (size_t i = 0; i <= 6; i++) {
                         stream_buffer.advance();
                     }
 
                     onEnd();
-                    return true;
+                    // return true;
+                    break;
                 }
             }
 
@@ -551,7 +587,8 @@ class StreamParser {
                 if (!c.has_value()) {
                     onEnd();
 
-                    return true;
+                    // return true;
+                    break;
                 }
 
                 // game termination
@@ -559,7 +596,8 @@ class StreamParser {
                     onEnd();
                     stream_buffer.advance();
 
-                    return true;
+                    // return true;
+                    break;
                 }
                 // castling
                 else {
@@ -568,13 +606,14 @@ class StreamParser {
 
                     if (parseMove()) {
                         stream_buffer.advance();
-                        return true;
+                        // return true;
+                        break;
                     }
                 }
             }
 
-            return false;
-        });
+            // return false;
+        }
     }
 
     bool parseMove() {
@@ -615,12 +654,13 @@ class StreamParser {
                 stream_buffer.readUntilMatchingDelimiter('(', ')');
                 goto start;
             case '$':
-                stream_buffer.loop([this](char c) {
-                    if (is_space(c)) return true;
+                while (auto c = stream_buffer.some()) {
+                    if (is_space(*c)) {
+                        break;
+                    }
 
                     stream_buffer.advance();
-                    return false;
-                });
+                }
                 goto start;
             case ' ':
                 while (auto c = stream_buffer.some()) {
