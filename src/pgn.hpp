@@ -147,36 +147,7 @@ class StreamParser {
        public:
         StreamBuffer(std::istream &stream) : stream_(stream) {}
 
-        template <typename FUNC>
-        void loop(FUNC f) {
-            while (bytes_read_) {
-                if (buffer_index_ >= bytes_read_) {
-                    if (!fill()) {
-                        return;
-                    }
-                }
-
-                while (buffer_index_ < bytes_read_) {
-                    const auto c = buffer_[buffer_index_];
-
-                    if (c == '\r') {
-                        buffer_index_++;
-                        continue;
-                    }
-
-                    if constexpr (std::is_same_v<decltype(f(c)), bool>) {
-                        const auto res = f(c);
-
-                        if (res) {
-                            return;
-                        }
-                    } else {
-                        f(c);
-                    }
-                }
-            }
-        }
-
+        /// @brief get the current char, skip carriage returns
         std::optional<char> some() {
             if (buffer_index_ < bytes_read_) {
                 const auto c = buffer_[buffer_index_];
@@ -200,11 +171,12 @@ class StreamParser {
         /// @param open_delim
         /// @param close_delim
         /// @return
-        bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
+        bool skipUntil(char open_delim, char close_delim) {
             int stack = 0;
 
             while (true) {
-                const auto ret = getNextByte();
+                const auto ret = some();
+                advance();
 
                 if (!ret.has_value()) {
                     return false;
@@ -263,14 +235,6 @@ class StreamParser {
             }
 
             return buffer_[buffer_index_];
-        }
-
-        std::optional<char> getNextByte() {
-            if (buffer_index_ == bytes_read_) {
-                return fill() ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
-            }
-
-            return buffer_[buffer_index_++];
         }
 
        private:
@@ -398,40 +362,6 @@ class StreamParser {
         which directly start with a game termination
         this https://github.com/Disservin/chess-library/issues/68
         */
-        // stream_buffer.loop([this, &is_termination_symbol, &has_comment](char c) {
-        //     if (c == ' ' || is_digit(c)) {
-        //         stream_buffer.advance();
-        //         return false;
-        //     } else if (c == '-' || c == '*' || c == '/') {
-        //         is_termination_symbol = true;
-        //         stream_buffer.advance();
-        //         return false;
-        //     } else if (c == '{') {
-        //         has_comment = true;
-
-        //         // reading comment
-        //         stream_buffer.advance();
-
-        //         while (auto c = stream_buffer.some()) {
-        //             stream_buffer.advance();
-
-        //             if (*c == '}') {
-        //                 break;
-        //             }
-
-        //             comment += *c;
-        //         }
-
-        //         // the game has no moves, but a comment followed by a game termination
-        //         if (!visitor->skip()) {
-        //             visitor->move("", comment.get());
-
-        //             comment.clear();
-        //         }
-        //     }
-
-        //     return true;
-        // });
 
         while (auto c = stream_buffer.some()) {
             if (*c == ' ' || is_digit(*c)) {
@@ -651,7 +581,7 @@ class StreamParser {
                 }
                 goto start;
             case '(':
-                stream_buffer.readUntilMatchingDelimiter('(', ')');
+                stream_buffer.skipUntil('(', ')');
                 goto start;
             case '$':
                 while (auto c = stream_buffer.some()) {
