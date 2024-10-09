@@ -147,12 +147,18 @@ class Board {
 
         static auto parseStringViewToInt = [](std::string_view sv) -> std::optional<int> {
             if (!sv.empty() && sv.back() == ';') sv.remove_suffix(1);
+#ifndef CHESS_NO_EXCEPTIONS
             try {
                 size_t pos;
                 int value = std::stoi(std::string(sv), &pos);
                 if (pos == sv.size()) return value;
             } catch (...) {
             }
+#else
+            size_t pos;
+            int value = std::stoi(std::string(sv), &pos);
+            if (pos == sv.size()) return value;
+#endif
             return std::nullopt;
         };
 
@@ -1155,12 +1161,18 @@ class Board {
 
         static auto parseStringViewToInt = [](std::string_view sv) -> std::optional<int> {
             if (!sv.empty() && sv.back() == ';') sv.remove_suffix(1);
+#ifndef CHESS_NO_EXCEPTIONS
             try {
                 size_t pos;
                 int value = std::stoi(std::string(sv), &pos);
                 if (pos == sv.size()) return value;
             } catch (...) {
             }
+#else
+            size_t pos;
+            int value = std::stoi(std::string(sv), &pos);
+            if (pos == sv.size()) return value;
+#endif
             return std::nullopt;
         };
 
@@ -1222,6 +1234,8 @@ class Board {
 #ifndef CHESS_NO_EXCEPTIONS
             throw std::runtime_error("Invalid position");
 #endif
+
+            return File(File::NO_FILE);
         };
 
         for (char i : castling) {
