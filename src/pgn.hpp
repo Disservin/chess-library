@@ -517,7 +517,6 @@ class StreamParser {
                 if (!c.has_value()) {
                     onEnd();
 
-                    // return true;
                     break;
                 }
 
@@ -526,7 +525,6 @@ class StreamParser {
                     onEnd();
                     stream_buffer.advance();
 
-                    // return true;
                     break;
                 }
                 // castling
@@ -536,13 +534,10 @@ class StreamParser {
 
                     if (parseMove()) {
                         stream_buffer.advance();
-                        // return true;
                         break;
                     }
                 }
             }
-
-            // return false;
         }
     }
 
@@ -558,56 +553,66 @@ class StreamParser {
             stream_buffer.advance();
         }
 
-    start:
-        auto curr = stream_buffer.current();
-        if (!curr.has_value()) {
-            onEnd();
-            return true;
-        }
+        return parseMoveAppendix();
+    }
 
-        switch (*curr) {
-            case '{':
-                // reading comment
-                stream_buffer.advance();
+    bool parseMoveAppendix() {
+        while (true) {
+            auto curr = stream_buffer.current();
 
-                while (auto c = stream_buffer.some()) {
+            if (!curr.has_value()) {
+                onEnd();
+                return true;
+            }
+
+            switch (*curr) {
+                case '{': {
+                    // reading comment
                     stream_buffer.advance();
 
-                    if (*c == '}') {
-                        break;
-                    }
-
-                    comment += *c;
-                }
-                goto start;
-            case '(':
-                stream_buffer.skipUntil('(', ')');
-                goto start;
-            case '$':
-                while (auto c = stream_buffer.some()) {
-                    if (is_space(*c)) {
-                        break;
-                    }
-
-                    stream_buffer.advance();
-                }
-                goto start;
-            case ' ':
-                while (auto c = stream_buffer.some()) {
-                    if (is_space(*c)) {
+                    while (auto c = stream_buffer.some()) {
                         stream_buffer.advance();
-                    } else {
-                        break;
+
+                        if (*c == '}') {
+                            break;
+                        }
+
+                        comment += *c;
                     }
+
+                    break;
                 }
-                goto start;
-            default:
-                break;
+                case '(': {
+                    stream_buffer.skipUntil('(', ')');
+                    break;
+                }
+                case '$': {
+                    while (auto c = stream_buffer.some()) {
+                        if (is_space(*c)) {
+                            break;
+                        }
+
+                        stream_buffer.advance();
+                    }
+
+                    break;
+                }
+                case ' ': {
+                    while (auto c = stream_buffer.some()) {
+                        if (!is_space(*c)) {
+                            break;
+                        }
+
+                        stream_buffer.advance();
+                    }
+
+                    break;
+                }
+                default:
+                    callVisitorMoveFunction();
+                    return false;
+            }
         }
-
-        callVisitorMoveFunction();
-
-        return false;
     }
 
     void onEnd() {
