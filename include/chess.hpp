@@ -4247,40 +4247,6 @@ class StreamParser {
         which directly start with a game termination
         this https://github.com/Disservin/chess-library/issues/68
         */
-        // stream_buffer.loop([this, &is_termination_symbol, &has_comment](char c) {
-        //     if (c == ' ' || is_digit(c)) {
-        //         stream_buffer.advance();
-        //         return false;
-        //     } else if (c == '-' || c == '*' || c == '/') {
-        //         is_termination_symbol = true;
-        //         stream_buffer.advance();
-        //         return false;
-        //     } else if (c == '{') {
-        //         has_comment = true;
-
-        //         // reading comment
-        //         stream_buffer.advance();
-
-        //         while (auto c = stream_buffer.some()) {
-        //             stream_buffer.advance();
-
-        //             if (*c == '}') {
-        //                 break;
-        //             }
-
-        //             comment += *c;
-        //         }
-
-        //         // the game has no moves, but a comment followed by a game termination
-        //         if (!visitor->skip()) {
-        //             visitor->move("", comment.get());
-
-        //             comment.clear();
-        //         }
-        //     }
-
-        //     return true;
-        // });
 
         while (auto c = stream_buffer.some()) {
             if (*c == ' ' || is_digit(*c)) {
