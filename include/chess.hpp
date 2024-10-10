@@ -3969,11 +3969,11 @@ class StreamParser {
             return;
         }
 
-        stream_buffer.loop([this](char c) {
+        while (auto c = stream_buffer.some()) {
             if (in_header) {
                 visitor->skipPgn(false);
 
-                if (c == '[') {
+                if (*c == '[') {
                     visitor->startPgn();
                     pgn_end = false;
 
@@ -3986,7 +3986,7 @@ class StreamParser {
 
             if (!dont_advance_after_body) stream_buffer.advance();
             dont_advance_after_body = false;
-        });
+        }
 
         if (!pgn_end) {
             onEnd();
@@ -4032,33 +4032,23 @@ class StreamParser {
        public:
         StreamBuffer(std::istream &stream) : stream_(stream) {}
 
-        template <typename FUNC>
-        void loop(FUNC f) {
-            while (bytes_read_) {
-                if (buffer_index_ >= bytes_read_) {
-                    if (!fill()) {
-                        return;
-                    }
+        /// @brief get the current char, skip carriage returns
+        std::optional<char> some() {
+            if (buffer_index_ < bytes_read_) {
+                const auto c = buffer_[buffer_index_];
+
+                if (c == '\r') {
+                    buffer_index_++;
+                    return some();
                 }
 
-                while (buffer_index_ < bytes_read_) {
-                    const auto c = buffer_[buffer_index_];
-
-                    if (c == '\r') {
-                        buffer_index_++;
-                        continue;
-                    }
-
-                    if constexpr (std::is_same_v<decltype(f(c)), bool>) {
-                        const auto res = f(c);
-
-                        if (res) {
-                            return;
-                        }
-                    } else {
-                        f(c);
-                    }
+                return c;
+            } else {
+                if (!fill()) {
+                    return std::nullopt;
                 }
+
+                return some();
             }
         }
 
@@ -4066,11 +4056,12 @@ class StreamParser {
         /// @param open_delim
         /// @param close_delim
         /// @return
-        bool readUntilMatchingDelimiter(char open_delim, char close_delim) {
+        bool skipUntil(char open_delim, char close_delim) {
             int stack = 0;
 
             while (true) {
-                const auto ret = getNextByte();
+                const auto ret = some();
+                advance();
 
                 if (!ret.has_value()) {
                     return false;
@@ -4131,14 +4122,6 @@ class StreamParser {
             return buffer_[buffer_index_];
         }
 
-        std::optional<char> getNextByte() {
-            if (buffer_index_ == bytes_read_) {
-                return fill() ? std::optional<char>(buffer_[buffer_index_++]) : std::nullopt;
-            }
-
-            return buffer_[buffer_index_++];
-        }
-
        private:
         std::istream &stream_;
         BufferType buffer_;
@@ -4168,43 +4151,44 @@ class StreamParser {
 
     void processHeader() {
         bool backslash = false;
-        stream_buffer.loop([this, &backslash](char c) {
-            switch (c) {
+
+        while (auto c = stream_buffer.some()) {
+            switch (*c) {
                 // tag start
                 case '[':
                     stream_buffer.advance();
 
-                    stream_buffer.loop([this](char c) {
-                        if (is_space(c)) {
-                            return true;
+                    while (auto k = stream_buffer.some()) {
+                        if (is_space(*k)) {
+                            break;
                         } else {
-                            header.first += c;
+                            header.first += *k;
                             stream_buffer.advance();
-                            return false;
                         }
-                    });
+                    }
 
                     stream_buffer.advance();
-                    return false;
+                    break;
                 case '"':
                     stream_buffer.advance();
-                    stream_buffer.loop([this, &backslash](char c) {
-                        if (c == '\\') {
+
+                    while (auto k = stream_buffer.some()) {
+                        if (*k == '\\') {
                             backslash = true;
                             // don't add backslash to header, is this really correct?
                             stream_buffer.advance();
-                            return false;
-                        } else if (c == '"' && !backslash) {
+                            // return false;
+                        } else if (*k == '"' && !backslash) {
                             stream_buffer.advance();
 
                             // we should be now at ]
                             assert(stream_buffer.current().value() == ']');
                             stream_buffer.advance();
 
-                            return true;
+                            break;
                         }
 #ifndef CHESS_NO_EXCEPTIONS
-                        else if (c == '\n') {
+                        else if (*k == '\n') {
                             // we missed the closing quote and read until the newline character
                             // this is an invalid pgn, let's throw an error
                             throw StreamParserException("Invalid PGN, missing closing quote in header");
@@ -4212,12 +4196,10 @@ class StreamParser {
 #endif
                         else {
                             backslash = false;
+                            header.second += *k;
+                            stream_buffer.advance();
                         }
-
-                        header.second += c;
-                        stream_buffer.advance();
-                        return false;
-                    });
+                    }
 
                     // manually skip carriage return, otherwise we would be in the body
                     // ideally we should completely skip all carriage returns and newlines to avoid this
@@ -4231,14 +4213,14 @@ class StreamParser {
                     header.second.clear();
 
                     stream_buffer.advance();
-                    return false;
+                    break;
                 case '\n':
                     in_header = false;
                     in_body   = true;
 
                     if (!visitor->skip()) visitor->startMoves();
 
-                    return true;
+                    goto exit_loop;
                 default:
                     // this should normally not happen
                     // lets just go into the body, will this always be save?
@@ -4247,12 +4229,11 @@ class StreamParser {
 
                     if (!visitor->skip()) visitor->startMoves();
 
-                    return true;
+                    goto exit_loop;
             }
+        }
 
-            stream_buffer.advance();
-            return false;
-        });
+    exit_loop:;
     }
 
     void processBody() {
@@ -4266,28 +4247,28 @@ class StreamParser {
         which directly start with a game termination
         this https://github.com/Disservin/chess-library/issues/68
         */
-        stream_buffer.loop([this, &is_termination_symbol, &has_comment](char c) {
-            if (c == ' ' || is_digit(c)) {
+
+        while (auto c = stream_buffer.some()) {
+            if (*c == ' ' || is_digit(*c)) {
                 stream_buffer.advance();
-                return false;
-            } else if (c == '-' || c == '*' || c == '/') {
+            } else if (*c == '-' || *c == '*' || c == '/') {
                 is_termination_symbol = true;
                 stream_buffer.advance();
-                return false;
-            } else if (c == '{') {
+            } else if (*c == '{') {
                 has_comment = true;
 
                 // reading comment
                 stream_buffer.advance();
-                stream_buffer.loop([this](char c) {
+
+                while (auto k = stream_buffer.some()) {
                     stream_buffer.advance();
 
-                    if (c == '}') return true;
+                    if (*k == '}') {
+                        break;
+                    }
 
-                    comment += c;
-
-                    return false;
-                });
+                    comment += *k;
+                }
 
                 // the game has no moves, but a comment followed by a game termination
                 if (!visitor->skip()) {
@@ -4295,10 +4276,10 @@ class StreamParser {
 
                     comment.clear();
                 }
+            } else {
+                break;
             }
-
-            return true;
-        });
+        }
 
         // we need to reparse the termination symbol
         if (has_comment && !is_termination_symbol) {
@@ -4311,79 +4292,76 @@ class StreamParser {
             return;
         }
 
-        stream_buffer.loop([this](char cd) {
-            if (isspace(cd)) {
+        while (auto c = stream_buffer.some()) {
+            if (is_space(*c)) {
                 stream_buffer.advance();
-                return false;
+                continue;
             }
 
-            return true;
-        });
+            break;
+        }
 
-        stream_buffer.loop([this](char cd) {
+        while (auto cd = stream_buffer.some()) {
             // Pgn are build up in the following way.
             // {move_number} {move} {comment} {move} {comment} {move_number} ...
             // So we need to skip the move_number then start reading the move, then save the comment
             // then read the second move in the group. After that a move_number will follow again.
 
             // [ is unexpected here, it probably is a new pgn and the current one is finished
-            if (cd == '[') {
+            if (*cd == '[') {
                 onEnd();
                 dont_advance_after_body = true;
-                return true;
+                // break;
+                break;
             }
 
             // skip move number digits
-            stream_buffer.loop([this](char c) {
-                if (is_space(c) || is_digit(c)) {
+            while (auto c = stream_buffer.some()) {
+                if (is_space(*c) || is_digit(*c)) {
                     stream_buffer.advance();
-                    return false;
+                } else {
+                    break;
                 }
-
-                return true;
-            });
+            }
 
             // skip dots
-            stream_buffer.loop([this](char c) {
-                if (c == '.') {
+            while (auto c = stream_buffer.some()) {
+                if (*c == '.') {
                     stream_buffer.advance();
-                    return false;
+                } else {
+                    break;
                 }
-
-                return true;
-            });
-
-            // skip spaces
-            stream_buffer.loop([this](char c) {
-                if (is_space(c)) {
-                    stream_buffer.advance();
-                    return false;
-                }
-
-                return true;
-            });
-
-            // parse move
-            if (parseMove()) {
-                return true;
             }
 
             // skip spaces
-            stream_buffer.loop([this](char c) {
-                if (is_space(c)) {
+            while (auto c = stream_buffer.some()) {
+                if (is_space(*c)) {
                     stream_buffer.advance();
-                    return false;
+                } else {
+                    break;
                 }
+            }
 
-                return true;
-            });
+            // parse move
+            if (parseMove()) {
+                break;
+            }
+
+            // skip spaces
+            while (auto c = stream_buffer.some()) {
+                if (is_space(*c)) {
+                    stream_buffer.advance();
+                } else {
+                    break;
+                }
+            }
 
             // game termination
             auto curr = stream_buffer.current();
 
             if (!curr.has_value()) {
                 onEnd();
-                return true;
+                break;
             }
 
             // game termination
@@ -4391,7 +4369,7 @@ class StreamParser {
                 onEnd();
                 stream_buffer.advance();
 
-                return true;
+                break;
             }
 
             const auto peek = stream_buffer.peek();
@@ -4402,14 +4380,16 @@ class StreamParser {
                     stream_buffer.advance();
 
                     onEnd();
-                    return true;
+                    // return true;
+                    break;
                 } else if (peek == '/') {
                     for (size_t i = 0; i <= 6; i++) {
                         stream_buffer.advance();
                     }
 
                     onEnd();
-                    return true;
+                    // return true;
+                    break;
                 }
             }
 
@@ -4422,7 +4402,7 @@ class StreamParser {
                 if (!c.has_value()) {
                     onEnd();
 
-                    return true;
+                    break;
                 }
 
                 // game termination
@@ -4430,7 +4410,7 @@ class StreamParser {
                     onEnd();
                     stream_buffer.advance();
 
-                    return true;
+                    break;
                 }
                 // castling
                 else {
@@ -4439,77 +4419,85 @@ class StreamParser {
 
                     if (parseMove()) {
                         stream_buffer.advance();
-                        return true;
+                        break;
                     }
                 }
             }
-
-            return false;
-        });
+        }
     }
 
     bool parseMove() {
         // reading move
-        stream_buffer.loop([this](char c) {
-            if (is_space(c)) {
+        while (auto c = stream_buffer.some()) {
+            if (is_space(*c)) {
+                break;
+            }
+
+            move += *c;
+
+            stream_buffer.advance();
+        }
+
+        return parseMoveAppendix();
+    }
+
+    bool parseMoveAppendix() {
+        while (true) {
+            auto curr = stream_buffer.current();
+
+            if (!curr.has_value()) {
+                onEnd();
                 return true;
             }
 
-            move += c;
-
-            stream_buffer.advance();
-            return false;
-        });
-
-    start:
-        auto curr = stream_buffer.current();
-        if (!curr.has_value()) {
-            onEnd();
-            return true;
-        }
-
-        switch (*curr) {
-            case '{':
-                // reading comment
-                stream_buffer.advance();
-                stream_buffer.loop([this](char c) {
+            switch (*curr) {
+                case '{': {
+                    // reading comment
                     stream_buffer.advance();
 
-                    if (c == '}') return true;
-
-                    comment += c;
-
-                    return false;
-                });
-                goto start;
-            case '(':
-                stream_buffer.readUntilMatchingDelimiter('(', ')');
-                goto start;
-            case '$':
-                stream_buffer.loop([this](char c) {
-                    if (is_space(c)) return true;
-
-                    stream_buffer.advance();
-                    return false;
-                });
-                goto start;
-            case ' ':
-                stream_buffer.loop([this](char c) {
-                    if (is_space(c)) {
+                    while (auto c = stream_buffer.some()) {
                         stream_buffer.advance();
-                        return false;
+
+                        if (*c == '}') {
+                            break;
+                        }
+
+                        comment += *c;
                     }
 
-                    return true;
-                });
-                goto start;
-            default:
-                break;
+                    break;
+                }
+                case '(': {
+                    stream_buffer.skipUntil('(', ')');
+                    break;
+                }
+                case '$': {
+                    while (auto c = stream_buffer.some()) {
+                        if (is_space(*c)) {
+                            break;
+                        }
+
+                        stream_buffer.advance();
+                    }
+
+                    break;
+                }
+                case ' ': {
+                    while (auto c = stream_buffer.some()) {
+                        if (!is_space(*c)) {
+                            break;
+                        }
+
+                        stream_buffer.advance();
+                    }
+
+                    break;
+                }
+                default:
+                    callVisitorMoveFunction();
+                    return false;
+            }
         }
-
-        callVisitorMoveFunction();
-
-        return false;
     }
 
     void onEnd() {
