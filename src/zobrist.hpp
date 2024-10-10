@@ -167,23 +167,28 @@ class Zobrist {
         0x1C99DED33CB890A1, 0xCF3145DE0ADD4289, 0xD0E4427A5514FB72, 0x77C621CC9FB3A483, 0x67A34DAC4356550B,
         0xF8D626AAAF278509};
 
-    static constexpr U64 castlingKey[16] = {
-        0,
-        RANDOM_ARRAY[768],
-        RANDOM_ARRAY[768 + 1],
-        RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 1],
-        RANDOM_ARRAY[768 + 2],
-        RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 2],
-        RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2],
-        RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2],
-        RANDOM_ARRAY[768 + 3],
-        RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 3],
-        RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 3],
-        RANDOM_ARRAY[768] ^ RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 3],
-        RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768 + 2],
-        RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768],
-        RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768 + 3],
-        RANDOM_ARRAY[768 + 1] ^ RANDOM_ARRAY[768 + 2] ^ RANDOM_ARRAY[768 + 3] ^ RANDOM_ARRAY[768]};
+    static constexpr std::array<U64, 16> castlingKey = []() constexpr {
+        auto generateCastlingKey = [](int index) constexpr -> U64 {
+            constexpr int RANDOM_OFFSET = 768;
+            constexpr int RANDOM_COUNT  = 4;
+
+            U64 key = 0;
+
+            for (int i = 0; i < RANDOM_COUNT; ++i) {
+                if (index & (1 << i)) {
+                    key ^= RANDOM_ARRAY[RANDOM_OFFSET + i];
+                }
+            }
+
+            return key;
+        };
+
+        std::array<U64, 16> arr{};
+
+        for (int i = 0; i < 16; ++i) arr[i] = generateCastlingKey(i);
+
+        return arr;
+    }();
 
     static constexpr int MAP_HASH_PIECE[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 

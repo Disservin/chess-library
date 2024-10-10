@@ -38,6 +38,7 @@ class File {
     constexpr bool operator>(const File& rhs) const noexcept {
         return static_cast<int>(file) > static_cast<int>(rhs.file);
     }
+
     constexpr bool operator<(const File& rhs) const noexcept {
         return static_cast<int>(file) < static_cast<int>(rhs.file);
     }
@@ -64,36 +65,41 @@ class Rank {
    public:
     enum class underlying { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NO_RANK };
 
-    constexpr Rank() : rank(underlying::NO_RANK) {}
-    constexpr Rank(underlying rank) : rank(rank) {}
-    constexpr Rank(int rank) : rank(static_cast<underlying>(rank)) {}
+    constexpr Rank() : rank_(underlying::NO_RANK) {}
+    constexpr Rank(underlying rank) : rank_(rank) {}
+    constexpr Rank(int rank) : rank_(static_cast<underlying>(rank)) {}
     constexpr Rank(std::string_view sw)
-        : rank(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - '1')) {}
+        : rank_(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - '1')) {}
 
-    [[nodiscard]] constexpr underlying internal() const noexcept { return rank; }
+    [[nodiscard]] constexpr underlying internal() const noexcept { return rank_; }
 
-    constexpr bool operator==(const Rank& rhs) const noexcept { return rank == rhs.rank; }
-    constexpr bool operator!=(const Rank& rhs) const noexcept { return rank != rhs.rank; }
+    constexpr bool operator==(const Rank& rhs) const noexcept { return rank_ == rhs.rank_; }
+    constexpr bool operator!=(const Rank& rhs) const noexcept { return rank_ != rhs.rank_; }
 
-    constexpr bool operator==(const underlying& rhs) const noexcept { return rank == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const noexcept { return rank != rhs; }
+    constexpr bool operator==(const underlying& rhs) const noexcept { return rank_ == rhs; }
+    constexpr bool operator!=(const underlying& rhs) const noexcept { return rank_ != rhs; }
 
     constexpr bool operator>=(const Rank& rhs) const noexcept {
-        return static_cast<int>(rank) >= static_cast<int>(rhs.rank);
+        return static_cast<int>(rank_) >= static_cast<int>(rhs.rank_);
     }
     constexpr bool operator<=(const Rank& rhs) const noexcept {
-        return static_cast<int>(rank) <= static_cast<int>(rhs.rank);
+        return static_cast<int>(rank_) <= static_cast<int>(rhs.rank_);
     }
 
-    operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(rank) + '1')); }
+    operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(rank_) + '1')); }
 
-    constexpr operator int() const noexcept { return static_cast<int>(rank); }
+    constexpr operator int() const noexcept { return static_cast<int>(rank_); }
+
+    constexpr std::uint64_t bb() const noexcept { return 0xffULL << (8 * static_cast<int>(rank_)); }
 
     [[nodiscard]] static constexpr bool back_rank(Rank r, Color color) noexcept {
-        if (color == Color::WHITE)
-            return r == Rank::RANK_1;
-        else
-            return r == Rank::RANK_8;
+        if (color == Color::WHITE) return r == Rank::RANK_1;
+        return r == Rank::RANK_8;
+    }
+
+    [[nodiscard]] static constexpr Rank rank(Rank r, Color color) noexcept {
+        if (color == Color::WHITE) return r;
+        return Rank(static_cast<underlying>(static_cast<int>(RANK_8) - static_cast<int>(r)));
     }
 
     static constexpr underlying RANK_1  = underlying::RANK_1;
@@ -107,7 +113,7 @@ class Rank {
     static constexpr underlying NO_RANK = underlying::NO_RANK;
 
    private:
-    underlying rank;
+    underlying rank_;
 };
 
 class Square {
@@ -287,6 +293,11 @@ enum class Direction : int8_t {
     SOUTH_WEST = -9,
     SOUTH_EAST = -7
 };
+
+[[nodiscard]] constexpr Direction make_direction(Direction dir, Color c) noexcept {
+    if (c == Color::BLACK) return static_cast<Direction>(-static_cast<int8_t>(dir));
+    return dir;
+}
 
 constexpr Square operator+(Square sq, Direction dir) {
     return static_cast<Square>(sq.index() + static_cast<int8_t>(dir));

@@ -153,8 +153,8 @@ class uci {
             return Move::NO_MOVE;
         }
 
-        constexpr auto pt_to_pgt      = [](PieceType pt) { return 1 << (pt); };
-        const SanMoveInformation info = parseSanInfo<PEDANTIC>(san);
+        static constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
+        const SanMoveInformation info   = parseSanInfo<PEDANTIC>(san);
 
         if (info.capture) {
             movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
@@ -274,9 +274,10 @@ class uci {
                    (!info.castling_short && !info.castling_long));
         };
 
-        constexpr auto isRank = [](char c) { return c >= '1' && c <= '8'; };
-        constexpr auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
-        constexpr auto sw     = [](const char &c) { return std::string_view(&c, 1); };
+        static constexpr auto isRank = [](char c) { return c >= '1' && c <= '8'; };
+        static constexpr auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
+        static constexpr auto sw     = [](const char &c) { return std::string_view(&c, 1); };
+
         SanMoveInformation info;
 
         // set to 1 to skip piece type offset

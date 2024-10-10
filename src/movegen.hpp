@@ -197,43 +197,42 @@ template <Color::underlying c>
 template <Color::underlying c, movegen::MoveGenType mt>
 inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
                                        Bitboard checkmask, Bitboard occ_opp) {
-    constexpr Direction UP              = c == Color::WHITE ? Direction::NORTH : Direction::SOUTH;
-    constexpr Direction DOWN            = c == Color::WHITE ? Direction::SOUTH : Direction::NORTH;
-    constexpr Direction DOWN_LEFT       = c == Color::WHITE ? Direction::SOUTH_WEST : Direction::NORTH_EAST;
-    constexpr Direction DOWN_RIGHT      = c == Color::WHITE ? Direction::SOUTH_EAST : Direction::NORTH_WEST;
-    constexpr Bitboard RANK_B_PROMO     = c == Color::WHITE ? attacks::MASK_RANK[static_cast<int>(Rank::RANK_7)]
-                                                            : attacks::MASK_RANK[static_cast<int>(Rank::RANK_2)];
-    constexpr Bitboard RANK_PROMO       = c == Color::WHITE ? attacks::MASK_RANK[static_cast<int>(Rank::RANK_8)]
-                                                            : attacks::MASK_RANK[static_cast<int>(Rank::RANK_1)];
-    constexpr Bitboard DOUBLE_PUSH_RANK = c == Color::WHITE ? attacks::MASK_RANK[static_cast<int>(Rank::RANK_3)]
-                                                            : attacks::MASK_RANK[static_cast<int>(Rank::RANK_6)];
+    // flipped for black
+
+    constexpr auto UP         = make_direction(Direction::NORTH, c);
+    constexpr auto DOWN       = make_direction(Direction::SOUTH, c);
+    constexpr auto DOWN_LEFT  = make_direction(Direction::SOUTH_WEST, c);
+    constexpr auto DOWN_RIGHT = make_direction(Direction::SOUTH_EAST, c);
+    constexpr auto UP_LEFT    = make_direction(Direction::NORTH_WEST, c);
+    constexpr auto UP_RIGHT   = make_direction(Direction::NORTH_EAST, c);
+
+    constexpr auto RANK_B_PROMO     = Rank::rank(Rank::RANK_7, c).bb();
+    constexpr auto RANK_PROMO       = Rank::rank(Rank::RANK_8, c).bb();
+    constexpr auto DOUBLE_PUSH_RANK = Rank::rank(Rank::RANK_3, c).bb();
 
     const auto pawns = board.pieces(PieceType::PAWN, c);
 
     // These pawns can maybe take Left or Right
-    const Bitboard pawns_lr         = pawns & ~pin_hv;
-    const Bitboard unpinnedpawns_lr = pawns_lr & ~pin_d;
-    const Bitboard pinnedpawns_lr   = pawns_lr & pin_d;
+    const Bitboard pawns_lr          = pawns & ~pin_hv;
+    const Bitboard unpinned_pawns_lr = pawns_lr & ~pin_d;
+    const Bitboard pinned_pawns_lr   = pawns_lr & pin_d;
 
-    Bitboard l_pawns =
-        attacks::pawnLeftAttacks<c>(unpinnedpawns_lr) | (attacks::pawnLeftAttacks<c>(pinnedpawns_lr) & pin_d);
-
-    Bitboard r_pawns =
-        attacks::pawnRightAttacks<c>(unpinnedpawns_lr) | (attacks::pawnRightAttacks<c>(pinnedpawns_lr) & pin_d);
+    auto l_pawns = attacks::shift<UP_LEFT>(unpinned_pawns_lr) | (attacks::shift<UP_LEFT>(pinned_pawns_lr) & pin_d);
+    auto r_pawns = attacks::shift<UP_RIGHT>(unpinned_pawns_lr) | (attacks::shift<UP_RIGHT>(pinned_pawns_lr) & pin_d);
 
     // Prune moves that don't capture a piece and are not on the checkmask.
     l_pawns &= occ_opp & checkmask;
     r_pawns &= occ_opp & checkmask;
 
     // These pawns can walk Forward
-    const Bitboard pawns_hv = pawns & ~pin_d;
+    const auto pawns_hv = pawns & ~pin_d;
 
-    const Bitboard pawns_pinned_hv   = pawns_hv & pin_hv;
-    const Bitboard pawns_unpinned_hv = pawns_hv & ~pin_hv;
+    const auto pawns_pinned_hv   = pawns_hv & pin_hv;
+    const auto pawns_unpinned_hv = pawns_hv & ~pin_hv;
 
     // Prune moves that are blocked by a piece
-    const Bitboard single_push_unpinned = attacks::shift<UP>(pawns_unpinned_hv) & ~board.occ();
-    const Bitboard single_push_pinned   = attacks::shift<UP>(pawns_pinned_hv) & pin_hv & ~board.occ();
+    const auto single_push_unpinned = attacks::shift<UP>(pawns_unpinned_hv) & ~board.occ();
+    const auto single_push_pinned   = attacks::shift<UP>(pawns_pinned_hv) & pin_hv & ~board.occ();
 
     // Prune moves that are not on the checkmask.
     Bitboard single_push = (single_push_unpinned | single_push_pinned) & checkmask;
@@ -320,26 +319,26 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     std::array<Move, 2> moves = {Move::NO_MOVE, Move::NO_MOVE};
     auto i                    = 0;
 
-    const Direction DOWN = c == Color::WHITE ? Direction::SOUTH : Direction::NORTH;
-    const Square epPawn  = ep + DOWN;
+    const auto DOWN     = make_direction(Direction::SOUTH, c);
+    const auto epPawnSq = ep + DOWN;
 
     /*
      In case the en passant square and the enemy pawn
      that just moved are not on the checkmask
      en passant is not available.
     */
-    if ((checkmask & (Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(ep))) == Bitboard(0)) return moves;
+    if ((checkmask & (Bitboard::fromSquare(epPawnSq) | Bitboard::fromSquare(ep))) == Bitboard(0)) return moves;
 
     const Square kSQ              = board.kingSq(c);
-    const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & attacks::MASK_RANK[epPawn.rank()].getBits();
+    const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & epPawnSq.rank().bb();
     const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, ~c) | board.pieces(PieceType::QUEEN, ~c);
 
-    Bitboard epBB = attacks::pawn(~c, ep) & pawns_lr;
+    auto epBB = attacks::pawn(~c, ep) & pawns_lr;
 
     // For one en passant square two pawns could potentially take there.
     while (epBB) {
-        const Square from = epBB.pop();
-        const Square to   = ep;
+        const auto from = epBB.pop();
+        const auto to   = ep;
 
         /*
          If the pawn is pinned but the en passant square is not on the
@@ -347,7 +346,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         */
         if ((Bitboard::fromSquare(from) & pin_d) && !(pin_d & Bitboard::fromSquare(ep))) continue;
 
-        const Bitboard connectingPawns = Bitboard::fromSquare(epPawn) | Bitboard::fromSquare(from);
+        const auto connectingPawns = Bitboard::fromSquare(epPawnSq) | Bitboard::fromSquare(from);
 
         /*
          7k/4p3/8/2KP3r/8/8/8/8 b - - 0 1
@@ -357,7 +356,8 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
          that would give check if the two pawns were removed.
          If that's the case then the move is illegal and we can break immediately.
         */
-        const bool isPossiblePin = kingMask && enemyQueenRook;
+        const auto isPossiblePin = kingMask && enemyQueenRook;
+
         if (isPossiblePin && (attacks::rook(kSQ, board.occ() & ~connectingPawns) & enemyQueenRook) != Bitboard(0))
             break;
 
@@ -461,7 +461,7 @@ template <Color::underlying c, movegen::MoveGenType mt>
 
         if ((not_attacked_path & empty_not_attacked) == not_attacked_path &&
             ((not_occ_path & ~board.occ()) == not_occ_path) &&
-            !(Bitboard::fromSquare(from_rook_sq) & pin_hv.getBits() & attacks::MASK_RANK[sq.rank()].getBits()) &&
+            !(Bitboard::fromSquare(from_rook_sq) & pin_hv.getBits() & sq.rank().bb()) &&
             !(Bitboard::fromSquare(end_rook_sq) & (withoutRook & withoutKing).getBits()) &&
             !(Bitboard::fromSquare(end_king_sq) &
               (seen | (withoutRook & Bitboard(~Bitboard::fromSquare(sq)))).getBits())) {
