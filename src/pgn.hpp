@@ -292,7 +292,6 @@ class StreamParser {
                             backslash = true;
                             // don't add backslash to header, is this really correct?
                             stream_buffer.advance();
-                            // return false;
                         } else if (*k == '"' && !backslash) {
                             stream_buffer.advance();
 
@@ -495,7 +494,6 @@ class StreamParser {
                     stream_buffer.advance();
 
                     onEnd();
-                    // return true;
                     break;
                 } else if (peek == '/') {
                     for (size_t i = 0; i <= 6; i++) {
@@ -503,7 +501,6 @@ class StreamParser {
                     }
 
                     onEnd();
-                    // return true;
                     break;
                 }
             }
