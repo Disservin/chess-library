@@ -47,5 +47,3 @@ int main(int argc, char const *argv[]) {
 
     return 0;
 }
-
-// https://godbolt.org/z/eqEhG3s6G
