@@ -119,7 +119,8 @@ class StreamParser {
 
         void operator+=(char c) {
             assert(index_ < N);
-            buffer_[index_++] = c;
+            buffer_[index_] = c;
+            ++index_;
         }
 
         void remove_suffix(std::size_t n) {
@@ -153,7 +154,7 @@ class StreamParser {
                 const auto c = buffer_[buffer_index_];
 
                 if (c == '\r') {
-                    buffer_index_++;
+                    ++buffer_index_;
                     return some();
                 }
 
@@ -183,13 +184,13 @@ class StreamParser {
                 }
 
                 if (*ret == open_delim) {
-                    stack++;
+                    ++stack;
                 } else if (*ret == close_delim) {
                     if (stack == 0) {
                         // Mismatched closing delimiter
                         return false;
                     } else {
-                        stack--;
+                        --stack;
                         if (stack == 0) {
                             // Matching closing delimiter found
                             return true;
@@ -218,7 +219,7 @@ class StreamParser {
                 fill();
             }
 
-            buffer_index_++;
+            ++buffer_index_;
         }
 
         char peek() {
@@ -496,7 +497,7 @@ class StreamParser {
                     onEnd();
                     break;
                 } else if (peek == '/') {
-                    for (size_t i = 0; i <= 6; i++) {
+                    for (size_t i = 0; i <= 6; ++i) {
                         stream_buffer.advance();
                     }
 
