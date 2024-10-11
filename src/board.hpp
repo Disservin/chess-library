@@ -584,9 +584,9 @@ class Board {
     [[nodiscard]] T at(Square sq) const {
         if constexpr (std::is_same_v<T, PieceType>) {
             return board_[sq.index()].type();
+        } else {
+            return board_[sq.index()];
         }
-
-        return board_[sq.index()];
     }
 
     /// @brief Checks if a move is a capture, enpassant moves are also considered captures.
@@ -1104,7 +1104,7 @@ class Board {
     bool chess960_ = false;
 
    private:
-       void removePieceInternal(Piece piece, Square sq) {
+    void removePieceInternal(Piece piece, Square sq) {
         assert(board_[sq.index()] == piece && piece != Piece::NONE);
 
         auto type  = piece.type();
