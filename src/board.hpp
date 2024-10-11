@@ -1104,23 +1104,7 @@ class Board {
     bool chess960_ = false;
 
    private:
-    void placePieceInternal(Piece piece, Square sq) {
-        assert(board_[sq.index()] == Piece::NONE);
-
-        auto type  = piece.type();
-        auto color = piece.color();
-        auto index = sq.index();
-
-        assert(type != PieceType::NONE);
-        assert(color != Color::NONE);
-        assert(index >= 0 && index < 64);
-
-        pieces_bb_[type].set(index);
-        occ_bb_[color].set(index);
-        board_[index] = piece;
-    }
-
-    void removePieceInternal(Piece piece, Square sq) {
+       void removePieceInternal(Piece piece, Square sq) {
         assert(board_[sq.index()] == piece && piece != Piece::NONE);
 
         auto type  = piece.type();
