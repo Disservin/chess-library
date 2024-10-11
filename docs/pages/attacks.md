@@ -3,6 +3,8 @@
 If you just want the attacks for a piece on a given square, you
 will have to use any of these functions.
 
+## API
+
 ```cpp
 namespace attacks {
     Bitboard pawn(Color c, Square sq);

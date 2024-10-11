@@ -1,5 +1,15 @@
 # PieceType
 
+## Description
+
+The `PieceType` class is a class that represents a chess piece type. It is a simple class that contains an enum class that represents the underlying type of the piece. The class also contains a few static members that represent the underlying type of the piece.
+
+::: tip
+Also checkout the [Piece](/pages/piece) class.
+:::
+
+## API
+
 ```cpp
 class PieceType {
    public:

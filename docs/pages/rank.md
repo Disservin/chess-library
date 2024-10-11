@@ -1,5 +1,15 @@
 # Rank
 
+## Description
+
+The `Rank` class is a class that represents a chess rank. It is a simple class that contains an enum class that represents the underlying type of the rank. The class also contains a few static members that represent the underlying type of the rank.
+
+::: tip
+Also checkout the [File](/pages/file) class.
+:::
+
+## API
+
 ```cpp
 
 class Rank {

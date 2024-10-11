@@ -3,7 +3,41 @@
 Castling moves are encoded as king captures rook. So always make sure the type is not castle
 before checking for captures.
 
-## General Implementation
+## Creation
+
+Incase you want to manually create a move you can do it like so.
+
+```cpp
+Move m = Move::make<Move::NORMAL>(Square::SQ_E2, Square::SQ_E4);
+```
+
+## Other formats
+
+Sometimes you want to convert an internal move object into something else which, like a uci move string or into san notation.
+You can easily do this by using the functions inside `uci` namespace.
+
+::: warning
+The `moveToSan`, `moveToLan` and `parseSan` functions are relatively new and might produce incorrect results.
+Please open an issue for such cases.
+:::
+
+## API
+
+```cpp
+namespace uci {
+
+std::string moveToUci(const Move& move, bool chess960 = false);
+
+Move uciToMove(const Board& board, const std::string& uci);
+
+std::string moveToSan(const Board& board, const Move& move);
+
+std::string moveToLan(const Board& board, const Move& move);
+
+Move parseSan(const Board& board, std::string_view san);
+
+}  // namespace uci
+```
 
 ```cpp
 struct Move {
@@ -40,38 +74,4 @@ struct Move {
 
     friend std::ostream& operator<<(std::ostream& os, const Move& move);
 };
-```
-
-## Creation
-
-Incase you want to manually create a move you can do it like so.
-
-```cpp
-Move m = Move::make<Move::NORMAL>(Square::SQ_E2, Square::SQ_E4);
-```
-
-## Other formats
-
-Sometimes you want to convert an internal move object into something else which, like a uci move string or into san notation.
-You can easily do this by using the functions inside `uci` namespace.
-
-::: warning
-The `moveToSan`, `moveToLan` and `parseSan` functions are relatively new and might produce incorrect results.
-Please open an issue for such cases.
-:::
-
-```cpp
-namespace uci {
-
-std::string moveToUci(const Move& move, bool chess960 = false);
-
-Move uciToMove(const Board& board, const std::string& uci);
-
-std::string moveToSan(const Board& board, const Move& move);
-
-std::string moveToLan(const Board& board, const Move& move);
-
-Move parseSan(const Board& board, std::string_view san);
-
-}  // namespace uci
 ```

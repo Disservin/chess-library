@@ -1,5 +1,15 @@
 # Square
 
+## Description
+
+The `Square` class is a simple class that represents a square on the board. It is a thin wrapper around an enum class that represents the squares of the board. It has a few utility functions to help with square manipulation.
+
+::: tip
+Also checkout the [File](/pages/file) and [Rank](/pages/rank) classes.
+:::
+
+## API
+
 ```cpp
 class Square {
    public:

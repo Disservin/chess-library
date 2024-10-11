@@ -14,6 +14,30 @@ If you want to convert the `string_view move` to an internal move object, you ca
 See [here](/pages/move.md#other-formats) for more information.
 :::
 
+So you will need to create a derived class from it.
+
+```c++
+class MyVisitor : public pgn::Visitor {
+   public:
+    virtual ~MyVisitor() {}
+
+    void startPgn() { board.setFen(STARTPOS); }
+
+    void header(std::string_view key, std::string_view value) {}
+
+    void startMoves() {}
+
+    void move(std::string_view move, std::string_view comment) {}
+
+    void endPgn() {}
+
+   private:
+    Board board;
+};
+```
+
+## API
+
 ```c++
 /// @brief Visitor interface for parsing PGN files
 /// the order of the calls is as follows:
@@ -46,27 +70,5 @@ class Visitor {
 
     /// @brief Called when a game ends
     virtual void endPgn() = 0;
-};
-```
-
-So you will need to create a derived class from it.
-
-```c++
-class MyVisitor : public pgn::Visitor {
-   public:
-    virtual ~MyVisitor() {}
-
-    void startPgn() { board.setFen(STARTPOS); }
-
-    void header(std::string_view key, std::string_view value) {}
-
-    void startMoves() {}
-
-    void move(std::string_view move, std::string_view comment) {}
-
-    void endPgn() {}
-
-   private:
-    Board board;
 };
 ```

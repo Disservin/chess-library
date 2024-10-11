@@ -1,5 +1,25 @@
 # Board
 
+## Description
+
+The Board class represents the state of a chess game. It provides functionalities to manipulate the board, execute moves, and query the game state. This class is essential for handling game logic, including move generation,  and checking game-ending conditions like checkmate or stalemate.
+
+Moves can be made using the `makeMove` function, which takes a `Move` object as an argument and also taken back using the `unmakeMove` function. The `makeNullMove` and `unmakeNullMove` functions are used to make and unmake null moves, respectively.
+
+## PackedBoard
+
+Commonly a chess board is represented by a FEN string, but it can also be represented by a PackedBoard. A PackedBoard only uses 24 bytes to represent the board, which is more memory-efficient than a FEN string. The `Compact` class provides functions to convert a Board object to a PackedBoard and vice versa.
+
+::: info
+The PackedBoard is not human-readable, and it is recommended to use the FEN string for debugging purposes.
+:::
+
+::: tip
+Also checkout [GameResultReason](/pages/types) and [GameResult](/pages/types) enums.
+:::
+
+## API
+
 ```cpp
 using PackedBoard = std::array<std::uint8_t, 24>;
 

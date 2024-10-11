@@ -1,5 +1,15 @@
 # File
 
+## Description
+
+The `File` class is a class that represents a chess file. It is a simple class that contains an enum class that represents the underlying type of the file. The class also contains a few static members that represent the underlying type of the file.
+
+::: tip
+Also checkout the [Rank](/pages/rank) class.
+:::
+
+## API
+
 ```cpp
 class File {
    public:

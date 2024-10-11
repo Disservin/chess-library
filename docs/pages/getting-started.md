@@ -1,4 +1,4 @@
-# Usage
+# Getting Started
 
 chess-library is a single header library.
 

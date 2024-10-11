@@ -1,5 +1,15 @@
 # Piece
 
+## Description
+
+The `Piece` class is a class that represents a chess piece. It is a simple class that contains the type of the piece and the color of the piece. The class also contains an enum class that represents the underlying type of the piece. The class also contains a few static members that represent the underlying type of the piece.
+
+::: tip
+Also checkout the [PieceType](/pages/piece-type) class.
+:::
+
+## API
+
 ```cpp
 class Piece {
    public:

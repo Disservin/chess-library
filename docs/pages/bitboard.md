@@ -1,5 +1,7 @@
 # Bitboard
 
+## API
+
 ```cpp
 class Bitboard {
    public:
