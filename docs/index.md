@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /pages/usage
+      link: /pages/getting-started
     - theme: alt
       text: View on GitHub
       link: https://github.com/Disservin/chess-library

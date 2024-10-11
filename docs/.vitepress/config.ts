@@ -27,6 +27,7 @@ export default defineConfig({
           { text: "What is chess-library", link: "/pages/what-is" },
           { text: "Getting Started", link: "/pages/getting-started" },
           { text: "PGN parsing", link: "/pages/pgn-parsing" },
+          { text: "Examples", link: "/pages/examples" },
         ],
       },
       {
