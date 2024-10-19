@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.73
+VERSION: 0.6.74
 */
 
 #ifndef CHESS_HPP
@@ -1969,6 +1969,13 @@ class Board {
         return ss;
     }
 
+    /// @brief Make a move on the board. The move must be legal otherwise the
+    /// behavior is undefined. EXACT can be set to true to only record
+    /// the enpassant square if the enemy can legally capture the pawn on their
+    /// next move.
+    /// @param move
+    /// @tparam EXACT
+    /// @return
     template <bool EXACT = false>
     void makeMove(const Move move) {
         const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
@@ -2026,11 +2033,16 @@ class Board {
 
                 // add enpassant hash if enemy pawns are attacking the square
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
+                    int found = -1;
+
+                    // check if the enemy can legally capture the pawn on the next move
                     if constexpr (EXACT) {
                         const auto piece = at(move.from());
 
-                        removePiece(piece, move.from());
-                        placePiece(piece, move.to());
+                        found = 0;
+
+                        removePieceInternal(piece, move.from());
+                        placePieceInternal(piece, move.to());
 
                         stm_ = ~stm_;
 
@@ -2042,18 +2054,16 @@ class Board {
                             valid = movegen::isEpSquareValid<Color::BLACK>(*this, move.to().ep_square());
                         }
 
+                        if (valid) found = 1;
+
                         // undo
                         stm_ = ~stm_;
 
-                        removePiece(piece, move.to());
-                        placePiece(piece, move.from());
+                        removePieceInternal(piece, move.to());
+                        placePieceInternal(piece, move.from());
+                    }
 
-                        if (valid) {
-                            assert(at(move.to().ep_square()) == Piece::NONE);
-                            ep_sq_ = move.to().ep_square();
-                            key_ ^= Zobrist::enpassant(move.to().ep_square().file());
-                        }
-                    } else {
+                    if (found != 0) {
                         assert(at(move.to().ep_square()) == Piece::NONE);
                         ep_sq_ = move.to().ep_square();
                         key_ ^= Zobrist::enpassant(move.to().ep_square().file());
@@ -2129,11 +2139,9 @@ class Board {
         plies_--;
 
         if (move.typeOf() == Move::CASTLING) {
-            const bool king_side = move.to() > move.from();
-
+            const bool king_side    = move.to() > move.from();
             const auto rook_from_sq = Square(king_side ? File::FILE_F : File::FILE_D, move.from().rank());
-
-            const auto king_to_sq = Square(king_side ? File::FILE_G : File::FILE_C, move.from().rank());
+            const auto king_to_sq   = Square(king_side ? File::FILE_G : File::FILE_C, move.from().rank());
 
             assert(at<PieceType>(rook_from_sq) == PieceType::ROOK);
             assert(at<PieceType>(king_to_sq) == PieceType::KING);
@@ -2143,6 +2151,7 @@ class Board {
 
             removePiece(rook, rook_from_sq);
             removePiece(king, king_to_sq);
+
             assert(king == Piece(PieceType::KING, stm_));
             assert(rook == Piece(PieceType::ROOK, stm_));
 
@@ -2155,6 +2164,7 @@ class Board {
         } else if (move.typeOf() == Move::PROMOTION) {
             const auto pawn  = Piece(PieceType::PAWN, stm_);
             const auto piece = at(move.to());
+
             assert(piece.type() == move.promotionType());
             assert(piece.type() != PieceType::PAWN);
             assert(piece.type() != PieceType::KING);
@@ -2172,9 +2182,9 @@ class Board {
             return;
         } else {
             assert(at(move.to()) != Piece::NONE);
+            assert(at(move.from()) == Piece::NONE);
 
             const auto piece = at(move.to());
-            assert(at(move.from()) == Piece::NONE);
 
             removePiece(piece, move.to());
             placePiece(piece, move.from());
@@ -2185,9 +2195,11 @@ class Board {
             const auto pawnTo = static_cast<Square>(ep_sq_ ^ 8);
 
             assert(at(pawnTo) == Piece::NONE);
+
             placePiece(pawn, pawnTo);
         } else if (prev.captured_piece != Piece::NONE) {
             assert(at(move.to()) == Piece::NONE);
+
             placePiece(prev.captured_piece, move.to());
         }
 
@@ -2284,7 +2296,7 @@ class Board {
         return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) || move.typeOf() == Move::ENPASSANT;
     }
 
-    /// @brief Get the current hash key of the board
+    /// @brief Get the current zobrist hash key of the board
     /// @return
     [[nodiscard]] U64 hash() const { return key_; }
     [[nodiscard]] Color sideToMove() const { return stm_; }
@@ -2340,11 +2352,10 @@ class Board {
         // We start the loop from the back and go forward in moves, at most to the
         // last move which reset the half-move counter because repetitions cant
         // be across half-moves.
+        const auto size = static_cast<int>(prev_states_.size());
 
-        for (int i = static_cast<int>(prev_states_.size()) - 2;
-             i >= 0 && i >= static_cast<int>(prev_states_.size()) - hfm_ - 1; i -= 2) {
+        for (int i = size - 2; i >= 0 && i >= size - hfm_ - 1; i -= 2) {
             if (prev_states_[i].hash == key_) c++;
-
             if (c == count) return true;
         }
 
@@ -2414,12 +2425,8 @@ class Board {
     /// function.
     /// @return
     [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const {
-        if (isHalfMoveDraw()) {
-            return getHalfMoveDrawType();
-        }
-
+        if (isHalfMoveDraw()) return getHalfMoveDrawType();
         if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
-
         if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
 
         Movelist movelist;
@@ -2463,7 +2470,7 @@ class Board {
                     pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color));
     }
 
-    /// @brief Regenerates the zobrist hash key
+    /// @brief Recalculates the zobrist hash key, expensive! Prefer using hash().
     /// @return
     [[nodiscard]] U64 zobrist() const {
         U64 hash_key = 0ULL;
@@ -2658,15 +2665,18 @@ class Board {
 
             // clear board state
 
+            board.hfm_   = 0;
+            board.plies_ = 0;
+
             board.stm_ = Color::WHITE;
+
+            board.cr_.clear();
+            board.prev_states_.clear();
+            board.original_fen_.clear();
+
             board.occ_bb_.fill(0ULL);
             board.pieces_bb_.fill(0ULL);
             board.board_.fill(Piece::NONE);
-            board.cr_.clear();
-            board.original_fen_.clear();
-            board.prev_states_.clear();
-            board.hfm_   = 0;
-            board.plies_ = 0;
 
             // place pieces back on the board
             while (occupied) {
@@ -2774,37 +2784,9 @@ class Board {
     };
 
    protected:
-    virtual void placePiece(Piece piece, Square sq) {
-        assert(board_[sq.index()] == Piece::NONE);
+    virtual void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
 
-        auto type  = piece.type();
-        auto color = piece.color();
-        auto index = sq.index();
-
-        assert(type != PieceType::NONE);
-        assert(color != Color::NONE);
-        assert(index >= 0 && index < 64);
-
-        pieces_bb_[type].set(index);
-        occ_bb_[color].set(index);
-        board_[index] = piece;
-    }
-
-    virtual void removePiece(Piece piece, Square sq) {
-        assert(board_[sq.index()] == piece && piece != Piece::NONE);
-
-        auto type  = piece.type();
-        auto color = piece.color();
-        auto index = sq.index();
-
-        assert(type != PieceType::NONE);
-        assert(color != Color::NONE);
-        assert(index >= 0 && index < 64);
-
-        pieces_bb_[type].clear(index);
-        occ_bb_[color].clear(index);
-        board_[index] = Piece::NONE;
-    }
+    virtual void removePiece(Piece piece, Square sq) { removePieceInternal(piece, sq); }
 
     std::vector<State> prev_states_;
 
@@ -2822,6 +2804,22 @@ class Board {
     bool chess960_ = false;
 
    private:
+    void removePieceInternal(Piece piece, Square sq) {
+        assert(board_[sq.index()] == piece && piece != Piece::NONE);
+
+        auto type  = piece.type();
+        auto color = piece.color();
+        auto index = sq.index();
+
+        assert(type != PieceType::NONE);
+        assert(color != Color::NONE);
+        assert(index >= 0 && index < 64);
+
+        pieces_bb_[type].clear(index);
+        occ_bb_[color].clear(index);
+        board_[index] = Piece::NONE;
+    }
+
     void placePieceInternal(Piece piece, Square sq) {
         assert(board_[sq.index()] == Piece::NONE);
 
@@ -2838,8 +2836,6 @@ class Board {
         board_[index] = piece;
     }
 
-    /// @brief [Internal Usage]
-    /// @param fen
     template <bool ctor = false>
     void setFenInternal(std::string_view fen) {
         original_fen_ = fen;
@@ -4020,7 +4016,8 @@ class StreamParser {
 
         void operator+=(char c) {
             assert(index_ < N);
-            buffer_[index_++] = c;
+            buffer_[index_] = c;
+            ++index_;
         }
 
         void remove_suffix(std::size_t n) {
@@ -4054,7 +4051,7 @@ class StreamParser {
                 const auto c = buffer_[buffer_index_];
 
                 if (c == '\r') {
-                    buffer_index_++;
+                    ++buffer_index_;
                     return some();
                 }
 
@@ -4084,13 +4081,13 @@ class StreamParser {
                 }
 
                 if (*ret == open_delim) {
-                    stack++;
+                    ++stack;
                 } else if (*ret == close_delim) {
                     if (stack == 0) {
                         // Mismatched closing delimiter
                         return false;
                     } else {
-                        stack--;
+                        --stack;
                         if (stack == 0) {
                             // Matching closing delimiter found
                             return true;
@@ -4119,7 +4116,7 @@ class StreamParser {
                 fill();
             }
 
-            buffer_index_++;
+            ++buffer_index_;
         }
 
         char peek() {
@@ -4193,7 +4190,6 @@ class StreamParser {
                             backslash = true;
                             // don't add backslash to header, is this really correct?
                             stream_buffer.advance();
-                            // return false;
                         } else if (*k == '"' && !backslash) {
                             stream_buffer.advance();
 
@@ -4396,15 +4392,13 @@ class StreamParser {
                     stream_buffer.advance();
 
                     onEnd();
-                    // return true;
                     break;
                 } else if (peek == '/') {
-                    for (size_t i = 0; i <= 6; i++) {
+                    for (size_t i = 0; i <= 6; ++i) {
                         stream_buffer.advance();
                     }
 
                     onEnd();
-                    // return true;
                     break;
                 }
             }
