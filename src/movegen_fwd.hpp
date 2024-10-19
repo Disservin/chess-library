@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <utility>
 
 #include "movelist.hpp"
 
@@ -39,7 +40,7 @@ class movegen {
 
     // Generate the checkmask. Returns a bitboard where the attacker path between the king and enemy piece is set.
     template <Color::underlying c>
-    [[nodiscard]] static Bitboard checkMask(const Board &board, Square sq, int &double_check);
+    [[nodiscard]] static std::pair<Bitboard, int> checkMask(const Board &board, Square sq);
 
     // Generate the pin mask for horizontal and vertical pins. Returns a bitboard where the ray between the king and the
     // pinner is set.
