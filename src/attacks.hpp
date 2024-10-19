@@ -11,10 +11,6 @@
 
 namespace chess {
 
-/// @brief Shifts a bitboard in a given direction
-/// @tparam direction
-/// @param b
-/// @return
 template <Direction direction>
 [[nodiscard]] inline constexpr Bitboard attacks::shift(const Bitboard b) {
     switch (direction) {
@@ -46,71 +42,36 @@ template <Direction direction>
     return {};
 }
 
-/// @brief [Internal Usage] Generate the left side pawn attacks.
-/// @tparam c
-/// @param pawns
-/// @return
 template <Color::underlying c>
 [[nodiscard]] inline Bitboard attacks::pawnLeftAttacks(const Bitboard pawns) {
     return c == Color::WHITE ? (pawns << 7) & ~MASK_FILE[static_cast<int>(File::FILE_H)]
                              : (pawns >> 7) & ~MASK_FILE[static_cast<int>(File::FILE_A)];
 }
 
-/// @brief [Internal Usage] Generate the right side pawn attacks.
-/// @tparam c
-/// @param pawns
-/// @return
 template <Color::underlying c>
 [[nodiscard]] inline Bitboard attacks::pawnRightAttacks(const Bitboard pawns) {
     return c == Color::WHITE ? (pawns << 9) & ~MASK_FILE[static_cast<int>(File::FILE_A)]
                              : (pawns >> 9) & ~MASK_FILE[static_cast<int>(File::FILE_H)];
 }
 
-/// @brief Returns the pawn attacks for a given color and square
-/// @param c
-/// @param sq
-/// @return
 [[nodiscard]] inline Bitboard attacks::pawn(Color c, Square sq) noexcept { return PawnAttacks[c][sq.index()]; }
 
-/// @brief Returns the knight attacks for a given square
-/// @param sq
-/// @return
 [[nodiscard]] inline Bitboard attacks::knight(Square sq) noexcept { return KnightAttacks[sq.index()]; }
 
-/// @brief Returns the bishop attacks for a given square
-/// @param sq
-/// @param occupied
-/// @return
 [[nodiscard]] inline Bitboard attacks::bishop(Square sq, Bitboard occupied) noexcept {
     return BishopTable[sq.index()].attacks[BishopTable[sq.index()](occupied)];
 }
 
-/// @brief Returns the rook attacks for a given square
-/// @param sq
-/// @param occupied
-/// @return
 [[nodiscard]] inline Bitboard attacks::rook(Square sq, Bitboard occupied) noexcept {
     return RookTable[sq.index()].attacks[RookTable[sq.index()](occupied)];
 }
 
-/// @brief Returns the queen attacks for a given square
-/// @param sq
-/// @param occupied
-/// @return
 [[nodiscard]] inline Bitboard attacks::queen(Square sq, Bitboard occupied) noexcept {
     return bishop(sq, occupied) | rook(sq, occupied);
 }
 
-/// @brief Returns the king attacks for a given square
-/// @param sq
-/// @return
 [[nodiscard]] inline Bitboard attacks::king(Square sq) noexcept { return KingAttacks[sq.index()]; }
 
-/// @brief Returns a bitboard with the origin squares of the attacking pieces set
-/// @param board
-/// @param color Attacker Color
-/// @param square Attacked Square
-/// @return
 [[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square) noexcept {
     const auto queens   = board.pieces(PieceType::QUEEN, color);
     const auto occupied = board.occ();
@@ -125,10 +86,6 @@ template <Color::underlying c>
     return atks & occupied;
 }
 
-/// @brief Slow function to calculate bishop attacks
-/// @param sq
-/// @param occupied
-/// @return
 [[nodiscard]] inline Bitboard attacks::bishopAttacks(Square sq, Bitboard occupied) {
     Bitboard attacks = 0ULL;
 
@@ -164,10 +121,6 @@ template <Color::underlying c>
     return attacks;
 }
 
-/// @brief Slow function to calculate rook attacks
-/// @param sq
-/// @param occupied
-/// @return
 [[nodiscard]] inline Bitboard attacks::rookAttacks(Square sq, Bitboard occupied) {
     Bitboard attacks = 0ULL;
 
@@ -203,11 +156,6 @@ template <Color::underlying c>
     return attacks;
 }
 
-/// @brief Initializes the magic bitboard tables for sliding pieces
-/// @param sq
-/// @param table
-/// @param magic
-/// @param attacks
 inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
                                  const std::function<Bitboard(Square, Bitboard)> &attacks) {
     // The edges of the board are not considered for the attacks
@@ -233,8 +181,6 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
     } while (occ);
 }
 
-/// @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at
-/// startup.
 inline void attacks::initAttacks() {
     BishopTable[0].attacks = BishopAttacks;
     RookTable[0].attacks   = RookAttacks;

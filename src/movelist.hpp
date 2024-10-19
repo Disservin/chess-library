@@ -68,28 +68,38 @@ class Movelist {
 
     // Capacity
 
-    /// @brief Checks if the movelist is empty.
-    /// @return
+    /**
+     * @brief Checks if the movelist is empty.
+     * @return
+     */
     [[nodiscard]] constexpr bool empty() const noexcept { return size_ == 0; }
 
-    /// @brief Return the number of moves in the movelist.
-    /// @return
+    /**
+     * @brief Return the number of moves in the movelist.
+     * @return
+     */
     [[nodiscard]] constexpr size_type size() const noexcept { return size_; }
 
     // Modifiers
 
-    /// @brief Clears the movelist.
+    /**
+     * @brief Clears the movelist.
+     */
     constexpr void clear() noexcept { size_ = 0; }
 
-    /// @brief Add a move to the end of the movelist.
-    /// @param move
+    /**
+     * @brief Add a move to the end of the movelist.
+     * @param move
+     */
     constexpr void add(const_reference move) noexcept {
         assert(size_ < constants::MAX_MOVES);
         moves_[size_++] = move;
     }
 
-    /// @brief Add a move to the end of the movelist.
-    /// @param move
+    /**
+     * @brief Add a move to the end of the movelist.
+     * @param move
+     */
     constexpr void add(value_type&& move) noexcept {
         assert(size_ < constants::MAX_MOVES);
         moves_[size_++] = move;
@@ -97,10 +107,11 @@ class Movelist {
 
     // Other
 
-    /// @brief Checks if a move is in the movelist, returns the index of the move if it is found,
-    /// otherwise -1.
-    /// @param move
-    /// @return
+    /**
+     * @brief Checks if a move is in the movelist, returns the index of the move if it is found, otherwise -1.
+     * @param move
+     * @return
+     */
     [[nodiscard]] [[deprecated("Use std::find() instead.")]] constexpr size_type find(value_type move) const noexcept {
         for (size_type i = 0; i < size_; ++i) {
             if (moves_[i] == move) {

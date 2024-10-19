@@ -29,13 +29,6 @@ inline auto movegen::init_squares_between() {
     return squares_between_bb;
 }
 
-/// @brief Generate the checkmask.
-/// Returns a bitboard where the attacker path between the king and enemy piece is set.
-/// @tparam c
-/// @param board
-/// @param sq
-/// @param double_check
-/// @return
 template <Color::underlying c>
 [[nodiscard]] inline Bitboard movegen::checkMask(const Board &board, Square sq, int &double_check) {
     double_check = 0;
@@ -88,14 +81,6 @@ template <Color::underlying c>
     return mask;
 }
 
-/// @brief Generate the pin mask for horizontal and vertical pins.
-/// Returns a bitboard where the ray between the king and the pinner is set.
-/// @tparam c
-/// @param board
-/// @param sq
-/// @param occ_opp
-/// @param occ_us
-/// @return
 template <Color::underlying c>
 [[nodiscard]] inline Bitboard movegen::pinMaskRooks(const Board &board, Square sq, Bitboard occ_opp, Bitboard occ_us) {
     const auto opp_rook  = board.pieces(PieceType::ROOK, ~c);
@@ -114,14 +99,6 @@ template <Color::underlying c>
     return pin_hv;
 }
 
-/// @brief Generate the pin mask for diagonal pins.
-/// Returns a bitboard where the ray between the king and the pinner is set.
-/// @tparam c
-/// @param board
-/// @param sq
-/// @param occ_opp
-/// @param occ_us
-/// @return
 template <Color::underlying c>
 [[nodiscard]] inline Bitboard movegen::pinMaskBishops(const Board &board, Square sq, Bitboard occ_opp,
                                                       Bitboard occ_us) {
@@ -141,11 +118,6 @@ template <Color::underlying c>
     return pin_diag;
 }
 
-/// @brief Returns the squares that are attacked by the enemy
-/// @tparam c
-/// @param board
-/// @param enemy_empty
-/// @return
 template <Color::underlying c>
 [[nodiscard]] inline Bitboard movegen::seenSquares(const Board &board, Bitboard enemy_empty) {
     auto king_sq          = board.kingSq(~c);
@@ -185,15 +157,6 @@ template <Color::underlying c>
     return seen;
 }
 
-/// @brief Generate pawn moves.
-/// @tparam c
-/// @tparam mt
-/// @param board
-/// @param moves
-/// @param pin_d
-/// @param pin_hv
-/// @param checkmask
-/// @param occ_opp
 template <Color::underlying c, movegen::MoveGenType mt>
 inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
                                        Bitboard checkmask, Bitboard occ_opp) {
@@ -367,43 +330,20 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     return moves;
 }
 
-/// @brief Generate knight moves.
-/// @param sq
-/// @param movable
-/// @return
 [[nodiscard]] inline Bitboard movegen::generateKnightMoves(Square sq) { return attacks::knight(sq); }
 
-/// @brief Generate bishop moves.
-/// @param sq
-/// @param movable
-/// @param pin_d
-/// @param occ_all
-/// @return
 [[nodiscard]] inline Bitboard movegen::generateBishopMoves(Square sq, Bitboard pin_d, Bitboard occ_all) {
     // The Bishop is pinned diagonally thus can only move diagonally.
     if (pin_d & Bitboard::fromSquare(sq)) return attacks::bishop(sq, occ_all) & pin_d;
     return attacks::bishop(sq, occ_all);
 }
 
-/// @brief Generate rook moves.
-/// @param sq
-/// @param movable
-/// @param pin_hv
-/// @param occ_all
-/// @return
 [[nodiscard]] inline Bitboard movegen::generateRookMoves(Square sq, Bitboard pin_hv, Bitboard occ_all) {
     // The Rook is pinned horizontally thus can only move horizontally.
     if (pin_hv & Bitboard::fromSquare(sq)) return attacks::rook(sq, occ_all) & pin_hv;
     return attacks::rook(sq, occ_all);
 }
 
-/// @brief Generate queen moves.
-/// @param sq
-/// @param movable
-/// @param pin_d
-/// @param pin_hv
-/// @param occ_all
-/// @return
 [[nodiscard]] inline Bitboard movegen::generateQueenMoves(Square sq, Bitboard pin_d, Bitboard pin_hv,
                                                           Bitboard occ_all) {
     Bitboard moves = 0ULL;
@@ -420,23 +360,10 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     return moves;
 }
 
-/// @brief Generate king moves.
-/// @param sq
-/// @param seen
-/// @param movable_square
-/// @return
 [[nodiscard]] inline Bitboard movegen::generateKingMoves(Square sq, Bitboard seen, Bitboard movable_square) {
     return attacks::king(sq) & movable_square & ~seen;
 }
 
-/// @brief Generate castling moves.
-/// @tparam c
-/// @tparam mt
-/// @param board
-/// @param sq
-/// @param seen
-/// @param pin_hv
-/// @return
 template <Color::underlying c, movegen::MoveGenType mt>
 [[nodiscard]] inline Bitboard movegen::generateCastleMoves(const Board &board, Square sq, Bitboard seen,
                                                            Bitboard pin_hv) {
@@ -484,11 +411,6 @@ inline void movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func)
     }
 }
 
-/// @brief all legal moves for a position
-/// @tparam c
-/// @tparam mt
-/// @param movelist
-/// @param board
 template <Color::underlying c, movegen::MoveGenType mt>
 inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
     /*

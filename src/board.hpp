@@ -171,8 +171,11 @@ class Board {
         setFen(fen);
     }
 
-    /// @brief Get the current FEN string.
-    /// @return
+    /**
+     * @brief  Get the current FEN string.
+     * @param move_counters
+     * @return
+     */
     [[nodiscard]] std::string getFen(bool move_counters = true) const {
         std::string ss;
         ss.reserve(100);
@@ -260,13 +263,14 @@ class Board {
         return ss;
     }
 
-    /// @brief Make a move on the board. The move must be legal otherwise the
-    /// behavior is undefined. EXACT can be set to true to only record
-    /// the enpassant square if the enemy can legally capture the pawn on their
-    /// next move.
-    /// @param move
-    /// @tparam EXACT
-    /// @return
+    /**
+     * @brief Make a move on the board. The move must be legal otherwise the
+     * behavior is undefined. EXACT can be set to true to only record
+     * the enpassant square if the enemy can legally capture the pawn on their
+     * next move.
+     * @tparam EXACT
+     * @param move
+     */
     template <bool EXACT = false>
     void makeMove(const Move move) {
         const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
@@ -497,7 +501,9 @@ class Board {
         key_ = prev.hash;
     }
 
-    /// @brief Make a null move. (Switches the side to move)
+    /**
+     * @brief Make a null move. (Switches the side to move)
+     */
     void makeNullMove() {
         prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, Piece::NONE);
 
@@ -510,7 +516,9 @@ class Board {
         plies_++;
     }
 
-    /// @brief Unmake a null move. (Switches the side to move)
+    /**
+     * @brief Unmake a null move. (Switches the side to move)
+     */
     void unmakeNullMove() {
         const auto &prev = prev_states_.back();
 
@@ -526,51 +534,66 @@ class Board {
         prev_states_.pop_back();
     }
 
-    /// @brief Get the occupancy bitboard from us.
-    /// @param color
-    /// @return
+    /**
+     * @brief Get the occupancy bitboard for the color.
+     * @param color
+     * @return
+     */
     [[nodiscard]] Bitboard us(Color color) const { return occ_bb_[color]; }
 
-    /// @brief Get the occupancy bitboard of the enemy.
-    /// @param color
-    /// @return
+    /**
+     * @brief Get the occupancy bitboard for the opposite color.
+     * @param color
+     * @return
+     */
     [[nodiscard]] Bitboard them(Color color) const { return us(~color); }
 
-    /// @brief Get the current occupancy bitboard.
-    /// Faster than calling all() or
-    /// us(board.sideToMove()) | them(board.sideToMove()).
-    /// @return
+    /**
+     * @brief Get the occupancy bitboard for both colors.
+     * Faster than calling all() or us(Color::WHITE) | us(Color::BLACK).
+     * @return
+     */
     [[nodiscard]] Bitboard occ() const { return occ_bb_[0] | occ_bb_[1]; }
 
-    /// @brief recalculate all bitboards
-    /// @return
+    /**
+     * @brief Get the occupancy bitboard for all pieces, should be only used internally.
+     * @return
+     */
     [[nodiscard]] Bitboard all() const { return us(Color::WHITE) | us(Color::BLACK); }
 
-    /// @brief Returns the square of the king for a certain color
-    /// @param color
-    /// @return
+    /**
+     * @brief Returns the square of the king for a certain color
+     * @param color
+     * @return
+     */
     [[nodiscard]] Square kingSq(Color color) const {
         assert(pieces(PieceType::KING, color) != Bitboard(0));
         return pieces(PieceType::KING, color).lsb();
     }
 
-    /// @brief Returns all pieces of a certain type and color
-    /// @param type
-    /// @param color
-    /// @return
+    /**
+     * @brief Returns all pieces of a certain type and color
+     * @param type
+     * @param color
+     * @return
+     */
     [[nodiscard]] Bitboard pieces(PieceType type, Color color) const { return pieces_bb_[type] & occ_bb_[color]; }
 
-    /// @brief Returns all pieces of a certain type
-    /// @param type
-    /// @return
+    /**
+     * @brief Returns all pieces of a certain type
+     * @param type
+     * @return
+     */
     [[nodiscard]] Bitboard pieces(PieceType type) const {
         return pieces(type, Color::WHITE) | pieces(type, Color::BLACK);
     }
 
-    /// @brief Returns either the piece or the piece type on a square
-    /// @tparam T
-    /// @param sq
-    /// @return
+    /**
+     * @brief Returns either the piece or the piece type on a square
+     * @tparam T
+     * @param sq
+     * @return
+     */
     template <typename T = Piece>
     [[nodiscard]] T at(Square sq) const {
         if constexpr (std::is_same_v<T, PieceType>) {
@@ -580,15 +603,19 @@ class Board {
         }
     }
 
-    /// @brief Checks if a move is a capture, enpassant moves are also considered captures.
-    /// @param move
-    /// @return
+    /**
+     * @brief Checks if a move is a capture, enpassant moves are also considered captures.
+     * @param move
+     * @return
+     */
     bool isCapture(const Move move) const {
         return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) || move.typeOf() == Move::ENPASSANT;
     }
 
-    /// @brief Get the current zobrist hash key of the board
-    /// @return
+    /**
+     * @brief Get the current zobrist hash key of the board
+     * @return
+     */
     [[nodiscard]] U64 hash() const { return key_; }
     [[nodiscard]] Color sideToMove() const { return stm_; }
     [[nodiscard]] Square enpassantSq() const { return ep_sq_; }
@@ -601,12 +628,16 @@ class Board {
         if (!original_fen_.empty()) setFen(original_fen_);
     }
 
-    /// @brief Checks if the current position is a chess960, aka. FRC/DFRC position.
-    /// @return
+    /**
+     * @brief Checks if the current position is a chess960, aka. FRC/DFRC position.
+     * @return
+     */
     [[nodiscard]] bool chess960() const { return chess960_; }
 
-    /// @brief Get the castling rights as a string
-    /// @return
+    /**
+     * @brief Get the castling rights as a string
+     * @return
+     */
     [[nodiscard]] std::string getCastleString() const {
         const auto get_file = [this](Color c, CastlingRights::Side side) {
             auto file = static_cast<std::string>(cr_.getRookFile(c, side));
@@ -633,10 +664,12 @@ class Board {
         return ss;
     }
 
-    /// @brief Checks if the current position is a repetition, set this to 1 if
-    /// you are writing a chess engine.
-    /// @param count
-    /// @return
+    /**
+     * @brief Checks if the current position is a repetition, set this to 1 if
+     * you are writing a chess engine.
+     * @param count
+     * @return
+     */
     [[nodiscard]] bool isRepetition(int count = 2) const {
         uint8_t c = 0;
 
@@ -653,16 +686,20 @@ class Board {
         return false;
     }
 
-    /// @brief Checks if the current position is a draw by 50 move rule.
-    /// Keep in mind that by the rules of chess, if the position has 50 half
-    /// moves it's not necessarily a draw, since checkmate has higher priority,
-    /// call getHalfMoveDrawType,
-    /// to determine whether the position is a draw or checkmate.
-    /// @return
+    /**
+     * @brief Checks if the current position is a draw by 50 move rule.
+     * Keep in mind that by the rules of chess, if the position has 50 half
+     * moves it's not necessarily a draw, since checkmate has higher priority,
+     * call getHalfMoveDrawType,
+     * to determine whether the position is a draw or checkmate.
+     * @return
+     */
     [[nodiscard]] bool isHalfMoveDraw() const { return hfm_ >= 100; }
 
-    /// @brief Only call this function if isHalfMoveDraw() returns true.
-    /// @return
+    /**
+     * @brief Only call this function if isHalfMoveDraw() returns true.
+     * @return
+     */
     [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const {
         Movelist movelist;
         movegen::legalmoves(movelist, *this);
@@ -674,8 +711,10 @@ class Board {
         return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
     }
 
-    /// @brief Checks if the current position is a draw by insufficient material.
-    /// @return
+    /**
+     * @brief Basic check if the current position is a draw by insufficient material.
+     * @return
+     */
     [[nodiscard]] bool isInsufficientMaterial() const {
         const auto count = occ().count();
 
@@ -709,12 +748,12 @@ class Board {
         return false;
     }
 
-    /// @brief Checks if the game is over. Returns GameResultReason::NONE if
-    /// the game is not over. This function calculates all legal moves for the
-    /// current position to
-    /// check if the game is over. If you are writing you should not use this
-    /// function.
-    /// @return
+    /**
+     * @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
+     * This function calculates all legal moves for the current position to check if the game is over.
+     * If you are writing a chess engine you should not use this function.
+     * @return
+     */
     [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const {
         if (isHalfMoveDraw()) return getHalfMoveDrawType();
         if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
@@ -731,10 +770,12 @@ class Board {
         return {GameResultReason::NONE, GameResult::NONE};
     }
 
-    /// @brief Checks if a square is attacked by the given color.
-    /// @param square
-    /// @param color
-    /// @return
+    /**
+     * @brief Checks if a square is attacked by the given color.
+     * @param square
+     * @param color
+     * @return
+     */
     [[nodiscard]] bool isAttacked(Square square, Color color) const {
         // cheap checks first
         if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
@@ -750,19 +791,26 @@ class Board {
         return false;
     }
 
-    /// @brief Checks if the current side to move is in check
-    /// @return
+    /**
+     * @brief Checks if the current side to move is in check
+     * @return
+     */
     [[nodiscard]] bool inCheck() const { return isAttacked(kingSq(stm_), ~stm_); }
 
-    /// @brief Checks if the given color has at least 1 piece thats not pawn and not king
-    /// @return
+    /**
+     * @brief Checks if the given color has at least 1 piece thats not pawn and not king
+     * @param color
+     * @return
+     */
     [[nodiscard]] bool hasNonPawnMaterial(Color color) const {
         return bool(pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
                     pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color));
     }
 
-    /// @brief Recalculates the zobrist hash key, expensive! Prefer using hash().
-    /// @return
+    /**
+     * @brief Calculates the zobrist hash key of the board, expensive! Prefer using hash().
+     * @return
+     */
     [[nodiscard]] U64 zobrist() const {
         U64 hash_key = 0ULL;
 
@@ -793,20 +841,29 @@ class Board {
 
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
 
-    /// @brief Compresses the board into a PackedBoard
+    /**
+     * @brief Compresses the board into a PackedBoard.
+     */
     class Compact {
         friend class Board;
         Compact() = default;
 
        public:
-        /// @brief Compresses the board into a PackedBoard
+        /**
+         * @brief Compresses the board into a PackedBoard
+         * @param board
+         * @return
+         */
         static PackedBoard encode(const Board &board) { return encodeState(board); }
 
         static PackedBoard encode(std::string_view fen, bool chess960 = false) { return encodeState(fen, chess960); }
 
-        /// @brief Creates a Board object from a PackedBoard
-        /// @param compressed
-        /// @param chess960 If the board is a chess960 position, set this to true
+        /**
+         * @brief Creates a Board object from a PackedBoard
+         * @param compressed
+         * @param chess960 If the board is a chess960 position, set this to true
+         * @return
+         */
         static Board decode(const PackedBoard &compressed, bool chess960 = false) {
             Board board     = Board(PrivateCtor::CREATE);
             board.chess960_ = chess960;

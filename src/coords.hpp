@@ -196,6 +196,9 @@ class Square {
         return tmp;
     }
 
+    /**
+     * @brief Get a string representation of the square.
+     */
     [[nodiscard]] operator std::string() const {
         std::string str;
         str += static_cast<std::string>(file());
@@ -208,29 +211,72 @@ class Square {
     [[nodiscard]] constexpr File file() const noexcept { return File(index() & 7); }
     [[nodiscard]] constexpr Rank rank() const noexcept { return Rank(index() >> 3); }
 
+    /**
+     * @brief Check if the square is light.
+     * @return
+     */
     [[nodiscard]] constexpr bool is_light() const noexcept {
         return (static_cast<std::int8_t>(sq) / 8 + static_cast<std::int8_t>(sq) % 8) % 2 == 0;
     }
+
+    /**
+     * @brief Check if the square is dark.
+     * @return
+     */
     [[nodiscard]] constexpr bool is_dark() const noexcept { return !is_light(); }
 
+    /**
+     * @brief Check if the square is vali.d
+     * @return
+     */
     [[nodiscard]] constexpr bool is_valid() const noexcept { return static_cast<std::int8_t>(sq) < 64; }
 
+    /**
+     * @brief Check if the square is valid.
+     * @param r
+     * @param f
+     * @return
+     */
     [[nodiscard]] constexpr static bool is_valid(Rank r, File f) noexcept {
         return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
     }
 
+    /**
+     * @brief Get the chebyshev distance between two squares.
+     * @param sq
+     * @param sq2
+     * @return
+     */
     [[nodiscard]] static int distance(Square sq, Square sq2) noexcept {
         return std::max(std::abs(sq.file() - sq2.file()), std::abs(sq.rank() - sq2.rank()));
     }
 
+    /**
+     * @brief Absolute value of sq - sq2.
+     * @param sq
+     * @param sq2
+     * @return
+     */
     [[nodiscard]] static int value_distance(Square sq, Square sq2) noexcept {
         return std::abs(sq.index() - sq2.index());
     }
 
+    /**
+     * @brief Check if the squares share the same color. I.e. if they are both light or dark.
+     * @param sq
+     * @param sq2
+     * @return
+     */
     [[nodiscard]] static constexpr bool same_color(Square sq, Square sq2) noexcept {
         return ((9 * (sq ^ sq2).index()) & 8) == 0;
     }
 
+    /**
+     * @brief Check if the square is on the back rank.
+     * @param sq
+     * @param color
+     * @return
+     */
     [[nodiscard]] static constexpr bool back_rank(Square sq, Color color) noexcept {
         if (color == Color::WHITE)
             return sq.rank() == Rank::RANK_1;
@@ -238,15 +284,20 @@ class Square {
             return sq.rank() == Rank::RANK_8;
     }
 
-    /// @brief Flips the square vertically.
+    /**
+     * @brief Flips the square vertically.
+     * @return
+     */
     constexpr Square& flip() noexcept {
         sq = static_cast<underlying>(static_cast<int>(sq) ^ 56);
         return *this;
     }
 
-    /// @brief Conditionally flips the square vertically.
-    /// @param c
-    /// @return
+    /**
+     * @brief Flips the square vertically, depending on the color.
+     * @param c
+     * @return
+     */
     [[nodiscard]] constexpr Square relative_square(Color c) const noexcept {
         return Square(static_cast<int>(sq) ^ (c * 56));
     }
@@ -255,6 +306,10 @@ class Square {
 
     [[nodiscard]] constexpr int antidiagonal_of() const noexcept { return rank() + file(); }
 
+    /**
+     * @brief Get the en passant square. Should only be called for valid ep positions.
+     * @return
+     */
     [[nodiscard]] constexpr Square ep_square() const noexcept {
         assert(rank() == Rank::RANK_3     // capture
                || rank() == Rank::RANK_4  // push
@@ -264,14 +319,30 @@ class Square {
         return Square(static_cast<int>(sq) ^ 8);
     }
 
+    /**
+     * @brief Get the destination square of the king after castling.
+     * @param is_king_side
+     * @param c
+     * @return
+     */
     [[nodiscard]] static constexpr Square castling_king_square(bool is_king_side, Color c) noexcept {
         return Square(is_king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1).relative_square(c);
     }
 
+    /**
+     * @brief Get the destination square of the rook after castling.
+     * @param is_king_side
+     * @param c
+     * @return
+     */
     [[nodiscard]] static constexpr Square castling_rook_square(bool is_king_side, Color c) noexcept {
         return Square(is_king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1).relative_square(c);
     }
 
+    /**
+     * @brief Maximum number of squares.
+     * @return
+     */
     [[nodiscard]] static constexpr int max() noexcept { return 64; }
 
    private:

@@ -16,10 +16,12 @@
 namespace chess {
 class uci {
    public:
-    /// @brief Converts an internal move to a UCI string
-    /// @param move
-    /// @param chess960
-    /// @return
+    /**
+     * @brief Converts an internal move to a UCI string
+     * @param move
+     * @param chess960
+     * @return
+     */
     [[nodiscard]] static std::string moveToUci(const Move &move, bool chess960 = false) noexcept(false) {
         // Get the from and to squares
         Square from_sq = move.from();
@@ -45,10 +47,12 @@ class uci {
         return ss.str();
     }
 
-    /// @brief Converts a UCI string to an internal move.
-    /// @param board
-    /// @param uci
-    /// @return
+    /**
+     * @brief Converts a UCI string to an internal move.
+     * @param board
+     * @param uci
+     * @return
+     */
     [[nodiscard]] static Move uciToMove(const Board &board, const std::string &uci) noexcept(false) {
         if (uci.length() < 4) {
             return Move::NO_MOVE;
@@ -101,20 +105,24 @@ class uci {
         }
     }
 
-    /// @brief Converts a move to a SAN string
-    /// @param board
-    /// @param move
-    /// @return
+    /**
+     * @brief Converts a move to a SAN string
+     * @param board
+     * @param move
+     * @return
+     */
     [[nodiscard]] static std::string moveToSan(const Board &board, const Move &move) noexcept(false) {
         std::string san;
         moveToRep<false>(board, move, san);
         return san;
     }
 
-    /// @brief static a move to a LAN string
-    /// @param board
-    /// @param move
-    /// @return
+    /**
+     * @brief Converts a move to a LAN string
+     * @param board
+     * @param move
+     * @return
+     */
     [[nodiscard]] static std::string moveToLan(const Board &board, const Move &move) noexcept(false) {
         std::string lan;
         moveToRep<true>(board, move, lan);
@@ -135,11 +143,13 @@ class uci {
         std::string msg_;
     };
 
-    /// @brief Converts a SAN string to a move
-    /// @tparam PEDANTIC
-    /// @param board
-    /// @param san
-    /// @return
+    /**
+     * @brief Parse a san string and return the move.
+     * @tparam PEDANTIC
+     * @param board
+     * @param san
+     * @return
+     */
     template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san) noexcept(false) {
         Movelist moves;
