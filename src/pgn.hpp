@@ -10,36 +10,49 @@
 
 namespace chess::pgn {
 
-/// @brief Visitor interface for parsing PGN files
-/// the order of the calls is as follows:
+/**
+ * @brief Visitor interface for parsing PGN files
+ */
 class Visitor {
    public:
     virtual ~Visitor() {};
 
-    /// @brief When true, the current PGN will be skipped and only
-    /// endPgn will be called, this will also reset the skip flag to false.
-    /// Has to be called after startPgn.
-    /// @param skip
+    /**
+     * @brief When true, the current PGN will be skipped and only
+     * endPgn will be called, this will also reset the skip flag to false.
+     * Has to be called after startPgn.
+     * @param skip
+     */
     void skipPgn(bool skip) { skip_ = skip; }
     bool skip() { return skip_; }
 
-    /// @brief Called when a new PGN starts
+    /**
+     * @brief Called when a new PGN starts
+     */
     virtual void startPgn() = 0;
 
-    /// @brief Called for each header
-    /// @param key
-    /// @param value
+    /**
+     * @brief Called for each header
+     * @param key
+     * @param value
+     */
     virtual void header(std::string_view key, std::string_view value) = 0;
 
-    /// @brief Called before the first move of a game
+    /**
+     * @brief Called before the first move of a game
+     */
     virtual void startMoves() = 0;
 
-    /// @brief Called for each move of a game
-    /// @param move
-    /// @param comment
+    /**
+     * @brief Called for each move of a game
+     * @param move
+     * @param comment
+     */
     virtual void move(std::string_view move, std::string_view comment) = 0;
 
-    /// @brief Called when a game ends
+    /**
+     * @brief Called when a game ends
+     */
     virtual void endPgn() = 0;
 
    private:
@@ -148,7 +161,7 @@ class StreamParser {
        public:
         StreamBuffer(std::istream &stream) : stream_(stream) {}
 
-        /// @brief get the current char, skip carriage returns
+        // Get the current character, skip carriage returns
         std::optional<char> some() {
             if (buffer_index_ < bytes_read_) {
                 const auto c = buffer_[buffer_index_];
@@ -168,10 +181,7 @@ class StreamParser {
             }
         }
 
-        /// @brief Assume that the current character is already the opening_delim
-        /// @param open_delim
-        /// @param close_delim
-        /// @return
+        // Assume that the current character is already the opening_delim
         bool skipUntil(char open_delim, char close_delim) {
             int stack = 0;
 
