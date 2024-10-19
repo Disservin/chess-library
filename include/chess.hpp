@@ -1755,16 +1755,7 @@ class Board {
 
         int clear(Color color, Side castle) {
             rooks[color][static_cast<int>(castle)] = File::NO_FILE;
-
-            switch (castle) {
-                case Side::KING_SIDE:
-                    return color == Color::WHITE ? 0 : 2;
-                case Side::QUEEN_SIDE:
-                    return color == Color::WHITE ? 1 : 3;
-                default:
-                    assert(false);
-                    return -1;
-            }
+            return color * 2 + static_cast<int>(castle);
         }
 
         void clear(Color color) { rooks[color].fill(File::NO_FILE); }
