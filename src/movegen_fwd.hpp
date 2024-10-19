@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <utility>
 
 #include "movelist.hpp"
 
@@ -42,7 +43,7 @@ class movegen {
     /// @param double_check
     /// @return
     template <Color::underlying c>
-    [[nodiscard]] static Bitboard checkMask(const Board &board, Square sq, int &double_check);
+    [[nodiscard]] static std::pair<Bitboard, int> checkMask(const Board &board, Square sq);
 
     /// @brief Generate the pin mask for horizontal and vertical pins.
     /// Returns a bitboard where the ray between the king and the pinner is set.
