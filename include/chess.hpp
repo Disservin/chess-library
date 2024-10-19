@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.74
+VERSION: 0.6.75
 */
 
 #ifndef CHESS_HPP
@@ -4778,18 +4778,6 @@ class uci {
                 return move;
             }
         }
-
-#ifdef DEBUG
-        std::stringstream ss;
-
-        ss << "pt " << int(info.piece) << "\n";
-        ss << "info.from_file " << int(info.from_file) << "\n";
-        ss << "info.from_rank " << int(info.from_rank) << "\n";
-        ss << "promotion " << int(info.promotion) << "\n";
-        ss << "to_sq " << squareToString[info.to] << "\n";
-
-        std::cerr << ss.str();
-#endif
 
 #ifndef CHESS_NO_EXCEPTIONS
         throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
