@@ -172,5 +172,5 @@ cd example
 meson setup build
 meson compile -C build
 
-./build/example/example
+./build/example
 ```
