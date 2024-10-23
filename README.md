@@ -167,10 +167,13 @@ meson test -C build
 
 #### Example
 
+Download the [Lichess March 2017 database](https://database.lichess.org/standard/lichess_db_standard_rated_2017-03.pgn.zst) and place it in the parent directory where you've checked out this repository.
+You can decompress this with the following command: `unzstd -d lichess_db_standard_rated_2017-03.pgn.zst`
+
 ```bash
 cd example
 meson setup build
 meson compile -C build
 
-./build/example/example
+./build/example
 ```
