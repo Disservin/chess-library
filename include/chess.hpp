@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.75
+VERSION: 0.6.76
 */
 
 #ifndef CHESS_HPP
@@ -1458,7 +1458,7 @@ class movegen {
 
     // Generate the checkmask. Returns a bitboard where the attacker path between the king and enemy piece is set.
     template <Color::underlying c>
-    [[nodiscard]] static Bitboard checkMask(const Board &board, Square sq, int &double_check);
+    [[nodiscard]] static std::pair<Bitboard, int> checkMask(const Board &board, Square sq);
 
     // Generate the pin mask for horizontal and vertical pins. Returns a bitboard where the ray between the king and the
     // pinner is set.
@@ -3319,9 +3319,7 @@ inline auto movegen::init_squares_between() {
 }
 
 template <Color::underlying c>
-[[nodiscard]] inline Bitboard movegen::checkMask(const Board &board, Square sq, int &double_check) {
-    double_check = 0;
-
+[[nodiscard]] inline std::pair<Bitboard, int> movegen::checkMask(const Board &board, Square sq) {
     const auto opp_knight = board.pieces(PieceType::KNIGHT, ~c);
     const auto opp_bishop = board.pieces(PieceType::BISHOP, ~c);
     const auto opp_rook   = board.pieces(PieceType::ROOK, ~c);
@@ -3329,16 +3327,18 @@ template <Color::underlying c>
 
     const auto opp_pawns = board.pieces(PieceType::PAWN, ~c);
 
+    int checks = 0;
+
     // check for knight checks
     Bitboard knight_attacks = attacks::knight(sq) & opp_knight;
-    double_check += bool(knight_attacks);
+    checks += bool(knight_attacks);
 
     Bitboard mask = knight_attacks;
 
     // check for pawn checks
     Bitboard pawn_attacks = attacks::pawn(board.sideToMove(), sq) & opp_pawns;
     mask |= pawn_attacks;
-    double_check += bool(pawn_attacks);
+    checks += bool(pawn_attacks);
 
     // check for bishop checks
     Bitboard bishop_attacks = attacks::bishop(sq, board.occ()) & (opp_bishop | opp_queen);
@@ -3347,27 +3347,28 @@ template <Color::underlying c>
         const auto index = bishop_attacks.lsb();
 
         mask |= SQUARES_BETWEEN_BB[sq.index()][index] | Bitboard::fromSquare(index);
-        double_check++;
+        checks++;
     }
 
     Bitboard rook_attacks = attacks::rook(sq, board.occ()) & (opp_rook | opp_queen);
+
     if (rook_attacks) {
         if (rook_attacks.count() > 1) {
-            double_check = 2;
-            return mask;
+            checks = 2;
+            return {mask, checks};
         }
 
         const auto index = rook_attacks.lsb();
 
         mask |= SQUARES_BETWEEN_BB[sq.index()][index] | Bitboard::fromSquare(index);
-        double_check++;
+        checks++;
     }
 
     if (!mask) {
-        return constants::DEFAULT_CHECKMASK;
+        return {constants::DEFAULT_CHECKMASK, checks};
     }
 
-    return mask;
+    return {mask, checks};
 }
 
 template <Color::underlying c>
@@ -3553,8 +3554,11 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         moves.add(Move::make<Move::NORMAL>(index + DOWN + DOWN, index));
     }
 
+    if constexpr (mt == MoveGenType::QUIET) return;
+
     const Square ep = board.enpassantSq();
-    if (mt != MoveGenType::QUIET && ep != Square::underlying::NO_SQ) {
+
+    if (ep != Square::underlying::NO_SQ) {
         auto m = generateEPMove(board, checkmask, pin_d, pawns_lr, ep, c);
 
         for (const auto &move : m) {
@@ -3657,6 +3661,8 @@ template <Color::underlying c, movegen::MoveGenType mt>
 [[nodiscard]] inline Bitboard movegen::generateCastleMoves(const Board &board, Square sq, Bitboard seen,
                                                            Bitboard pin_hv) {
     if constexpr (mt == MoveGenType::CAPTURE) return 0ull;
+    if (!Square::back_rank(sq, c) || !board.castlingRights().has(c)) return 0ull;
+
     const auto rights = board.castlingRights();
 
     Bitboard moves = 0ull;
@@ -3709,19 +3715,17 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
     */
     auto king_sq = board.kingSq(c);
 
-    int double_check = 0;
-
     Bitboard occ_us  = board.us(c);
     Bitboard occ_opp = board.us(~c);
     Bitboard occ_all = occ_us | occ_opp;
 
     Bitboard opp_empty = ~occ_us;
 
-    Bitboard check_mask = checkMask<c>(board, king_sq, double_check);
-    Bitboard pin_hv     = pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
-    Bitboard pin_d      = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+    const auto [checkmask, checks] = checkMask<c>(board, king_sq);
+    const auto pin_hv              = pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
+    const auto pin_d               = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
 
-    assert(double_check <= 2);
+    assert(checks <= 2);
 
     // Moves have to be on the checkmask
     Bitboard movable_square;
@@ -3740,9 +3744,9 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
         whileBitboardAdd(movelist, Bitboard::fromSquare(king_sq),
                          [&](Square sq) { return generateKingMoves(sq, seen, movable_square); });
 
-        if (check_mask == constants::DEFAULT_CHECKMASK && Square::back_rank(king_sq, c) &&
-            board.castlingRights().has(c)) {
+        if (checks == 0) {
             Bitboard moves_bb = generateCastleMoves<c, mt>(board, king_sq, seen, pin_hv);
+
             while (moves_bb) {
                 Square to = moves_bb.pop();
                 movelist.add(Move::make<Move::CASTLING>(king_sq, to));
@@ -3750,14 +3754,14 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
         }
     }
 
-    movable_square &= check_mask;
+    movable_square &= checkmask;
 
     // Early return for double check as described earlier
-    if (double_check == 2) return;
+    if (checks == 2) return;
 
     // Add the moves to the movelist.
     if (pieces & PieceGenType::PAWN) {
-        generatePawnMoves<c, mt>(board, movelist, pin_d, pin_hv, check_mask, occ_opp);
+        generatePawnMoves<c, mt>(board, movelist, pin_d, pin_hv, checkmask, occ_opp);
     }
 
     if (pieces & PieceGenType::KNIGHT) {
@@ -3804,16 +3808,15 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
 
 template <Color::underlying c>
 inline bool movegen::isEpSquareValid(const Board &board, Square ep) {
-    const auto stm   = board.sideToMove();
-    int double_check = 0;
+    const auto stm = board.sideToMove();
 
     Bitboard occ_us  = board.us(stm);
     Bitboard occ_opp = board.us(~stm);
     auto king_sq     = board.kingSq(stm);
 
-    Bitboard checkmask = movegen::checkMask<c>(board, king_sq, double_check);
-    Bitboard pin_hv    = movegen::pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
-    Bitboard pin_d     = movegen::pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+    const auto [checkmask, checks] = movegen::checkMask<c>(board, king_sq);
+    const auto pin_hv              = movegen::pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
+    const auto pin_d               = movegen::pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
 
     const auto pawns    = board.pieces(PieceType::PAWN, stm);
     const auto pawns_lr = pawns & ~pin_hv;
