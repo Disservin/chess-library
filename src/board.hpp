@@ -596,6 +596,8 @@ class Board {
      */
     template <typename T = Piece>
     [[nodiscard]] T at(Square sq) const {
+        assert(sq.index() < 64 && sq.index() >= 0);
+
         if constexpr (std::is_same_v<T, PieceType>) {
             return board_[sq.index()].type();
         } else {
