@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.77
+VERSION: 0.6.8
 */
 
 #ifndef CHESS_HPP
@@ -4890,23 +4890,25 @@ class uci {
         if constexpr (LAN) {
             str += static_cast<std::string>(move.from().file());
             str += static_cast<std::string>(move.from().rank());
-        } else {
+        } else if (pt != PieceType::PAWN) {
             Movelist moves;
-            movegen::legalmoves(moves, board);
+            movegen::legalmoves(moves, board, 1 << pt);
+
+            bool needFile = false;
+            bool needRank = false;
 
             for (const auto &m : moves) {
-                // check for ambiguity
-                if (pt != PieceType::PAWN && m != move && board.at(m.from()) == board.at(move.from()) &&
-                    m.to() == move.to()) {
-                    if (m.from().file() == move.from().file()) {
-                        str += static_cast<std::string>(move.from().rank());
-                        break;
-                    } else {
-                        str += static_cast<std::string>(move.from().file());
-                        break;
-                    }
+                if (m != move && m.to() == move.to()) {
+                    // same file but different rank, we need rank
+                    if (m.from().file() == move.from().file()) needRank = true;
+
+                    // same rank but different file, we need file
+                    if (m.from().rank() == move.from().rank()) needFile = true;
                 }
             }
+
+            if (needFile) str += static_cast<std::string>(move.from().file());
+            if (needRank) str += static_cast<std::string>(move.from().rank());
         }
 
         if (board.at(move.to()) != Piece::NONE || move.typeOf() == Move::ENPASSANT) {
