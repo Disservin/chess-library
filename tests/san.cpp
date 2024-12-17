@@ -230,6 +230,7 @@ TEST_SUITE("SAN Parser") {
         Move m = Move::make(Square::underlying::SQ_D4, Square::underlying::SQ_B3);
 
         CHECK(uci::parseSan(b, "Nd4b3") == m);
+        CHECK(uci::moveToSan(b, m) == "N4b3");
     }
 
     TEST_CASE("Test Knight Capture Ambiguity") {
@@ -239,6 +240,35 @@ TEST_SUITE("SAN Parser") {
         Move m = Move::make(Square::underlying::SQ_D4, Square::underlying::SQ_B3);
 
         CHECK(uci::parseSan(b, "Nd4xb3") == m);
+    }
+
+    TEST_CASE("Test Knight Ambiguity 2") {
+        Board b;
+        b.setFen("2N1N3/p7/6k1/1p6/2N1N3/2R5/R3Q1P1/2R3K1 w - - 5 55");
+
+        {
+            Move m = Move::make(Square::underlying::SQ_E4, Square::underlying::SQ_D6);
+
+            CHECK(uci::moveToSan(b, m) == "Ne4d6");
+        }
+
+        {
+            Move m = Move::make(Square::underlying::SQ_C4, Square::underlying::SQ_D6);
+
+            CHECK(uci::moveToSan(b, m) == "Nc4d6");
+        }
+
+        {
+            Move m = Move::make(Square::underlying::SQ_C8, Square::underlying::SQ_D6);
+
+            CHECK(uci::moveToSan(b, m) == "Nc8d6");
+        }
+
+        {
+            Move m = Move::make(Square::underlying::SQ_E8, Square::underlying::SQ_D6);
+
+            CHECK(uci::moveToSan(b, m) == "Ne8d6");
+        }
     }
 
     TEST_CASE("Parse No Move") {
