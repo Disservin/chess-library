@@ -44,31 +44,33 @@ class Board {
        public:
         enum class Side : uint8_t { KING_SIDE, QUEEN_SIDE };
 
-        void setCastlingRight(Color color, Side castle, File rook_file) {
+        constexpr void setCastlingRight(Color color, Side castle, File rook_file) {
             rooks[color][static_cast<int>(castle)] = rook_file;
         }
 
-        void clear() { std::fill_n(&rooks[0][0], 4, File::NO_FILE); }
+        constexpr void clear() { std::fill_n(&rooks[0][0], 4, File::NO_FILE); }
 
-        int clear(Color color, Side castle) {
+        constexpr int clear(Color color, Side castle) {
             rooks[color][static_cast<int>(castle)] = File::NO_FILE;
             return color * 2 + static_cast<int>(castle);
         }
 
-        void clear(Color color) { rooks[color].fill(File::NO_FILE); }
+        constexpr void clear(Color color) { rooks[color].fill(File::NO_FILE); }
 
-        bool has(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)] != File::NO_FILE; }
+        constexpr bool has(Color color, Side castle) const {
+            return rooks[color][static_cast<int>(castle)] != File::NO_FILE;
+        }
 
-        bool has(Color color) const { return has(color, Side::KING_SIDE) || has(color, Side::QUEEN_SIDE); }
+        constexpr bool has(Color color) const { return has(color, Side::KING_SIDE) || has(color, Side::QUEEN_SIDE); }
 
-        File getRookFile(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)]; }
+        constexpr File getRookFile(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)]; }
 
-        int hashIndex() const {
+        constexpr int hashIndex() const {
             return has(Color::WHITE, Side::KING_SIDE) + 2 * has(Color::WHITE, Side::QUEEN_SIDE) +
                    4 * has(Color::BLACK, Side::KING_SIDE) + 8 * has(Color::BLACK, Side::QUEEN_SIDE);
         }
 
-        bool isEmpty() const { return !has(Color::WHITE) && !has(Color::BLACK); }
+        constexpr bool isEmpty() const { return !has(Color::WHITE) && !has(Color::BLACK); }
 
         template <typename T>
         static constexpr Side closestSide(T sq, T pred) {
@@ -634,8 +636,8 @@ class Board {
      * @return
      */
     [[nodiscard]] std::string getCastleString() const {
-        const auto get_file = [this](Color c, CastlingRights::Side side) {
-            auto file = static_cast<std::string>(cr_.getRookFile(c, side));
+        static const auto get_file = [](const CastlingRights &cr, Color c, CastlingRights::Side side) {
+            auto file = static_cast<std::string>(cr.getRookFile(c, side));
             return c == Color::WHITE ? std::toupper(file[0]) : file[0];
         };
 
@@ -644,7 +646,7 @@ class Board {
 
             for (auto color : {Color::WHITE, Color::BLACK})
                 for (auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE})
-                    if (cr_.has(color, side)) ss += get_file(color, side);
+                    if (cr_.has(color, side)) ss += get_file(cr_, color, side);
 
             return ss;
         }
