@@ -48,10 +48,7 @@ class Board {
             rooks[color][static_cast<int>(castle)] = rook_file;
         }
 
-        void clear() {
-            rooks[0].fill(File::NO_FILE);
-            rooks[1].fill(File::NO_FILE);
-        }
+        void clear() { std::fill_n(&rooks[0][0], 4, File::NO_FILE); }
 
         int clear(Color color, Side castle) {
             rooks[color][static_cast<int>(castle)] = File::NO_FILE;
@@ -62,10 +59,7 @@ class Board {
 
         bool has(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)] != File::NO_FILE; }
 
-        bool has(Color color) const {
-            return rooks[color][static_cast<int>(Side::KING_SIDE)] != File::NO_FILE ||
-                   rooks[color][static_cast<int>(Side::QUEEN_SIDE)] != File::NO_FILE;
-        }
+        bool has(Color color) const { return has(color, Side::KING_SIDE) || has(color, Side::QUEEN_SIDE); }
 
         File getRookFile(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)]; }
 
@@ -82,7 +76,6 @@ class Board {
         }
 
        private:
-        // [color][side]
         std::array<std::array<File, 2>, 2> rooks;
     };
 
