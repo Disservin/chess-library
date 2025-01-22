@@ -429,6 +429,24 @@ TEST_SUITE("SAN Parser") {
         }
     }
 
+    TEST_CASE("Test Rook Ambiguity 3") {
+        auto b = Board{"1r5k/5Rp1/5p1p/1r2Nb1P/2B5/2P1R1P1/5PK1/8 b - - 0 1"};
+
+        {
+            auto m = Move::make(Square::underlying::SQ_B5, Square::underlying::SQ_B2);
+
+            CHECK(uci::moveToSan(b, m) == "Rb2");
+            CHECK(uci::parseSan(b, "Rb2") == m);
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_B5, Square::underlying::SQ_B6);
+
+            CHECK(uci::moveToSan(b, m) == "R5b6");
+            CHECK(uci::parseSan(b, "R5b6") == m);
+        }
+    }
+
     TEST_CASE("Test Bishop Ambiguity 2") {
         auto b = Board{"2Bqkb1r/4p2p/8/8/2B5/p7/4B3/RNBQKBNR w KQk - 0 1"};
 
