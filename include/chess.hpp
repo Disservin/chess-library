@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.7.3
+VERSION: 0.7.4
 */
 
 #ifndef CHESS_HPP
@@ -4914,21 +4914,46 @@ class uci {
             Movelist moves;
             movegen::legalmoves(moves, board, 1 << pt);
 
-            bool needFile = false;
-            bool needRank = false;
+            bool needFile         = false;
+            bool needRank         = false;
+            bool hasAmbiguousMove = false;
 
             for (const auto &m : moves) {
                 if (m != move && m.to() == move.to()) {
-                    // same file but different rank, we need rank
-                    if (m.from().file() == move.from().file()) needRank = true;
+                    hasAmbiguousMove = true;
 
-                    // same rank but different file, we need file
-                    if (m.from().rank() == move.from().rank()) needFile = true;
+                    /*
+                    First, if the moving pieces can be distinguished by their originating files, the originating file
+                    letter of the moving piece is inserted immediately after the moving piece letter.
+
+                    Second (when the first step fails), if the moving pieces can be distinguished by their originating
+                    ranks, the originating rank digit of the moving piece is inserted immediately after the moving piece
+                    letter.
+
+                    Third (when both the first and the second steps fail), the two character square coordinate of the
+                    originating square of the moving piece is inserted immediately after the moving piece letter.
+                    */
+
+                    if (isIdentifiableByType(moves, move, move.from().file())) {
+                        needFile = true;
+                        break;
+                    }
+
+                    if (isIdentifiableByType(moves, move, move.from().rank())) {
+                        needRank = true;
+                        break;
+                    }
                 }
             }
 
             if (needFile) str += static_cast<std::string>(move.from().file());
             if (needRank) str += static_cast<std::string>(move.from().rank());
+
+            // we weren't able to disambiguate the move by either file or rank, so we need to use both
+            if (hasAmbiguousMove && !needFile && !needRank) {
+                str += static_cast<std::string>(move.from().file());
+                str += static_cast<std::string>(move.from().rank());
+            }
         }
 
         if (board.at(move.to()) != Piece::NONE || move.typeOf() == Move::ENPASSANT) {
@@ -4960,6 +4985,29 @@ class uci {
         } else {
             str += '+';
         }
+    }
+
+    template <typename CoordinateType>
+    static bool isIdentifiableByType(const Movelist &moves, const Move move, CoordinateType type) {
+        static_assert(std::is_same_v<CoordinateType, File> || std::is_same_v<CoordinateType, Rank>,
+                      "CoordinateType must be either File or Rank");
+
+        for (const auto &m : moves) {
+            if (m == move || m.to() != move.to()) {
+                continue;
+            }
+
+            // file
+            if constexpr (std::is_same_v<CoordinateType, File>) {
+                if (type == m.from().file()) return false;
+            }
+            // rank
+            else {
+                if (type == m.from().rank()) return false;
+            }
+        }
+
+        return true;
     }
 };
 }  // namespace chess
