@@ -187,8 +187,8 @@ class uci {
 #endif
         }
 
-        Move matchingMove;
-        bool foundMatch = false;
+        Move matchingMove = Move::NO_MOVE;
+        bool foundMatch   = false;
 
         for (const auto &move : moves) {
             // Skip all moves that are not to the correct square
