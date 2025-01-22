@@ -417,8 +417,8 @@ TEST_SUITE("SAN Parser") {
         {
             auto m = Move::make(Square::underlying::SQ_B5, Square::underlying::SQ_B2);
 
-            CHECK(uci::moveToSan(b, m) == "Rb2");
-            CHECK(uci::parseSan(b, "Rb2") == m);
+            CHECK(uci::moveToSan(b, m) == "Rbb2");
+            CHECK(uci::parseSan(b, "Rbb2") == m);
         }
 
         {
