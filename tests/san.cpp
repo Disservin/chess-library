@@ -250,22 +250,70 @@ TEST_SUITE("SAN Parser") {
 
         {
             auto m = Move::make(Square::underlying::SQ_C2, Square::underlying::SQ_D3);
-            CHECK(uci::parseSan(b, "Bc2d3") == m);
+            CHECK(uci::moveToSan(b, m) == "Bc2d3");
         }
 
         {
             auto m = Move::make(Square::underlying::SQ_C4, Square::underlying::SQ_D3);
-            CHECK(uci::parseSan(b, "Bc4d3") == m);
+            CHECK(uci::moveToSan(b, m) == "Bc4d3");
         }
 
         {
             auto m = Move::make(Square::underlying::SQ_E2, Square::underlying::SQ_D3);
-            CHECK(uci::parseSan(b, "Be2d3") == m);
+            CHECK(uci::moveToSan(b, m) == "Be2d3");
         }
 
         {
             auto m = Move::make(Square::underlying::SQ_E4, Square::underlying::SQ_D3);
-            CHECK(uci::parseSan(b, "Be4d3") == m);
+            CHECK(uci::moveToSan(b, m) == "Be4d3");
+        }
+    }
+
+    TEST_CASE("Test Rook Ambiguity") {
+        auto b = Board{"k5r1/8/8/8/2R1R3/8/2R1RK2/8 w - - 0 1"};
+
+        {
+            auto m = Move::make(Square::underlying::SQ_C2, Square::underlying::SQ_C3);
+            CHECK(uci::moveToSan(b, m) == "R2c3");
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_C2, Square::underlying::SQ_D2);
+            CHECK(uci::moveToSan(b, m) == "Rcd2");
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_E2, Square::underlying::SQ_E3);
+            CHECK(uci::moveToSan(b, m) == "R2e3");
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_E2, Square::underlying::SQ_D2);
+            CHECK(uci::moveToSan(b, m) == "Red2");
+        }
+    }
+
+    TEST_CASE("Test Queen Ambiguity") {
+        auto b = Board{"1k4r1/8/8/8/2Q1Q3/8/2Q1QK2/8 w - - 0 1"};
+
+        {
+            auto m = Move::make(Square::underlying::SQ_C2, Square::underlying::SQ_D3);
+            CHECK(uci::moveToSan(b, m) == "Qc2d3");
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_C4, Square::underlying::SQ_D3);
+            CHECK(uci::moveToSan(b, m) == "Qc4d3");
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_E2, Square::underlying::SQ_D3);
+            CHECK(uci::moveToSan(b, m) == "Qe2d3");
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_E4, Square::underlying::SQ_D3);
+            CHECK(uci::moveToSan(b, m) == "Qe4d3");
         }
     }
 
