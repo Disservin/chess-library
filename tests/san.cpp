@@ -245,6 +245,30 @@ TEST_SUITE("SAN Parser") {
         }
     }
 
+    TEST_CASE("Test Bishop Ambiguity") {
+        auto b = Board{"4k3/8/8/8/2B1B3/8/2B1BK2/8 w - - 0 1"};
+
+        {
+            auto m = Move::make(Square::underlying::SQ_C2, Square::underlying::SQ_D3);
+            CHECK(uci::parseSan(b, "Bc2d3") == m);
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_C4, Square::underlying::SQ_D3);
+            CHECK(uci::parseSan(b, "Bc4d3") == m);
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_E2, Square::underlying::SQ_D3);
+            CHECK(uci::parseSan(b, "Be2d3") == m);
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_E4, Square::underlying::SQ_D3);
+            CHECK(uci::parseSan(b, "Be4d3") == m);
+        }
+    }
+
     TEST_CASE("Parse No Move") {
         Board b = Board();
 
