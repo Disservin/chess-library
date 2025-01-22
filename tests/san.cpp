@@ -329,7 +329,7 @@ TEST_SUITE("SAN Parser") {
         Move san = Move::NO_MOVE;
 
         CHECK_THROWS_WITH_AS(san = uci::parseSan(b, "Nec3"),
-                             "Ambiguous san: Nec3 in 8/8/6K1/4k3/4N3/p4r2/N3N3/8 w - - 3 82", uci::SanParseError);
+                             "Ambiguous san: Nec3 in 8/8/6K1/4k3/4N3/p4r2/N3N3/8 w - - 3 82", uci::AmbiguousMoveError);
         CHECK(san == Move::NO_MOVE);
     }
 

@@ -143,6 +143,20 @@ class uci {
         std::string msg_;
     };
 
+    class AmbiguousMoveError : public std::exception {
+       public:
+        explicit AmbiguousMoveError(const char *message) : msg_(message) {}
+
+        explicit AmbiguousMoveError(const std::string &message) : msg_(message) {}
+
+        virtual ~AmbiguousMoveError() noexcept {}
+
+        virtual const char *what() const noexcept { return msg_.c_str(); }
+
+       protected:
+        std::string msg_;
+    };
+
     /**
      * @brief Parse a san string and return the move.
      * @tparam PEDANTIC
@@ -227,7 +241,7 @@ class uci {
             // If we get here, the move matches our criteria
             if (foundMatch) {
 #ifndef CHESS_NO_EXCEPTIONS
-                throw SanParseError("Ambiguous san: " + std::string(san) + " in " + board.getFen());
+                throw AmbiguousMoveError("Ambiguous san: " + std::string(san) + " in " + board.getFen());
 #endif
             }
 
