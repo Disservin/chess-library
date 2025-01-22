@@ -226,7 +226,9 @@ class uci {
 
             // If we get here, the move matches our criteria
             if (foundMatch) {
+#ifndef CHESS_NO_EXCEPTIONS
                 throw SanParseError("Ambiguous san: " + std::string(san) + " in " + board.getFen());
+#endif
             }
 
             matchingMove = move;
