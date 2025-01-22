@@ -55,7 +55,7 @@ class Board {
             return color * 2 + static_cast<int>(castle);
         }
 
-        constexpr void clear(Color color) { rooks[color].fill(File::NO_FILE); }
+        constexpr void clear(Color color) { rooks[color][0] = rooks[color][1] = File::NO_FILE; }
 
         constexpr bool has(Color color, Side castle) const {
             return rooks[color][static_cast<int>(castle)] != File::NO_FILE;
