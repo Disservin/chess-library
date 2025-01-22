@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.6.8
+VERSION: 0.7.0
 */
 
 #ifndef CHESS_HPP
@@ -1762,37 +1762,33 @@ class Board {
        public:
         enum class Side : uint8_t { KING_SIDE, QUEEN_SIDE };
 
-        void setCastlingRight(Color color, Side castle, File rook_file) {
+        constexpr void setCastlingRight(Color color, Side castle, File rook_file) {
             rooks[color][static_cast<int>(castle)] = rook_file;
         }
 
-        void clear() {
-            rooks[0].fill(File::NO_FILE);
-            rooks[1].fill(File::NO_FILE);
-        }
+        constexpr void clear() { std::fill_n(&rooks[0][0], 4, File::NO_FILE); }
 
-        int clear(Color color, Side castle) {
+        constexpr int clear(Color color, Side castle) {
             rooks[color][static_cast<int>(castle)] = File::NO_FILE;
             return color * 2 + static_cast<int>(castle);
         }
 
-        void clear(Color color) { rooks[color].fill(File::NO_FILE); }
+        constexpr void clear(Color color) { rooks[color].fill(File::NO_FILE); }
 
-        bool has(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)] != File::NO_FILE; }
-
-        bool has(Color color) const {
-            return rooks[color][static_cast<int>(Side::KING_SIDE)] != File::NO_FILE ||
-                   rooks[color][static_cast<int>(Side::QUEEN_SIDE)] != File::NO_FILE;
+        constexpr bool has(Color color, Side castle) const {
+            return rooks[color][static_cast<int>(castle)] != File::NO_FILE;
         }
 
-        File getRookFile(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)]; }
+        constexpr bool has(Color color) const { return has(color, Side::KING_SIDE) || has(color, Side::QUEEN_SIDE); }
 
-        int hashIndex() const {
+        constexpr File getRookFile(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)]; }
+
+        constexpr int hashIndex() const {
             return has(Color::WHITE, Side::KING_SIDE) + 2 * has(Color::WHITE, Side::QUEEN_SIDE) +
                    4 * has(Color::BLACK, Side::KING_SIDE) + 8 * has(Color::BLACK, Side::QUEEN_SIDE);
         }
 
-        bool isEmpty() const { return !has(Color::WHITE) && !has(Color::BLACK); }
+        constexpr bool isEmpty() const { return !has(Color::WHITE) && !has(Color::BLACK); }
 
         template <typename T>
         static constexpr Side closestSide(T sq, T pred) {
@@ -1800,7 +1796,6 @@ class Board {
         }
 
        private:
-        // [color][side]
         std::array<std::array<File, 2>, 2> rooks;
     };
 
@@ -2359,8 +2354,8 @@ class Board {
      * @return
      */
     [[nodiscard]] std::string getCastleString() const {
-        const auto get_file = [this](Color c, CastlingRights::Side side) {
-            auto file = static_cast<std::string>(cr_.getRookFile(c, side));
+        static const auto get_file = [](const CastlingRights &cr, Color c, CastlingRights::Side side) {
+            auto file = static_cast<std::string>(cr.getRookFile(c, side));
             return c == Color::WHITE ? std::toupper(file[0]) : file[0];
         };
 
@@ -2369,7 +2364,7 @@ class Board {
 
             for (auto color : {Color::WHITE, Color::BLACK})
                 for (auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE})
-                    if (cr_.has(color, side)) ss += get_file(color, side);
+                    if (cr_.has(color, side)) ss += get_file(cr_, color, side);
 
             return ss;
         }
@@ -4697,6 +4692,9 @@ class uci {
 #endif
         }
 
+        Move matchingMove = Move::NO_MOVE;
+        bool foundMatch   = false;
+
         for (const auto &move : moves) {
             // Skip all moves that are not to the correct square
             // or are castling moves
@@ -4704,43 +4702,51 @@ class uci {
                 continue;
             }
 
+            // Handle promotion moves
             if (info.promotion != PieceType::NONE) {
-                if (move.typeOf() == Move::PROMOTION && info.promotion == move.promotionType()) {
-                    if (move.from().file() == info.from_file) {
-                        return move;
-                    }
+                if (move.typeOf() != Move::PROMOTION || info.promotion != move.promotionType() ||
+                    move.from().file() != info.from_file) {
+                    continue;
                 }
-
-                continue;
             }
-
-            // For simple moves like Nf3
-            if (info.from_rank == Rank::NO_RANK && info.from_file == File::NO_FILE) {
-                return move;
-            }
-
-            if (move.typeOf() == Move::ENPASSANT) {
-                if (move.from().file() == info.from_file) return move;
-                continue;
-            }
-
-            // we know the from square, so we can check if it matches
-            if (info.from != Square::underlying::NO_SQ) {
-                if (move.from() == info.from) {
-                    return move;
+            // Handle en passant moves
+            else if (move.typeOf() == Move::ENPASSANT) {
+                if (move.from().file() != info.from_file) {
+                    continue;
                 }
-
-                continue;
+            }
+            // Handle moves with specific from square
+            else if (info.from != Square::underlying::NO_SQ) {
+                if (move.from() != info.from) {
+                    continue;
+                }
+            }
+            // Handle moves with partial from information (rank or file)
+            else if (info.from_rank != Rank::NO_RANK || info.from_file != File::NO_FILE) {
+                if ((info.from_file != File::NO_FILE && move.from().file() != info.from_file) ||
+                    (info.from_rank != Rank::NO_RANK && move.from().rank() != info.from_rank)) {
+                    continue;
+                }
             }
 
-            if ((move.from().file() == info.from_file) || (move.from().rank() == info.from_rank)) {
-                return move;
+            // If we get here, the move matches our criteria
+            if (foundMatch) {
+#ifndef CHESS_NO_EXCEPTIONS
+                throw SanParseError("Ambiguous san: " + std::string(san) + " in " + board.getFen());
+#endif
             }
+
+            matchingMove = move;
+            foundMatch   = true;
         }
 
+        if (!foundMatch) {
 #ifndef CHESS_NO_EXCEPTIONS
-        throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
+            throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
 #endif
+        }
+
+        return matchingMove;
     }
 
    private:
