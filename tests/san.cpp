@@ -274,4 +274,25 @@ TEST_SUITE("SAN Parser") {
 
         CHECK(uci::parseSan(b, "") == Move::NO_MOVE);
     }
+
+    TEST_CASE("Should throw on ambiguous move") {
+        auto b = Board{"8/8/6K1/4k3/4N3/p4r2/N3N3/8 w - - 3 82"};
+
+        Move san = Move::NO_MOVE;
+
+        CHECK_THROWS_WITH_AS(san = uci::parseSan(b, "Nec3"),
+                             "Ambiguous san: Nec3 in 8/8/6K1/4k3/4N3/p4r2/N3N3/8 w - - 3 82", uci::SanParseError);
+        CHECK(san == Move::NO_MOVE);
+    }
+
+    TEST_CASE("Should throw for illegal move") {
+        auto b = Board{"8/8/6K1/4k3/4N3/p4r2/N3N3/8 w - - 3 82"};
+
+        Move san = Move::NO_MOVE;
+
+        CHECK_THROWS_WITH_AS(san = uci::parseSan(b, "Nec4"),
+                             "Failed to parse san. At step 3: Nec4 8/8/6K1/4k3/4N3/p4r2/N3N3/8 w - - 3 82",
+                             uci::SanParseError);
+        CHECK(san == Move::NO_MOVE);
+    }
 }

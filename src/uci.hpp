@@ -187,6 +187,9 @@ class uci {
 #endif
         }
 
+        Move matchingMove;
+        bool foundMatch = false;
+
         for (const auto &move : moves) {
             // Skip all moves that are not to the correct square
             // or are castling moves
@@ -194,43 +197,49 @@ class uci {
                 continue;
             }
 
+            // Handle promotion moves
             if (info.promotion != PieceType::NONE) {
-                if (move.typeOf() == Move::PROMOTION && info.promotion == move.promotionType()) {
-                    if (move.from().file() == info.from_file) {
-                        return move;
-                    }
+                if (move.typeOf() != Move::PROMOTION || info.promotion != move.promotionType() ||
+                    move.from().file() != info.from_file) {
+                    continue;
                 }
-
-                continue;
             }
-
-            // For simple moves like Nf3
-            if (info.from_rank == Rank::NO_RANK && info.from_file == File::NO_FILE) {
-                return move;
-            }
-
-            if (move.typeOf() == Move::ENPASSANT) {
-                if (move.from().file() == info.from_file) return move;
-                continue;
-            }
-
-            // we know the from square, so we can check if it matches
-            if (info.from != Square::underlying::NO_SQ) {
-                if (move.from() == info.from) {
-                    return move;
+            // Handle en passant moves
+            else if (move.typeOf() == Move::ENPASSANT) {
+                if (move.from().file() != info.from_file) {
+                    continue;
                 }
-
-                continue;
+            }
+            // Handle moves with specific from square
+            else if (info.from != Square::underlying::NO_SQ) {
+                if (move.from() != info.from) {
+                    continue;
+                }
+            }
+            // Handle moves with partial from information (rank or file)
+            else if (info.from_rank != Rank::NO_RANK || info.from_file != File::NO_FILE) {
+                if ((info.from_file != File::NO_FILE && move.from().file() != info.from_file) ||
+                    (info.from_rank != Rank::NO_RANK && move.from().rank() != info.from_rank)) {
+                    continue;
+                }
             }
 
-            if ((move.from().file() == info.from_file) || (move.from().rank() == info.from_rank)) {
-                return move;
+            // If we get here, the move matches our criteria
+            if (foundMatch) {
+                throw SanParseError("Ambiguous san: " + std::string(san) + " in " + board.getFen());
             }
+
+            matchingMove = move;
+            foundMatch   = true;
         }
 
+        if (!foundMatch) {
 #ifndef CHESS_NO_EXCEPTIONS
-        throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
+            throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
 #endif
+        }
+
+        return matchingMove;
     }
 
    private:
