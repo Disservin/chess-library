@@ -257,6 +257,17 @@ TEST_SUITE("SAN Parser") {
         }
     }
 
+    TEST_CASE("Test Knight Capture Check Ambiguity") {
+        auto b = Board{"2N1N3/p4k2/3q4/1p6/2N1N3/2R5/R3Q1P1/2R3K1 w - - 0 1"};
+
+        {
+            Move m = Move::make(Square::underlying::SQ_E4, Square::underlying::SQ_D6);
+
+            CHECK(uci::moveToSan(b, m) == "Ne4xd6+");
+            CHECK(uci::parseSan(b, "Ne4xd6+") == m);
+        }
+    }
+
     TEST_CASE("Test Bishop Ambiguity") {
         auto b = Board{"4k3/8/8/8/2B1B3/8/2B1BK2/8 w - - 0 1"};
 
@@ -481,6 +492,73 @@ TEST_SUITE("SAN Parser") {
             CHECK(uci::moveToSan(b, m) == "Bcd3");
             CHECK(uci::parseSan(b, "Bcd3") == m);
         }
+    }
+
+    TEST_CASE("Test Bishop Capture Mating Ambiguity") {
+        auto b = Board{"7r/4pqbp/5bkp/6nn/2B5/p2r4/4B3/RNBQKBR1 w Q - 0 1"};
+
+        {
+            auto m = Move::make(Square::underlying::SQ_C4, Square::underlying::SQ_D3);
+
+            CHECK(uci::moveToSan(b, m) == "Bcxd3#");
+            CHECK(uci::parseSan(b, "Bcxd3#") == m);
+        }
+    }
+
+    TEST_CASE("Test Pinned Queen Ambiguity") {
+        auto b = Board{"1Q3q1k/4P3/8/3p1N1q/1Q1P4/2N5/2K5/5q2 b - - 0 1"};
+
+        {
+            auto m = Move::make(Square::underlying::SQ_F1, Square::underlying::SQ_F5);
+
+            CHECK(uci::moveToSan(b, m) == "Qfxf5+");
+            CHECK(uci::parseSan(b, "Qfxf5+") == m);
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_H5, Square::underlying::SQ_F5);
+
+            CHECK(uci::moveToSan(b, m) == "Qhxf5+");
+            CHECK(uci::parseSan(b, "Qhxf5+") == m);
+        }
+    }
+
+    TEST_CASE("Test Pinned Rook Ambiguity") {
+        auto b = Board{"1r6/5Rp1/5p1p/1r2Nb1P/2B5/2PR2P1/3r1PK1/3k4 b - - 0 1"};
+
+        {
+            auto m = Move::make(Square::underlying::SQ_B5, Square::underlying::SQ_B2);
+
+            CHECK(uci::moveToSan(b, m) == "Rb2");
+            CHECK(uci::parseSan(b, "Rb2") == m);
+        }
+
+        {
+            auto m = Move::make(Square::underlying::SQ_B5, Square::underlying::SQ_B6);
+
+            CHECK(uci::moveToSan(b, m) == "R5b6");
+            CHECK(uci::parseSan(b, "R5b6") == m);
+        }
+    }
+
+    TEST_CASE("Test Pinned Bishop Ambiguity") {
+        auto b = Board{"2r4r/4pqbp/5bkp/6nn/2B5/p2r4/2K1B3/RNBQ1BR1 w - - 0 1"};
+
+        {
+            auto m = Move::make(Square::underlying::SQ_E2, Square::underlying::SQ_D3);
+
+            CHECK(uci::moveToSan(b, m) == "Bxd3#");
+            CHECK(uci::parseSan(b, "Bxd3#") == m);
+        }
+    }
+
+    TEST_CASE("Test Pinned Knight Ambiguity") {
+        auto b = Board{"r1k5/5p2/2n2B1p/2R1P3/p1n3PN/8/P4PK1/1R6 b - - 0 1"};
+
+        Move m = Move::make(Square::underlying::SQ_C4, Square::underlying::SQ_E5);
+
+        CHECK(uci::moveToSan(b, m) == "Nxe5");
+        CHECK(uci::parseSan(b, "Nxe5") == m);
     }
 
     TEST_CASE("Parse No Move") {
