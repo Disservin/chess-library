@@ -11,11 +11,14 @@ It can be used for any type of chess program, be it a chess engine, a chess GUI,
 ### Why this library?
 
 - **Fast**: This library is fast enough for pretty much any purpose in C++ and it is faster than most other chess libraries in C++.
-- **Documentation**: Easy to browse **documentation** at https://disservin.github.io/chess-library
+- **Documentation**: Easy to browse **documentation** at <https://disservin.github.io/chess-library>
 - **Robust**: Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/official-stockfish/WDL_model).
 - **PGN Support**: Parse basic PGN files.
 - **Namespace**: Everything is in the `chess::` namespace, so it won't pollute your namespace.
 - **Compact Board Representation in 24bytes**: The board state can be compressed into 24 bytes, using `PackedBoard` and `Board::Compact::encode`/`Board::Compact::decode`.
+
+> [!NOTE]
+> Users are advised to update to the latest version of the library, to fix possible SAN/LAN issues.
 
 ### Usage
 
@@ -65,18 +68,18 @@ The 3 other big chess libraries that I know of in C++ are:
   - Early Version (after 4 years)
   - No support for Chess960 (I think)
 
-### Repositories using this library:
+### Repositories using this library
 
 - Stockfish Winrate Model
-  https://github.com/official-stockfish/WDL_model
+  <https://github.com/official-stockfish/WDL_model>
 - CLI Tool for running chess engine matches
-  https://github.com/Disservin/fast-chess
+  <https://github.com/Disservin/fast-chess>
 - GUI-based Chess Player as well as a Chess Engine
-  https://github.com/Orbital-Web/Raphael
+  <https://github.com/Orbital-Web/Raphael>
 - UCI Chess Engine (\~3.3k elo)
-  https://github.com/rafid-dev/rice (old version)
+  <https://github.com/rafid-dev/rice> (old version)
 - Texel tuner for HCE engines
-  https://github.com/GediminasMasaitis/texel-tuner
+  <https://github.com/GediminasMasaitis/texel-tuner>
 
 ### Benchmarks
 
@@ -145,7 +148,7 @@ depth 5  time 3403  nodes 164075551    nps 48200808  fen r4rk1/1pp1qppp/p1np1n2/
 
 ### Development Setup
 
-This project is using the meson build system. https://mesonbuild.com/
+This project is using the meson build system. <https://mesonbuild.com/>
 
 #### Setup
 
