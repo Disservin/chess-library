@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.7.4
+VERSION: 0.7.5
 */
 
 #ifndef CHESS_HPP
@@ -4910,57 +4910,62 @@ class uci {
         if constexpr (LAN) {
             str += static_cast<std::string>(move.from().file());
             str += static_cast<std::string>(move.from().rank());
-        } else if (pt != PieceType::PAWN) {
-            Movelist moves;
-            movegen::legalmoves(moves, board, 1 << pt);
+        } else {
+            if (pt != PieceType::PAWN) {
+                Movelist moves;
+                movegen::legalmoves(moves, board, 1 << pt);
 
-            bool needFile         = false;
-            bool needRank         = false;
-            bool hasAmbiguousMove = false;
+                bool needFile         = false;
+                bool needRank         = false;
+                bool hasAmbiguousMove = false;
 
-            for (const auto &m : moves) {
-                if (m != move && m.to() == move.to()) {
-                    hasAmbiguousMove = true;
+                for (const auto &m : moves) {
+                    if (m != move && m.to() == move.to()) {
+                        hasAmbiguousMove = true;
 
-                    /*
-                    First, if the moving pieces can be distinguished by their originating files, the originating file
-                    letter of the moving piece is inserted immediately after the moving piece letter.
+                        /*
+                        First, if the moving pieces can be distinguished by their originating files, the originating
+                        file letter of the moving piece is inserted immediately after the moving piece letter.
 
-                    Second (when the first step fails), if the moving pieces can be distinguished by their originating
-                    ranks, the originating rank digit of the moving piece is inserted immediately after the moving piece
-                    letter.
+                        Second (when the first step fails), if the moving pieces can be distinguished by their
+                        originating ranks, the originating rank digit of the moving piece is inserted immediately after
+                        the moving piece letter.
 
-                    Third (when both the first and the second steps fail), the two character square coordinate of the
-                    originating square of the moving piece is inserted immediately after the moving piece letter.
-                    */
+                        Third (when both the first and the second steps fail), the two character square coordinate of
+                        the originating square of the moving piece is inserted immediately after the moving piece
+                        letter.
+                        */
 
-                    if (isIdentifiableByType(moves, move, move.from().file())) {
-                        needFile = true;
-                        break;
+                        if (isIdentifiableByType(moves, move, move.from().file())) {
+                            needFile = true;
+                            break;
+                        }
+
+                        if (isIdentifiableByType(moves, move, move.from().rank())) {
+                            needRank = true;
+                            break;
+                        }
                     }
+                }
 
-                    if (isIdentifiableByType(moves, move, move.from().rank())) {
-                        needRank = true;
-                        break;
-                    }
+                if (needFile) str += static_cast<std::string>(move.from().file());
+                if (needRank) str += static_cast<std::string>(move.from().rank());
+
+                // we weren't able to disambiguate the move by either file or rank, so we need to use both
+                if (hasAmbiguousMove && !needFile && !needRank) {
+                    str += static_cast<std::string>(move.from().file());
+                    str += static_cast<std::string>(move.from().rank());
                 }
             }
 
-            if (needFile) str += static_cast<std::string>(move.from().file());
-            if (needRank) str += static_cast<std::string>(move.from().rank());
-
-            // we weren't able to disambiguate the move by either file or rank, so we need to use both
-            if (hasAmbiguousMove && !needFile && !needRank) {
-                str += static_cast<std::string>(move.from().file());
-                str += static_cast<std::string>(move.from().rank());
+            if (board.at(move.to()) != Piece::NONE || move.typeOf() == Move::ENPASSANT) {
+                if (pt == PieceType::PAWN) {
+                    str += static_cast<std::string>(move.from().file());
+                }
             }
         }
 
         if (board.at(move.to()) != Piece::NONE || move.typeOf() == Move::ENPASSANT) {
-            if (pt == PieceType::PAWN) {
-                str += static_cast<std::string>(move.from().file());
-            }
-
             str += 'x';
         }
 
