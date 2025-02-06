@@ -72,3 +72,7 @@ class Visitor {
     virtual void endPgn() = 0;
 };
 ```
+
+::: tip
+It might be that `header` or `move` are called with an empty string for one of the arguments.
+:::
