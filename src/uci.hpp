@@ -89,8 +89,7 @@ class uci {
         if (piece == PieceType::PAWN && uci.length() == 5 && Square::back_rank(target, ~board.sideToMove())) {
             auto promotion = PieceType(uci.substr(4, 1));
 
-            if (promotion != PieceType::QUEEN && promotion != PieceType::ROOK && promotion != PieceType::BISHOP &&
-                promotion != PieceType::KNIGHT) {
+            if (promotion == PieceType::NONE || promotion == PieceType::KING || promotion == PieceType::PAWN) {
                 return Move::NO_MOVE;
             }
 
