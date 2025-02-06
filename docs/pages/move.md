@@ -26,14 +26,45 @@ Please open an issue for such cases.
 ```cpp
 namespace uci {
 
+/**
+ * @brief Converts a move to a UCI string.
+ * @param move
+ * @param chess960
+ * @return
+ */
 std::string moveToUci(const Move& move, bool chess960 = false);
 
+/**
+ * @brief Converts a UCI string to an internal move.
+ * @param board
+ * @param uci
+ * @return NO_MOVE if the move is invalid.
+ */
 Move uciToMove(const Board& board, const std::string& uci);
 
+/**
+ * @brief Converts a move to a SAN string
+ * @param board
+ * @param move
+ * @return
+ */
 std::string moveToSan(const Board& board, const Move& move);
 
+/**
+ * @brief Converts a move to a LAN string
+ * @param board
+ * @param move
+ * @return
+ */
 std::string moveToLan(const Board& board, const Move& move);
 
+/**
+ * @brief Parse a san string and return the move.
+ * This function will throw a SanParseError if the san string is invalid.
+ * @param board
+ * @param san
+ * @return
+ */
 Move parseSan(const Board& board, std::string_view san);
 
 }  // namespace uci

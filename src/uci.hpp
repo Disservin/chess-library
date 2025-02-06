@@ -159,26 +159,32 @@ class uci {
 
     /**
      * @brief Parse a san string and return the move.
-     * @tparam PEDANTIC
+     * This function will throw a SanParseError if the san string is invalid.
      * @param board
      * @param san
      * @return
      */
-    template <bool PEDANTIC = false>
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san) noexcept(false) {
         Movelist moves;
 
-        return parseSan<PEDANTIC>(board, san, moves);
+        return parseSan(board, san, moves);
     }
 
-    template <bool PEDANTIC = false>
+    /**
+     * @brief Parse a san string and return the move.
+     * This function will throw a SanParseError if the san string is invalid.
+     * @param board
+     * @param san
+     * @param moves
+     * @return
+     */
     [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
         if (san.empty()) {
             return Move::NO_MOVE;
         }
 
         static constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
-        const SanMoveInformation info   = parseSanInfo<PEDANTIC>(san);
+        const SanMoveInformation info   = parseSanInfo(san);
 
         if (info.capture) {
             movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
@@ -266,9 +272,11 @@ class uci {
         PieceType promotion = PieceType::NONE;
 
         Square from = Square::underlying::NO_SQ;
-        Square to   = Square::underlying::NO_SQ;  // a valid move always has a to square
+        // a valid move always has a to square
+        Square to = Square::underlying::NO_SQ;
 
-        PieceType piece = PieceType::NONE;  // a valid move always has a piece
+        // a valid move always has a piece
+        PieceType piece = PieceType::NONE;
 
         bool castling_short = false;
         bool castling_long  = false;
@@ -276,13 +284,10 @@ class uci {
         bool capture = false;
     };
 
-    template <bool PEDANTIC = false>
     [[nodiscard]] static SanMoveInformation parseSanInfo(std::string_view san) noexcept(false) {
 #ifndef CHESS_NO_EXCEPTIONS
-        if constexpr (PEDANTIC) {
-            if (san.length() < 2) {
-                throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
-            }
+        if (san.length() < 2) {
+            throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
         }
 #endif
         constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info, char castling_char) {
