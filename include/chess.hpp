@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.7.7
+VERSION: 0.8.0
 */
 
 #ifndef CHESS_HPP
@@ -4570,32 +4570,31 @@ class uci {
             return Move::NO_MOVE;
         }
 
-        PieceType piece = board.at(source).type();
+        auto pt = board.at(source).type();
 
         // castling in chess960
-        if (board.chess960() && piece == PieceType::KING && board.at(target).type() == PieceType::ROOK &&
+        if (board.chess960() && pt == PieceType::KING && board.at(target).type() == PieceType::ROOK &&
             board.at(target).color() == board.sideToMove()) {
             return Move::make<Move::CASTLING>(source, target);
         }
 
         // convert to king captures rook
         // in chess960 the move should be sent as king captures rook already!
-        if (!board.chess960() && piece == PieceType::KING && Square::distance(target, source) == 2) {
+        if (!board.chess960() && pt == PieceType::KING && Square::distance(target, source) == 2) {
             target = Square(target > source ? File::FILE_H : File::FILE_A, source.rank());
             return Move::make<Move::CASTLING>(source, target);
         }
 
         // en passant
-        if (piece == PieceType::PAWN && target == board.enpassantSq()) {
+        if (pt == PieceType::PAWN && target == board.enpassantSq()) {
             return Move::make<Move::ENPASSANT>(source, target);
         }
 
         // promotion
-        if (piece == PieceType::PAWN && uci.length() == 5 && Square::back_rank(target, ~board.sideToMove())) {
+        if (pt == PieceType::PAWN && uci.length() == 5 && Square::back_rank(target, ~board.sideToMove())) {
             auto promotion = PieceType(uci.substr(4, 1));
 
-            if (promotion != PieceType::QUEEN && promotion != PieceType::ROOK && promotion != PieceType::BISHOP &&
-                promotion != PieceType::KNIGHT) {
+            if (promotion == PieceType::NONE || promotion == PieceType::KING || promotion == PieceType::PAWN) {
                 return Move::NO_MOVE;
             }
 
@@ -4900,6 +4899,8 @@ class uci {
     template <bool LAN = false>
     static void moveToRep(Board board, const Move &move, std::string &str) {
         if (handleCastling(move, str)) {
+            board.makeMove(move);
+            if (board.inCheck()) appendCheckSymbol(board, str);
             return;
         }
 
