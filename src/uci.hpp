@@ -394,6 +394,8 @@ class uci {
     template <bool LAN = false>
     static void moveToRep(Board board, const Move &move, std::string &str) {
         if (handleCastling(move, str)) {
+            board.makeMove(move);
+            if (board.inCheck()) appendCheckSymbol(board, str);
             return;
         }
 
