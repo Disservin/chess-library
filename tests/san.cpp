@@ -587,4 +587,22 @@ TEST_SUITE("SAN Parser") {
                              uci::SanParseError);
         CHECK(san == Move::NO_MOVE);
     }
+
+    TEST_CASE("Checkmate castle should have #") {
+        auto b = Board{"RRR5/8/8/8/8/8/PPPPPP2/k3K2R w K - 0 1"};
+
+        Move m = Move::make<Move::CASTLING>(Square::underlying::SQ_E1, Square::underlying::SQ_H1);
+
+        CHECK(uci::moveToSan(b, m) == "O-O#");
+        CHECK(uci::parseSan(b, "O-O#") == m);
+    }
+
+    TEST_CASE("Check castle should have +") {
+        auto b = Board{"8/8/8/8/8/8/PPPPPP2/k3K2R w K - 0 1"};
+
+        Move m = Move::make<Move::CASTLING>(Square::underlying::SQ_E1, Square::underlying::SQ_H1);
+
+        CHECK(uci::moveToSan(b, m) == "O-O+");
+        CHECK(uci::parseSan(b, "O-O+") == m);
+    }
 }
