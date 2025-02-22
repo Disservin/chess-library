@@ -292,11 +292,11 @@ TEST_SUITE("Bitboard") {
         const auto str = "00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n";
         CHECK(static_cast<std::string>(str) == str);
 
-        b               = Bitboard::fromSquare(Square::underlying::SQ_A1);
+        b               = Bitboard::fromSquare(Square::SQ_A1);
         const auto str1 = "00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n10000000\n";
         CHECK(static_cast<std::string>(str1) == str1);
 
-        b               = Bitboard::fromSquare(Square::underlying::SQ_A2);
+        b               = Bitboard::fromSquare(Square::SQ_A2);
         const auto str2 = "00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n01000000\n";
         CHECK(static_cast<std::string>(str2) == str2);
     }

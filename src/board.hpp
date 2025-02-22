@@ -227,7 +227,7 @@ class Board {
 
         // Append information about the en passant square (if any)
         // and the half-move clock and full move number to the FEN string
-        if (ep_sq_ == Square::underlying::NO_SQ)
+        if (ep_sq_ == Square::NO_SQ)
             ss += " -";
         else {
             ss += ' ';
@@ -280,8 +280,8 @@ class Board {
         hfm_++;
         plies_++;
 
-        if (ep_sq_ != Square::underlying::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
-        ep_sq_ = Square::underlying::NO_SQ;
+        if (ep_sq_ != Square::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
+        ep_sq_ = Square::NO_SQ;
 
         if (capture) {
             removePiece(captured, move.to());
@@ -503,8 +503,8 @@ class Board {
         prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, Piece::NONE);
 
         key_ ^= Zobrist::sideToMove();
-        if (ep_sq_ != Square::underlying::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
-        ep_sq_ = Square::underlying::NO_SQ;
+        if (ep_sq_ != Square::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
+        ep_sq_ = Square::NO_SQ;
 
         stm_ = ~stm_;
 
@@ -825,7 +825,7 @@ class Board {
         }
 
         U64 ep_hash = 0ULL;
-        if (ep_sq_ != Square::underlying::NO_SQ) ep_hash ^= Zobrist::enpassant(ep_sq_.file());
+        if (ep_sq_ != Square::NO_SQ) ep_hash ^= Zobrist::enpassant(ep_sq_.file());
 
         U64 stm_hash = 0ULL;
         if (stm_ == Color::WHITE) stm_hash ^= Zobrist::sideToMove();
@@ -936,7 +936,7 @@ class Board {
             const auto castling   = params[2].has_value() ? *params[2] : "-";
             const auto en_passant = params[3].has_value() ? *params[3] : "-";
 
-            const auto ep  = en_passant == "-" ? Square::underlying::NO_SQ : Square(en_passant);
+            const auto ep  = en_passant == "-" ? Square::NO_SQ : Square(en_passant);
             const auto stm = (move_right == "w") ? Color::WHITE : Color::BLACK;
 
             CastlingRights cr;
@@ -1105,7 +1105,7 @@ class Board {
         // 14 => any black rook with castling rights, side will be deduced from the file
         // 15 => black king and black is side to move
         static std::uint8_t convertMeaning(const CastlingRights &cr, Color stm, Square ep, Square sq, Piece piece) {
-            if (piece.type() == PieceType::PAWN && ep != Square::underlying::NO_SQ) {
+            if (piece.type() == PieceType::PAWN && ep != Square::NO_SQ) {
                 if (Square(static_cast<int>(sq.index()) ^ 8) == ep) return 12;
             }
 
@@ -1143,7 +1143,7 @@ class Board {
     CastlingRights cr_ = {};
     uint16_t plies_    = 0;
     Color stm_         = Color::WHITE;
-    Square ep_sq_      = Square::underlying::NO_SQ;
+    Square ep_sq_      = Square::NO_SQ;
     uint8_t hfm_       = 0;
 
     bool chess960_ = false;
@@ -1224,7 +1224,7 @@ class Board {
         plies_ = parseStringViewToInt(full_move).value_or(1);
 
         plies_ = plies_ * 2 - 2;
-        ep_sq_ = en_passant == "-" ? Square::underlying::NO_SQ : Square(en_passant);
+        ep_sq_ = en_passant == "-" ? Square::NO_SQ : Square(en_passant);
         stm_   = (move_right == "w") ? Color::WHITE : Color::BLACK;
         key_   = 0ULL;
         cr_.clear();
@@ -1260,8 +1260,7 @@ class Board {
         static const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) {
             const auto king_side = CastlingRights::Side::KING_SIDE;
             const auto king_sq   = board.kingSq(color);
-            const auto sq_corner = Square(side == king_side ? Square::underlying::SQ_H1 : Square::underlying::SQ_A1)
-                                       .relative_square(color);
+            const auto sq_corner = Square(side == king_side ? Square::SQ_H1 : Square::SQ_A1).relative_square(color);
 
             const auto start = side == king_side ? king_sq + 1 : king_sq - 1;
 
@@ -1316,13 +1315,13 @@ class Board {
         }
 
         // check if ep square itself is valid
-        if (ep_sq_ != Square::underlying::NO_SQ && !((ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
-                                                     (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE))) {
-            ep_sq_ = Square::underlying::NO_SQ;
+        if (ep_sq_ != Square::NO_SQ && !((ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
+                                         (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE))) {
+            ep_sq_ = Square::NO_SQ;
         }
 
         // check if ep square is valid, i.e. if there is a pawn that can capture it
-        if (ep_sq_ != Square::underlying::NO_SQ) {
+        if (ep_sq_ != Square::NO_SQ) {
             bool valid;
 
             if (stm_ == Color::WHITE) {
@@ -1332,7 +1331,7 @@ class Board {
             }
 
             if (!valid)
-                ep_sq_ = Square::underlying::NO_SQ;
+                ep_sq_ = Square::NO_SQ;
             else
                 key_ ^= Zobrist::enpassant(ep_sq_.file());
         }

@@ -10,7 +10,7 @@ TEST_SUITE("UCI Move Conversion") {
 
         std::string uci = "f6e5";
 
-        CHECK(uci::uciToMove(b, uci) == Move::make(Square::underlying::SQ_F6, Square::underlying::SQ_E5));
+        CHECK(uci::uciToMove(b, uci) == Move::make(Square::SQ_F6, Square::SQ_E5));
     }
 
     TEST_CASE("Test ambiguous pawn ep capture") {
@@ -19,8 +19,7 @@ TEST_SUITE("UCI Move Conversion") {
 
         std::string uci = "f5g6";
 
-        CHECK(uci::uciToMove(b, uci) ==
-              Move::make<Move::ENPASSANT>(Square::underlying::SQ_F5, Square::underlying::SQ_G6));
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::ENPASSANT>(Square::SQ_F5, Square::SQ_G6));
     }
 
     TEST_CASE("Test ambiguous knight move") {
@@ -29,7 +28,7 @@ TEST_SUITE("UCI Move Conversion") {
 
         std::string uci = "f3g5";
 
-        CHECK(uci::uciToMove(b, uci) == Move::make(Square::underlying::SQ_F3, Square::underlying::SQ_G5));
+        CHECK(uci::uciToMove(b, uci) == Move::make(Square::SQ_F3, Square::SQ_G5));
     }
 
     TEST_CASE("Test ambiguous rook move with check") {
@@ -47,7 +46,7 @@ TEST_SUITE("UCI Move Conversion") {
 
         std::string uci = "d1h1";
 
-        CHECK(uci::uciToMove(b, uci) == Move::make(Square::underlying::SQ_D1, Square::underlying::SQ_H1));
+        CHECK(uci::uciToMove(b, uci) == Move::make(Square::SQ_D1, Square::SQ_H1));
     }
 
     TEST_CASE("Test Knight move") {
@@ -56,7 +55,7 @@ TEST_SUITE("UCI Move Conversion") {
 
         std::string uci = "f3g5";
 
-        CHECK(uci::uciToMove(b, uci) == Move::make(Square::underlying::SQ_F3, Square::underlying::SQ_G5));
+        CHECK(uci::uciToMove(b, uci) == Move::make(Square::SQ_F3, Square::SQ_G5));
     }
 
     TEST_CASE("Test illegal pawn promotion") {

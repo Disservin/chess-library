@@ -230,7 +230,7 @@ class uci {
                 }
             }
             // Handle moves with specific from square
-            else if (info.from != Square::underlying::NO_SQ) {
+            else if (info.from != Square::NO_SQ) {
                 if (move.from() != info.from) {
                     continue;
                 }
@@ -270,9 +270,9 @@ class uci {
 
         PieceType promotion = PieceType::NONE;
 
-        Square from = Square::underlying::NO_SQ;
+        Square from = Square::NO_SQ;
         // a valid move always has a to square
-        Square to = Square::underlying::NO_SQ;
+        Square to = Square::NO_SQ;
 
         // a valid move always has a piece
         PieceType piece = PieceType::NONE;

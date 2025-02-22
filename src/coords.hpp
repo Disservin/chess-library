@@ -10,6 +10,16 @@
 
 namespace chess {
 
+#define CHESS_DECLARE_RANK(N)                            \
+    static constexpr auto SQ_A##N = underlying::SQ_A##N; \
+    static constexpr auto SQ_B##N = underlying::SQ_B##N; \
+    static constexpr auto SQ_C##N = underlying::SQ_C##N; \
+    static constexpr auto SQ_D##N = underlying::SQ_D##N; \
+    static constexpr auto SQ_E##N = underlying::SQ_E##N; \
+    static constexpr auto SQ_F##N = underlying::SQ_F##N; \
+    static constexpr auto SQ_G##N = underlying::SQ_G##N; \
+    static constexpr auto SQ_H##N = underlying::SQ_H##N;
+
 class File {
    public:
     enum class underlying : std::uint8_t { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NO_FILE };
@@ -131,6 +141,24 @@ class Square {
         NO_SQ
     };
     // clang-format on
+
+// when c++20
+#if __cplusplus >= 202002L
+    using enum underlying;
+#else
+
+    CHESS_DECLARE_RANK(1)
+    CHESS_DECLARE_RANK(2)
+    CHESS_DECLARE_RANK(3)
+    CHESS_DECLARE_RANK(4)
+    CHESS_DECLARE_RANK(5)
+    CHESS_DECLARE_RANK(6)
+    CHESS_DECLARE_RANK(7)
+    CHESS_DECLARE_RANK(8)
+
+    static constexpr auto NO_SQ = underlying::NO_SQ;
+
+#endif
 
     constexpr Square() : sq(underlying::NO_SQ) {}
 
@@ -326,7 +354,7 @@ class Square {
      * @return
      */
     [[nodiscard]] static constexpr Square castling_king_square(bool is_king_side, Color c) noexcept {
-        return Square(is_king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1).relative_square(c);
+        return Square(is_king_side ? Square::SQ_G1 : Square::SQ_C1).relative_square(c);
     }
 
     /**
@@ -336,7 +364,7 @@ class Square {
      * @return
      */
     [[nodiscard]] static constexpr Square castling_rook_square(bool is_king_side, Color c) noexcept {
-        return Square(is_king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1).relative_square(c);
+        return Square(is_king_side ? Square::SQ_F1 : Square::SQ_D1).relative_square(c);
     }
 
     /**
@@ -373,5 +401,7 @@ enum class Direction : int8_t {
 constexpr Square operator+(Square sq, Direction dir) {
     return static_cast<Square>(sq.index() + static_cast<int8_t>(dir));
 }
+
+#undef CHESS_DECLARE_RANK
 
 }  // namespace chess
