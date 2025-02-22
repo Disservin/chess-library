@@ -121,171 +121,171 @@ TEST_SUITE("Rank") {
 
 TEST_SUITE("Square") {
     TEST_CASE("Square operator==") {
-        Square s = Square::underlying::SQ_A1;
-        CHECK(s == Square::underlying::SQ_A1);
+        Square s = Square::SQ_A1;
+        CHECK(s == Square::SQ_A1);
     }
 
     TEST_CASE("Square operator!=") {
-        Square s = Square::underlying::SQ_A1;
-        CHECK(s != Square::underlying::SQ_A2);
+        Square s = Square::SQ_A1;
+        CHECK(s != Square::SQ_A2);
     }
 
     TEST_CASE("Square operator>=") {
-        Square s = Square::underlying::SQ_A1;
-        CHECK(s >= Square::underlying::SQ_A1);
+        Square s = Square::SQ_A1;
+        CHECK(s >= Square::SQ_A1);
     }
 
     TEST_CASE("Square operator<=") {
-        Square s = Square::underlying::SQ_A1;
-        CHECK(s <= Square::underlying::SQ_A1);
+        Square s = Square::SQ_A1;
+        CHECK(s <= Square::SQ_A1);
     }
 
     TEST_CASE("Square operator>") {
-        Square s = Square::underlying::SQ_A2;
-        CHECK(s > Square::underlying::SQ_A1);
+        Square s = Square::SQ_A2;
+        CHECK(s > Square::SQ_A1);
     }
 
     TEST_CASE("Square operator<") {
-        Square s = Square::underlying::SQ_A1;
-        CHECK(s < Square::underlying::SQ_A2);
+        Square s = Square::SQ_A1;
+        CHECK(s < Square::SQ_A2);
     }
 
     TEST_CASE("Square operator std::string") {
-        Square s = Square::underlying::SQ_A1;
+        Square s = Square::SQ_A1;
         CHECK(static_cast<std::string>(s) == "a1");
 
-        s = Square::underlying::SQ_A2;
+        s = Square::SQ_A2;
         CHECK(static_cast<std::string>(s) == "a2");
 
-        s = Square::underlying::SQ_A3;
+        s = Square::SQ_A3;
         CHECK(static_cast<std::string>(s) == "a3");
 
-        s = Square::underlying::SQ_A4;
+        s = Square::SQ_A4;
         CHECK(static_cast<std::string>(s) == "a4");
 
-        s = Square::underlying::SQ_A5;
+        s = Square::SQ_A5;
         CHECK(static_cast<std::string>(s) == "a5");
 
-        s = Square::underlying::SQ_A6;
+        s = Square::SQ_A6;
         CHECK(static_cast<std::string>(s) == "a6");
 
-        s = Square::underlying::SQ_A7;
+        s = Square::SQ_A7;
         CHECK(static_cast<std::string>(s) == "a7");
 
-        s = Square::underlying::SQ_A8;
+        s = Square::SQ_A8;
         CHECK(static_cast<std::string>(s) == "a8");
 
-        s = Square::underlying::SQ_B1;
+        s = Square::SQ_B1;
         CHECK(static_cast<std::string>(s) == "b1");
 
-        s = Square::underlying::SQ_B2;
+        s = Square::SQ_B2;
         CHECK(static_cast<std::string>(s) == "b2");
 
-        s = Square::underlying::SQ_B3;
+        s = Square::SQ_B3;
         CHECK(static_cast<std::string>(s) == "b3");
 
-        s = Square::underlying::SQ_B4;
+        s = Square::SQ_B4;
         CHECK(static_cast<std::string>(s) == "b4");
 
-        s = Square::underlying::SQ_B5;
+        s = Square::SQ_B5;
         CHECK(static_cast<std::string>(s) == "b5");
 
-        s = Square::underlying::SQ_B6;
+        s = Square::SQ_B6;
         CHECK(static_cast<std::string>(s) == "b6");
 
-        s = Square::underlying::SQ_B7;
+        s = Square::SQ_B7;
         CHECK(static_cast<std::string>(s) == "b7");
 
-        s = Square::underlying::SQ_B8;
+        s = Square::SQ_B8;
         CHECK(static_cast<std::string>(s) == "b8");
 
-        s = Square::underlying::SQ_C1;
+        s = Square::SQ_C1;
         CHECK(static_cast<std::string>(s) == "c1");
 
-        s = Square::underlying::SQ_C2;
+        s = Square::SQ_C2;
         CHECK(static_cast<std::string>(s) == "c2");
 
-        s = Square::underlying::SQ_C3;
+        s = Square::SQ_C3;
         CHECK(static_cast<std::string>(s) == "c3");
     }
 
     TEST_CASE("Square file()") {
-        Square s = Square::underlying::SQ_A1;
+        Square s = Square::SQ_A1;
         CHECK(s.file() == File::FILE_A);
 
-        s = Square::underlying::SQ_B1;
+        s = Square::SQ_B1;
         CHECK(s.file() == File::FILE_B);
 
-        s = Square::underlying::SQ_C1;
+        s = Square::SQ_C1;
         CHECK(s.file() == File::FILE_C);
     }
 
     TEST_CASE("Square rank()") {
-        Square s = Square::underlying::SQ_A1;
+        Square s = Square::SQ_A1;
         CHECK(s.rank() == Rank::RANK_1);
 
-        s = Square::underlying::SQ_A2;
+        s = Square::SQ_A2;
         CHECK(s.rank() == Rank::RANK_2);
 
-        s = Square::underlying::SQ_A3;
+        s = Square::SQ_A3;
         CHECK(s.rank() == Rank::RANK_3);
     }
 
     TEST_CASE("Square ()") {
         Square s = Square(File::FILE_A, Rank::RANK_1);
-        CHECK(s == Square::underlying::SQ_A1);
+        CHECK(s == Square::SQ_A1);
 
         s = Square(File::FILE_B, Rank::RANK_1);
-        CHECK(s == Square::underlying::SQ_B1);
+        CHECK(s == Square::SQ_B1);
 
         s = Square(File::FILE_C, Rank::RANK_1);
-        CHECK(s == Square::underlying::SQ_C1);
+        CHECK(s == Square::SQ_C1);
     }
 
     TEST_CASE("Square ()") {
         Square s = Square("a1");
-        CHECK(s == Square::underlying::SQ_A1);
+        CHECK(s == Square::SQ_A1);
 
         s = Square("b1");
-        CHECK(s == Square::underlying::SQ_B1);
+        CHECK(s == Square::SQ_B1);
 
         s = Square("c1");
-        CHECK(s == Square::underlying::SQ_C1);
+        CHECK(s == Square::SQ_C1);
     }
 
     TEST_CASE("is_light") {
-        Square s = Square::underlying::SQ_A1;
+        Square s = Square::SQ_A1;
         CHECK(s.is_light());
 
-        s = Square::underlying::SQ_B1;
+        s = Square::SQ_B1;
         CHECK(!s.is_light());
 
-        s = Square::underlying::SQ_C1;
+        s = Square::SQ_C1;
         CHECK(s.is_light());
     }
 
     TEST_CASE("is_dark") {
-        Square s = Square::underlying::SQ_A1;
+        Square s = Square::SQ_A1;
         CHECK(!s.is_dark());
 
-        s = Square::underlying::SQ_B1;
+        s = Square::SQ_B1;
         CHECK(s.is_dark());
 
-        s = Square::underlying::SQ_C1;
+        s = Square::SQ_C1;
         CHECK(!s.is_dark());
     }
 
     TEST_CASE("is_valid") {
-        Square s = Square::underlying::SQ_A1;
+        Square s = Square::SQ_A1;
         CHECK(s.is_valid());
 
-        s = Square::underlying::SQ_B1;
+        s = Square::SQ_B1;
         CHECK(s.is_valid());
 
-        s = Square::underlying::SQ_C1;
+        s = Square::SQ_C1;
         CHECK(s.is_valid());
 
-        s = Square::underlying::NO_SQ;
+        s = Square::NO_SQ;
         CHECK(!s.is_valid());
     }
 
@@ -296,58 +296,58 @@ TEST_SUITE("Square") {
     }
 
     TEST_CASE("Square distance") {
-        CHECK(Square::distance(Square::underlying::SQ_A1, Square::underlying::SQ_A1) == 0);
-        CHECK(Square::distance(Square::underlying::SQ_A1, Square::underlying::SQ_A2) == 1);
-        CHECK(Square::distance(Square::underlying::SQ_A1, Square::underlying::SQ_B1) == 1);
-        CHECK(Square::distance(Square::underlying::SQ_A1, Square::underlying::SQ_B2) == 1);
+        CHECK(Square::distance(Square::SQ_A1, Square::SQ_A1) == 0);
+        CHECK(Square::distance(Square::SQ_A1, Square::SQ_A2) == 1);
+        CHECK(Square::distance(Square::SQ_A1, Square::SQ_B1) == 1);
+        CHECK(Square::distance(Square::SQ_A1, Square::SQ_B2) == 1);
     }
 
     TEST_CASE("Square value_distance") {
-        CHECK(Square::value_distance(Square::underlying::SQ_A1, Square::underlying::SQ_A1) == 0);
-        CHECK(Square::value_distance(Square::underlying::SQ_A1, Square::underlying::SQ_A2) == 8);
-        CHECK(Square::value_distance(Square::underlying::SQ_A1, Square::underlying::SQ_B1) == 1);
-        CHECK(Square::value_distance(Square::underlying::SQ_A1, Square::underlying::SQ_B2) == 9);
+        CHECK(Square::value_distance(Square::SQ_A1, Square::SQ_A1) == 0);
+        CHECK(Square::value_distance(Square::SQ_A1, Square::SQ_A2) == 8);
+        CHECK(Square::value_distance(Square::SQ_A1, Square::SQ_B1) == 1);
+        CHECK(Square::value_distance(Square::SQ_A1, Square::SQ_B2) == 9);
     }
 
     TEST_CASE("Square same_color") {
-        CHECK(Square::same_color(Square::underlying::SQ_A1, Square::underlying::SQ_A1));
-        CHECK(!Square::same_color(Square::underlying::SQ_A1, Square::underlying::SQ_A2));
-        CHECK(!Square::same_color(Square::underlying::SQ_A1, Square::underlying::SQ_B1));
-        CHECK(Square::same_color(Square::underlying::SQ_A1, Square::underlying::SQ_B2));
+        CHECK(Square::same_color(Square::SQ_A1, Square::SQ_A1));
+        CHECK(!Square::same_color(Square::SQ_A1, Square::SQ_A2));
+        CHECK(!Square::same_color(Square::SQ_A1, Square::SQ_B1));
+        CHECK(Square::same_color(Square::SQ_A1, Square::SQ_B2));
     }
 
     TEST_CASE("Square back_rank") {
-        CHECK(Square::back_rank(Square::underlying::SQ_A1, Color::WHITE));
-        CHECK(!Square::back_rank(Square::underlying::SQ_A1, Color::BLACK));
-        CHECK(!Square::back_rank(Square::underlying::SQ_A8, Color::WHITE));
-        CHECK(Square::back_rank(Square::underlying::SQ_A8, Color::BLACK));
+        CHECK(Square::back_rank(Square::SQ_A1, Color::WHITE));
+        CHECK(!Square::back_rank(Square::SQ_A1, Color::BLACK));
+        CHECK(!Square::back_rank(Square::SQ_A8, Color::WHITE));
+        CHECK(Square::back_rank(Square::SQ_A8, Color::BLACK));
     }
 
     TEST_CASE("Square flip") {
-        CHECK(Square(Square::underlying::SQ_A1).flip() == Square::underlying::SQ_A8);
-        CHECK(Square(Square::underlying::SQ_A2).flip() == Square::underlying::SQ_A7);
-        CHECK(Square(Square::underlying::SQ_A3).flip() == Square::underlying::SQ_A6);
+        CHECK(Square(Square::SQ_A1).flip() == Square::SQ_A8);
+        CHECK(Square(Square::SQ_A2).flip() == Square::SQ_A7);
+        CHECK(Square(Square::SQ_A3).flip() == Square::SQ_A6);
     }
 
     TEST_CASE("Square relative_square") {
-        CHECK(Square(Square::underlying::SQ_A1).relative_square(Color::WHITE) == Square::underlying::SQ_A1);
-        CHECK(Square(Square::underlying::SQ_A1).relative_square(Color::BLACK) == Square::underlying::SQ_A8);
-        CHECK(Square(Square::underlying::SQ_A2).relative_square(Color::WHITE) == Square::underlying::SQ_A2);
-        CHECK(Square(Square::underlying::SQ_A2).relative_square(Color::BLACK) == Square::underlying::SQ_A7);
+        CHECK(Square(Square::SQ_A1).relative_square(Color::WHITE) == Square::SQ_A1);
+        CHECK(Square(Square::SQ_A1).relative_square(Color::BLACK) == Square::SQ_A8);
+        CHECK(Square(Square::SQ_A2).relative_square(Color::WHITE) == Square::SQ_A2);
+        CHECK(Square(Square::SQ_A2).relative_square(Color::BLACK) == Square::SQ_A7);
     }
 
     TEST_CASE("Square ep_square") {
-        CHECK(Square(Square::underlying::SQ_A3).ep_square() == Square::underlying::SQ_A4);
-        CHECK(Square(Square::underlying::SQ_A4).ep_square() == Square::underlying::SQ_A3);
-        CHECK(Square(Square::underlying::SQ_A5).ep_square() == Square::underlying::SQ_A6);
-        CHECK(Square(Square::underlying::SQ_A6).ep_square() == Square::underlying::SQ_A5);
+        CHECK(Square(Square::SQ_A3).ep_square() == Square::SQ_A4);
+        CHECK(Square(Square::SQ_A4).ep_square() == Square::SQ_A3);
+        CHECK(Square(Square::SQ_A5).ep_square() == Square::SQ_A6);
+        CHECK(Square(Square::SQ_A6).ep_square() == Square::SQ_A5);
     }
 
     TEST_CASE("Square castling_king_square") {
-        CHECK(Square::castling_king_square(true, Color::WHITE) == Square::underlying::SQ_G1);
-        CHECK(Square::castling_king_square(false, Color::WHITE) == Square::underlying::SQ_C1);
-        CHECK(Square::castling_king_square(true, Color::BLACK) == Square::underlying::SQ_G8);
-        CHECK(Square::castling_king_square(false, Color::BLACK) == Square::underlying::SQ_C8);
+        CHECK(Square::castling_king_square(true, Color::WHITE) == Square::SQ_G1);
+        CHECK(Square::castling_king_square(false, Color::WHITE) == Square::SQ_C1);
+        CHECK(Square::castling_king_square(true, Color::BLACK) == Square::SQ_G8);
+        CHECK(Square::castling_king_square(false, Color::BLACK) == Square::SQ_C8);
     }
 
     TEST_CASE("Square max") { CHECK(Square::max() == 64); }

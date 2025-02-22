@@ -269,7 +269,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
 
     const Square ep = board.enpassantSq();
 
-    if (ep != Square::underlying::NO_SQ) {
+    if (ep != Square::NO_SQ) {
         auto m = generateEPMove(board, checkmask, pin_d, pawns_lr, ep, c);
 
         for (const auto &move : m) {

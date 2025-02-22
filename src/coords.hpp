@@ -354,7 +354,7 @@ class Square {
      * @return
      */
     [[nodiscard]] static constexpr Square castling_king_square(bool is_king_side, Color c) noexcept {
-        return Square(is_king_side ? Square::underlying::SQ_G1 : Square::underlying::SQ_C1).relative_square(c);
+        return Square(is_king_side ? Square::SQ_G1 : Square::SQ_C1).relative_square(c);
     }
 
     /**
@@ -364,7 +364,7 @@ class Square {
      * @return
      */
     [[nodiscard]] static constexpr Square castling_rook_square(bool is_king_side, Color c) noexcept {
-        return Square(is_king_side ? Square::underlying::SQ_F1 : Square::underlying::SQ_D1).relative_square(c);
+        return Square(is_king_side ? Square::SQ_F1 : Square::SQ_D1).relative_square(c);
     }
 
     /**
