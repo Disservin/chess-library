@@ -8,7 +8,7 @@ before checking for captures.
 Incase you want to manually create a move you can do it like so.
 
 ```cpp
-Move m = Move::make<Move::NORMAL>(Square::underlying::SQ_E2, Square::underlying::SQ_E4);
+Move m = Move::make<Move::NORMAL>(Square::SQ_E2, Square::SQ_E4);
 ```
 
 ## Other formats
