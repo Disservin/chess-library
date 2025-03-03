@@ -25,6 +25,31 @@ The library internally uses `assert` and may print debug information to `std::ce
 To disable this define `NDEBUG` when compiling.
 :::
 
+### Board.isGameOver() API
+
+Engines should avoid `isGameOver()` because it redundantly generates legal moves that your engine has already calculated.  
+Instead you should use something like this:
+
+```cpp
+if (board.isHalfMoveDraw())
+  return board.getHalfMoveDrawType().first == GameResultReason::CHECKMATE ? 
+         MATED_SCORE : DRAW_SCORE;
+
+if (board.isRepetition())
+  return DRAW_SCORE;
+
+Movelist moves;
+movegen::legalmoves(moves, board);
+
+for (const auto& move : moves) {
+  // do something
+}
+
+// no moves means game over
+if (moves.empty())
+  return inCheck ? MATED_SCORE : DRAW_SCORE;
+```
+
 ## Understanding Bitboards
 
 A bitboard is a fundamental data structure in chess programming that uses a 64-bit integer to represent a chess board. Each bit corresponds to one square on the board - when a bit is 1, it means something is present on that square (like a piece or an attack). Bitboards make chess operations very efficient since they can use CPU's native bitwise operations.
@@ -57,4 +82,3 @@ Bitboard all_pawns = white_pawns | black_pawns;  // Union of both
 - `pop()` - Returns and clears the least significant bit. This is particularly useful when you need to process each piece on a bitboard one at a time. Each call to pop() gives you the next piece position and removes it from the bitboard. This approach is much faster than any for loop.
 
 - `getBits()` - Returns the raw 64-bit integer underlying the bitboard. This gives you direct access to the underyling 64-bit integer when you need it.
-
