@@ -25,6 +25,22 @@ class Color {
         }
     }
 
+    /**
+     * @brief Gets the long string representation of the color
+     * @return "White" for WHITE, "Black" for BLACK
+     * "None" for NONE
+     */
+    [[nodiscard]] std::string longStr() const {
+        switch (color) {
+            case underlying::WHITE:
+                return "White";
+            case underlying::BLACK:
+                return "Black";
+            default:
+                return "None";
+        }
+    }
+
     constexpr Color operator~() const noexcept { return static_cast<Color>(static_cast<uint8_t>(color) ^ 1); }
 
     explicit operator std::string() const {
