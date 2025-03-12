@@ -67,6 +67,12 @@ std::string moveToLan(const Board& board, const Move& move);
  */
 Move parseSan(const Board& board, std::string_view san);
 
+/**
+ * @brief Check if a string is a valid UCI move. Must also have the correct length.
+ * @param move
+ * @return
+ */
+static bool isUciMove(const std::string &move) noexcept;
 }  // namespace uci
 ```
 

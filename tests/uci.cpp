@@ -85,3 +85,59 @@ TEST_SUITE("UCI Move Conversion") {
         CHECK(uci::uciToMove(b, uci) == Move::NO_MOVE);
     }
 }
+
+TEST_SUITE("UCI isUciMove Check") {
+    TEST_CASE("Test valid standard moves") {
+        CHECK(uci::isUciMove("e2e4"));  // Pawn push
+        CHECK(uci::isUciMove("g1f3"));  // Knight move
+        CHECK(uci::isUciMove("f1c4"));  // Bishop move
+        CHECK(uci::isUciMove("h1g1"));  // Rook move
+        CHECK(uci::isUciMove("d1d7"));  // Queen move
+        CHECK(uci::isUciMove("e1e2"));  // King move
+    }
+
+    TEST_CASE("Test valid pawn promotion moves") {
+        CHECK(uci::isUciMove("e7e8q"));  // Promote to queen
+        CHECK(uci::isUciMove("a7a8r"));  // Promote to rook
+        CHECK(uci::isUciMove("h2h1n"));  // Promote to knight
+        CHECK(uci::isUciMove("c7c8b"));  // Promote to bishop
+    }
+
+    TEST_CASE("Test invalid formats") {
+        CHECK_FALSE(uci::isUciMove(""));        // Empty string
+        CHECK_FALSE(uci::isUciMove("e2e"));     // Too short
+        CHECK_FALSE(uci::isUciMove("e2e4 "));   // Additional space
+        CHECK_FALSE(uci::isUciMove("e2e4e5"));  // Too long
+        CHECK_FALSE(uci::isUciMove("e2-e4"));   // Invalid format with hyphen
+        CHECK_FALSE(uci::isUciMove("P@e4"));    // Not UCI format
+        CHECK_FALSE(uci::isUciMove("O-O"));     // Castling in algebraic, not UCI
+    }
+
+    TEST_CASE("Test invalid coordinates") {
+        CHECK_FALSE(uci::isUciMove("i2e4"));  // Invalid file 'i'
+        CHECK_FALSE(uci::isUciMove("e9e4"));  // Invalid rank '9'
+        CHECK_FALSE(uci::isUciMove("e0e4"));  // Invalid rank '0'
+        CHECK_FALSE(uci::isUciMove("e2j4"));  // Invalid file 'j'
+        CHECK_FALSE(uci::isUciMove("22e4"));  // Not a file
+        CHECK_FALSE(uci::isUciMove("e2e/"));  // Not a rank
+    }
+
+    TEST_CASE("Test case sensitivity") {
+        CHECK_FALSE(uci::isUciMove("E2E4"));   // Uppercase coordinates
+        CHECK_FALSE(uci::isUciMove("e7e8Q"));  // Uppercase promotion
+        CHECK_FALSE(uci::isUciMove("e7e8X"));  // Invalid promotion piece
+    }
+
+    TEST_CASE("Test special UCI moves") {
+        // Some engines use special notations for castling
+        CHECK(uci::isUciMove("e1g1"));  // King-side castling for white
+        CHECK(uci::isUciMove("e8g8"));  // King-side castling for black
+        CHECK(uci::isUciMove("e1c1"));  // Queen-side castling for white
+        CHECK(uci::isUciMove("e8c8"));  // Queen-side castling for black
+    }
+
+    TEST_CASE("Test edge cases") {
+        CHECK_FALSE(uci::isUciMove("e7e9q"));  // Invalid rank promotion
+        CHECK_FALSE(uci::isUciMove("e7k8q"));  // Invalid file promotion
+    }
+}
