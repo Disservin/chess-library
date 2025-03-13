@@ -1,11 +1,9 @@
 #pragma once
 
 #include <array>
-#include <cassert>
 #include <iostream>
 #include <istream>
 #include <optional>
-#include <stdexcept>
 #include <string_view>
 
 namespace chess::pgn {
