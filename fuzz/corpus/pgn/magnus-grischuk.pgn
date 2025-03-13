@@ -1,0 +1,20 @@
+[Event "3rd Norway Chess 2015"]
+[Site "Stavanger NOR"]
+[Date "2015.06.21"]
+[Round "5.2"]
+[White "Carlsen, M."]
+[Black "Grischuk, A."]
+[Result "1-0"]
+[GameId "jMVMo1Ua"]
+[WhiteElo "2876"]
+[BlackElo "2781"]
+[Variant "Standard"]
+[TimeControl "-"]
+[ECO "B91"]
+[Opening "Sicilian Defense: Najdorf Variation, Zagreb Variation"]
+[Termination "Unknown"]
+[Annotator "lichess.org"]
+
+1. Nf3 { [%eval 0.15] } 1... c5 { [%eval 0.37] } 2. e4 { [%eval 0.28] } 2... d6 { [%eval 0.32] } 3. d4 { [%eval 0.34] } 3... cxd4 { [%eval 0.27] } 4. Nxd4 { [%eval 0.36] } 4... Nf6 { [%eval 0.23] } 5. Nc3 { [%eval 0.28] } 5... a6 { [%eval 0.3] } 6. g3 { [%eval 0.03] } { B91 Sicilian Defense: Najdorf Variation, Zagreb Variation } 6... e5 { [%eval 0.0] } 7. Nde2 { [%eval 0.06] } 7... Be7 { [%eval 0.1] } 8. Bg2 { [%eval 0.05] } 8... b5 { [%eval 0.21] } 9. Nd5 { [%eval 0.18] } 9... Nbd7 { [%eval 0.29] } 10. Nec3 { [%eval 0.17] } 10... Bb7 { [%eval 0.31] } 11. a4 { [%eval 0.3] } 11... Nxd5 { [%eval 0.29] } 12. Nxd5 { [%eval 0.28] } 12... Nf6 { [%eval 0.38] } 13. axb5 { [%eval -0.01] } 13... Nxd5 { [%eval -0.09] } 14. exd5 { [%eval -0.12] } 14... axb5 { [%eval -0.11] } 15. Rxa8 { [%eval 0.01] } 15... Qxa8 { [%eval -0.07] } 16. Qd3 { [%eval -0.14] } 16... O-O { [%eval 0.06] } 17. O-O { [%eval 0.0] } 17... Bc8 { [%eval 0.05] } 18. Be3 { [%eval -0.11] } 18... Bd7 { [%eval 0.0] } 19. Rc1 { [%eval -0.06] } 19... h6 { [%eval -0.06] } 20. Qd1 { [%eval -0.02] } 20... Qb7 { [%eval -0.08] } 21. Ra1 { [%eval -0.12] } 21... Ra8 { [%eval -0.08] } 22. h4 { [%eval -0.02] } 22... Ra6 { [%eval 0.0] } 23. b3 { [%eval 0.0] } 23... Bd8 { [%eval -0.02] } 24. c4 { [%eval -0.12] } 24... bxc4 { [%eval 0.0] } 25. bxc4 { [%eval 0.0] } 25... Bb6 { [%eval 0.0] } 26. c5 { [%eval 0.08] } 26... Bxc5 { [%eval 0.06] } 27. Bxc5 { [%eval 0.0] } 27... dxc5 { [%eval 0.09] } 28. d6 { [%eval 0.11] } 28... Qb6 { [%eval 0.11] } 29. Rxa6 { [%eval 0.21] } 29... Qxa6 { [%eval 0.1] } 30. Bd5 { [%eval 0.12] } 30... Qc8 { [%eval 0.44] } 31. Qb3 { [%eval 0.53] } 31... Be8 { [%eval 0.57] } 32. Qc3 { [%eval 0.46] } 32... c4 { [%eval 0.58] } 33. Bxc4 { [%eval 0.62] } 33... Bd7 { [%eval 0.58] } 34. Qb3 { [%eval 0.56] } 34... Qe8 { [%eval 0.63] } 35. Qf3 { [%eval 0.69] } 35... Kf8 { [%eval 0.66] } 36. h5 { [%eval 0.26] } 36... Kg8 { [%eval 0.77] } 37. Qe4 { [%eval 0.72] } 37... Bc6 { [%eval 0.81] } 38. Bd5 { [%eval 0.84] } 38... Bd7 { [%eval 0.93] } 39. Kg2 { [%eval 0.63] } 39... Kh8 { [%eval 0.77] } 40. f4 { [%eval 0.78] } 40... exf4?? { (0.78 → 2.75) Blunder. f6 was best. } { [%eval 2.75] } (40... f6 41. fxe5 fxe5 42. g4 Qc8 43. Kg3 Qc3+ 44. Qf3 Qc8 45. Be4 Be6 46. Bf5 Bxf5 47. gxf5 Qd8 48. Qd5) 41. Qxe8+ { [%eval 2.87] } 41... Bxe8 { [%eval 2.65] } 42. Bxf7 { [%eval 2.85] } 42... Bc6+ { [%eval 2.41] } 43. Kf2 { [%eval 2.65] } 43... fxg3+ { [%eval 1.24] } 44. Kxg3 { [%eval 5.64] } 44... Bd7? { (5.64 → 44.73) Mistake. Ba4 was best. } { [%eval 44.73] } (44... Ba4 45. Bg6 Kg8 46. Kf4 Kf8 47. Kf5 Bd7+ 48. Ke5 Bg4 49. Ke4 Be6 50. Kd4 Kg8 51. Ke5 Bd7 52. Bf5) 45. Bg6 { [%eval 45.54] } { White wins. } 1-0
+
+

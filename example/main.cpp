@@ -24,7 +24,7 @@ class MyVisitor : public pgn::Visitor {
     Board board;
 };
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const* argv[]) {
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <pgn_file>\n";
         return 1;
