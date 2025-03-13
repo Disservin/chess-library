@@ -65,12 +65,6 @@ enum class StreamParserError {
     NotEnoughData,
 };
 
-enum class StreamParserError {
-    None,
-    InvalidHeaderMissingClosingQuote,
-    NotEnoughData,
-};
-
 template <std::size_t BUFFER_SIZE =
 #if defined(__unix__) || defined(__unix) || defined(unix) || defined(__APPLE__) || defined(__MACH__)
 #    if defined(__APPLE__) || defined(__MACH__)
@@ -222,9 +216,7 @@ class StreamParser {
             }
         }
 
-        void advance() {
-            ++buffer_index_;
-        }
+        void advance() { ++buffer_index_; }
 
         char peek() {
             fill_if_needed();
