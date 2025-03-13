@@ -38,7 +38,12 @@ int main(int argc, char const* argv[]) {
     const auto t0 = std::chrono::high_resolution_clock::now();
 
     pgn::StreamParser parser(file_stream);
-    parser.readGames(*vis);
+    auto error = parser.readGames(*vis);
+
+    if (error) {
+        std::cerr << "Error: " << error.message() << "\n";
+        return 1;
+    }
 
     const auto t1 = std::chrono::high_resolution_clock::now();
 
