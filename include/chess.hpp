@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.8.4
+VERSION: 0.8.3
 */
 
 #ifndef CHESS_HPP
@@ -1498,6 +1498,9 @@ class movegen {
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                                         PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
+    // Public function to retrieve the checkmask and number of checks of our king. Used in perft.
+    [[nodiscard]] static std::pair<Bitboard, int> checkMask(const Board& board);
+
    private:
     static auto init_squares_between();
     static const std::array<std::array<Bitboard, 64>, 64> SQUARES_BETWEEN_BB;
@@ -2600,6 +2603,20 @@ class Board {
         return hash_key ^ ep_hash ^ stm_hash ^ castling_hash;
     }
 
+    // New function!
+    enum CheckType {
+        NO_CHECK,
+        DIRECT_CHECK,
+        DISCOVERY_CHECK
+    };
+
+    /**
+     * @brief Tests whether a pseudo-legal move gives a check
+     * @param Move
+     * @return CheckType
+     */
+    CheckType gives_check(const Move& m) const;
+
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
 
     /**
@@ -3141,12 +3158,11 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     }
 
     os << "\n\n";
-    os << "Side to move: " << static_cast<int>(b.stm_.internal()) << "\n";
-    os << "Castling rights: " << b.getCastleString() << "\n";
-    os << "Halfmoves: " << b.halfMoveClock() << "\n";
-    os << "Fullmoves: " << b.fullMoveNumber() << "\n";
-    os << "EP: " << b.ep_sq_.index() << "\n";
-    os << "Hash: " << b.key_ << "\n";
+
+    os << b.getFen() << "\n";
+    if (b.ep_sq_.is_valid())
+        os << "EP: " << b.ep_sq_ << "\n";
+    os << "Hash: " << std::hex << b.key_ << std::dec << "\n";
 
     os << std::endl;
 
@@ -3935,49 +3951,11 @@ class Visitor {
     bool skip_ = false;
 };
 
-class StreamParserError {
-   public:
-    enum Code {
-        None,
-        ExceededMaxStringLength,
-        InvalidHeaderMissingClosingBracket,
-        InvalidHeaderMissingClosingQuote,
-        NotEnoughData
-    };
-
-    StreamParserError() : code_(None) {}
-
-    StreamParserError(Code code) : code_(code) {}
-
-    Code code() const { return code_; }
-
-    bool hasError() const { return code_ != None; }
-
-    std::string message() const {
-        switch (code_) {
-            case None:
-                return "No error";
-            case InvalidHeaderMissingClosingBracket:
-                return "Invalid header: missing closing bracket";
-            case InvalidHeaderMissingClosingQuote:
-                return "Invalid header: missing closing quote";
-            case NotEnoughData:
-                return "Not enough data";
-            default:
-                assert(false);
-                return "Unknown error";
-        }
-    }
-
-    bool operator==(Code code) const { return code_ == code; }
-    bool operator!=(Code code) const { return code_ != code; }
-    bool operator==(const StreamParserError &other) const { return code_ == other.code_; }
-    bool operator!=(const StreamParserError &other) const { return code_ != other.code_; }
-
-    operator bool() const { return code_ != None; }
-
-   private:
-    Code code_;
+enum class StreamParserError {
+    None,
+    InvalidHeaderMissingClosingBracket,
+    InvalidHeaderMissingClosingQuote,
+    NotEnoughData,
 };
 
 template <std::size_t BUFFER_SIZE =
@@ -4019,10 +3997,6 @@ class StreamParser {
 
             } else if (in_body) {
                 processBody();
-
-                if (error != StreamParserError::None) {
-                    return error;
-                }
             }
 
             if (!dont_advance_after_body) stream_buffer.advance();
@@ -4039,31 +4013,17 @@ class StreamParser {
    private:
     class LineBuffer {
        public:
-        bool empty() const noexcept { return index_ == 0; }
+        LineBuffer() { buffer_.reserve(BUFFER_SIZE); }
+        bool empty() const noexcept { return buffer_.empty(); }
 
-        void clear() noexcept { index_ = 0; }
+        void clear() noexcept { buffer_.clear(); }
 
-        std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
+        std::string_view get() const noexcept { return std::string_view(buffer_.data(), buffer_.size()); }
 
-        bool add(char c) {
-            if (index_ >= N) {
-                return false;
-            }
-
-            buffer_[index_] = c;
-
-            ++index_;
-
-            return true;
-        }
+        void operator+=(char c) { buffer_.push_back(c); }
 
        private:
-        // PGN lines are limited to 255 characters
-        static constexpr int N = 255;
-
-        std::array<char, N> buffer_ = {};
-
-        std::size_t index_ = 0;
+        std::vector<char> buffer_;
     };
 
     class StreamBuffer {
@@ -4181,7 +4141,7 @@ class StreamParser {
 
     void callVisitorMoveFunction() {
         if (!move.empty()) {
-            if (!visitor->skip()) visitor->move(move.get(), comment);
+            if (!visitor->skip()) visitor->move(move.get(), comment.get());
 
             move.clear();
             comment.clear();
@@ -4201,11 +4161,7 @@ class StreamParser {
                         if (is_space(*k)) {
                             break;
                         } else {
-                            if (!header.first.add(*k)) {
-                                error = StreamParserError::ExceededMaxStringLength;
-                                return;
-                            }
-
+                            header.first += *k;
                             stream_buffer.advance();
                         }
                     }
@@ -4239,12 +4195,7 @@ class StreamParser {
                             return;
                         } else {
                             backslash = false;
-
-                            if (!header.second.add(*k)) {
-                                error = StreamParserError::ExceededMaxStringLength;
-                                return;
-                            }
-
+                            header.second += *k;
                             stream_buffer.advance();
                         }
                     }
@@ -4318,7 +4269,7 @@ class StreamParser {
 
                 // the game has no moves, but a comment followed by a game termination
                 if (!visitor->skip()) {
-                    visitor->move("", comment);
+                    visitor->move("", comment.get());
 
                     comment.clear();
                 }
@@ -4458,10 +4409,8 @@ class StreamParser {
                 }
                 // castling
                 else {
-                    if (!move.add('0') || !move.add('-')) {
-                        error = StreamParserError::ExceededMaxStringLength;
-                        return;
-                    }
+                    move += '0';
+                    move += '-';
 
                     if (parseMove()) {
                         stream_buffer.advance();
@@ -4479,10 +4428,7 @@ class StreamParser {
                 break;
             }
 
-            if (!move.add(*c)) {
-                error = StreamParserError::ExceededMaxStringLength;
-                return true;
-            }
+            move += *c;
 
             stream_buffer.advance();
         }
@@ -4596,8 +4542,8 @@ class StreamParser {
     // one time allocations
     std::pair<LineBuffer, LineBuffer> header = {LineBuffer{}, LineBuffer{}};
 
-    LineBuffer move     = {};
-    std::string comment = {};
+    LineBuffer move    = {};
+    LineBuffer comment = {};
 
     // State
 
@@ -5156,6 +5102,449 @@ class uci {
         return true;
     }
 };
+}  // namespace chess
+
+
+// Addition to the current library.
+
+namespace chess {
+
+    inline Board::CheckType Board::gives_check(const Move& m) const {
+
+        auto getSniper = [&](Square ksq, Bitboard oc) {
+            return
+                (attacks::bishop(ksq, oc) & (pieces(PieceType::BISHOP, stm_) | pieces(PieceType::QUEEN, stm_)))
+                | (attacks::rook(ksq, oc) & (pieces(PieceType::ROOK, stm_) | pieces(PieceType::QUEEN, stm_)));
+            };
+
+        assert(at(m.from()).color() == stm_);
+
+        Square from = m.from();
+        Square to = m.to();
+        Square ksq = kingSq(~stm_);
+        Bitboard toBB = Bitboard::fromSquare(to);
+        PieceType pt = at(from).type();
+
+        Bitboard fromPiece;
+        Bitboard fromKing;
+        switch (pt)
+        {
+            case int(PieceType::PAWN) :
+            {
+                fromPiece = toBB;
+                fromKing = attacks::pawn(~stm_, ksq);
+                break;
+            }
+            case int(PieceType::KNIGHT) :
+            {
+                fromPiece = attacks::knight(from);
+                fromKing = attacks::knight(ksq);
+                break;
+            }
+            case int(PieceType::BISHOP) :
+            {
+                fromPiece = attacks::bishop(from, occ());
+                fromKing = attacks::bishop(ksq, occ());
+                break;
+            }
+            case int(PieceType::ROOK) :
+            {
+                fromPiece = attacks::rook(from, occ());
+                fromKing = attacks::rook(ksq, occ());
+                break;
+            }
+            case int(PieceType::QUEEN) :
+            {
+                fromPiece = attacks::queen(from, occ());
+                fromKing = attacks::queen(ksq, occ());
+                break;
+            }
+            case int(PieceType::KING) :
+            {
+                fromPiece = fromKing = 0;
+            }
+        };
+
+        if (fromPiece & fromKing & toBB)
+            return DIRECT_CHECK;
+
+        // Discovery check
+        Bitboard fromBB = Bitboard::fromSquare(from);
+        Bitboard oc = occ() ^ fromBB;
+        Bitboard sniper = getSniper(ksq, oc);
+        while (sniper) {
+            Square sq = sniper.pop();
+            return (!(movegen::SQUARES_BETWEEN_BB[ksq.index()][sq.index()] & toBB) || m.typeOf() == Move::CASTLING)
+                ? DISCOVERY_CHECK : NO_CHECK;
+        }
+
+        switch (m.typeOf())
+        {
+        case Move::NORMAL:
+            return NO_CHECK;
+
+        case Move::PROMOTION:
+        {
+            Bitboard attacks;
+            switch (m.promotionType())
+            {
+                case int(PieceType::KNIGHT) :
+                {
+                    attacks = attacks::knight(to);
+                    break;
+                }
+                case int(PieceType::BISHOP) :
+                {
+                    attacks = attacks::bishop(to, oc);
+                    break;
+                }
+                case int(PieceType::ROOK) :
+                {
+                    attacks = attacks::rook(to, oc);
+                    break;
+                }
+                case int(PieceType::QUEEN) :
+                {
+                    attacks = attacks::queen(to, oc);
+                    break;
+                }
+            }
+            return (attacks & pieces(PieceType::KING, ~stm_)) ? DIRECT_CHECK : NO_CHECK;
+        }
+
+        case Move::ENPASSANT:
+        {
+            Square capSq(to.file(), from.rank());
+            return (getSniper(ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB)) ? DISCOVERY_CHECK : NO_CHECK;
+        }
+
+        case Move::CASTLING:
+        {
+            Square rookTo = Square::castling_rook_square(to > from, stm_);
+            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo)) ? DISCOVERY_CHECK : NO_CHECK;
+        }
+        }
+
+        assert(false);
+        return NO_CHECK;  // Prevent a compiler warning
+    }
+}
+
+#include <filesystem>
+#include <boost/process.hpp>
+#include <BS_thread_pool.hpp>
+
+namespace chess {
+
+    // Class to store engine output in the data list of the engine pool.
+    struct EngineData {
+        std::string engineName;
+        std::string info;
+    };
+
+    std::ostream& operator<<(std::ostream& os, const EngineData& c) {
+        return os << c.engineName << ": '" << c.info << "'";
+    }
+
+    class EnginePool;
+
+    // class ExternalEngine
+    // Loads/unloads an external UCI engine.
+    // Note: it is not recommended to use this class outside the EnginePool class!
+    class ExternalEngine {
+    public:
+        // No default CTOR!
+        ExternalEngine() = delete;
+
+        // Load a UCI engine and redirect its stdin and stdout.
+        // Note: you must handle reading the outputs for yourself.
+        ExternalEngine(const std::string& exe);
+
+        // Load a UCI engine. all output is moved to the engine pool's data list.
+        // Use pool functions to read from the data stream.
+        ExternalEngine(const std::string& exe, EnginePool& pool);
+
+        // DTOR
+        ~ExternalEngine();
+
+        // Test if engine has been loaded successfully.
+        [[nodiscard]] bool is_ok() const { return engine; }
+
+        // Send a UCI command to the engine.
+        void operator<<(const std::string& cmd) { ops << cmd << std::endl; }
+
+        // Receive an output line from the engine.
+        void operator>>(std::string& s) {
+            std::getline(ips, s);
+            if (!s.empty() && s.back() == '\r')
+                s.pop_back();
+        }
+
+        std::string engineName;
+
+    private:
+        boost::process::child engine;
+        boost::process::ipstream ips;
+        boost::process::opstream ops;
+        std::unique_ptr<std::thread> readThread;
+    };
+
+    // class EnginePool
+    // Enables launching multiple external UCI chess engines and communicate with them.
+    // Note: No special constructor. Add engines with the run function.
+    class EnginePool {
+    public:
+        // Add external engine to the pool and run it.
+        void run(const std::string& exe) { threads.emplace_back(new ExternalEngine(exe, *this)); }
+
+        // Lock/unlock data
+        void lock() { mutex.lock(); }
+        void unlock() noexcept { mutex.unlock(); }
+
+        // Data functions
+        // Note: Lock the pool before using these functions as any engine running can modify the data list!
+        [[nodiscard]] bool has_data() const noexcept { return !data.empty(); }
+        [[nodiscard]] EngineData& get_data() noexcept { return data.front(); }
+        void pop_data() noexcept { data.pop_front(); }
+
+        // Add engine output to the data list in a thread-safe way.
+        void add_data(const std::string& engineName, const std::string& info) {
+            lock();
+            data.emplace_back(engineName, info);
+            unlock();
+            cv.notify_one();
+        }
+
+        // Wait for data to be available.
+        void wait_for_data() {
+            std::unique_lock<std::mutex> lock(mutex);
+            cv.wait(lock, [&]() { return has_data(); });
+        }
+
+        // Return the number of engines in the pool.
+        [[nodiscard]] size_t size() const noexcept { return threads.size(); }
+
+        // Send UCI command to all engines.
+        void operator<<(const std::string& cmd) {
+            for (const auto& t : threads)
+                if (t->is_ok())
+                    *t << cmd;
+        }
+
+        // Wait for all engines to signal "readyok".
+        void wait_for_readyok() {
+            for (const auto& t : threads) {
+                if (!t->is_ok()) continue;
+
+                *t << "isready";
+                bool stop = false;
+                while (!stop) {
+                    wait_for_data();
+                    lock();
+                    while (has_data()) {
+                        if (get_data().info.find("readyok") == 0)
+                            stop = true;
+                        pop_data();
+                    }
+                    unlock();
+                }
+
+                // Usually the list should be empty already. but who knows ....
+                clear();
+            }
+        }
+
+        // Clear data in a thread-safe way.
+        void clear() {
+            lock();
+            data.clear();
+            unlock();
+        }
+
+    private:
+        std::mutex mutex;
+        std::condition_variable cv;
+        std::vector<std::unique_ptr<ExternalEngine>> threads;
+        std::list<EngineData> data;
+    };
+
+    // CTOR: load an engine and redirect stdin and stdout.
+    // Note: you must handle reading/writing by yourself!
+    inline ExternalEngine::ExternalEngine(const std::string& exe) {
+        // check if engine exists
+        if (!std::filesystem::exists(exe))
+            throw(std::runtime_error("Engine '" + exe + "' not found!"));
+
+        auto pos = exe.rfind(".exe");
+        engineName = (pos != std::string::npos) ? exe.substr(0, pos) : exe;
+
+        // start the engine
+        engine = boost::process::child(exe, boost::process::std_out > ips, boost::process::std_in < ops);
+        if (!engine)
+            throw(std::runtime_error("Engine '" + engineName + "' start failed!"));
+    }
+
+    // CTOR: load an UCI engine and add it to the engine pool.
+    // engine output is added to the data list.
+    // note: only lines beginning with named key words (see below) are added to the data list.
+    // adapt key words to fit your own needs.
+    inline ExternalEngine::ExternalEngine(const std::string& exe, EnginePool& pool) :
+        ExternalEngine(exe)
+    {
+        readThread = std::make_unique<std::thread>(std::thread([&]() {
+            while (engine.running()) {
+                std::string line;
+                *this >> line;
+                if (line.empty()) continue;
+
+                // Store lines with these key words
+                if (line.find("info") == 0
+                    || line.find("readyok") == 0
+                    || line.find("bestmove") == 0)
+                    pool.add_data(engineName, line);
+            }
+            }));
+    }
+
+    inline ExternalEngine::~ExternalEngine() {
+        if (engine) {
+            engine.terminate();
+            if (readThread.get())
+                readThread->join();
+        }
+    }
+}
+
+namespace chess {
+
+    [[nodiscard]] inline std::pair<Bitboard, int> movegen::checkMask(const Board& board) {
+        if (board.sideToMove() == Color::WHITE)
+            return checkMask<Color::WHITE>(board, board.kingSq(Color::WHITE));
+        else
+            return checkMask<Color::BLACK>(board, board.kingSq(Color::BLACK));
+    }
+
+    // This adds a perft function to the chess library.
+
+    struct PerftResults {
+        std::atomic_uint64_t nodes = 0;
+        std::atomic_uint64_t captures = 0;
+        std::atomic_uint64_t eps = 0;
+        std::atomic_uint64_t castles = 0;
+        std::atomic_uint64_t promotions = 0;
+        std::atomic_uint64_t checks = 0;
+        std::atomic_uint64_t direct_checks = 0;
+        std::atomic_uint64_t discovery_checks = 0;
+        std::atomic_uint64_t double_checks = 0;
+        std::atomic_uint64_t mates = 0;
+        float time = 0;  // in seconds
+        float speed = 0; // in mega nodes per seconds
+
+        enum Type {
+            NONE,
+            CHECKS,
+            ALL
+        };
+    };
+
+    /**
+     * @brief Run a performance test. 
+     * @param T
+     * @param board
+     * @param depth
+     * @param result
+     * @return number of nodes
+     */
+    // Main call: perft<PerftResults::Type T>(...) without second template parameter
+
+    template <PerftResults::Type T, bool Root = true>
+    uint64_t perft(Board& board, unsigned depth, PerftResults& result) {
+
+        Movelist list;
+        movegen::legalmoves(list, board);
+
+        if (depth == 1) {
+            if constexpr (T) {
+                for (const auto& m : list) {
+                    if constexpr (T == PerftResults::ALL) {
+                        if (m.typeOf() != Move::CASTLING) {
+                            if (m.typeOf() != Move::ENPASSANT) {
+                                if (board.at(m.to()) != Piece::NONE)
+                                    result.captures++;
+                                if (m.typeOf() == Move::PROMOTION)
+                                    result.promotions++;
+                            }
+                            else {
+                                result.captures++;
+                                result.eps++;
+                            }
+                        }
+                        else
+                            result.castles++;
+                    }
+
+                    auto ct = board.gives_check(m);
+                    if (ct) {
+                        result.checks++;
+                        if (ct == Board::CheckType::DIRECT_CHECK)
+                            result.direct_checks++;
+                        else
+                            result.discovery_checks++;
+
+                        board.makeMove(m);
+
+                        auto [_, checks] = movegen::checkMask(board);
+                        if (checks > 1)
+                            result.double_checks++;
+
+                        Movelist list;
+                        movegen::legalmoves(list, board);
+                        if (list.size() == 0)
+                            result.mates++;
+
+                        board.unmakeMove(m);
+                    }
+                }
+            }
+
+            return list.size();
+        }
+
+        if constexpr (Root) {
+            auto time_begin = std::chrono::system_clock::now();
+            if (depth > 1) {
+                BS::thread_pool pool(list.size());
+                pool.detach_loop<Movelist::size_type>(0, list.size(), [&](Movelist::size_type i) {
+                    Board b(board);
+                    const Move& m = list[i];
+                    b.makeMove(m);
+                    result.nodes += perft<T, false>(b, depth - 1, result);
+                    b.unmakeMove(m);
+                    });
+                pool.wait();
+            }
+            else if (depth == 1)
+                result.nodes = perft<T, false>(board, depth, result);
+            else
+                result.nodes = 1;
+
+            auto time_end = std::chrono::system_clock::now() - time_begin;
+            auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_end).count();
+            result.time = float(elapsed) / 1000000.0f;
+            result.speed = float(result.nodes) / result.time;
+            return result.nodes;
+        }
+        else {
+            uint64_t nodes = 0;
+            for (const Move& m : list) {
+                board.makeMove(m);
+                nodes += perft<T, false>(board, depth - 1, result);
+                board.unmakeMove(m);
+            }
+            return nodes;
+        }
+    }
+
 }  // namespace chess
 
 #endif
