@@ -8,6 +8,149 @@
 
 namespace chess::pgn {
 
+namespace detail {
+
+/**
+ * @brief Private class
+ */
+class StringBuffer {
+   public:
+    bool empty() const noexcept { return index_ == 0; }
+
+    void clear() noexcept { index_ = 0; }
+
+    std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
+
+    bool add(char c) {
+        if (index_ >= N) {
+            return false;
+        }
+
+        buffer_[index_] = c;
+
+        ++index_;
+
+        return true;
+    }
+
+   private:
+    // PGN String Tokens are limited to 255 characters
+    static constexpr int N = 255;
+
+    std::array<char, N> buffer_ = {};
+
+    std::size_t index_ = 0;
+};
+
+/**
+ * @brief Private class
+ * @tparam BUFFER_SIZE
+ */
+template <std::size_t BUFFER_SIZE>
+class StreamBuffer {
+   private:
+    static constexpr std::size_t N = BUFFER_SIZE;
+    using BufferType               = std::array<char, N * N>;
+
+   public:
+    StreamBuffer(std::istream &stream) : stream_(stream) {}
+
+    // Get the current character, skip carriage returns
+    std::optional<char> some() {
+        while (true) {
+            if (buffer_index_ < bytes_read_) {
+                const auto c = buffer_[buffer_index_];
+
+                if (c == '\r') {
+                    ++buffer_index_;
+                    continue;
+                }
+
+                return c;
+            }
+
+            if (!fill()) {
+                return std::nullopt;
+            }
+        }
+    }
+
+    // Assume that the current character is already the opening_delim
+    bool skipUntil(char open_delim, char close_delim) {
+        int stack = 0;
+
+        while (true) {
+            const auto ret = some();
+            advance();
+
+            if (!ret.has_value()) {
+                return false;
+            }
+
+            if (*ret == open_delim) {
+                ++stack;
+            } else if (*ret == close_delim) {
+                if (stack == 0) {
+                    // Mismatched closing delimiter
+                    return false;
+                } else {
+                    --stack;
+                    if (stack == 0) {
+                        // Matching closing delimiter found
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // If we reach this point, there are unmatched opening delimiters
+        return false;
+    }
+
+    bool fill() {
+        buffer_index_ = 0;
+
+        stream_.read(buffer_.data(), N * N);
+        bytes_read_ = stream_.gcount();
+
+        return bytes_read_ > 0;
+    }
+
+    void fill_if_needed() {
+        if (buffer_index_ >= bytes_read_) {
+            fill();
+        }
+    }
+
+    void advance() { ++buffer_index_; }
+
+    char peek() {
+        fill_if_needed();
+
+        if (buffer_index_ + 1 >= bytes_read_) {
+            return stream_.peek();
+        }
+
+        return buffer_[buffer_index_ + 1];
+    }
+
+    std::optional<char> current() {
+        if (buffer_index_ >= bytes_read_) {
+            return fill() ? std::optional<char>(buffer_[buffer_index_]) : std::nullopt;
+        }
+
+        return buffer_[buffer_index_];
+    }
+
+   private:
+    std::istream &stream_;
+    BufferType buffer_;
+    std::streamsize bytes_read_   = 0;
+    std::streamsize buffer_index_ = 0;
+};
+
+}  // namespace detail
+
 /**
  * @brief Visitor interface for parsing PGN files
  */
@@ -103,12 +246,10 @@ class StreamParserError {
 };
 
 template <std::size_t BUFFER_SIZE =
-#if defined(__unix__) || defined(__unix) || defined(unix) || defined(__APPLE__) || defined(__MACH__)
-#    if defined(__APPLE__) || defined(__MACH__)
+#if defined(__APPLE__) || defined(__MACH__)
               256
-#    else
+#elif defined(__unix__) || defined(__unix) || defined(unix)
               1024
-#    endif
 #else
               256
 #endif
@@ -159,137 +300,6 @@ class StreamParser {
     }
 
    private:
-    class StringBuffer {
-       public:
-        bool empty() const noexcept { return index_ == 0; }
-
-        void clear() noexcept { index_ = 0; }
-
-        std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
-
-        bool add(char c) {
-            if (index_ >= N) {
-                return false;
-            }
-
-            buffer_[index_] = c;
-
-            ++index_;
-
-            return true;
-        }
-
-       private:
-        // PGN String Tokens are limited to 255 characters
-        static constexpr int N = 255;
-
-        std::array<char, N> buffer_ = {};
-
-        std::size_t index_ = 0;
-    };
-
-    class StreamBuffer {
-       private:
-        static constexpr std::size_t N = BUFFER_SIZE;
-        using BufferType               = std::array<char, N * N>;
-
-       public:
-        StreamBuffer(std::istream &stream) : stream_(stream) {}
-
-        // Get the current character, skip carriage returns
-        std::optional<char> some() {
-            while (true) {
-                if (buffer_index_ < bytes_read_) {
-                    const auto c = buffer_[buffer_index_];
-
-                    if (c == '\r') {
-                        ++buffer_index_;
-                        continue;
-                    }
-
-                    return c;
-                }
-
-                if (!fill()) {
-                    return std::nullopt;
-                }
-            }
-        }
-
-        // Assume that the current character is already the opening_delim
-        bool skipUntil(char open_delim, char close_delim) {
-            int stack = 0;
-
-            while (true) {
-                const auto ret = some();
-                advance();
-
-                if (!ret.has_value()) {
-                    return false;
-                }
-
-                if (*ret == open_delim) {
-                    ++stack;
-                } else if (*ret == close_delim) {
-                    if (stack == 0) {
-                        // Mismatched closing delimiter
-                        return false;
-                    } else {
-                        --stack;
-                        if (stack == 0) {
-                            // Matching closing delimiter found
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            // If we reach this point, there are unmatched opening delimiters
-            return false;
-        }
-
-        bool fill() {
-            buffer_index_ = 0;
-
-            stream_.read(buffer_.data(), N * N);
-            bytes_read_ = stream_.gcount();
-
-            return bytes_read_ > 0;
-        }
-
-        void fill_if_needed() {
-            if (buffer_index_ >= bytes_read_) {
-                fill();
-            }
-        }
-
-        void advance() { ++buffer_index_; }
-
-        char peek() {
-            fill_if_needed();
-
-            if (buffer_index_ + 1 >= bytes_read_) {
-                return stream_.peek();
-            }
-
-            return buffer_[buffer_index_ + 1];
-        }
-
-        std::optional<char> current() {
-            if (buffer_index_ >= bytes_read_) {
-                return fill() ? std::optional<char>(buffer_[buffer_index_]) : std::nullopt;
-            }
-
-            return buffer_[buffer_index_];
-        }
-
-       private:
-        std::istream &stream_;
-        BufferType buffer_;
-        std::streamsize bytes_read_   = 0;
-        std::streamsize buffer_index_ = 0;
-    };
-
     void reset_trackers() {
         header.first.clear();
         header.second.clear();
@@ -711,15 +721,15 @@ class StreamParser {
         }
     }
 
-    StreamBuffer stream_buffer;
+    detail::StreamBuffer<BUFFER_SIZE> stream_buffer;
 
     Visitor *visitor = nullptr;
 
     // one time allocations
-    std::pair<StringBuffer, StringBuffer> header = {StringBuffer{}, StringBuffer{}};
+    std::pair<detail::StringBuffer, detail::StringBuffer> header = {detail::StringBuffer{}, detail::StringBuffer{}};
 
-    StringBuffer move   = {};
-    std::string comment = {};
+    detail::StringBuffer move = {};
+    std::string comment       = {};
 
     // State
 
