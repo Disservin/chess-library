@@ -73,6 +73,12 @@ class StreamParserException : public std::exception {
     std::string msg_;
 };
 
+enum class StreamParserError {
+    None,
+    InvalidHeaderMissingClosingQuote,
+    NotEnoughData,
+};
+
 template <std::size_t BUFFER_SIZE =
 #if defined(__unix__) || defined(__unix) || defined(unix) || defined(__APPLE__) || defined(__MACH__)
 #    if defined(__APPLE__) || defined(__MACH__)
@@ -90,11 +96,11 @@ class StreamParser {
 
     StreamParser(std::istream &stream) : stream_buffer(stream) {}
 
-    void readGames(Visitor &vis) {
+    StreamParserError readGames(Visitor &vis) {
         visitor = &vis;
 
         if (!stream_buffer.fill()) {
-            return;
+            return StreamParserError::NotEnoughData;
         }
 
         while (auto c = stream_buffer.some()) {
@@ -106,6 +112,10 @@ class StreamParser {
                     pgn_end = false;
 
                     processHeader();
+
+                    if (error != StreamParserError::None) {
+                        return error;
+                    }
                 }
 
             } else if (in_body) {
@@ -119,6 +129,8 @@ class StreamParser {
         if (!pgn_end) {
             onEnd();
         }
+
+        return error;
     }
 
    private:
@@ -134,16 +146,6 @@ class StreamParser {
             assert(index_ < N);
             buffer_[index_] = c;
             ++index_;
-        }
-
-        void remove_suffix(std::size_t n) {
-#ifndef CHESS_NO_EXCEPTIONS
-            if (n > index_) {
-                throw StreamParserException("LineBuffer underflow");
-            }
-#endif
-
-            index_ -= n;
         }
 
        private:
@@ -311,15 +313,12 @@ class StreamParser {
                             stream_buffer.advance();
 
                             break;
-                        }
-#ifndef CHESS_NO_EXCEPTIONS
-                        else if (*k == '\n') {
+                        } else if (*k == '\n') {
                             // we missed the closing quote and read until the newline character
                             // this is an invalid pgn, let's throw an error
-                            throw StreamParserException("Invalid PGN, missing closing quote in header");
-                        }
-#endif
-                        else {
+                            error = StreamParserError::InvalidHeaderMissingClosingQuote;
+                            return;
+                        } else {
                             backslash = false;
                             header.second += *k;
                             stream_buffer.advance();
@@ -345,7 +344,7 @@ class StreamParser {
 
                     if (!visitor->skip()) visitor->startMoves();
 
-                    goto exit_loop;
+                    return;
                 default:
                     // this should normally not happen
                     // lets just go into the body, will this always be save?
@@ -354,11 +353,9 @@ class StreamParser {
 
                     if (!visitor->skip()) visitor->startMoves();
 
-                    goto exit_loop;
+                    return;
             }
         }
-
-    exit_loop:;
     }
 
     void processBody() {
@@ -674,6 +671,8 @@ class StreamParser {
     LineBuffer comment = {};
 
     // State
+
+    StreamParserError error = StreamParserError::None;
 
     bool in_header = true;
     bool in_body   = false;
