@@ -68,7 +68,7 @@ Create the parser and parse the games:
 
 ```cpp
 pgn::StreamParser parser(file_stream);
-parser.readGames(visitor);
+auto error = parser.readGames(visitor);
 ```
 
 #### Putting it together
@@ -112,7 +112,12 @@ int main() {
 
     MyVisitor visitor;
     pgn::StreamParser parser(file_stream);
-    parser.readGames(visitor);
+    auto error = parser.readGames(visitor);
+
+    if (error) {
+        std::cerr << "Error parsing PGN: " << error.message() << std::endl;
+        return -1;
+    }
 
     return 0;
 }

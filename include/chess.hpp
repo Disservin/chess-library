@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.8.3
+VERSION: 0.8.4
 */
 
 #ifndef CHESS_HPP
@@ -3935,11 +3935,49 @@ class Visitor {
     bool skip_ = false;
 };
 
-enum class StreamParserError {
-    None,
-    InvalidHeaderMissingClosingBracket,
-    InvalidHeaderMissingClosingQuote,
-    NotEnoughData,
+class StreamParserError {
+   public:
+    enum Code {
+        None,
+        ExceededMaxStringLength,
+        InvalidHeaderMissingClosingBracket,
+        InvalidHeaderMissingClosingQuote,
+        NotEnoughData
+    };
+
+    StreamParserError() : code_(None) {}
+
+    StreamParserError(Code code) : code_(code) {}
+
+    Code code() const { return code_; }
+
+    bool hasError() const { return code_ != None; }
+
+    std::string message() const {
+        switch (code_) {
+            case None:
+                return "No error";
+            case InvalidHeaderMissingClosingBracket:
+                return "Invalid header: missing closing bracket";
+            case InvalidHeaderMissingClosingQuote:
+                return "Invalid header: missing closing quote";
+            case NotEnoughData:
+                return "Not enough data";
+            default:
+                assert(false);
+                return "Unknown error";
+        }
+    }
+
+    bool operator==(Code code) const { return code_ == code; }
+    bool operator!=(Code code) const { return code_ != code; }
+    bool operator==(const StreamParserError &other) const { return code_ == other.code_; }
+    bool operator!=(const StreamParserError &other) const { return code_ != other.code_; }
+
+    operator bool() const { return code_ != None; }
+
+   private:
+    Code code_;
 };
 
 template <std::size_t BUFFER_SIZE =
@@ -3981,6 +4019,10 @@ class StreamParser {
 
             } else if (in_body) {
                 processBody();
+
+                if (error != StreamParserError::None) {
+                    return error;
+                }
             }
 
             if (!dont_advance_after_body) stream_buffer.advance();
@@ -3997,17 +4039,31 @@ class StreamParser {
    private:
     class LineBuffer {
        public:
-        LineBuffer() { buffer_.reserve(BUFFER_SIZE); }
-        bool empty() const noexcept { return buffer_.empty(); }
+        bool empty() const noexcept { return index_ == 0; }
 
-        void clear() noexcept { buffer_.clear(); }
+        void clear() noexcept { index_ = 0; }
 
-        std::string_view get() const noexcept { return std::string_view(buffer_.data(), buffer_.size()); }
+        std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
 
-        void operator+=(char c) { buffer_.push_back(c); }
+        bool add(char c) {
+            if (index_ >= N) {
+                return false;
+            }
+
+            buffer_[index_] = c;
+
+            ++index_;
+
+            return true;
+        }
 
        private:
-        std::vector<char> buffer_;
+        // PGN lines are limited to 255 characters
+        static constexpr int N = 255;
+
+        std::array<char, N> buffer_ = {};
+
+        std::size_t index_ = 0;
     };
 
     class StreamBuffer {
@@ -4125,7 +4181,7 @@ class StreamParser {
 
     void callVisitorMoveFunction() {
         if (!move.empty()) {
-            if (!visitor->skip()) visitor->move(move.get(), comment.get());
+            if (!visitor->skip()) visitor->move(move.get(), comment);
 
             move.clear();
             comment.clear();
@@ -4145,7 +4201,11 @@ class StreamParser {
                         if (is_space(*k)) {
                             break;
                         } else {
-                            header.first += *k;
+                            if (!header.first.add(*k)) {
+                                error = StreamParserError::ExceededMaxStringLength;
+                                return;
+                            }
+
                             stream_buffer.advance();
                         }
                     }
@@ -4179,7 +4239,12 @@ class StreamParser {
                             return;
                         } else {
                             backslash = false;
-                            header.second += *k;
+
+                            if (!header.second.add(*k)) {
+                                error = StreamParserError::ExceededMaxStringLength;
+                                return;
+                            }
+
                             stream_buffer.advance();
                         }
                     }
@@ -4253,7 +4318,7 @@ class StreamParser {
 
                 // the game has no moves, but a comment followed by a game termination
                 if (!visitor->skip()) {
-                    visitor->move("", comment.get());
+                    visitor->move("", comment);
 
                     comment.clear();
                 }
@@ -4393,8 +4458,10 @@ class StreamParser {
                 }
                 // castling
                 else {
-                    move += '0';
-                    move += '-';
+                    if (!move.add('0') || !move.add('-')) {
+                        error = StreamParserError::ExceededMaxStringLength;
+                        return;
+                    }
 
                     if (parseMove()) {
                         stream_buffer.advance();
@@ -4412,7 +4479,10 @@ class StreamParser {
                 break;
             }
 
-            move += *c;
+            if (!move.add(*c)) {
+                error = StreamParserError::ExceededMaxStringLength;
+                return true;
+            }
 
             stream_buffer.advance();
         }
@@ -4526,8 +4596,8 @@ class StreamParser {
     // one time allocations
     std::pair<LineBuffer, LineBuffer> header = {LineBuffer{}, LineBuffer{}};
 
-    LineBuffer move    = {};
-    LineBuffer comment = {};
+    LineBuffer move     = {};
+    std::string comment = {};
 
     // State
 
