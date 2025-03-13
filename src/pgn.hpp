@@ -59,20 +59,6 @@ class Visitor {
     bool skip_ = false;
 };
 
-class StreamParserException : public std::exception {
-   public:
-    explicit StreamParserException(const char *message) : msg_(message) {}
-
-    explicit StreamParserException(const std::string &message) : msg_(message) {}
-
-    virtual ~StreamParserException() noexcept {}
-
-    virtual const char *what() const noexcept { return msg_.c_str(); }
-
-   protected:
-    std::string msg_;
-};
-
 enum class StreamParserError {
     None,
     InvalidHeaderMissingClosingQuote,
@@ -165,21 +151,21 @@ class StreamParser {
 
         // Get the current character, skip carriage returns
         std::optional<char> some() {
-            if (buffer_index_ < bytes_read_) {
-                const auto c = buffer_[buffer_index_];
+            while (true) {
+                if (buffer_index_ < bytes_read_) {
+                    const auto c = buffer_[buffer_index_];
 
-                if (c == '\r') {
-                    ++buffer_index_;
-                    return some();
+                    if (c == '\r') {
+                        ++buffer_index_;
+                        continue;
+                    }
+
+                    return c;
                 }
 
-                return c;
-            } else {
                 if (!fill()) {
                     return std::nullopt;
                 }
-
-                return some();
             }
         }
 
@@ -216,8 +202,6 @@ class StreamParser {
         }
 
         bool fill() {
-            if (!stream_.good()) return false;
-
             buffer_index_ = 0;
 
             stream_.read(buffer_.data(), N * N);
@@ -226,15 +210,19 @@ class StreamParser {
             return bytes_read_ > 0;
         }
 
-        void advance() {
+        void fill_if_needed() {
             if (buffer_index_ >= bytes_read_) {
                 fill();
             }
+        }
 
+        void advance() {
             ++buffer_index_;
         }
 
         char peek() {
+            fill_if_needed();
+
             if (buffer_index_ + 1 >= bytes_read_) {
                 return stream_.peek();
             }
