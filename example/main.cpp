@@ -10,7 +10,7 @@ class MyVisitor : public pgn::Visitor {
    public:
     virtual ~MyVisitor() {}
 
-    void startPgn() { board.setFen(constants::STARTPOS); }
+    void startPgn() {}
 
     void header(std::string_view key, std::string_view value) {}
 

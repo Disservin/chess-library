@@ -601,9 +601,7 @@ TEST_SUITE("PGN StreamParser") {
         auto vis = std::make_unique<MyVisitor>();
         pgn::StreamParser<1> parser(file_stream);
 
-        CHECK_THROWS_AS_MESSAGE(parser.readGames(*vis), pgn::StreamParserException,
-                                "Invalid PGN, missing closing quote in header");
-
+        CHECK(parser.readGames(*vis) == pgn::StreamParserError::InvalidHeaderMissingClosingQuote);
         CHECK(vis->gameCount() == 1);
     }
 }
