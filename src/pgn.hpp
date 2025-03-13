@@ -61,6 +61,7 @@ class Visitor {
 
 enum class StreamParserError {
     None,
+    InvalidHeaderMissingClosingBracket,
     InvalidHeaderMissingClosingQuote,
     NotEnoughData,
 };
@@ -78,8 +79,6 @@ template <std::size_t BUFFER_SIZE =
           >
 class StreamParser {
    public:
-    // Exception Class
-
     StreamParser(std::istream &stream) : stream_buffer(stream) {}
 
     StreamParserError readGames(Visitor &vis) {
@@ -122,23 +121,17 @@ class StreamParser {
    private:
     class LineBuffer {
        public:
-        bool empty() const noexcept { return index_ == 0; }
+        LineBuffer() { buffer_.reserve(BUFFER_SIZE); }
+        bool empty() const noexcept { return buffer_.empty(); }
 
-        void clear() noexcept { index_ = 0; }
+        void clear() noexcept { buffer_.clear(); }
 
-        std::string_view get() const noexcept { return std::string_view(buffer_.data(), index_); }
+        std::string_view get() const noexcept { return std::string_view(buffer_.data(), buffer_.size()); }
 
-        void operator+=(char c) {
-            assert(index_ < N);
-            buffer_[index_] = c;
-            ++index_;
-        }
+        void operator+=(char c) { buffer_.push_back(c); }
 
        private:
-        // PGN lines are limited to 255 characters
-        static constexpr int N      = 255;
-        std::array<char, N> buffer_ = {};
-        std::size_t index_          = 0;
+        std::vector<char> buffer_;
     };
 
     class StreamBuffer {
@@ -295,7 +288,11 @@ class StreamParser {
                             stream_buffer.advance();
 
                             // we should be now at ]
-                            assert(stream_buffer.current().value() == ']');
+                            if (stream_buffer.current().value_or('\0') != ']') {
+                                error = StreamParserError::InvalidHeaderMissingClosingBracket;
+                                return;
+                            }
+
                             stream_buffer.advance();
 
                             break;
