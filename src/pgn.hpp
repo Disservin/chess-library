@@ -116,17 +116,15 @@ class StreamBuffer {
         return bytes_read_ > 0;
     }
 
-    void fill_if_needed() {
+    void advance() {
         if (buffer_index_ >= bytes_read_) {
             fill();
         }
+
+        ++buffer_index_;
     }
 
-    void advance() { ++buffer_index_; }
-
     char peek() {
-        fill_if_needed();
-
         if (buffer_index_ + 1 >= bytes_read_) {
             return stream_.peek();
         }

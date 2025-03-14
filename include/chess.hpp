@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.8.4
+VERSION: 0.8.5
 */
 
 #ifndef CHESS_HPP
@@ -3888,6 +3888,9 @@ namespace chess::pgn {
 
 namespace detail {
 
+/**
+ * @brief Private class
+ */
 class StringBuffer {
    public:
     bool empty() const noexcept { return index_ == 0; }
@@ -3917,6 +3920,10 @@ class StringBuffer {
     std::size_t index_ = 0;
 };
 
+/**
+ * @brief Private class
+ * @tparam BUFFER_SIZE
+ */
 template <std::size_t BUFFER_SIZE>
 class StreamBuffer {
    private:
@@ -3987,17 +3994,15 @@ class StreamBuffer {
         return bytes_read_ > 0;
     }
 
-    void fill_if_needed() {
+    void advance() {
         if (buffer_index_ >= bytes_read_) {
             fill();
         }
+
+        ++buffer_index_;
     }
 
-    void advance() { ++buffer_index_; }
-
     char peek() {
-        fill_if_needed();
-
         if (buffer_index_ + 1 >= bytes_read_) {
             return stream_.peek();
         }
@@ -4117,12 +4122,10 @@ class StreamParserError {
 };
 
 template <std::size_t BUFFER_SIZE =
-#if defined(__unix__) || defined(__unix) || defined(unix) || defined(__APPLE__) || defined(__MACH__)
-#    if defined(__APPLE__) || defined(__MACH__)
+#if defined(__APPLE__) || defined(__MACH__)
               256
-#    else
+#elif defined(__unix__) || defined(__unix) || defined(unix)
               1024
-#    endif
 #else
               256
 #endif
