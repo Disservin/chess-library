@@ -142,13 +142,15 @@ class MockVisitorGameover : public pgn::Visitor {
     std::pair<GameResultReason, GameResult> game_res_;
 };
 
+using SmallBufferStreamParser = pgn::StreamParser<1>;
+
 TEST_SUITE("PGN StreamParser") {
     TEST_CASE("Basic PGN") {
         const auto file  = "./tests/pgns/basic.pgn";
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->count() == 130);
@@ -174,7 +176,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser<1> parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->count() == 130);
@@ -304,7 +306,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->count() == 125);
@@ -318,7 +320,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->count() == 0);
@@ -332,7 +334,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 4);
@@ -344,7 +346,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 2);
@@ -358,7 +360,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 1);
@@ -372,7 +374,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 1);
@@ -386,7 +388,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 1);
@@ -400,7 +402,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 1);
@@ -414,7 +416,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 1);
@@ -428,7 +430,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 1);
@@ -442,7 +444,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 1);
@@ -456,7 +458,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 1);
@@ -470,7 +472,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 2);
@@ -489,7 +491,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 3);
@@ -512,7 +514,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 2);
@@ -526,7 +528,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MockVisitorGameover>();
-        pgn::StreamParser<1> parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         auto res = vis->gameResult();
@@ -540,7 +542,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor2>();
-        pgn::StreamParser<1> parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         const auto& headers = vis->headers();
@@ -558,7 +560,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor2>();
-        pgn::StreamParser<1> parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->endCount() == 2);
@@ -572,7 +574,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor2>();
-        pgn::StreamParser<1> parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->headers()[0] == "Event Batch 10: s20red4c4_t3 vs master[!important]");
@@ -585,7 +587,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser<1> parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
         parser.readGames(*vis);
 
         CHECK(vis->gameCount() == 2);
@@ -599,7 +601,7 @@ TEST_SUITE("PGN StreamParser") {
         auto file_stream = std::ifstream(file);
 
         auto vis = std::make_unique<MyVisitor>();
-        pgn::StreamParser<1> parser(file_stream);
+        SmallBufferStreamParser parser(file_stream);
 
         CHECK(parser.readGames(*vis) == pgn::StreamParserError::InvalidHeaderMissingClosingQuote);
         CHECK(vis->gameCount() == 1);
