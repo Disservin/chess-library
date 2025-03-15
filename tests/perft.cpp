@@ -22,7 +22,13 @@ class Perft {
         uint64_t nodes = 0;
 
         for (const auto& move : moves) {
+            const auto gives_check = board_.givesCheck(move) != CheckType::NO_CHECK;
             board_.makeMove<true>(move);
+
+            if (gives_check != board_.inCheck()) {
+                throw std::runtime_error("givesCheck() and inCheck() are inconsistent");
+            }
+
             nodes += perft(depth - 1);
             board_.unmakeMove(move);
         }
