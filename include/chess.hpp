@@ -25,19 +25,15 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.8.7
+VERSION: 0.8.8
 */
 
 #ifndef CHESS_HPP
 #define CHESS_HPP
 
-
+#include <cstdint>
 #include <functional>
 #include <utility>
-
-
-#include <cstdint>
-
 
 #if __cplusplus >= 202002L
 #    include <bit>
@@ -53,11 +49,8 @@ VERSION: 0.8.7
 #    include <nmmintrin.h>
 #endif
 
-
-#include <string_view>
-
-
 #include <ostream>
+#include <string_view>
 
 namespace chess {
 
@@ -94,8 +87,8 @@ class Color {
         return Color(static_cast<underlying>(static_cast<int>(color) ^ 1));
     }
 
-    constexpr bool operator==(const Color& rhs) const noexcept { return color == rhs.color; }
-    constexpr bool operator!=(const Color& rhs) const noexcept { return color != rhs.color; }
+    constexpr bool operator==(const Color &rhs) const noexcept { return color == rhs.color; }
+    constexpr bool operator!=(const Color &rhs) const noexcept { return color != rhs.color; }
 
     constexpr operator int() const noexcept { return static_cast<int>(color); }
 
@@ -105,7 +98,7 @@ class Color {
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return color; }
 
-    friend std::ostream& operator<<(std::ostream& os, const Color& color) {
+    friend std::ostream &operator<<(std::ostream &os, const Color &color) {
         return os << static_cast<std::string>(color);
     }
 
@@ -180,24 +173,24 @@ class File {
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return file; }
 
-    constexpr bool operator==(const File& rhs) const noexcept { return file == rhs.file; }
-    constexpr bool operator!=(const File& rhs) const noexcept { return file != rhs.file; }
+    constexpr bool operator==(const File &rhs) const noexcept { return file == rhs.file; }
+    constexpr bool operator!=(const File &rhs) const noexcept { return file != rhs.file; }
 
-    constexpr bool operator==(const underlying& rhs) const noexcept { return file == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const noexcept { return file != rhs; }
+    constexpr bool operator==(const underlying &rhs) const noexcept { return file == rhs; }
+    constexpr bool operator!=(const underlying &rhs) const noexcept { return file != rhs; }
 
-    constexpr bool operator>=(const File& rhs) const noexcept {
+    constexpr bool operator>=(const File &rhs) const noexcept {
         return static_cast<int>(file) >= static_cast<int>(rhs.file);
     }
-    constexpr bool operator<=(const File& rhs) const noexcept {
+    constexpr bool operator<=(const File &rhs) const noexcept {
         return static_cast<int>(file) <= static_cast<int>(rhs.file);
     }
 
-    constexpr bool operator>(const File& rhs) const noexcept {
+    constexpr bool operator>(const File &rhs) const noexcept {
         return static_cast<int>(file) > static_cast<int>(rhs.file);
     }
 
-    constexpr bool operator<(const File& rhs) const noexcept {
+    constexpr bool operator<(const File &rhs) const noexcept {
         return static_cast<int>(file) < static_cast<int>(rhs.file);
     }
 
@@ -231,16 +224,16 @@ class Rank {
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return rank_; }
 
-    constexpr bool operator==(const Rank& rhs) const noexcept { return rank_ == rhs.rank_; }
-    constexpr bool operator!=(const Rank& rhs) const noexcept { return rank_ != rhs.rank_; }
+    constexpr bool operator==(const Rank &rhs) const noexcept { return rank_ == rhs.rank_; }
+    constexpr bool operator!=(const Rank &rhs) const noexcept { return rank_ != rhs.rank_; }
 
-    constexpr bool operator==(const underlying& rhs) const noexcept { return rank_ == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const noexcept { return rank_ != rhs; }
+    constexpr bool operator==(const underlying &rhs) const noexcept { return rank_ == rhs; }
+    constexpr bool operator!=(const underlying &rhs) const noexcept { return rank_ != rhs; }
 
-    constexpr bool operator>=(const Rank& rhs) const noexcept {
+    constexpr bool operator>=(const Rank &rhs) const noexcept {
         return static_cast<int>(rank_) >= static_cast<int>(rhs.rank_);
     }
-    constexpr bool operator<=(const Rank& rhs) const noexcept {
+    constexpr bool operator<=(const Rank &rhs) const noexcept {
         return static_cast<int>(rank_) <= static_cast<int>(rhs.rank_);
     }
 
@@ -318,39 +311,39 @@ class Square {
         assert(str.size() >= 2);
     }
 
-    constexpr Square operator^(const Square& s) const noexcept {
+    constexpr Square operator^(const Square &s) const noexcept {
         return Square(static_cast<underlying>(static_cast<int>(sq) ^ s.index()));
     };
 
-    constexpr bool operator==(const Square& rhs) const noexcept { return sq == rhs.sq; }
+    constexpr bool operator==(const Square &rhs) const noexcept { return sq == rhs.sq; }
 
-    constexpr bool operator!=(const Square& rhs) const noexcept { return sq != rhs.sq; }
+    constexpr bool operator!=(const Square &rhs) const noexcept { return sq != rhs.sq; }
 
-    constexpr bool operator>(const Square& rhs) const noexcept {
+    constexpr bool operator>(const Square &rhs) const noexcept {
         return static_cast<int>(sq) > static_cast<int>(rhs.sq);
     }
 
-    constexpr bool operator>=(const Square& rhs) const noexcept {
+    constexpr bool operator>=(const Square &rhs) const noexcept {
         return static_cast<int>(sq) >= static_cast<int>(rhs.sq);
     }
 
-    constexpr bool operator<(const Square& rhs) const noexcept {
+    constexpr bool operator<(const Square &rhs) const noexcept {
         return static_cast<int>(sq) < static_cast<int>(rhs.sq);
     }
 
-    constexpr bool operator<=(const Square& rhs) const noexcept {
+    constexpr bool operator<=(const Square &rhs) const noexcept {
         return static_cast<int>(sq) <= static_cast<int>(rhs.sq);
     }
 
-    constexpr Square operator+(const Square& rhs) const noexcept {
+    constexpr Square operator+(const Square &rhs) const noexcept {
         return Square(static_cast<underlying>(static_cast<int>(sq) + static_cast<int>(rhs.sq)));
     }
 
-    constexpr Square operator-(const Square& rhs) const noexcept {
+    constexpr Square operator-(const Square &rhs) const noexcept {
         return Square(static_cast<underlying>(static_cast<int>(sq) - static_cast<int>(rhs.sq)));
     }
 
-    constexpr Square& operator++() noexcept {
+    constexpr Square &operator++() noexcept {
         sq = static_cast<underlying>(static_cast<int>(sq) + 1);
         return *this;
     }
@@ -361,7 +354,7 @@ class Square {
         return tmp;
     }
 
-    constexpr Square& operator--() noexcept {
+    constexpr Square &operator--() noexcept {
         sq = static_cast<underlying>(static_cast<int>(sq) - 1);
         return *this;
     }
@@ -464,7 +457,7 @@ class Square {
      * @brief Flips the square vertically.
      * @return
      */
-    constexpr Square& flip() noexcept {
+    constexpr Square &flip() noexcept {
         sq = static_cast<underlying>(static_cast<int>(sq) ^ 56);
         return *this;
     }
@@ -525,7 +518,7 @@ class Square {
     underlying sq;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Square& sq) {
+inline std::ostream &operator<<(std::ostream &os, const Square &sq) {
     os << static_cast<std::string>(sq);
     return os;
 }
@@ -595,32 +588,32 @@ class Bitboard {
     constexpr bool operator==(std::uint64_t rhs) const noexcept { return bits == rhs; }
     constexpr bool operator!=(std::uint64_t rhs) const noexcept { return bits != rhs; }
 
-    constexpr Bitboard operator&(const Bitboard& rhs) const noexcept { return Bitboard(bits & rhs.bits); }
-    constexpr Bitboard operator|(const Bitboard& rhs) const noexcept { return Bitboard(bits | rhs.bits); }
-    constexpr Bitboard operator^(const Bitboard& rhs) const noexcept { return Bitboard(bits ^ rhs.bits); }
+    constexpr Bitboard operator&(const Bitboard &rhs) const noexcept { return Bitboard(bits & rhs.bits); }
+    constexpr Bitboard operator|(const Bitboard &rhs) const noexcept { return Bitboard(bits | rhs.bits); }
+    constexpr Bitboard operator^(const Bitboard &rhs) const noexcept { return Bitboard(bits ^ rhs.bits); }
     constexpr Bitboard operator~() const noexcept { return Bitboard(~bits); }
 
-    constexpr Bitboard& operator&=(const Bitboard& rhs) noexcept {
+    constexpr Bitboard &operator&=(const Bitboard &rhs) noexcept {
         bits &= rhs.bits;
         return *this;
     }
 
-    constexpr Bitboard& operator|=(const Bitboard& rhs) noexcept {
+    constexpr Bitboard &operator|=(const Bitboard &rhs) noexcept {
         bits |= rhs.bits;
         return *this;
     }
 
-    constexpr Bitboard& operator^=(const Bitboard& rhs) noexcept {
+    constexpr Bitboard &operator^=(const Bitboard &rhs) noexcept {
         bits ^= rhs.bits;
         return *this;
     }
 
-    constexpr bool operator==(const Bitboard& rhs) const noexcept { return bits == rhs.bits; }
-    constexpr bool operator!=(const Bitboard& rhs) const noexcept { return bits != rhs.bits; }
-    constexpr bool operator||(const Bitboard& rhs) const noexcept { return bits || rhs.bits; }
-    constexpr bool operator&&(const Bitboard& rhs) const noexcept { return bits && rhs.bits; }
+    constexpr bool operator==(const Bitboard &rhs) const noexcept { return bits == rhs.bits; }
+    constexpr bool operator!=(const Bitboard &rhs) const noexcept { return bits != rhs.bits; }
+    constexpr bool operator||(const Bitboard &rhs) const noexcept { return bits || rhs.bits; }
+    constexpr bool operator&&(const Bitboard &rhs) const noexcept { return bits && rhs.bits; }
 
-    constexpr Bitboard& set(int index) noexcept {
+    constexpr Bitboard &set(int index) noexcept {
         assert(index >= 0 && index < 64);
         bits |= (1ULL << index);
         return *this;
@@ -631,13 +624,13 @@ class Bitboard {
         return bits & (1ULL << index);
     }
 
-    constexpr Bitboard& clear(int index) noexcept {
+    constexpr Bitboard &clear(int index) noexcept {
         assert(index >= 0 && index < 64);
         bits &= ~(1ULL << index);
         return *this;
     }
 
-    constexpr Bitboard& clear() noexcept {
+    constexpr Bitboard &clear() noexcept {
         bits = 0;
         return *this;
     }
@@ -726,19 +719,19 @@ class Bitboard {
 
     [[nodiscard]] constexpr std::uint64_t getBits() const noexcept { return bits; }
 
-    friend std::ostream& operator<<(std::ostream& os, const Bitboard& bb);
+    friend std::ostream &operator<<(std::ostream &os, const Bitboard &bb);
 
    private:
     std::uint64_t bits;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Bitboard& bb) {
+inline std::ostream &operator<<(std::ostream &os, const Bitboard &bb) {
     os << std::string(bb);
     return os;
 }
 
-constexpr Bitboard operator&(std::uint64_t lhs, const Bitboard& rhs) { return rhs & lhs; }
-constexpr Bitboard operator|(std::uint64_t lhs, const Bitboard& rhs) { return rhs | lhs; }
+constexpr Bitboard operator&(std::uint64_t lhs, const Bitboard &rhs) { return rhs & lhs; }
+constexpr Bitboard operator|(std::uint64_t lhs, const Bitboard &rhs) { return rhs | lhs; }
 }  // namespace chess
 
 namespace chess {
@@ -986,18 +979,12 @@ class attacks {
 #include <cctype>
 #include <optional>
 
-
-
 namespace chess::constants {
 
 constexpr Bitboard DEFAULT_CHECKMASK = Bitboard(0xFFFFFFFFFFFFFFFFull);
 constexpr auto STARTPOS              = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 constexpr auto MAX_MOVES             = 256;
 }  // namespace chess::constants
-
-
-
-
 
 namespace chess {
 
@@ -1038,12 +1025,12 @@ class PieceType {
 
     explicit operator std::string() const {
         if (pt == underlying::NONE) return " ";
-        constexpr static const char* pieceTypeStr[] = {"p", "n", "b", "r", "q", "k"};
+        constexpr static const char *pieceTypeStr[] = {"p", "n", "b", "r", "q", "k"};
         return pieceTypeStr[static_cast<int>(pt)];
     }
 
-    constexpr bool operator==(const PieceType& rhs) const noexcept { return pt == rhs.pt; }
-    constexpr bool operator!=(const PieceType& rhs) const noexcept { return pt != rhs.pt; }
+    constexpr bool operator==(const PieceType &rhs) const noexcept { return pt == rhs.pt; }
+    constexpr bool operator!=(const PieceType &rhs) const noexcept { return pt != rhs.pt; }
 
     constexpr operator int() const noexcept { return static_cast<int>(pt); }
 
@@ -1061,7 +1048,7 @@ class PieceType {
     underlying pt;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const PieceType& pt) {
+inline std::ostream &operator<<(std::ostream &os, const PieceType &pt) {
     os << static_cast<std::string>(pt);
     return os;
 }
@@ -1096,19 +1083,19 @@ class Piece {
                                           : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
     constexpr Piece(std::string_view p) : piece(underlying::NONE) { piece = convertCharToUnderlying(p[0]); }
 
-    constexpr bool operator<(const Piece& rhs) const noexcept { return piece < rhs.piece; }
-    constexpr bool operator>(const Piece& rhs) const noexcept { return piece > rhs.piece; }
-    constexpr bool operator==(const Piece& rhs) const noexcept { return piece == rhs.piece; }
-    constexpr bool operator!=(const Piece& rhs) const noexcept { return piece != rhs.piece; }
+    constexpr bool operator<(const Piece &rhs) const noexcept { return piece < rhs.piece; }
+    constexpr bool operator>(const Piece &rhs) const noexcept { return piece > rhs.piece; }
+    constexpr bool operator==(const Piece &rhs) const noexcept { return piece == rhs.piece; }
+    constexpr bool operator!=(const Piece &rhs) const noexcept { return piece != rhs.piece; }
 
-    constexpr bool operator==(const underlying& rhs) const noexcept { return piece == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const noexcept { return piece != rhs; }
+    constexpr bool operator==(const underlying &rhs) const noexcept { return piece == rhs; }
+    constexpr bool operator!=(const underlying &rhs) const noexcept { return piece != rhs; }
 
-    constexpr bool operator==(const PieceType& rhs) const noexcept { return type() == rhs; }
-    constexpr bool operator!=(const PieceType& rhs) const noexcept { return type() != rhs; }
+    constexpr bool operator==(const PieceType &rhs) const noexcept { return type() == rhs; }
+    constexpr bool operator!=(const PieceType &rhs) const noexcept { return type() != rhs; }
 
     explicit operator std::string() const {
-        constexpr static const char* pieceStr[] = {"P", "N", "B", "R", "Q", "K",  //
+        constexpr static const char *pieceStr[] = {"P", "N", "B", "R", "Q", "K",  //
                                                    "p", "n", "b", "r", "q", "k"};
         if (piece == NONE) return ".";
         return pieceStr[static_cast<int>(piece)];
@@ -1270,12 +1257,9 @@ inline std::ostream &operator<<(std::ostream &os, const Move &move) {
 }
 }  // namespace chess
 
-
-
 #include <cstddef>
 #include <iterator>
 #include <stdexcept>
-
 
 namespace chess {
 class Movelist {
@@ -1283,13 +1267,13 @@ class Movelist {
     using value_type      = Move;
     using size_type       = int;
     using difference_type = std::ptrdiff_t;
-    using reference       = value_type&;
-    using const_reference = const value_type&;
-    using pointer         = value_type*;
-    using const_pointer   = const value_type*;
+    using reference       = value_type &;
+    using const_reference = const value_type &;
+    using pointer         = value_type *;
+    using const_pointer   = const value_type *;
 
-    using iterator       = value_type*;
-    using const_iterator = const value_type*;
+    using iterator       = value_type *;
+    using const_iterator = const value_type *;
 
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -1367,7 +1351,7 @@ class Movelist {
      * @brief Add a move to the end of the movelist.
      * @param move
      */
-    constexpr void add(value_type&& move) noexcept {
+    constexpr void add(value_type &&move) noexcept {
         assert(size_ < constants::MAX_MOVES);
         moves_[size_++] = move;
     }
@@ -1478,8 +1462,6 @@ class movegen {
 };
 
 }  // namespace chess
-
-
 
 namespace chess {
 class Zobrist {
@@ -1668,7 +1650,7 @@ class Zobrist {
 
     static constexpr int MAP_HASH_PIECE[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 
-        [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
+    [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
 #if __cplusplus >= 202207L
         [[assume(piece < 12)]];
@@ -1720,6 +1702,8 @@ enum class GameResultReason {
     THREEFOLD_REPETITION,
     NONE
 };
+
+enum class CheckType { NO_CHECK, DIRECT_CHECK, DISCOVERY_CHECK };
 
 // A compact representation of the board in 24 bytes,
 // does not include the half-move clock or full move number.
@@ -2483,6 +2467,8 @@ class Board {
      */
     [[nodiscard]] bool inCheck() const { return isAttacked(kingSq(stm_), ~stm_); }
 
+    [[nodiscard]] CheckType givesCheck(const Move &m) const;
+
     /**
      * @brief Checks if the given color has at least 1 piece thats not pawn and not king
      * @param color
@@ -3077,6 +3063,99 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
 
     return os;
 }
+
+inline CheckType Board::givesCheck(const Move &m) const {
+    const static auto getSniper = [](const Board *board, Square ksq, Bitboard oc) {
+        return (attacks::bishop(ksq, oc) & (board->pieces(PieceType::BISHOP, board->sideToMove()) |
+                                            board->pieces(PieceType::QUEEN, board->sideToMove()))) |
+               (attacks::rook(ksq, oc) & (board->pieces(PieceType::ROOK, board->sideToMove()) |
+                                          board->pieces(PieceType::QUEEN, board->sideToMove())));
+    };
+
+    assert(at(m.from()).color() == stm_);
+
+    const Square from   = m.from();
+    const Square to     = m.to();
+    const Square ksq    = kingSq(~stm_);
+    const Bitboard toBB = Bitboard::fromSquare(to);
+    const PieceType pt  = at(from).type();
+
+    Bitboard fromPiece = 0ull, fromKing = 0ull;
+
+    if (pt == PieceType::PAWN) {
+        fromPiece = toBB;
+        fromKing  = attacks::pawn(~stm_, ksq);
+    } else if (pt == PieceType::KNIGHT) {
+        fromPiece = attacks::knight(from);
+        fromKing  = attacks::knight(ksq);
+    } else if (pt == PieceType::BISHOP) {
+        fromPiece = attacks::bishop(from, occ());
+        fromKing  = attacks::bishop(ksq, occ());
+    } else if (pt == PieceType::ROOK) {
+        fromPiece = attacks::rook(from, occ());
+        fromKing  = attacks::rook(ksq, occ());
+    } else if (pt == PieceType::QUEEN) {
+        fromPiece = attacks::queen(from, occ());
+        fromKing  = attacks::queen(ksq, occ());
+    }
+
+    if (fromPiece & fromKing & toBB) return CheckType::DIRECT_CHECK;
+
+    // Discovery check
+    const Bitboard fromBB = Bitboard::fromSquare(from);
+    const Bitboard oc     = occ() ^ fromBB;
+
+    Bitboard sniper = getSniper(this, ksq, oc);
+
+    while (sniper) {
+        Square sq = sniper.pop();
+        return (!(movegen::SQUARES_BETWEEN_BB[ksq.index()][sq.index()] & toBB) || m.typeOf() == Move::CASTLING)
+                   ? CheckType::DISCOVERY_CHECK
+                   : CheckType::NO_CHECK;
+    }
+
+    switch (m.typeOf()) {
+        case Move::NORMAL:
+            return CheckType::NO_CHECK;
+
+        case Move::PROMOTION: {
+            Bitboard attacks = 0ull;
+
+            switch (m.promotionType()) {
+                case int(PieceType::KNIGHT):
+                    attacks = attacks::knight(to);
+                    break;
+                case int(PieceType::BISHOP):
+                    attacks = attacks::bishop(to, oc);
+                    break;
+                case int(PieceType::ROOK):
+                    attacks = attacks::rook(to, oc);
+                    break;
+                case int(PieceType::QUEEN):
+                    attacks = attacks::queen(to, oc);
+                    break;
+            }
+
+            return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
+        }
+
+        case Move::ENPASSANT: {
+            Square capSq(to.file(), from.rank());
+            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB)) ? CheckType::DISCOVERY_CHECK
+                                                                                     : CheckType::NO_CHECK;
+        }
+
+        case Move::CASTLING: {
+            Square rookTo = Square::castling_rook_square(to > from, stm_);
+            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo)) ? CheckType::DISCOVERY_CHECK
+                                                                              : CheckType::NO_CHECK;
+        }
+    }
+
+    assert(false);
+    return CheckType::NO_CHECK;  // Prevent a compiler warning
+}
+
 }  // namespace  chess
 
 namespace chess {
@@ -3261,8 +3340,6 @@ inline void attacks::initAttacks() {
     }
 }
 }  // namespace chess
-
-
 
 namespace chess {
 
@@ -4546,7 +4623,6 @@ class StreamParser {
 }  // namespace chess::pgn
 
 #include <sstream>
-
 
 namespace chess {
 class uci {

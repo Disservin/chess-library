@@ -15,7 +15,7 @@ The PackedBoard is not human-readable, and it is recommended to use the FEN stri
 :::
 
 ::: tip
-Also checkout [GameResultReason](/pages/types) and [GameResult](/pages/types) enums.
+Also checkout [GameResultReason](/pages/types), [GameResult](/pages/types) and [CheckType](/pages/types) enums.
 :::
 
 ::: warning
@@ -133,6 +133,8 @@ class Board {
 
         /// @brief Check if the current position is in check.
         bool inCheck();
+
+        CheckType givesCheck(const Move &m) const;
 
         /// @brief Check if the color has any non pawn material left.
         bool hasNonPawnMaterial(Color color);
