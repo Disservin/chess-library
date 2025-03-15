@@ -40,3 +40,9 @@ enum class GameResultReason {
     NONE
 };
 ```
+
+## CheckType
+
+```cpp
+enum class CheckType { NO_CHECK, DIRECT_CHECK, DISCOVERY_CHECK };
+```
