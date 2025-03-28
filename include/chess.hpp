@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.8.6
+VERSION: 0.8.7
 */
 
 #ifndef CHESS_HPP
@@ -1017,67 +1017,29 @@ class PieceType {
     constexpr PieceType(underlying pt) : pt(pt) {}
     constexpr explicit PieceType(std::string_view type) : pt(underlying::NONE) {
         assert(type.size() > 0);
-        switch (type.data()[0]) {
-            case 'P':
-                pt = underlying::PAWN;
-                break;
-            case 'N':
-                pt = underlying::KNIGHT;
-                break;
-            case 'B':
-                pt = underlying::BISHOP;
-                break;
-            case 'R':
-                pt = underlying::ROOK;
-                break;
-            case 'Q':
-                pt = underlying::QUEEN;
-                break;
-            case 'K':
-                pt = underlying::KING;
-                break;
 
-            case 'p':
-                pt = underlying::PAWN;
-                break;
-            case 'n':
-                pt = underlying::KNIGHT;
-                break;
-            case 'b':
-                pt = underlying::BISHOP;
-                break;
-            case 'r':
-                pt = underlying::ROOK;
-                break;
-            case 'q':
-                pt = underlying::QUEEN;
-                break;
-            case 'k':
-                pt = underlying::KING;
-                break;
-            default:
-                pt = underlying::NONE;
-                break;
-        }
+        char c = type[0];
+
+        if (c == 'P' || c == 'p')
+            pt = underlying::PAWN;
+        else if (c == 'N' || c == 'n')
+            pt = underlying::KNIGHT;
+        else if (c == 'B' || c == 'b')
+            pt = underlying::BISHOP;
+        else if (c == 'R' || c == 'r')
+            pt = underlying::ROOK;
+        else if (c == 'Q' || c == 'q')
+            pt = underlying::QUEEN;
+        else if (c == 'K' || c == 'k')
+            pt = underlying::KING;
+        else
+            pt = underlying::NONE;
     }
 
     explicit operator std::string() const {
-        switch (pt) {
-            case underlying::PAWN:
-                return "p";
-            case underlying::KNIGHT:
-                return "n";
-            case underlying::BISHOP:
-                return "b";
-            case underlying::ROOK:
-                return "r";
-            case underlying::QUEEN:
-                return "q";
-            case underlying::KING:
-                return "k";
-            default:
-                return " ";
-        }
+        if (pt == underlying::NONE) return " ";
+        constexpr static const char* pieceTypeStr[] = {"p", "n", "b", "r", "q", "k"};
+        return pieceTypeStr[static_cast<int>(pt)];
     }
 
     constexpr bool operator==(const PieceType& rhs) const noexcept { return pt == rhs.pt; }
@@ -1146,35 +1108,10 @@ class Piece {
     constexpr bool operator!=(const PieceType& rhs) const noexcept { return type() != rhs; }
 
     explicit operator std::string() const {
-        switch (piece) {
-            case WHITEPAWN:
-                return "P";
-            case WHITEKNIGHT:
-                return "N";
-            case WHITEBISHOP:
-                return "B";
-            case WHITEROOK:
-                return "R";
-            case WHITEQUEEN:
-                return "Q";
-            case WHITEKING:
-                return "K";
-            // black
-            case BLACKPAWN:
-                return "p";
-            case BLACKKNIGHT:
-                return "n";
-            case BLACKBISHOP:
-                return "b";
-            case BLACKROOK:
-                return "r";
-            case BLACKQUEEN:
-                return "q";
-            case BLACKKING:
-                return "k";
-            default:
-                return ".";
-        }
+        constexpr static const char* pieceStr[] = {"P", "N", "B", "R", "Q", "K",  //
+                                                   "p", "n", "b", "r", "q", "k"};
+        if (piece == NONE) return ".";
+        return pieceStr[static_cast<int>(piece)];
     }
 
     constexpr operator int() const noexcept { return static_cast<int>(piece); }
