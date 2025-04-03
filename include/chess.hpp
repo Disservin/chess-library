@@ -1671,7 +1671,7 @@ class Zobrist {
         [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
 #if __cplusplus >= 202207L
-        [[assume(x < 12)]];
+        [[assume(piece < 12)]];
 #endif
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
     }
@@ -1679,7 +1679,7 @@ class Zobrist {
     [[nodiscard]] static U64 enpassant(File file) noexcept {
         assert(int(file) < 8);
 #if __cplusplus >= 202207L
-        [[assume(x < 8)]];
+        [[assume(int(file) < 8)]];
 #endif
         return RANDOM_ARRAY[772 + file];
     }
@@ -1687,7 +1687,7 @@ class Zobrist {
     [[nodiscard]] static U64 castling(int castling) noexcept {
         assert(castling >= 0 && castling < 16);
 #if __cplusplus >= 202207L
-        [[assume(x < 16)]];
+        [[assume(castling < 16)]];
 #endif
         return castlingKey[castling];
     }
@@ -1695,7 +1695,7 @@ class Zobrist {
     [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
         assert(idx >= 0 && idx < 4);
 #if __cplusplus >= 202207L
-        [[assume(x < 4)]];
+        [[assume(idx < 4)]];
 #endif
         return RANDOM_ARRAY[768 + idx];
     }
