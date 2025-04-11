@@ -32,6 +32,8 @@ enum class GameResultReason {
     NONE
 };
 
+enum class CheckType { NO_CHECK, DIRECT_CHECK, DISCOVERY_CHECK };
+
 // A compact representation of the board in 24 bytes,
 // does not include the half-move clock or full move number.
 using PackedBoard = std::array<std::uint8_t, 24>;
@@ -419,8 +421,7 @@ class Board {
     }
 
     void unmakeMove(const Move move) {
-        const auto prev = prev_states_.back();
-        prev_states_.pop_back();
+        const auto& prev = prev_states_.back();
 
         ep_sq_ = prev.enpassant;
         cr_    = prev.castling;
@@ -447,10 +448,6 @@ class Board {
 
             placePiece(king, move.from());
             placePiece(rook, move.to());
-
-            key_ = prev.hash;
-
-            return;
         } else if (move.typeOf() == Move::PROMOTION) {
             const auto pawn  = Piece(PieceType::PAWN, stm_);
             const auto piece = at(move.to());
@@ -467,9 +464,6 @@ class Board {
                 assert(at(move.to()) == Piece::NONE);
                 placePiece(prev.captured_piece, move.to());
             }
-
-            key_ = prev.hash;
-            return;
         } else {
             assert(at(move.to()) != Piece::NONE);
             assert(at(move.from()) == Piece::NONE);
@@ -478,22 +472,23 @@ class Board {
 
             removePiece(piece, move.to());
             placePiece(piece, move.from());
-        }
 
-        if (move.typeOf() == Move::ENPASSANT) {
-            const auto pawn   = Piece(PieceType::PAWN, ~stm_);
-            const auto pawnTo = static_cast<Square>(ep_sq_ ^ 8);
+            if (move.typeOf() == Move::ENPASSANT) {
+                const auto pawn   = Piece(PieceType::PAWN, ~stm_);
+                const auto pawnTo = static_cast<Square>(ep_sq_ ^ 8);
 
-            assert(at(pawnTo) == Piece::NONE);
+                assert(at(pawnTo) == Piece::NONE);
 
-            placePiece(pawn, pawnTo);
-        } else if (prev.captured_piece != Piece::NONE) {
-            assert(at(move.to()) == Piece::NONE);
+                placePiece(pawn, pawnTo);
+            } else if (prev.captured_piece != Piece::NONE) {
+                assert(at(move.to()) == Piece::NONE);
 
-            placePiece(prev.captured_piece, move.to());
+                placePiece(prev.captured_piece, move.to());
+            }
         }
 
         key_ = prev.hash;
+        prev_states_.pop_back();
     }
 
     /**
@@ -575,12 +570,29 @@ class Board {
     [[nodiscard]] Bitboard pieces(PieceType type, Color color) const { return pieces_bb_[type] & occ_bb_[color]; }
 
     /**
+     * @brief Returns all pieces of two types and color
+     * @param type1, type2
+     * @param color
+     * @return
+     */
+    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2, Color color) const {
+        return (pieces_bb_[type1] | pieces_bb_[type2]) & occ_bb_[color];
+    }
+
+    /**
      * @brief Returns all pieces of a certain type
      * @param type
      * @return
      */
-    [[nodiscard]] Bitboard pieces(PieceType type) const {
-        return pieces(type, Color::WHITE) | pieces(type, Color::BLACK);
+    [[nodiscard]] Bitboard pieces(PieceType type) const { return pieces_bb_[type]; }
+
+    /**
+     * @brief Returns all pieces of two types
+     * @param type1, type2
+     * @return
+     */
+    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2) const {
+        return pieces_bb_[type1] | pieces_bb_[type2];
     }
 
     /**
@@ -793,6 +805,19 @@ class Board {
      * @return
      */
     [[nodiscard]] bool inCheck() const { return isAttacked(kingSq(stm_), ~stm_); }
+
+    /**
+     * @brief Checks if the given moves can deliver a check
+     * @param move
+     * @return The CheckType of this move
+     */
+    [[nodiscard]] CheckType givesCheck(const Move move) const;
+
+    /**
+     * @brief Checks if the king is in double check
+     * @return
+     */
+    [[nodiscard]] bool inDoubleCheck() const;
 
     /**
      * @brief Checks if the given color has at least 1 piece thats not pawn and not king
@@ -1376,16 +1401,125 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
         os << " \n";
     }
 
-    os << "\n\n";
-    os << "Side to move: " << static_cast<int>(b.stm_.internal()) << "\n";
-    os << "Castling rights: " << b.getCastleString() << "\n";
-    os << "Halfmoves: " << b.halfMoveClock() << "\n";
-    os << "Fullmoves: " << b.fullMoveNumber() << "\n";
-    os << "EP: " << b.ep_sq_.index() << "\n";
-    os << "Hash: " << b.key_ << "\n";
-
+    os << "\nFEN: " << b.getFen();
+    os << "\nHash: " << std::hex << b.key_ << std::dec << "\n";
     os << std::endl;
 
     return os;
 }
+
+inline CheckType Board::givesCheck(const Move move) const {
+    const static auto getSniper = [](const Board *board, Square ksq, Bitboard oc) {
+        return ((attacks::bishop(ksq, oc) & board->pieces(PieceType::BISHOP, PieceType::QUEEN)) |
+                (attacks::rook  (ksq, oc) & board->pieces(PieceType::ROOK,   PieceType::QUEEN))) &
+               board->us(board->sideToMove());
+    };
+
+    assert(at(move.from()).color() == stm_);
+
+    const auto from = move.from();
+    const auto to   = move.to();
+    const auto ksq  = kingSq(~stm_);
+    const auto toBB = Bitboard::fromSquare(to);
+    const auto pt   = at<PieceType>(from);
+
+    // Direct check
+    Bitboard fromPiece, fromKing;
+
+    switch (pt) {
+        case int(PieceType::PAWN): {
+            fromKing = attacks::pawn(~stm_, ksq);
+            break;
+        }
+        case int(PieceType::KNIGHT): {
+            fromKing = attacks::knight(ksq);
+            break;
+        }
+        case int(PieceType::BISHOP): {
+            fromKing = attacks::bishop(ksq, occ());
+            break;
+        }
+        case int(PieceType::ROOK): {
+            fromKing = attacks::rook(ksq, occ());
+            break;
+        }
+        case int(PieceType::QUEEN): {
+            fromKing = attacks::queen(ksq, occ());
+        }
+    }
+
+    if (fromKing & toBB) return CheckType::DIRECT_CHECK;
+
+    // Discovery check
+    const auto oc = occ() ^ Bitboard::fromSquare(from);
+    auto sniper   = getSniper(this, ksq, oc);
+
+    while (sniper) {
+        const auto sq = sniper.pop();
+        return (!(movegen::SQUARES_BETWEEN_BB[ksq.index()][sq] & toBB) || move.typeOf() == Move::CASTLING)
+                   ? CheckType::DISCOVERY_CHECK
+                   : CheckType::NO_CHECK;
+    }
+
+    switch (move.typeOf()) {
+        case Move::NORMAL: {
+            return CheckType::NO_CHECK;
+        }
+        case Move::PROMOTION: {
+            Bitboard attacks;
+
+            switch (move.promotionType()) {
+                case int(PieceType::KNIGHT): {
+                    attacks = attacks::knight(to);
+                    break;
+                };
+                case int(PieceType::BISHOP): {
+                    attacks = attacks::bishop(to, oc);
+                    break;
+                }
+                case int(PieceType::ROOK): {
+                    attacks = attacks::rook(to, oc);
+                    break;
+                }
+                case int(PieceType::QUEEN): {
+                    attacks = attacks::queen(to, oc);
+                }
+            }
+
+            return (attacks & pieces(PieceType::KING, ~stm_))
+                ? CheckType::DIRECT_CHECK
+                : CheckType::NO_CHECK;
+        }
+        case Move::ENPASSANT: {
+            const Square capSq(to.file(), from.rank());
+            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB))
+                ? CheckType::DISCOVERY_CHECK
+                : CheckType::NO_CHECK;
+        }
+        case Move::CASTLING: {
+            const Square rookTo = Square::castling_rook_square(to > from, stm_);
+            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo))
+                ? CheckType::DISCOVERY_CHECK
+                : CheckType::NO_CHECK;
+        }
+    }
+
+        // c++23
+#if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
+    std::unreachable();
+#endif
+
+    assert(false);
+    return CheckType::NO_CHECK;  // Prevent a compiler warning
+}
+
+[[nodiscard]] inline bool Board::inDoubleCheck() const {
+    int checks;
+    if (stm_ == Color::WHITE)
+        checks = movegen::checkMask<Color::WHITE>(*this, kingSq(stm_)).second;
+    else
+        checks = movegen::checkMask<Color::BLACK>(*this, kingSq(stm_)).second;
+    return checks > 1;
+}
+
 }  // namespace  chess
