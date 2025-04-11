@@ -251,13 +251,11 @@ class Rank {
     constexpr std::uint64_t bb() const noexcept { return 0xffULL << (8 * static_cast<int>(rank_)); }
 
     [[nodiscard]] static constexpr bool back_rank(Rank r, Color color) noexcept {
-        if (color == Color::WHITE) return r == Rank::RANK_1;
-        return r == Rank::RANK_8;
+        return r == Rank(static_cast<int>(color) * 7);
     }
 
     [[nodiscard]] static constexpr Rank rank(Rank r, Color color) noexcept {
-        if (color == Color::WHITE) return r;
-        return Rank(static_cast<underlying>(static_cast<int>(RANK_8) - static_cast<int>(r)));
+        return Rank((static_cast<int>(r) ^ (static_cast<int>(color) * 7)));
     }
 
     static constexpr underlying RANK_1  = underlying::RANK_1;
