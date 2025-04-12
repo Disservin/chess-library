@@ -32,6 +32,8 @@ enum class GameResultReason {
     NONE
 };
 
+enum class CheckType { NO_CHECK, DIRECT_CHECK, DISCOVERY_CHECK };
+
 // A compact representation of the board in 24 bytes,
 // does not include the half-move clock or full move number.
 using PackedBoard = std::array<std::uint8_t, 24>;
@@ -794,6 +796,8 @@ class Board {
      */
     [[nodiscard]] bool inCheck() const { return isAttacked(kingSq(stm_), ~stm_); }
 
+    [[nodiscard]] CheckType givesCheck(const Move &m) const;
+
     /**
      * @brief Checks if the given color has at least 1 piece thats not pawn and not king
      * @param color
@@ -1388,4 +1392,97 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
 
     return os;
 }
+
+inline CheckType Board::givesCheck(const Move &m) const {
+    const static auto getSniper = [](const Board *board, Square ksq, Bitboard oc) {
+        return (attacks::bishop(ksq, oc) & (board->pieces(PieceType::BISHOP, board->sideToMove()) |
+                                            board->pieces(PieceType::QUEEN, board->sideToMove()))) |
+               (attacks::rook(ksq, oc) & (board->pieces(PieceType::ROOK, board->sideToMove()) |
+                                          board->pieces(PieceType::QUEEN, board->sideToMove())));
+    };
+
+    assert(at(m.from()).color() == stm_);
+
+    const Square from   = m.from();
+    const Square to     = m.to();
+    const Square ksq    = kingSq(~stm_);
+    const Bitboard toBB = Bitboard::fromSquare(to);
+    const PieceType pt  = at(from).type();
+
+    Bitboard fromPiece = 0ull, fromKing = 0ull;
+
+    if (pt == PieceType::PAWN) {
+        fromPiece = toBB;
+        fromKing  = attacks::pawn(~stm_, ksq);
+    } else if (pt == PieceType::KNIGHT) {
+        fromPiece = attacks::knight(from);
+        fromKing  = attacks::knight(ksq);
+    } else if (pt == PieceType::BISHOP) {
+        fromPiece = attacks::bishop(from, occ());
+        fromKing  = attacks::bishop(ksq, occ());
+    } else if (pt == PieceType::ROOK) {
+        fromPiece = attacks::rook(from, occ());
+        fromKing  = attacks::rook(ksq, occ());
+    } else if (pt == PieceType::QUEEN) {
+        fromPiece = attacks::queen(from, occ());
+        fromKing  = attacks::queen(ksq, occ());
+    }
+
+    if (fromPiece & fromKing & toBB) return CheckType::DIRECT_CHECK;
+
+    // Discovery check
+    const Bitboard fromBB = Bitboard::fromSquare(from);
+    const Bitboard oc     = occ() ^ fromBB;
+
+    Bitboard sniper = getSniper(this, ksq, oc);
+
+    while (sniper) {
+        Square sq = sniper.pop();
+        return (!(movegen::SQUARES_BETWEEN_BB[ksq.index()][sq.index()] & toBB) || m.typeOf() == Move::CASTLING)
+                   ? CheckType::DISCOVERY_CHECK
+                   : CheckType::NO_CHECK;
+    }
+
+    switch (m.typeOf()) {
+        case Move::NORMAL:
+            return CheckType::NO_CHECK;
+
+        case Move::PROMOTION: {
+            Bitboard attacks = 0ull;
+
+            switch (m.promotionType()) {
+                case int(PieceType::KNIGHT):
+                    attacks = attacks::knight(to);
+                    break;
+                case int(PieceType::BISHOP):
+                    attacks = attacks::bishop(to, oc);
+                    break;
+                case int(PieceType::ROOK):
+                    attacks = attacks::rook(to, oc);
+                    break;
+                case int(PieceType::QUEEN):
+                    attacks = attacks::queen(to, oc);
+                    break;
+            }
+
+            return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
+        }
+
+        case Move::ENPASSANT: {
+            Square capSq(to.file(), from.rank());
+            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB)) ? CheckType::DISCOVERY_CHECK
+                                                                                     : CheckType::NO_CHECK;
+        }
+
+        case Move::CASTLING: {
+            Square rookTo = Square::castling_rook_square(to > from, stm_);
+            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo)) ? CheckType::DISCOVERY_CHECK
+                                                                              : CheckType::NO_CHECK;
+        }
+    }
+
+    assert(false);
+    return CheckType::NO_CHECK;  // Prevent a compiler warning
+}
+
 }  // namespace  chess
