@@ -3080,26 +3080,21 @@ inline CheckType Board::givesCheck(const Move &m) const {
     const Bitboard toBB = Bitboard::fromSquare(to);
     const PieceType pt  = at(from).type();
 
-    Bitboard fromPiece = 0ull, fromKing = 0ull;
+    Bitboard fromKing = 0ull;
 
     if (pt == PieceType::PAWN) {
-        fromPiece = toBB;
         fromKing  = attacks::pawn(~stm_, ksq);
     } else if (pt == PieceType::KNIGHT) {
-        fromPiece = attacks::knight(from);
         fromKing  = attacks::knight(ksq);
     } else if (pt == PieceType::BISHOP) {
-        fromPiece = attacks::bishop(from, occ());
         fromKing  = attacks::bishop(ksq, occ());
     } else if (pt == PieceType::ROOK) {
-        fromPiece = attacks::rook(from, occ());
         fromKing  = attacks::rook(ksq, occ());
     } else if (pt == PieceType::QUEEN) {
-        fromPiece = attacks::queen(from, occ());
         fromKing  = attacks::queen(ksq, occ());
     }
 
-    if (fromPiece & fromKing & toBB) return CheckType::DIRECT_CHECK;
+    if (fromKing & toBB) return CheckType::DIRECT_CHECK;
 
     // Discovery check
     const Bitboard fromBB = Bitboard::fromSquare(from);
