@@ -39,9 +39,10 @@ class W_Board : public Board {
     W_Board() : Board() {}
     W_Board(std::string_view fen) : Board(fen) {}
 
-    virtual void setFen(std::string_view fen) {
-        Board::setFen(fen);
+    virtual bool setFen(std::string_view fen) {
+        auto ret = Board::setFen(fen);
         inc = 0;
+        return ret;
     }
 
     int inc = 0;

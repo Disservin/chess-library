@@ -31,7 +31,22 @@ class Board {
     public:
         Board::Board(std::string_view fen)
 
-        void setFen(std::string_view fen);
+        /**
+         * @brief Returns true if the given FEN was successfully parsed and set
+         * (position might still be illegal).
+         * @param fen
+         * @return
+         */
+        bool setFen(std::string_view fen);
+
+        /**
+         * @brief Returns true if the given EPD was successfully parsed and set
+         * (position might still be illegal).
+         * @param epd
+         * @return
+         */
+        bool setEpd(const std::string_view epd);
+
         std::string getFen(bool moveCounters = true);
 
         /// @brief Make a move on the board. The move must be legal otherwise the
