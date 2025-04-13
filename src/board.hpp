@@ -9,6 +9,14 @@
 #include <string_view>
 #include <vector>
 
+// check if charconv header is available
+#if __has_include(<charconv>)
+#    define CHESS_USE_CHARCONV
+#    include <charconv>
+#else
+#    include <sstream>
+#endif
+
 #include "attacks_fwd.hpp"
 #include "color.hpp"
 #include "constants.hpp"
@@ -20,6 +28,43 @@
 #include "zobrist.hpp"
 
 namespace chess {
+
+namespace detail {
+inline std::optional<int> parseStringViewToInt(std::string_view sv) {
+    if (sv.empty()) return std::nullopt;
+
+    std::string_view parsed_sv = sv;
+    if (parsed_sv.back() == ';') parsed_sv.remove_suffix(1);
+
+    if (parsed_sv.empty()) return std::nullopt;
+
+#ifdef CHESS_USE_CHARCONV
+    int result;
+    const char *begin = parsed_sv.data();
+    const char *end   = begin + parsed_sv.size();
+
+    auto [ptr, ec] = std::from_chars(begin, end, result);
+
+    if (ec == std::errc() && ptr == end) {
+        return result;
+    }
+#else
+    std::string str(parsed_sv);
+    std::stringstream ss(str);
+
+    ss.exceptions(std::ios::goodbit);
+
+    int value;
+    ss >> value;
+
+    if (!ss.fail() && (ss.eof() || (ss >> std::ws).eof())) {
+        return value;
+    }
+#endif
+
+    return std::nullopt;
+}
+}  // namespace detail
 
 enum class GameResult { WIN, LOSE, DRAW, NONE };
 
@@ -112,8 +157,6 @@ class Board {
         setFenInternal<true>(fen);
     }
 
-    virtual void setFen(std::string_view fen) { setFenInternal(fen); }
-
     static Board fromFen(std::string_view fen) { return Board(fen); }
     static Board fromEpd(std::string_view epd) {
         Board board;
@@ -121,51 +164,53 @@ class Board {
         return board;
     }
 
-    void setEpd(const std::string_view epd) {
+    /**
+     * @brief Returns true if the given FEN was successfully parsed and set.
+     * @param fen
+     * @return
+     */
+    virtual bool setFen(std::string_view fen) { return setFenInternal(fen); }
+
+    /**
+     * @brief Returns true if the given EPD was successfully parsed and set.
+     * @param epd
+     * @return
+     */
+    bool setEpd(const std::string_view epd) {
         auto parts = utils::splitString(epd, ' ');
 
-#ifndef CHESS_NO_EXCEPTIONS
-        if (parts.size() < 1) throw std::runtime_error("Invalid EPD");
-#else
-        if (parts.size() < 1) return;
-#endif
+        if (parts.size() < 4) return false;
 
         int hm = 0;
         int fm = 1;
 
-        static auto parseStringViewToInt = [](std::string_view sv) -> std::optional<int> {
-            if (!sv.empty() && sv.back() == ';') sv.remove_suffix(1);
-#ifndef CHESS_NO_EXCEPTIONS
-            try {
-                size_t pos;
-                int value = std::stoi(std::string(sv), &pos);
-                if (pos == sv.size()) return value;
-            } catch (...) {
-            }
-#else
-            size_t pos;
-            int value = std::stoi(std::string(sv), &pos);
-            if (pos == sv.size()) return value;
-#endif
-            return std::nullopt;
-        };
-
         if (auto it = std::find(parts.begin(), parts.end(), "hmvc"); it != parts.end()) {
-            auto num = *(it + 1);
-
-            hm = parseStringViewToInt(num).value_or(0);
+            if (std::distance(it, parts.end()) > 1) {
+                auto num    = *(it + 1);
+                auto parsed = detail::parseStringViewToInt(num);
+                if (parsed) hm = *parsed;
+            } else {
+                return false;
+            }
         }
 
         if (auto it = std::find(parts.begin(), parts.end(), "fmvn"); it != parts.end()) {
-            auto num = *(it + 1);
-
-            fm = parseStringViewToInt(num).value_or(1);
+            if (std::distance(it, parts.end()) > 1) {
+                auto num    = *(it + 1);
+                auto parsed = detail::parseStringViewToInt(num);
+                if (parsed && *parsed > 0)
+                    fm = *parsed;
+                else
+                    return false;
+            } else {
+                return false;
+            }
         }
 
         auto fen = std::string(parts[0]) + " " + std::string(parts[1]) + " " + std::string(parts[2]) + " " +
                    std::string(parts[3]) + " " + std::to_string(hm) + " " + std::to_string(fm);
 
-        setFen(fen);
+        return setFen(fen);
     }
 
     /**
@@ -1181,15 +1226,14 @@ class Board {
     }
 
     template <bool ctor = false>
-    void setFenInternal(std::string_view fen) {
+    bool setFenInternal(std::string_view fen) {
         original_fen_ = fen;
 
-        occ_bb_.fill(0ULL);
-        pieces_bb_.fill(0ULL);
-        board_.fill(Piece::NONE);
+        reset();
 
-        // find leading whitespaces and remove them
-        while (fen[0] == ' ') fen.remove_prefix(1);
+        while (!fen.empty() && fen[0] == ' ') fen.remove_prefix(1);
+
+        if (fen.empty()) return false;
 
         const auto params     = split_string_view<6>(fen);
         const auto position   = params[0].has_value() ? *params[0] : "";
@@ -1199,35 +1243,30 @@ class Board {
         const auto half_move  = params[4].has_value() ? *params[4] : "0";
         const auto full_move  = params[5].has_value() ? *params[5] : "1";
 
-        static auto parseStringViewToInt = [](std::string_view sv) -> std::optional<int> {
-            if (!sv.empty() && sv.back() == ';') sv.remove_suffix(1);
-#ifndef CHESS_NO_EXCEPTIONS
-            try {
-                size_t pos;
-                int value = std::stoi(std::string(sv), &pos);
-                if (pos == sv.size()) return value;
-            } catch (...) {
-            }
-#else
-            size_t pos;
-            int value = std::stoi(std::string(sv), &pos);
-            if (pos == sv.size()) return value;
-#endif
-            return std::nullopt;
-        };
+        if (position.empty()) return false;
 
-        // Half move clock
-        hfm_ = parseStringViewToInt(half_move).value_or(0);
+        if (move_right != "w" && move_right != "b") return false;
 
-        // Full move number
-        plies_ = parseStringViewToInt(full_move).value_or(1);
+        auto half_move_opt = detail::parseStringViewToInt(half_move);
+        if (!half_move_opt) return false;
+        hfm_ = *half_move_opt;
+
+        auto full_move_opt = detail::parseStringViewToInt(full_move);
+        if (!full_move_opt || *full_move_opt <= 0) return false;
+        plies_ = *full_move_opt;
 
         plies_ = plies_ * 2 - 2;
-        ep_sq_ = en_passant == "-" ? Square::NO_SQ : Square(en_passant);
-        stm_   = (move_right == "w") ? Color::WHITE : Color::BLACK;
-        key_   = 0ULL;
-        cr_.clear();
-        prev_states_.clear();
+
+        if (en_passant != "-") {
+            if (!Square::is_valid_string_sq(en_passant)) {
+                return false;
+            }
+
+            ep_sq_ = Square(en_passant);
+            if (ep_sq_ == Square::NO_SQ) return false;
+        }
+
+        stm_ = (move_right == "w") ? Color::WHITE : Color::BLACK;
 
         if (stm_ == Color::BLACK) {
             plies_++;
@@ -1236,15 +1275,23 @@ class Board {
         }
 
         auto square = 56;
+        int rank    = 7;
         for (char curr : position) {
             if (isdigit(curr)) {
-                square += (curr - '0');
+                int skip = curr - '0';
+                square += skip;
+                if (square > 63) return false;
             } else if (curr == '/') {
+                if ((square - 56) % 8 != 0) return false;
+
                 square -= 16;
+                rank--;
+
+                if (rank < 0) return false;
             } else {
                 auto p = Piece(std::string_view(&curr, 1));
+                if (p == Piece::NONE || !Square::is_valid_sq(square) || at(square) != Piece::NONE) return false;
 
-                // prevent warnings about virtual method bypassing virtual dispatch
                 if constexpr (ctor) {
                     placePieceInternal(p, Square(square));
                 } else {
@@ -1253,10 +1300,14 @@ class Board {
 
                 key_ ^= Zobrist::piece(p, Square(square));
                 ++square;
+
+                if (square > 63) return false;
             }
         }
 
-        static const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) {
+        if (rank != 0 || square != 64) return false;
+
+        static const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) -> File {
             const auto king_side = CastlingRights::Side::KING_SIDE;
             const auto king_sq   = board.kingSq(color);
             const auto sq_corner = Square(side == king_side ? Square::SQ_H1 : Square::SQ_A1).relative_square(color);
@@ -1270,13 +1321,10 @@ class Board {
                 }
             }
 
-#ifndef CHESS_NO_EXCEPTIONS
-            throw std::runtime_error("Invalid position");
-#endif
-
             return File(File::NO_FILE);
         };
 
+        // Parse castling rights
         for (char i : castling) {
             if (i == '-') break;
 
@@ -1284,42 +1332,45 @@ class Board {
             const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
 
             if (!chess960_) {
-                if (i == 'K') cr_.setCastlingRight(Color::WHITE, king_side, File::FILE_H);
-                if (i == 'Q') cr_.setCastlingRight(Color::WHITE, queen_side, File::FILE_A);
-                if (i == 'k') cr_.setCastlingRight(Color::BLACK, king_side, File::FILE_H);
-                if (i == 'q') cr_.setCastlingRight(Color::BLACK, queen_side, File::FILE_A);
+                if (i == 'K')
+                    cr_.setCastlingRight(Color::WHITE, king_side, File::FILE_H);
+                else if (i == 'Q')
+                    cr_.setCastlingRight(Color::WHITE, queen_side, File::FILE_A);
+                else if (i == 'k')
+                    cr_.setCastlingRight(Color::BLACK, king_side, File::FILE_H);
+                else if (i == 'q')
+                    cr_.setCastlingRight(Color::BLACK, queen_side, File::FILE_A);
+                else
+                    return false;
 
                 continue;
             }
 
             // chess960 castling detection
-
             const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
             const auto king_sq = kingSq(color);
 
-            // find rook on the right side of the king
             if (i == 'K' || i == 'k') {
-                cr_.setCastlingRight(color, king_side, find_rook(*this, king_side, color));
-            }
-            // find rook on the left side of the king
-            else if (i == 'Q' || i == 'q') {
-                cr_.setCastlingRight(color, queen_side, find_rook(*this, queen_side, color));
-            }
-            // correct frc castling encoding
-            else {
+                auto file = find_rook(*this, king_side, color);
+                if (file == File::NO_FILE) return false;
+                cr_.setCastlingRight(color, king_side, file);
+            } else if (i == 'Q' || i == 'q') {
+                auto file = find_rook(*this, queen_side, color);
+                if (file == File::NO_FILE) return false;
+                cr_.setCastlingRight(color, queen_side, file);
+            } else {
                 const auto file = File(std::string_view(&i, 1));
+                if (file == File::NO_FILE) return false;
                 const auto side = CastlingRights::closestSide(file, king_sq.file());
                 cr_.setCastlingRight(color, side, file);
             }
         }
 
-        // check if ep square itself is valid
         if (ep_sq_ != Square::NO_SQ && !((ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
                                          (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE))) {
             ep_sq_ = Square::NO_SQ;
         }
 
-        // check if ep square is valid, i.e. if there is a pawn that can capture it
         if (ep_sq_ != Square::NO_SQ) {
             bool valid;
 
@@ -1338,6 +1389,8 @@ class Board {
         key_ ^= Zobrist::castling(cr_.hashIndex());
 
         assert(key_ == zobrist());
+
+        return true;
     }
 
     template <int N>
@@ -1359,6 +1412,20 @@ class Board {
         }
 
         return arr;
+    }
+
+    void reset() {
+        occ_bb_.fill(0ULL);
+        pieces_bb_.fill(0ULL);
+        board_.fill(Piece::NONE);
+
+        stm_   = Color::WHITE;
+        ep_sq_ = Square::NO_SQ;
+        hfm_   = 0;
+        plies_ = 1;
+        key_   = 0ULL;
+        cr_.clear();
+        prev_states_.clear();
     }
 
     // store the original fen string

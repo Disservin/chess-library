@@ -371,6 +371,12 @@ class Square {
      */
     [[nodiscard]] static constexpr int max() noexcept { return 64; }
 
+    [[nodiscard]] static bool is_valid_string_sq(std::string_view str) noexcept {
+        return str.size() == 2 && str[0] >= 'a' && str[0] <= 'h' && str[1] >= '1' && str[1] <= '8';
+    }
+
+    [[nodiscard]] static constexpr bool is_valid_sq(int sq) noexcept { return sq >= 0 && sq < 64; }
+
    private:
     underlying sq;
 };
