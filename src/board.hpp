@@ -421,8 +421,7 @@ class Board {
     }
 
     void unmakeMove(const Move move) {
-        const auto prev = prev_states_.back();
-        prev_states_.pop_back();
+        const auto &prev = prev_states_.back();
 
         ep_sq_ = prev.enpassant;
         cr_    = prev.castling;
@@ -450,9 +449,6 @@ class Board {
             placePiece(king, move.from());
             placePiece(rook, move.to());
 
-            key_ = prev.hash;
-
-            return;
         } else if (move.typeOf() == Move::PROMOTION) {
             const auto pawn  = Piece(PieceType::PAWN, stm_);
             const auto piece = at(move.to());
@@ -470,8 +466,6 @@ class Board {
                 placePiece(prev.captured_piece, move.to());
             }
 
-            key_ = prev.hash;
-            return;
         } else {
             assert(at(move.to()) != Piece::NONE);
             assert(at(move.from()) == Piece::NONE);
@@ -480,22 +474,23 @@ class Board {
 
             removePiece(piece, move.to());
             placePiece(piece, move.from());
-        }
 
-        if (move.typeOf() == Move::ENPASSANT) {
-            const auto pawn   = Piece(PieceType::PAWN, ~stm_);
-            const auto pawnTo = static_cast<Square>(ep_sq_ ^ 8);
+            if (move.typeOf() == Move::ENPASSANT) {
+                const auto pawn   = Piece(PieceType::PAWN, ~stm_);
+                const auto pawnTo = static_cast<Square>(ep_sq_ ^ 8);
 
-            assert(at(pawnTo) == Piece::NONE);
+                assert(at(pawnTo) == Piece::NONE);
 
-            placePiece(pawn, pawnTo);
-        } else if (prev.captured_piece != Piece::NONE) {
-            assert(at(move.to()) == Piece::NONE);
+                placePiece(pawn, pawnTo);
+            } else if (prev.captured_piece != Piece::NONE) {
+                assert(at(move.to()) == Piece::NONE);
 
-            placePiece(prev.captured_piece, move.to());
+                placePiece(prev.captured_piece, move.to());
+            }
         }
 
         key_ = prev.hash;
+        prev_states_.pop_back();
     }
 
     /**
@@ -1412,15 +1407,15 @@ inline CheckType Board::givesCheck(const Move &m) const {
     Bitboard fromKing = 0ull;
 
     if (pt == PieceType::PAWN) {
-        fromKing  = attacks::pawn(~stm_, ksq);
+        fromKing = attacks::pawn(~stm_, ksq);
     } else if (pt == PieceType::KNIGHT) {
-        fromKing  = attacks::knight(ksq);
+        fromKing = attacks::knight(ksq);
     } else if (pt == PieceType::BISHOP) {
-        fromKing  = attacks::bishop(ksq, occ());
+        fromKing = attacks::bishop(ksq, occ());
     } else if (pt == PieceType::ROOK) {
-        fromKing  = attacks::rook(ksq, occ());
+        fromKing = attacks::rook(ksq, occ());
     } else if (pt == PieceType::QUEEN) {
-        fromKing  = attacks::queen(ksq, occ());
+        fromKing = attacks::queen(ksq, occ());
     }
 
     if (fromKing & toBB) return CheckType::DIRECT_CHECK;
