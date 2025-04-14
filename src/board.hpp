@@ -881,6 +881,10 @@ class Board {
         return hash_key ^ ep_hash ^ stm_hash ^ castling_hash;
     }
 
+    [[nodiscard]] Bitboard getCastlingPath(Color c, bool isKingSide) const noexcept {
+        return castling_path[c][isKingSide];
+    }
+
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
 
     /**
@@ -1184,6 +1188,8 @@ class Board {
     std::array<Bitboard, 2> occ_bb_    = {};
     std::array<Piece, 64> board_       = {};
 
+    std::array<std::array<Bitboard, 2>, 2> castling_path = {};
+
     U64 key_           = 0ULL;
     CastlingRights cr_ = {};
     uint16_t plies_    = 0;
@@ -1377,6 +1383,23 @@ class Board {
 
         assert(key_ == zobrist());
 
+        // init castling_path
+        for (Color c : {Color::WHITE, Color::BLACK}) {
+            const auto king_from = kingSq(c);
+
+            for (const auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE}) {
+                if (!cr_.has(c, side)) continue;
+
+                const auto rook_from = Square(cr_.getRookFile(c, side), king_from.rank());
+                const auto king_to   = Square::castling_king_square(side == Board::CastlingRights::Side::KING_SIDE, c);
+                const auto rook_to   = Square::castling_rook_square(side == Board::CastlingRights::Side::KING_SIDE, c);
+
+                castling_path[c][side == CastlingRights::Side::KING_SIDE] =
+                    (movegen::between(rook_from, rook_to) | movegen::between(king_from, king_to)) &
+                    ~(Bitboard::fromSquare(king_from) | Bitboard::fromSquare(rook_from));
+            }
+        }
+
         return true;
     }
 
@@ -1482,7 +1505,7 @@ inline CheckType Board::givesCheck(const Move &m) const {
 
     while (sniper) {
         Square sq = sniper.pop();
-        return (!(movegen::SQUARES_BETWEEN_BB[ksq.index()][sq.index()] & toBB) || m.typeOf() == Move::CASTLING)
+        return (!(movegen::between(ksq, sq) & toBB) || m.typeOf() == Move::CASTLING)
                    ? CheckType::DISCOVERY_CHECK
                    : CheckType::NO_CHECK;
     }
