@@ -39,7 +39,7 @@ VERSION: 0.8.11
 #include <cstdint>
 
 
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
 #    include <bit>
 #endif
 #include <algorithm>
@@ -48,7 +48,7 @@ VERSION: 0.8.11
 #include <iostream>
 #include <string>
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && _MSVC_LANG < 202002L
 #    include <intrin.h>
 #    include <nmmintrin.h>
 #endif
@@ -288,8 +288,8 @@ class Square {
     };
     // clang-format on
 
-// when c++20
-#if __cplusplus >= 202002L
+    // when c++20
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
     using enum underlying;
 #else
 
@@ -659,12 +659,12 @@ class Bitboard {
     [[nodiscard]] constexpr bool empty() const noexcept { return bits == 0; }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if !defined(_MSC_VER) || (_MSVC_LANG >= 202002L)
     constexpr
 #endif
         int lsb() const noexcept {
         assert(bits != 0);
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
         return std::countr_zero(bits);
 #else
 #    if defined(__GNUC__)
@@ -680,13 +680,13 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if !defined(_MSC_VER) || (_MSVC_LANG >= 202002L)
     constexpr
 #endif
         int msb() const noexcept {
         assert(bits != 0);
 
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
         return std::countl_zero(bits) ^ 63;
 #else
 #    if defined(__GNUC__)
@@ -702,11 +702,11 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if !defined(_MSC_VER) || (_MSVC_LANG >= 202002L)
     constexpr
 #endif
         int count() const noexcept {
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
         return std::popcount(bits);
 #else
 #    if defined(_MSC_VER) || defined(__INTEL_COMPILER)
@@ -1474,7 +1474,7 @@ class movegen {
 
     [[nodiscard]] static Bitboard generateKingMoves(Square sq, Bitboard seen, Bitboard movable_square);
 
-    template <Color::underlying c, MoveGenType mt>
+    template <Color::underlying c>
     [[nodiscard]] static Bitboard generateCastleMoves(const Board &board, Square sq, Bitboard seen, Bitboard pinHV);
 
     template <typename T>
@@ -1485,6 +1485,10 @@ class movegen {
 
     template <Color::underlying c>
     static bool isEpSquareValid(const Board &board, Square ep);
+
+    [[nodiscard]] static Bitboard between(Square sq1, Square sq2) noexcept {
+        return SQUARES_BETWEEN_BB[sq1.index()][sq2.index()];
+    }
 
     friend class Board;
 };
@@ -1682,7 +1686,7 @@ class Zobrist {
 
         [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(piece < 12)]];
 #endif
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
@@ -1690,7 +1694,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 enpassant(File file) noexcept {
         assert(int(file) < 8);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(int(file) < 8)]];
 #endif
         return RANDOM_ARRAY[772 + file];
@@ -1698,7 +1702,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 castling(int castling) noexcept {
         assert(castling >= 0 && castling < 16);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(castling < 16)]];
 #endif
         return castlingKey[castling];
@@ -1706,7 +1710,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
         assert(idx >= 0 && idx < 4);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(idx < 4)]];
 #endif
         return RANDOM_ARRAY[768 + idx];
@@ -2574,6 +2578,10 @@ class Board {
         return hash_key ^ ep_hash ^ stm_hash ^ castling_hash;
     }
 
+    [[nodiscard]] Bitboard getCastlingPath(Color c, bool isKingSide) const noexcept {
+        return castling_path[c][isKingSide];
+    }
+
     friend std::ostream &operator<<(std::ostream &os, const Board &board);
 
     /**
@@ -2877,6 +2885,8 @@ class Board {
     std::array<Bitboard, 2> occ_bb_    = {};
     std::array<Piece, 64> board_       = {};
 
+    std::array<std::array<Bitboard, 2>, 2> castling_path = {};
+
     U64 key_           = 0ULL;
     CastlingRights cr_ = {};
     uint16_t plies_    = 0;
@@ -3070,6 +3080,23 @@ class Board {
 
         assert(key_ == zobrist());
 
+        // init castling_path
+        for (Color c : {Color::WHITE, Color::BLACK}) {
+            const auto king_from = kingSq(c);
+
+            for (const auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE}) {
+                if (!cr_.has(c, side)) continue;
+
+                const auto rook_from = Square(cr_.getRookFile(c, side), king_from.rank());
+                const auto king_to   = Square::castling_king_square(side == Board::CastlingRights::Side::KING_SIDE, c);
+                const auto rook_to   = Square::castling_rook_square(side == Board::CastlingRights::Side::KING_SIDE, c);
+
+                castling_path[c][side == CastlingRights::Side::KING_SIDE] =
+                    (movegen::between(rook_from, rook_to) | movegen::between(king_from, king_to)) &
+                    ~(Bitboard::fromSquare(king_from) | Bitboard::fromSquare(rook_from));
+            }
+        }
+
         return true;
     }
 
@@ -3175,7 +3202,7 @@ inline CheckType Board::givesCheck(const Move &m) const {
 
     while (sniper) {
         Square sq = sniper.pop();
-        return (!(movegen::SQUARES_BETWEEN_BB[ksq.index()][sq.index()] & toBB) || m.typeOf() == Move::CASTLING)
+        return (!(movegen::between(ksq, sq) & toBB) || m.typeOf() == Move::CASTLING)
                    ? CheckType::DISCOVERY_CHECK
                    : CheckType::NO_CHECK;
     }
@@ -3199,7 +3226,6 @@ inline CheckType Board::givesCheck(const Move &m) const {
                     break;
                 case int(PieceType::QUEEN):
                     attacks = attacks::queen(to, oc);
-                    break;
             }
 
             return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
@@ -3207,14 +3233,16 @@ inline CheckType Board::givesCheck(const Move &m) const {
 
         case Move::ENPASSANT: {
             Square capSq(to.file(), from.rank());
-            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB)) ? CheckType::DISCOVERY_CHECK
-                                                                                     : CheckType::NO_CHECK;
+            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB))
+                ? CheckType::DISCOVERY_CHECK
+                : CheckType::NO_CHECK;
         }
 
         case Move::CASTLING: {
             Square rookTo = Square::castling_rook_square(to > from, stm_);
-            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo)) ? CheckType::DISCOVERY_CHECK
-                                                                              : CheckType::NO_CHECK;
+            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo))
+                ? CheckType::DISCOVERY_CHECK
+                : CheckType::NO_CHECK;
         }
     }
 
@@ -3247,7 +3275,7 @@ template <Direction direction>
             return (b & ~MASK_FILE[7]) >> 7;
     }
 
-        // c++23
+    // c++23
 #if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
     std::unreachable();
 #endif
@@ -3407,23 +3435,29 @@ inline void attacks::initAttacks() {
 }
 }  // namespace chess
 
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
+#    include <bit>
+#endif
 
 
 namespace chess {
 
 inline auto movegen::init_squares_between() {
-    std::array<std::array<Bitboard, 64>, 64> squares_between_bb{};
-    Bitboard sqs = 0;
 
-    for (Square sq1 = 0; sq1 < 64; ++sq1) {
-        for (Square sq2 = 0; sq2 < 64; ++sq2) {
-            sqs = Bitboard::fromSquare(sq1) | Bitboard::fromSquare(sq2);
-            if (sq1 == sq2)
-                squares_between_bb[sq1.index()][sq2.index()].clear();
-            else if (sq1.file() == sq2.file() || sq1.rank() == sq2.rank())
-                squares_between_bb[sq1.index()][sq2.index()] = attacks::rook(sq1, sqs) & attacks::rook(sq2, sqs);
-            else if (sq1.diagonal_of() == sq2.diagonal_of() || sq1.antidiagonal_of() == sq2.antidiagonal_of())
-                squares_between_bb[sq1.index()][sq2.index()] = attacks::bishop(sq1, sqs) & attacks::bishop(sq2, sqs);
+    std::array<std::array<Bitboard, 64>, 64> squares_between_bb{};
+    auto att = [](PieceType pt, Square sq, Bitboard occ) {
+        return (pt == PieceType::BISHOP) ? attacks::bishop(sq, occ) : attacks::rook(sq, occ);
+    };
+
+    for (int sq1 = 0; sq1 < 64; ++sq1) {
+        for (PieceType pt : {PieceType::BISHOP, PieceType::ROOK}) {
+            for (int sq2 = 0; sq2 < 64; ++sq2) {
+                if (att(pt, sq1, 0).check(sq2)) {
+                    squares_between_bb[sq1][sq2] =
+                        att(pt, sq1, Bitboard::fromSquare(sq2)) & att(pt, sq2, Bitboard::fromSquare(sq1));
+                }
+                squares_between_bb[sq1][sq2].set(sq2);
+            }
         }
     }
 
@@ -3458,7 +3492,7 @@ template <Color::underlying c>
     if (bishop_attacks) {
         const auto index = bishop_attacks.lsb();
 
-        mask |= SQUARES_BETWEEN_BB[sq.index()][index] | Bitboard::fromSquare(index);
+        mask |= between(sq, index);
         checks++;
     }
 
@@ -3472,7 +3506,7 @@ template <Color::underlying c>
 
         const auto index = rook_attacks.lsb();
 
-        mask |= SQUARES_BETWEEN_BB[sq.index()][index] | Bitboard::fromSquare(index);
+        mask |= between(sq, index);
         checks++;
     }
 
@@ -3494,8 +3528,12 @@ template <Color::underlying c>
     while (rook_attacks) {
         const auto index = rook_attacks.pop();
 
-        const Bitboard possible_pin = SQUARES_BETWEEN_BB[sq.index()][index] | Bitboard::fromSquare(index);
+        const Bitboard possible_pin = between(sq, index);
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
+        if (std::has_single_bit((possible_pin & occ_us).getBits())) pin_hv |= possible_pin;
+#else
         if ((possible_pin & occ_us).count() == 1) pin_hv |= possible_pin;
+#endif
     }
 
     return pin_hv;
@@ -3513,7 +3551,7 @@ template <Color::underlying c>
     while (bishop_attacks) {
         const auto index = bishop_attacks.pop();
 
-        const Bitboard possible_pin = SQUARES_BETWEEN_BB[sq.index()][index] | Bitboard::fromSquare(index);
+        const Bitboard possible_pin = between(sq, index);
         if ((possible_pin & occ_us).count() == 1) pin_diag |= possible_pin;
     }
 
@@ -3769,10 +3807,10 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     return attacks::king(sq) & movable_square & ~seen;
 }
 
-template <Color::underlying c, movegen::MoveGenType mt>
+template <Color::underlying c>
 [[nodiscard]] inline Bitboard movegen::generateCastleMoves(const Board &board, Square sq, Bitboard seen,
                                                            Bitboard pin_hv) {
-    if constexpr (mt == MoveGenType::CAPTURE) return 0ull;
+
     if (!Square::back_rank(sq, c) || !board.castlingRights().has(c)) return 0ull;
 
     const auto rights = board.castlingRights();
@@ -3782,25 +3820,20 @@ template <Color::underlying c, movegen::MoveGenType mt>
     for (const auto side : {Board::CastlingRights::Side::KING_SIDE, Board::CastlingRights::Side::QUEEN_SIDE}) {
         if (!rights.has(c, side)) continue;
 
-        const auto end_king_sq = Square::castling_king_square(side == Board::CastlingRights::Side::KING_SIDE, c);
-        const auto end_rook_sq = Square::castling_rook_square(side == Board::CastlingRights::Side::KING_SIDE, c);
+        const auto is_king_side = side == Board::CastlingRights::Side::KING_SIDE;
 
-        const auto from_rook_sq = Square(rights.getRookFile(c, side), sq.rank());
+        // No pieces on the castling path
+        if (board.occ() & board.getCastlingPath(c, is_king_side)) continue;
 
-        const Bitboard not_occ_path       = SQUARES_BETWEEN_BB[sq.index()][from_rook_sq.index()];
-        const Bitboard not_attacked_path  = SQUARES_BETWEEN_BB[sq.index()][end_king_sq.index()];
-        const Bitboard empty_not_attacked = ~seen & ~(board.occ() & Bitboard(~Bitboard::fromSquare(from_rook_sq)));
-        const Bitboard withoutRook        = board.occ() & Bitboard(~Bitboard::fromSquare(from_rook_sq));
-        const Bitboard withoutKing        = board.occ() & Bitboard(~Bitboard::fromSquare(sq));
+        // No attacks on the king path
+        const auto king_to = Square::castling_king_square(is_king_side, c);
+        if (between(sq, king_to) & seen) continue;
 
-        if ((not_attacked_path & empty_not_attacked) == not_attacked_path &&
-            ((not_occ_path & ~board.occ()) == not_occ_path) &&
-            !(Bitboard::fromSquare(from_rook_sq) & pin_hv.getBits() & sq.rank().bb()) &&
-            !(Bitboard::fromSquare(end_rook_sq) & (withoutRook & withoutKing).getBits()) &&
-            !(Bitboard::fromSquare(end_king_sq) &
-              (seen | (withoutRook & Bitboard(~Bitboard::fromSquare(sq)))).getBits())) {
-            moves |= Bitboard::fromSquare(from_rook_sq);
-        }
+        // Chess960: Rook is pinned on the backrank.
+        const auto from_rook_bb = Bitboard::fromSquare(Square(rights.getRookFile(c, side), sq.rank()));
+        if (board.chess960() && (pin_hv & board.us(board.sideToMove()) & from_rook_bb)) continue;
+
+        moves |= from_rook_bb;
     }
 
     return moves;
@@ -3856,8 +3889,8 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
         whileBitboardAdd(movelist, Bitboard::fromSquare(king_sq),
                          [&](Square sq) { return generateKingMoves(sq, seen, movable_square); });
 
-        if (checks == 0) {
-            Bitboard moves_bb = generateCastleMoves<c, mt>(board, king_sq, seen, pin_hv);
+        if (mt != MoveGenType::CAPTURE && checks == 0) {
+            Bitboard moves_bb = generateCastleMoves<c>(board, king_sq, seen, pin_hv);
 
             while (moves_bb) {
                 Square to = moves_bb.pop();
