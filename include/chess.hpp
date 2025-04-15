@@ -289,7 +289,7 @@ class Square {
     // clang-format on
 
     // when c++20
-#if __cplusplus >= 202002L || (_MSC_VER && _MSVC_LANG >= 202002L)
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
     using enum underlying;
 #else
 
@@ -1686,7 +1686,7 @@ class Zobrist {
 
         [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
-#if __cplusplus >= 202207L || (_MSC_VER && _MSVC_LANG >= 202302L)
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(piece < 12)]];
 #endif
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
@@ -1694,7 +1694,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 enpassant(File file) noexcept {
         assert(int(file) < 8);
-#if __cplusplus >= 202207L || (_MSC_VER && _MSVC_LANG >= 202302L)
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(int(file) < 8)]];
 #endif
         return RANDOM_ARRAY[772 + file];
@@ -1702,7 +1702,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 castling(int castling) noexcept {
         assert(castling >= 0 && castling < 16);
-#if __cplusplus >= 202207L || (_MSC_VER && _MSVC_LANG >= 202302L)
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(castling < 16)]];
 #endif
         return castlingKey[castling];
@@ -1710,7 +1710,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
         assert(idx >= 0 && idx < 4);
-#if __cplusplus >= 202207L || (_MSC_VER && _MSVC_LANG >= 202302L)
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(idx < 4)]];
 #endif
         return RANDOM_ARRAY[768 + idx];
@@ -3435,7 +3435,7 @@ inline void attacks::initAttacks() {
 }
 }  // namespace chess
 
-#if __cplusplus >= 202002L || (_MSC_VER && _MSVC_LANG >= 202002L)
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
 #    include <bit>
 #endif
 
@@ -3529,7 +3529,7 @@ template <Color::underlying c>
         const auto index = rook_attacks.pop();
 
         const Bitboard possible_pin = between(sq, index);
-#if __cplusplus >= 202002L || (_MSC_VER && _MSVC_LANG >= 202002L)
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
         if (std::has_single_bit((possible_pin & occ_us).getBits())) pin_hv |= possible_pin;
 #else
         if ((possible_pin & occ_us).count() == 1) pin_hv |= possible_pin;

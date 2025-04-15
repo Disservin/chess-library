@@ -1,7 +1,7 @@
 #pragma once
 
 #include <array>
-#if __cplusplus >= 202002L || (_MSC_VER && _MSVC_LANG >= 202002L)
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
 #    include <bit>
 #endif
 
@@ -100,7 +100,7 @@ template <Color::underlying c>
         const auto index = rook_attacks.pop();
 
         const Bitboard possible_pin = between(sq, index);
-#if __cplusplus >= 202002L || (_MSC_VER && _MSVC_LANG >= 202002L)
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
         if (std::has_single_bit((possible_pin & occ_us).getBits())) pin_hv |= possible_pin;
 #else
         if ((possible_pin & occ_us).count() == 1) pin_hv |= possible_pin;
