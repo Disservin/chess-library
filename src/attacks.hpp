@@ -32,7 +32,7 @@ template <Direction direction>
             return (b & ~MASK_FILE[7]) >> 7;
     }
 
-        // c++23
+    // c++23
 #if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
     std::unreachable();
 #endif

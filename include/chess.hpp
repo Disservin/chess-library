@@ -39,7 +39,7 @@ VERSION: 0.8.11
 #include <cstdint>
 
 
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
 #    include <bit>
 #endif
 #include <algorithm>
@@ -48,7 +48,7 @@ VERSION: 0.8.11
 #include <iostream>
 #include <string>
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && _MSVC_LANG < 202002L
 #    include <intrin.h>
 #    include <nmmintrin.h>
 #endif
@@ -288,8 +288,8 @@ class Square {
     };
     // clang-format on
 
-// when c++20
-#if __cplusplus >= 202002L
+    // when c++20
+#if __cplusplus >= 202002L || (_MSC_VER && _MSVC_LANG >= 202002L)
     using enum underlying;
 #else
 
@@ -659,12 +659,12 @@ class Bitboard {
     [[nodiscard]] constexpr bool empty() const noexcept { return bits == 0; }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if !defined(_MSC_VER) || (_MSVC_LANG >= 202002L)
     constexpr
 #endif
         int lsb() const noexcept {
         assert(bits != 0);
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
         return std::countr_zero(bits);
 #else
 #    if defined(__GNUC__)
@@ -680,13 +680,13 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if !defined(_MSC_VER) || (_MSVC_LANG >= 202002L)
     constexpr
 #endif
         int msb() const noexcept {
         assert(bits != 0);
 
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
         return std::countl_zero(bits) ^ 63;
 #else
 #    if defined(__GNUC__)
@@ -702,11 +702,11 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if !defined(_MSC_VER) || (_MSVC_LANG >= 202002L)
     constexpr
 #endif
         int count() const noexcept {
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
         return std::popcount(bits);
 #else
 #    if defined(_MSC_VER) || defined(__INTEL_COMPILER)
@@ -1686,7 +1686,7 @@ class Zobrist {
 
         [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (_MSC_VER && _MSVC_LANG >= 202302L)
         [[assume(piece < 12)]];
 #endif
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
@@ -1694,7 +1694,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 enpassant(File file) noexcept {
         assert(int(file) < 8);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (_MSC_VER && _MSVC_LANG >= 202302L)
         [[assume(int(file) < 8)]];
 #endif
         return RANDOM_ARRAY[772 + file];
@@ -1702,7 +1702,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 castling(int castling) noexcept {
         assert(castling >= 0 && castling < 16);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (_MSC_VER && _MSVC_LANG >= 202302L)
         [[assume(castling < 16)]];
 #endif
         return castlingKey[castling];
@@ -1710,7 +1710,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
         assert(idx >= 0 && idx < 4);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (_MSC_VER && _MSVC_LANG >= 202302L)
         [[assume(idx < 4)]];
 #endif
         return RANDOM_ARRAY[768 + idx];
@@ -3226,7 +3226,6 @@ inline CheckType Board::givesCheck(const Move &m) const {
                     break;
                 case int(PieceType::QUEEN):
                     attacks = attacks::queen(to, oc);
-                    break;
             }
 
             return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
@@ -3234,14 +3233,16 @@ inline CheckType Board::givesCheck(const Move &m) const {
 
         case Move::ENPASSANT: {
             Square capSq(to.file(), from.rank());
-            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB)) ? CheckType::DISCOVERY_CHECK
-                                                                                     : CheckType::NO_CHECK;
+            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB))
+                ? CheckType::DISCOVERY_CHECK
+                : CheckType::NO_CHECK;
         }
 
         case Move::CASTLING: {
             Square rookTo = Square::castling_rook_square(to > from, stm_);
-            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo)) ? CheckType::DISCOVERY_CHECK
-                                                                              : CheckType::NO_CHECK;
+            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo))
+                ? CheckType::DISCOVERY_CHECK
+                : CheckType::NO_CHECK;
         }
     }
 
@@ -3274,7 +3275,7 @@ template <Direction direction>
             return (b & ~MASK_FILE[7]) >> 7;
     }
 
-        // c++23
+    // c++23
 #if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
     std::unreachable();
 #endif
@@ -3434,6 +3435,9 @@ inline void attacks::initAttacks() {
 }
 }  // namespace chess
 
+#if __cplusplus >= 202002L || (_MSC_VER && _MSVC_LANG >= 202002L)
+#    include <bit>
+#endif
 
 
 namespace chess {
@@ -3525,7 +3529,11 @@ template <Color::underlying c>
         const auto index = rook_attacks.pop();
 
         const Bitboard possible_pin = between(sq, index);
+#if __cplusplus >= 202002L || (_MSC_VER && _MSVC_LANG >= 202002L)
+        if (std::has_single_bit((possible_pin & occ_us).getBits())) pin_hv |= possible_pin;
+#else
         if ((possible_pin & occ_us).count() == 1) pin_hv |= possible_pin;
+#endif
     }
 
     return pin_hv;

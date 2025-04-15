@@ -1529,7 +1529,6 @@ inline CheckType Board::givesCheck(const Move &m) const {
                     break;
                 case int(PieceType::QUEEN):
                     attacks = attacks::queen(to, oc);
-                    break;
             }
 
             return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
@@ -1537,14 +1536,16 @@ inline CheckType Board::givesCheck(const Move &m) const {
 
         case Move::ENPASSANT: {
             Square capSq(to.file(), from.rank());
-            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB)) ? CheckType::DISCOVERY_CHECK
-                                                                                     : CheckType::NO_CHECK;
+            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB))
+                ? CheckType::DISCOVERY_CHECK
+                : CheckType::NO_CHECK;
         }
 
         case Move::CASTLING: {
             Square rookTo = Square::castling_rook_square(to > from, stm_);
-            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo)) ? CheckType::DISCOVERY_CHECK
-                                                                              : CheckType::NO_CHECK;
+            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo))
+                ? CheckType::DISCOVERY_CHECK
+                : CheckType::NO_CHECK;
         }
     }
 
