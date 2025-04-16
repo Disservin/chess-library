@@ -73,8 +73,8 @@ class movegen {
 
     [[nodiscard]] static Bitboard generateKingMoves(Square sq, Bitboard seen, Bitboard movable_square);
 
-    template <Color::underlying c, MoveGenType mt>
-    [[nodiscard]] static Bitboard generateCastleMoves(const Board &board, Square sq, Bitboard seen, Bitboard pinHV);
+    template <Color::underlying c>
+    [[nodiscard]] static Bitboard generateCastleMoves(const Board &board, Square sq, Bitboard seen, Bitboard pinHV) noexcept;
 
     template <typename T>
     static void whileBitboardAdd(Movelist &movelist, Bitboard mask, T func);
@@ -84,6 +84,8 @@ class movegen {
 
     template <Color::underlying c>
     static bool isEpSquareValid(const Board &board, Square ep);
+
+    [[nodiscard]] static Bitboard between(Square sq1, Square sq2) noexcept;
 
     friend class Board;
 };
