@@ -1391,8 +1391,8 @@ class Board {
                 if (!cr_.has(c, side)) continue;
 
                 const auto rook_from = Square(cr_.getRookFile(c, side), king_from.rank());
-                const auto king_to   = Square::castling_king_square(side == Board::CastlingRights::Side::KING_SIDE, c);
-                const auto rook_to   = Square::castling_rook_square(side == Board::CastlingRights::Side::KING_SIDE, c);
+                const auto king_to   = Square::castling_king_square(side == CastlingRights::Side::KING_SIDE, c);
+                const auto rook_to   = Square::castling_rook_square(side == CastlingRights::Side::KING_SIDE, c);
 
                 castling_path[c][side == CastlingRights::Side::KING_SIDE] =
                     (movegen::between(rook_from, rook_to) | movegen::between(king_from, king_to)) &
@@ -1505,9 +1505,8 @@ inline CheckType Board::givesCheck(const Move &m) const {
 
     while (sniper) {
         Square sq = sniper.pop();
-        return (!(movegen::between(ksq, sq) & toBB) || m.typeOf() == Move::CASTLING)
-                   ? CheckType::DISCOVERY_CHECK
-                   : CheckType::NO_CHECK;
+        return (!(movegen::between(ksq, sq) & toBB) || m.typeOf() == Move::CASTLING) ? CheckType::DISCOVERY_CHECK
+                                                                                     : CheckType::NO_CHECK;
     }
 
     switch (m.typeOf()) {
