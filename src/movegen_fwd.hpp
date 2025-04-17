@@ -42,14 +42,11 @@ class movegen {
     template <Color::underlying c>
     [[nodiscard]] static std::pair<Bitboard, int> checkMask(const Board &board, Square sq);
 
-    // Generate the pin mask for horizontal and vertical pins. Returns a bitboard where the ray between the king and the
-    // pinner is set.
-    template <Color::underlying c>
-    [[nodiscard]] static Bitboard pinMaskRooks(const Board &board, Square sq, Bitboard occ_enemy, Bitboard occ_us);
-
-    // Generate the pin mask for diagonal pins. Returns a bitboard where the ray between the king and the pinner is set.
-    template <Color::underlying c>
-    [[nodiscard]] static Bitboard pinMaskBishops(const Board &board, Square sq, Bitboard occ_enemy, Bitboard occ_us);
+    // Generate the pin mask for horizontal and vertical pins -> PieceType::ROOK
+    // Generate the pin mask for diagonal pins. -> PieceType::BISHOP
+    // Returns a bitboard where the ray between the king and the pinner is set.
+    template <Color::underlying c, PieceType::underlying pt>
+    [[nodiscard]] static Bitboard pinMask(const Board &board, Square sq, Bitboard occ_enemy, Bitboard occ_us) noexcept;
 
     // Returns the squares that are attacked by the enemy
     template <Color::underlying c>

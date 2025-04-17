@@ -89,7 +89,7 @@ class Board {
    public:
     class CastlingRights {
        public:
-        enum class Side : uint8_t { KING_SIDE, QUEEN_SIDE };
+        enum class Side : std::uint8_t { KING_SIDE, QUEEN_SIDE };
 
         constexpr void setCastlingRight(Color color, Side castle, File rook_file) {
             rooks[color][static_cast<int>(castle)] = rook_file;
@@ -133,10 +133,10 @@ class Board {
         U64 hash;
         CastlingRights castling;
         Square enpassant;
-        uint8_t half_moves;
+        std::uint8_t half_moves;
         Piece captured_piece;
 
-        State(const U64 &hash, const CastlingRights &castling, const Square &enpassant, const uint8_t &half_moves,
+        State(const U64 &hash, const CastlingRights &castling, const Square &enpassant, const std::uint8_t &half_moves,
               const Piece &captured_piece)
             : hash(hash),
               castling(castling),
@@ -577,35 +577,35 @@ class Board {
      * @param color
      * @return
      */
-    [[nodiscard]] Bitboard us(Color color) const { return occ_bb_[color]; }
+    [[nodiscard]] Bitboard us(Color color) const noexcept { return occ_bb_[color]; }
 
     /**
      * @brief Get the occupancy bitboard for the opposite color.
      * @param color
      * @return
      */
-    [[nodiscard]] Bitboard them(Color color) const { return us(~color); }
+    [[nodiscard]] Bitboard them(Color color) const noexcept { return us(~color); }
 
     /**
      * @brief Get the occupancy bitboard for both colors.
      * Faster than calling all() or us(Color::WHITE) | us(Color::BLACK).
      * @return
      */
-    [[nodiscard]] Bitboard occ() const { return occ_bb_[0] | occ_bb_[1]; }
+    [[nodiscard]] Bitboard occ() const noexcept { return occ_bb_[0] | occ_bb_[1]; }
 
     /**
      * @brief Get the occupancy bitboard for all pieces, should be only used internally.
      * @return
      */
-    [[nodiscard]] Bitboard all() const { return us(Color::WHITE) | us(Color::BLACK); }
+    [[nodiscard]] Bitboard all() const noexcept { return us(Color::WHITE) | us(Color::BLACK); }
 
     /**
      * @brief Returns the square of the king for a certain color
      * @param color
      * @return
      */
-    [[nodiscard]] Square kingSq(Color color) const {
-        assert(pieces(PieceType::KING, color) != Bitboard(0));
+    [[nodiscard]] Square kingSq(Color color) const noexcept {
+        assert(pieces(PieceType::KING, color) != 0ull);
         return pieces(PieceType::KING, color).lsb();
     }
 
@@ -615,15 +615,36 @@ class Board {
      * @param color
      * @return
      */
-    [[nodiscard]] Bitboard pieces(PieceType type, Color color) const { return pieces_bb_[type] & occ_bb_[color]; }
+    [[nodiscard]] Bitboard pieces(PieceType type, Color color) const noexcept {
+        return pieces_bb_[type] & occ_bb_[color];
+    }
+
+    /**
+     * @brief Returns all pieces of a two types and color
+     * @param type1, type2
+     * @param color
+     * @return
+     */
+    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2, Color color) const noexcept {
+        return (pieces_bb_[type1] | pieces_bb_[type2]) & occ_bb_[color];
+    }
 
     /**
      * @brief Returns all pieces of a certain type
      * @param type
      * @return
      */
-    [[nodiscard]] Bitboard pieces(PieceType type) const {
-        return pieces(type, Color::WHITE) | pieces(type, Color::BLACK);
+    [[nodiscard]] Bitboard pieces(PieceType type) const noexcept {
+        return pieces_bb_[type];
+    }
+
+    /**
+     * @brief Returns all pieces of a two types
+     * @param type1, type2
+     * @return
+     */
+    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2) const noexcept {
+        return pieces_bb_[type1] | pieces_bb_[type2];
     }
 
     /**
@@ -633,8 +654,8 @@ class Board {
      * @return
      */
     template <typename T = Piece>
-    [[nodiscard]] T at(Square sq) const {
-        assert(sq.index() < 64 && sq.index() >= 0);
+    [[nodiscard]] T at(Square sq) const noexcept {
+        assert(sq.is_valid());
 
         if constexpr (std::is_same_v<T, PieceType>) {
             return board_[sq.index()].type();
@@ -648,7 +669,7 @@ class Board {
      * @param move
      * @return
      */
-    bool isCapture(const Move move) const {
+    bool isCapture(const Move move) const noexcept {
         return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) || move.typeOf() == Move::ENPASSANT;
     }
 
@@ -656,12 +677,12 @@ class Board {
      * @brief Get the current zobrist hash key of the board
      * @return
      */
-    [[nodiscard]] U64 hash() const { return key_; }
-    [[nodiscard]] Color sideToMove() const { return stm_; }
-    [[nodiscard]] Square enpassantSq() const { return ep_sq_; }
-    [[nodiscard]] CastlingRights castlingRights() const { return cr_; }
-    [[nodiscard]] std::uint32_t halfMoveClock() const { return hfm_; }
-    [[nodiscard]] std::uint32_t fullMoveNumber() const { return 1 + plies_ / 2; }
+    [[nodiscard]] U64 hash() const noexcept { return key_; }
+    [[nodiscard]] Color sideToMove() const noexcept { return stm_; }
+    [[nodiscard]] Square enpassantSq() const noexcept { return ep_sq_; }
+    [[nodiscard]] CastlingRights castlingRights() const noexcept { return cr_; }
+    [[nodiscard]] std::uint32_t halfMoveClock() const noexcept { return hfm_; }
+    [[nodiscard]] std::uint32_t fullMoveNumber() const noexcept { return 1 + plies_ / 2; }
 
     void set960(bool is960) {
         chess960_ = is960;
@@ -672,7 +693,7 @@ class Board {
      * @brief Checks if the current position is a chess960, aka. FRC/DFRC position.
      * @return
      */
-    [[nodiscard]] bool chess960() const { return chess960_; }
+    [[nodiscard]] bool chess960() const noexcept { return chess960_; }
 
     /**
      * @brief Get the castling rights as a string
@@ -710,8 +731,8 @@ class Board {
      * @param count
      * @return
      */
-    [[nodiscard]] bool isRepetition(int count = 2) const {
-        uint8_t c = 0;
+    [[nodiscard]] bool isRepetition(int count = 2) const noexcept {
+        std::uint8_t c = 0;
 
         // We start the loop from the back and go forward in moves, at most to the
         // last move which reset the half-move counter because repetitions cant
@@ -734,13 +755,13 @@ class Board {
      * to determine whether the position is a draw or checkmate.
      * @return
      */
-    [[nodiscard]] bool isHalfMoveDraw() const { return hfm_ >= 100; }
+    [[nodiscard]] bool isHalfMoveDraw() const noexcept { return hfm_ >= 100; }
 
     /**
      * @brief Only call this function if isHalfMoveDraw() returns true.
      * @return
      */
-    [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const {
+    [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const noexcept {
         Movelist movelist;
         movegen::legalmoves(movelist, *this);
 
@@ -755,7 +776,7 @@ class Board {
      * @brief Basic check if the current position is a draw by insufficient material.
      * @return
      */
-    [[nodiscard]] bool isInsufficientMaterial() const {
+    [[nodiscard]] bool isInsufficientMaterial() const noexcept {
         const auto count = occ().count();
 
         // only kings, draw
@@ -794,7 +815,7 @@ class Board {
      * If you are writing a chess engine you should not use this function.
      * @return
      */
-    [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const {
+    [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const noexcept {
         if (isHalfMoveDraw()) return getHalfMoveDrawType();
         if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
         if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
@@ -816,16 +837,16 @@ class Board {
      * @param color
      * @return
      */
-    [[nodiscard]] bool isAttacked(Square square, Color color) const {
+    [[nodiscard]] bool isAttacked(Square square, Color color) const noexcept {
         // cheap checks first
         if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
         if (attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
         if (attacks::king(square) & pieces(PieceType::KING, color)) return true;
 
-        if (attacks::bishop(square, occ()) & (pieces(PieceType::BISHOP, color) | pieces(PieceType::QUEEN, color)))
+        if (attacks::bishop(square, occ()) & pieces(PieceType::BISHOP, PieceType::QUEEN, color))
             return true;
 
-        if (attacks::rook(square, occ()) & (pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color)))
+        if (attacks::rook(square, occ()) & pieces(PieceType::ROOK, PieceType::QUEEN, color))
             return true;
 
         return false;
@@ -835,18 +856,17 @@ class Board {
      * @brief Checks if the current side to move is in check
      * @return
      */
-    [[nodiscard]] bool inCheck() const { return isAttacked(kingSq(stm_), ~stm_); }
+    [[nodiscard]] bool inCheck() const noexcept { return isAttacked(kingSq(stm_), ~stm_); }
 
-    [[nodiscard]] CheckType givesCheck(const Move &m) const;
+    [[nodiscard]] CheckType givesCheck(const Move &m) const noexcept;
 
     /**
      * @brief Checks if the given color has at least 1 piece thats not pawn and not king
      * @param color
      * @return
      */
-    [[nodiscard]] bool hasNonPawnMaterial(Color color) const {
-        return bool(pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
-                    pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color));
+    [[nodiscard]] bool hasNonPawnMaterial(Color color) const noexcept {
+        return bool(us(color) ^ pieces(PieceType::PAWN, PieceType::KING, color));
     }
 
     /**
@@ -856,16 +876,10 @@ class Board {
     [[nodiscard]] U64 zobrist() const {
         U64 hash_key = 0ULL;
 
-        auto wPieces = us(Color::WHITE);
-        auto bPieces = us(Color::BLACK);
+        auto pieces  = occ();
 
-        while (wPieces.getBits()) {
-            const Square sq = wPieces.pop();
-            hash_key ^= Zobrist::piece(at(sq), sq);
-        }
-
-        while (bPieces.getBits()) {
-            const Square sq = bPieces.pop();
+        while (pieces) {
+            const Square sq = pieces.pop();
             hash_key ^= Zobrist::piece(at(sq), sq);
         }
 
@@ -971,8 +985,7 @@ class Board {
         static PackedBoard encodeState(std::string_view fen, bool chess960 = false) {
             // fallback to slower method
             if (chess960) {
-                Board board = Board(fen, true);
-                return encodeState(board);
+                return encodeState(Board(fen, true));
             }
 
             PackedBoard packed{};
@@ -1008,9 +1021,9 @@ class Board {
 
             const auto parts = split_string_view<8>(position, '/');
 
-            auto offset = 8 * 2;
-            auto square = 0;
-            auto occ    = Bitboard(0);
+            int offset   = 8 * 2;
+            int square   = 0;
+            Bitboard occ = 0ull;
 
             for (auto i = parts.rbegin(); i != parts.rend(); i++) {
                 auto part = *i;
@@ -1141,7 +1154,7 @@ class Board {
         }
 
         // 1:1 mapping of Piece::internal() to the compressed piece
-        static std::uint8_t convertPiece(Piece piece) { return int(piece.internal()); }
+        static std::uint8_t convertPiece(Piece piece) { return static_cast<int>(piece.internal()); }
 
         // for pieces with a special meaning return Piece::NONE since this is otherwise not used
         static Piece convertPiece(std::uint8_t piece) {
@@ -1188,12 +1201,12 @@ class Board {
     std::array<Bitboard, 2> occ_bb_    = {};
     std::array<Piece, 64> board_       = {};
 
-    U64 key_           = 0ULL;
-    CastlingRights cr_ = {};
-    uint16_t plies_    = 0;
-    Color stm_         = Color::WHITE;
-    Square ep_sq_      = Square::NO_SQ;
-    uint8_t hfm_       = 0;
+    U64 key_             = 0ULL;
+    CastlingRights cr_   = {};
+    std::uint16_t plies_ = 0;
+    Color stm_           = Color::WHITE;
+    Square ep_sq_        = Square::NO_SQ;
+    std::uint8_t hfm_    = 0;
 
     bool chess960_ = false;
 
@@ -1449,7 +1462,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
             os << " " << static_cast<std::string>(b.board_[i - j]);
         }
 
-        os << " \n";
+        os << "\n";
     }
 
     os << "\n\n";
@@ -1465,12 +1478,10 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return os;
 }
 
-inline CheckType Board::givesCheck(const Move &m) const {
+inline CheckType Board::givesCheck(const Move &m) const noexcept {
     const static auto getSniper = [](const Board *board, Square ksq, Bitboard oc) {
-        return (attacks::bishop(ksq, oc) & (board->pieces(PieceType::BISHOP, board->sideToMove()) |
-                                            board->pieces(PieceType::QUEEN, board->sideToMove()))) |
-               (attacks::rook(ksq, oc) & (board->pieces(PieceType::ROOK, board->sideToMove()) |
-                                          board->pieces(PieceType::QUEEN, board->sideToMove())));
+        return (attacks::bishop(ksq, oc) & (board->pieces(PieceType::BISHOP, PieceType::QUEEN, board->sideToMove()))) |
+               (attacks::rook(ksq, oc) & (board->pieces(PieceType::ROOK, PieceType::QUEEN, board->sideToMove())));
     };
 
     assert(at(m.from()).color() == stm_);
@@ -1517,18 +1528,17 @@ inline CheckType Board::givesCheck(const Move &m) const {
             Bitboard attacks = 0ull;
 
             switch (m.promotionType()) {
-                case int(PieceType::KNIGHT):
+                case static_cast<int>(PieceType::KNIGHT):
                     attacks = attacks::knight(to);
                     break;
-                case int(PieceType::BISHOP):
+                case static_cast<int>(PieceType::BISHOP):
                     attacks = attacks::bishop(to, oc);
                     break;
-                case int(PieceType::ROOK):
+                case static_cast<int>(PieceType::ROOK):
                     attacks = attacks::rook(to, oc);
                     break;
-                case int(PieceType::QUEEN):
+                case static_cast<int>(PieceType::QUEEN):
                     attacks = attacks::queen(to, oc);
-                    break;
             }
 
             return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;

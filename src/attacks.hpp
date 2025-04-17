@@ -32,7 +32,7 @@ template <Direction direction>
             return (b & ~MASK_FILE[7]) >> 7;
     }
 
-        // c++23
+    // c++23
 #if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
     std::unreachable();
 #endif
@@ -86,71 +86,36 @@ template <Color::underlying c>
     return atks & occupied;
 }
 
-[[nodiscard]] inline Bitboard attacks::bishopAttacks(Square sq, Bitboard occupied) {
-    Bitboard attacks = 0ULL;
+template <PieceType::underlying pt>
+[[nodiscard]] inline Bitboard attacks::slider(Square sq, Bitboard occupied) noexcept {
+    static_assert(pt == PieceType::BISHOP || pt == PieceType::ROOK || pt == PieceType::QUEEN,
+                  "PieceType must be a slider!");
 
-    int r, f;
-
-    int br = sq.rank();
-    int bf = sq.file();
-
-    for (r = br + 1, f = bf + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r++, f++) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (r = br - 1, f = bf + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r--, f++) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (r = br + 1, f = bf - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r++, f--) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (r = br - 1, f = bf - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r--, f--) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    return attacks;
+    if constexpr (pt == PieceType::BISHOP) return bishop(sq, occupied);
+    if constexpr (pt == PieceType::ROOK) return rook(sq, occupied);
+    if constexpr (pt == PieceType::QUEEN) return queen(sq, occupied);
 }
 
-[[nodiscard]] inline Bitboard attacks::rookAttacks(Square sq, Bitboard occupied) {
-    Bitboard attacks = 0ULL;
+template <bool ISROOK>
+[[nodiscard]] inline Bitboard attacks::sliderAttacks(Square sq, Bitboard occupied) noexcept {
+    static constexpr int dirs[2][4][2] = {{1, 1, 1, -1, -1, -1, -1, 1}, {1, 0, 0, -1, -1, 0, 0, 1}};
 
-    int r, f;
+    Bitboard attacks = 0ull;
 
-    int rr = sq.rank();
-    int rf = sq.file();
+    File pf = sq.file();
+    Rank pr = sq.rank();
 
-    for (r = rr + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
+    for (int i = 0; i < 4; ++i) {
+        int off_f = dirs[ISROOK][i][0];
+        int off_r = dirs[ISROOK][i][1];
 
-    for (r = rr - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (f = rf + 1; Square::is_valid(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
-        auto s = Square(static_cast<Rank>(rr), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (f = rf - 1; Square::is_valid(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
-        auto s = Square(static_cast<Rank>(rr), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
+        File f;
+        Rank r;
+        for (f = pf + off_f, r = pr + off_r; Square::is_valid(r, f); f += off_f, r += off_r) {
+            const auto index = Square(f, r).index();
+            attacks.set(index);
+            if (occupied.check(index)) break;
+        }
     }
 
     return attacks;
@@ -167,9 +132,13 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
 
     auto &table_sq = table[sq.index()];
 
+#ifndef CHESS_USE_PEXT
     table_sq.magic = magic;
+#endif
     table_sq.mask  = (attacks(sq, occ) & ~edges).getBits();
+#ifndef CHESS_USE_PEXT
     table_sq.shift = 64 - Bitboard(table_sq.mask).count();
+#endif
 
     if (sq < 64 - 1) {
         table[sq.index() + 1].attacks = table_sq.attacks + (1ull << Bitboard(table_sq.mask).count());
@@ -186,8 +155,8 @@ inline void attacks::initAttacks() {
     RookTable[0].attacks   = RookAttacks;
 
     for (int i = 0; i < 64; i++) {
-        initSliders(static_cast<Square>(i), BishopTable, BishopMagics[i], bishopAttacks);
-        initSliders(static_cast<Square>(i), RookTable, RookMagics[i], rookAttacks);
+        initSliders(static_cast<Square>(i), BishopTable, BishopMagics[i], sliderAttacks<false>);
+        initSliders(static_cast<Square>(i), RookTable, RookMagics[i], sliderAttacks<true>);
     }
 }
 }  // namespace chess

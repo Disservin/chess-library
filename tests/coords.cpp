@@ -255,24 +255,24 @@ TEST_SUITE("Square") {
 
     TEST_CASE("is_light") {
         Square s = Square::SQ_A1;
-        CHECK(s.is_light());
-
-        s = Square::SQ_B1;
         CHECK(!s.is_light());
 
-        s = Square::SQ_C1;
+        s = Square::SQ_B1;
         CHECK(s.is_light());
+
+        s = Square::SQ_C1;
+        CHECK(!s.is_light());
     }
 
     TEST_CASE("is_dark") {
         Square s = Square::SQ_A1;
-        CHECK(!s.is_dark());
-
-        s = Square::SQ_B1;
         CHECK(s.is_dark());
 
-        s = Square::SQ_C1;
+        s = Square::SQ_B1;
         CHECK(!s.is_dark());
+
+        s = Square::SQ_C1;
+        CHECK(s.is_dark());
     }
 
     TEST_CASE("is_valid") {

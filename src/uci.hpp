@@ -36,8 +36,7 @@ class uci {
         std::stringstream ss;
 
         // Add the from and to squares to the string stream
-        ss << from_sq;
-        ss << to_sq;
+        ss << from_sq << to_sq;
 
         // If the move is a promotion, add the promoted piece to the string stream
         if (move.typeOf() == Move::PROMOTION) {
@@ -96,12 +95,7 @@ class uci {
             return Move::make<Move::PROMOTION>(source, target, PieceType(uci.substr(4, 1)));
         }
 
-        switch (uci.length()) {
-            case 4:
-                return Move::make<Move::NORMAL>(source, target);
-            default:
-                return Move::NO_MOVE;
-        }
+        return (uci.length() == 4) ? Move::make<Move::NORMAL>(source, target) : Move::NO_MOVE;
     }
 
     /**

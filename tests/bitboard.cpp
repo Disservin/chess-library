@@ -287,7 +287,7 @@ TEST_SUITE("Bitboard") {
     }
 
     TEST_CASE("operator string") {
-        Bitboard b = Bitboard(0);
+        Bitboard b = 0ull;
 
         const auto str = "00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n00000000\n";
         CHECK(static_cast<std::string>(str) == str);

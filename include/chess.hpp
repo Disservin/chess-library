@@ -37,9 +37,12 @@ VERSION: 0.8.12
 
 
 #include <cstdint>
+#ifdef CHESS_USE_PEXT
+#    include <immintrin.h>
+#endif
 
 
-#if __cplusplus >= 202002L
+#if __cpp_lib_bitops >= 201907L
 #    include <bit>
 #endif
 #include <algorithm>
@@ -66,7 +69,7 @@ class Color {
     enum class underlying : std::int8_t { WHITE = 0, BLACK = 1, NONE = -1 };
 
     constexpr Color() : color(underlying::NONE) {}
-    constexpr Color(underlying c) : color(c) { assert(isValid(int(c))); }
+    constexpr Color(underlying c) : color(c) { assert(isValid(static_cast<int>(c))); }
     constexpr Color(int c) : Color(static_cast<underlying>(c)) { assert(isValid(c)); }
     constexpr Color(std::string_view str)
         : color(str == "w"   ? underlying::WHITE
@@ -201,6 +204,11 @@ class File {
         return static_cast<int>(file) < static_cast<int>(rhs.file);
     }
 
+    constexpr File& operator+=(int rhs) noexcept {
+        file = underlying(static_cast<int>(file) + rhs);
+        return *this;
+    }
+
     constexpr operator int() const noexcept { return static_cast<int>(file); }
 
     explicit operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(file) + 'a')); }
@@ -244,11 +252,16 @@ class Rank {
         return static_cast<int>(rank_) <= static_cast<int>(rhs.rank_);
     }
 
+    constexpr Rank& operator+=(int rhs) noexcept {
+        rank_ = underlying(static_cast<int>(rank_) + rhs);
+        return *this;
+    }
+
     operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(rank_) + '1')); }
 
     constexpr operator int() const noexcept { return static_cast<int>(rank_); }
 
-    constexpr std::uint64_t bb() const noexcept { return 0xffULL << (8 * static_cast<int>(rank_)); }
+    [[nodiscard]] constexpr std::uint64_t bb() const noexcept { return 0xffULL << (8 * static_cast<int>(rank_)); }
 
     [[nodiscard]] static constexpr bool back_rank(Rank r, Color color) noexcept {
         return r == Rank(static_cast<int>(color) * 7);
@@ -289,7 +302,7 @@ class Square {
     // clang-format on
 
 // when c++20
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
     using enum underlying;
 #else
 
@@ -389,8 +402,7 @@ class Square {
      * @brief Check if the square is light.
      * @return
      */
-    [[nodiscard]] constexpr bool is_light() const noexcept {
-        return (static_cast<std::int8_t>(sq) / 8 + static_cast<std::int8_t>(sq) % 8) % 2 == 0;
+    [[nodiscard]] constexpr bool is_light() const noexcept { return (file() + rank()) & 1;
     }
 
     /**
@@ -452,10 +464,7 @@ class Square {
      * @return
      */
     [[nodiscard]] static constexpr bool back_rank(Square sq, Color color) noexcept {
-        if (color == Color::WHITE)
-            return sq.rank() == Rank::RANK_1;
-        else
-            return sq.rank() == Rank::RANK_8;
+        return Rank::back_rank(sq.rank(), color);
     }
 
     /**
@@ -473,7 +482,7 @@ class Square {
      * @return
      */
     [[nodiscard]] constexpr Square relative_square(Color c) const noexcept {
-        return Square(static_cast<int>(sq) ^ (c * 56));
+        return Square(static_cast<int>(sq) ^ (static_cast<int>(c) * 56));
     }
 
     [[nodiscard]] constexpr int diagonal_of() const noexcept { return 7 + rank() - file(); }
@@ -534,7 +543,7 @@ inline std::ostream& operator<<(std::ostream& os, const Square& sq) {
     return os;
 }
 
-enum class Direction : int8_t {
+enum class Direction : std::int8_t {
     NORTH      = 8,
     WEST       = -1,
     SOUTH      = -8,
@@ -546,12 +555,12 @@ enum class Direction : int8_t {
 };
 
 [[nodiscard]] constexpr Direction make_direction(Direction dir, Color c) noexcept {
-    if (c == Color::BLACK) return static_cast<Direction>(-static_cast<int8_t>(dir));
+    if (c == Color::BLACK) return static_cast<Direction>(-static_cast<std::int8_t>(dir));
     return dir;
 }
 
 constexpr Square operator+(Square sq, Direction dir) {
-    return static_cast<Square>(sq.index() + static_cast<int8_t>(dir));
+    return static_cast<Square>(sq.index() + static_cast<std::int8_t>(dir));
 }
 
 #undef CHESS_DECLARE_RANK
@@ -659,12 +668,12 @@ class Bitboard {
     [[nodiscard]] constexpr bool empty() const noexcept { return bits == 0; }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         int lsb() const noexcept {
         assert(bits != 0);
-#if __cplusplus >= 202002L
+#if __cpp_lib_bitops >= 201907L
         return std::countr_zero(bits);
 #else
 #    if defined(__GNUC__)
@@ -680,13 +689,13 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         int msb() const noexcept {
         assert(bits != 0);
 
-#if __cplusplus >= 202002L
+#if __cpp_lib_bitops >= 201907L
         return std::countl_zero(bits) ^ 63;
 #else
 #    if defined(__GNUC__)
@@ -702,11 +711,11 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         int count() const noexcept {
-#if __cplusplus >= 202002L
+#if __cpp_lib_bitops >= 201907L
         return std::popcount(bits);
 #else
 #    if defined(_MSC_VER) || defined(__INTEL_COMPILER)
@@ -749,23 +758,212 @@ namespace chess {
 class Board;
 }  // namespace chess
 
+
+
+namespace chess {
+
+class PieceType {
+   public:
+    enum class underlying : std::uint8_t {
+        PAWN,
+        KNIGHT,
+        BISHOP,
+        ROOK,
+        QUEEN,
+        KING,
+        NONE,
+    };
+
+    constexpr PieceType() : pt(underlying::NONE) {}
+    constexpr PieceType(underlying pt) : pt(pt) {}
+    constexpr explicit PieceType(std::string_view type) : pt(underlying::NONE) {
+        assert(type.size() > 0);
+
+        char c = type[0];
+
+        if (c == 'P' || c == 'p')
+            pt = underlying::PAWN;
+        else if (c == 'N' || c == 'n')
+            pt = underlying::KNIGHT;
+        else if (c == 'B' || c == 'b')
+            pt = underlying::BISHOP;
+        else if (c == 'R' || c == 'r')
+            pt = underlying::ROOK;
+        else if (c == 'Q' || c == 'q')
+            pt = underlying::QUEEN;
+        else if (c == 'K' || c == 'k')
+            pt = underlying::KING;
+        else
+            pt = underlying::NONE;
+    }
+
+    explicit operator std::string() const {
+        if (pt == underlying::NONE) return " ";
+        constexpr static const char* pieceTypeStr[] = {"p", "n", "b", "r", "q", "k"};
+        return pieceTypeStr[static_cast<int>(pt)];
+    }
+
+    constexpr bool operator==(const PieceType& rhs) const noexcept { return pt == rhs.pt; }
+    constexpr bool operator!=(const PieceType& rhs) const noexcept { return pt != rhs.pt; }
+
+    constexpr operator int() const noexcept { return static_cast<int>(pt); }
+
+    [[nodiscard]] constexpr underlying internal() const noexcept { return pt; }
+
+    static constexpr underlying PAWN   = underlying::PAWN;
+    static constexpr underlying KNIGHT = underlying::KNIGHT;
+    static constexpr underlying BISHOP = underlying::BISHOP;
+    static constexpr underlying ROOK   = underlying::ROOK;
+    static constexpr underlying QUEEN  = underlying::QUEEN;
+    static constexpr underlying KING   = underlying::KING;
+    static constexpr underlying NONE   = underlying::NONE;
+
+   private:
+    underlying pt;
+};
+
+inline std::ostream& operator<<(std::ostream& os, const PieceType& pt) {
+    os << static_cast<std::string>(pt);
+    return os;
+}
+
+class Piece {
+   public:
+    enum class underlying : std::uint8_t {
+        WHITEPAWN,
+        WHITEKNIGHT,
+        WHITEBISHOP,
+        WHITEROOK,
+        WHITEQUEEN,
+        WHITEKING,
+        BLACKPAWN,
+        BLACKKNIGHT,
+        BLACKBISHOP,
+        BLACKROOK,
+        BLACKQUEEN,
+        BLACKKING,
+        NONE
+    };
+
+    constexpr Piece() : piece(underlying::NONE) {}
+    constexpr Piece(underlying piece) : piece(piece) {}
+    constexpr Piece(PieceType type, Color color)
+        : piece(color == Color::NONE      ? Piece::NONE
+                : type == PieceType::NONE ? Piece::NONE
+                                          : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
+    constexpr Piece(Color color, PieceType type)
+        : piece(color == Color::NONE      ? Piece::NONE
+                : type == PieceType::NONE ? Piece::NONE
+                                          : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
+    constexpr Piece(std::string_view p) : piece(underlying::NONE) { piece = convertCharToUnderlying(p[0]); }
+
+    constexpr bool operator<(const Piece& rhs) const noexcept { return piece < rhs.piece; }
+    constexpr bool operator>(const Piece& rhs) const noexcept { return piece > rhs.piece; }
+    constexpr bool operator==(const Piece& rhs) const noexcept { return piece == rhs.piece; }
+    constexpr bool operator!=(const Piece& rhs) const noexcept { return piece != rhs.piece; }
+
+    constexpr bool operator==(const underlying& rhs) const noexcept { return piece == rhs; }
+    constexpr bool operator!=(const underlying& rhs) const noexcept { return piece != rhs; }
+
+    constexpr bool operator==(const PieceType& rhs) const noexcept { return type() == rhs; }
+    constexpr bool operator!=(const PieceType& rhs) const noexcept { return type() != rhs; }
+
+    explicit operator std::string() const {
+        constexpr static const char* pieceStr[] = {"P", "N", "B", "R", "Q", "K",  //
+                                                   "p", "n", "b", "r", "q", "k"};
+        if (piece == NONE) return ".";
+        return pieceStr[static_cast<int>(piece)];
+    }
+
+    constexpr operator int() const noexcept { return static_cast<int>(piece); }
+
+    [[nodiscard]] constexpr PieceType type() const noexcept {
+        if (piece == NONE) return PieceType::NONE;
+        // return static_cast<PieceType::underlying>(int(piece) % 6);
+        return static_cast<PieceType::underlying>(static_cast<int>(piece) > 5 ? static_cast<int>(piece) - 6
+                                                                              : static_cast<int>(piece));
+    }
+
+    [[nodiscard]] constexpr Color color() const noexcept {
+        if (piece == NONE) return Color::NONE;
+        return static_cast<Color>(static_cast<int>(piece) / 6);
+    }
+
+    [[nodiscard]] constexpr underlying internal() const noexcept { return piece; }
+
+    static constexpr underlying NONE        = underlying::NONE;
+    static constexpr underlying WHITEPAWN   = underlying::WHITEPAWN;
+    static constexpr underlying WHITEKNIGHT = underlying::WHITEKNIGHT;
+    static constexpr underlying WHITEBISHOP = underlying::WHITEBISHOP;
+    static constexpr underlying WHITEROOK   = underlying::WHITEROOK;
+    static constexpr underlying WHITEQUEEN  = underlying::WHITEQUEEN;
+    static constexpr underlying WHITEKING   = underlying::WHITEKING;
+    static constexpr underlying BLACKPAWN   = underlying::BLACKPAWN;
+    static constexpr underlying BLACKKNIGHT = underlying::BLACKKNIGHT;
+    static constexpr underlying BLACKBISHOP = underlying::BLACKBISHOP;
+    static constexpr underlying BLACKROOK   = underlying::BLACKROOK;
+    static constexpr underlying BLACKQUEEN  = underlying::BLACKQUEEN;
+    static constexpr underlying BLACKKING   = underlying::BLACKKING;
+
+   private:
+    underlying piece;
+
+    [[nodiscard]] constexpr static underlying convertCharToUnderlying(char c) {
+        switch (c) {
+            case 'P':
+                return WHITEPAWN;
+            case 'N':
+                return WHITEKNIGHT;
+            case 'B':
+                return WHITEBISHOP;
+            case 'R':
+                return WHITEROOK;
+            case 'Q':
+                return WHITEQUEEN;
+            case 'K':
+                return WHITEKING;
+            case 'p':
+                return BLACKPAWN;
+            case 'n':
+                return BLACKKNIGHT;
+            case 'b':
+                return BLACKBISHOP;
+            case 'r':
+                return BLACKROOK;
+            case 'q':
+                return BLACKQUEEN;
+            case 'k':
+                return BLACKKING;
+            default:
+                return NONE;
+        }
+    }
+};
+}  // namespace chess
+
 namespace chess {
 class attacks {
     using U64 = std::uint64_t;
+
+#ifdef CHESS_USE_PEXT
+    struct Magic {
+        U64 mask;
+        Bitboard *attacks;
+        U64 operator()(Bitboard b) const noexcept { return _pext_u64(b.getBits(), mask); }
+    };
+#else
     struct Magic {
         U64 mask;
         U64 magic;
         Bitboard *attacks;
         U64 shift;
-
-        U64 operator()(Bitboard b) const { return (((b & mask)).getBits() * magic) >> shift; }
+        U64 operator()(Bitboard b) const noexcept { return (((b & mask)).getBits() * magic) >> shift; }
     };
+#endif
 
-    // Slow function to calculate bishop attacks
-    [[nodiscard]] static Bitboard bishopAttacks(Square sq, Bitboard occupied);
-
-    // Slow function to calculate rook attacks
-    [[nodiscard]] static Bitboard rookAttacks(Square sq, Bitboard occupied);
+    // Slow function to calculate bishop and rook attacks
+    template <bool ISROOK>
+    [[nodiscard]] static Bitboard sliderAttacks(Square sq, Bitboard occupied) noexcept;
 
     // Initializes the magic bitboard tables for sliding pieces
     static void initSliders(Square sq, Magic table[], U64 magic,
@@ -980,6 +1178,16 @@ class attacks {
     [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
 
     /**
+     * @brief Returns the slider attacks for a given square
+     * @param sq
+     * @param occupied
+     * @tparam pt
+     * @return
+     */
+    template <PieceType::underlying pt>
+    [[nodiscard]] static Bitboard slider(Square sq, Bitboard occupied) noexcept;
+
+    /**
      * @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at startup.
      */
     static inline void initAttacks();
@@ -1008,189 +1216,6 @@ constexpr auto MAX_MOVES             = 256;
 }  // namespace chess::constants
 
 
-
-
-
-namespace chess {
-
-class PieceType {
-   public:
-    enum class underlying : std::uint8_t {
-        PAWN,
-        KNIGHT,
-        BISHOP,
-        ROOK,
-        QUEEN,
-        KING,
-        NONE,
-    };
-
-    constexpr PieceType() : pt(underlying::NONE) {}
-    constexpr PieceType(underlying pt) : pt(pt) {}
-    constexpr explicit PieceType(std::string_view type) : pt(underlying::NONE) {
-        assert(type.size() > 0);
-
-        char c = type[0];
-
-        if (c == 'P' || c == 'p')
-            pt = underlying::PAWN;
-        else if (c == 'N' || c == 'n')
-            pt = underlying::KNIGHT;
-        else if (c == 'B' || c == 'b')
-            pt = underlying::BISHOP;
-        else if (c == 'R' || c == 'r')
-            pt = underlying::ROOK;
-        else if (c == 'Q' || c == 'q')
-            pt = underlying::QUEEN;
-        else if (c == 'K' || c == 'k')
-            pt = underlying::KING;
-        else
-            pt = underlying::NONE;
-    }
-
-    explicit operator std::string() const {
-        if (pt == underlying::NONE) return " ";
-        constexpr static const char* pieceTypeStr[] = {"p", "n", "b", "r", "q", "k"};
-        return pieceTypeStr[static_cast<int>(pt)];
-    }
-
-    constexpr bool operator==(const PieceType& rhs) const noexcept { return pt == rhs.pt; }
-    constexpr bool operator!=(const PieceType& rhs) const noexcept { return pt != rhs.pt; }
-
-    constexpr operator int() const noexcept { return static_cast<int>(pt); }
-
-    [[nodiscard]] constexpr underlying internal() const noexcept { return pt; }
-
-    static constexpr underlying PAWN   = underlying::PAWN;
-    static constexpr underlying KNIGHT = underlying::KNIGHT;
-    static constexpr underlying BISHOP = underlying::BISHOP;
-    static constexpr underlying ROOK   = underlying::ROOK;
-    static constexpr underlying QUEEN  = underlying::QUEEN;
-    static constexpr underlying KING   = underlying::KING;
-    static constexpr underlying NONE   = underlying::NONE;
-
-   private:
-    underlying pt;
-};
-
-inline std::ostream& operator<<(std::ostream& os, const PieceType& pt) {
-    os << static_cast<std::string>(pt);
-    return os;
-}
-
-class Piece {
-   public:
-    enum class underlying : std::uint8_t {
-        WHITEPAWN,
-        WHITEKNIGHT,
-        WHITEBISHOP,
-        WHITEROOK,
-        WHITEQUEEN,
-        WHITEKING,
-        BLACKPAWN,
-        BLACKKNIGHT,
-        BLACKBISHOP,
-        BLACKROOK,
-        BLACKQUEEN,
-        BLACKKING,
-        NONE
-    };
-
-    constexpr Piece() : piece(underlying::NONE) {}
-    constexpr Piece(underlying piece) : piece(piece) {}
-    constexpr Piece(PieceType type, Color color)
-        : piece(color == Color::NONE      ? Piece::NONE
-                : type == PieceType::NONE ? Piece::NONE
-                                          : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
-    constexpr Piece(Color color, PieceType type)
-        : piece(color == Color::NONE      ? Piece::NONE
-                : type == PieceType::NONE ? Piece::NONE
-                                          : static_cast<underlying>(static_cast<int>(color.internal()) * 6 + type)) {}
-    constexpr Piece(std::string_view p) : piece(underlying::NONE) { piece = convertCharToUnderlying(p[0]); }
-
-    constexpr bool operator<(const Piece& rhs) const noexcept { return piece < rhs.piece; }
-    constexpr bool operator>(const Piece& rhs) const noexcept { return piece > rhs.piece; }
-    constexpr bool operator==(const Piece& rhs) const noexcept { return piece == rhs.piece; }
-    constexpr bool operator!=(const Piece& rhs) const noexcept { return piece != rhs.piece; }
-
-    constexpr bool operator==(const underlying& rhs) const noexcept { return piece == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const noexcept { return piece != rhs; }
-
-    constexpr bool operator==(const PieceType& rhs) const noexcept { return type() == rhs; }
-    constexpr bool operator!=(const PieceType& rhs) const noexcept { return type() != rhs; }
-
-    explicit operator std::string() const {
-        constexpr static const char* pieceStr[] = {"P", "N", "B", "R", "Q", "K",  //
-                                                   "p", "n", "b", "r", "q", "k"};
-        if (piece == NONE) return ".";
-        return pieceStr[static_cast<int>(piece)];
-    }
-
-    constexpr operator int() const noexcept { return static_cast<int>(piece); }
-
-    [[nodiscard]] constexpr PieceType type() const noexcept {
-        if (piece == NONE) return PieceType::NONE;
-        // return static_cast<PieceType::underlying>(int(piece) % 6);
-        return static_cast<PieceType::underlying>(static_cast<int>(piece) > 5 ? static_cast<int>(piece) - 6
-                                                                              : static_cast<int>(piece));
-    }
-
-    [[nodiscard]] constexpr Color color() const noexcept {
-        if (piece == NONE) return Color::NONE;
-        return static_cast<Color>(static_cast<int>(piece) / 6);
-    }
-
-    [[nodiscard]] constexpr underlying internal() const noexcept { return piece; }
-
-    static constexpr underlying NONE        = underlying::NONE;
-    static constexpr underlying WHITEPAWN   = underlying::WHITEPAWN;
-    static constexpr underlying WHITEKNIGHT = underlying::WHITEKNIGHT;
-    static constexpr underlying WHITEBISHOP = underlying::WHITEBISHOP;
-    static constexpr underlying WHITEROOK   = underlying::WHITEROOK;
-    static constexpr underlying WHITEQUEEN  = underlying::WHITEQUEEN;
-    static constexpr underlying WHITEKING   = underlying::WHITEKING;
-    static constexpr underlying BLACKPAWN   = underlying::BLACKPAWN;
-    static constexpr underlying BLACKKNIGHT = underlying::BLACKKNIGHT;
-    static constexpr underlying BLACKBISHOP = underlying::BLACKBISHOP;
-    static constexpr underlying BLACKROOK   = underlying::BLACKROOK;
-    static constexpr underlying BLACKQUEEN  = underlying::BLACKQUEEN;
-    static constexpr underlying BLACKKING   = underlying::BLACKKING;
-
-   private:
-    underlying piece;
-
-    [[nodiscard]] constexpr static underlying convertCharToUnderlying(char c) {
-        switch (c) {
-            case 'P':
-                return WHITEPAWN;
-            case 'N':
-                return WHITEKNIGHT;
-            case 'B':
-                return WHITEBISHOP;
-            case 'R':
-                return WHITEROOK;
-            case 'Q':
-                return WHITEQUEEN;
-            case 'K':
-                return WHITEKING;
-            case 'p':
-                return BLACKPAWN;
-            case 'n':
-                return BLACKKNIGHT;
-            case 'b':
-                return BLACKBISHOP;
-            case 'r':
-                return BLACKROOK;
-            case 'q':
-                return BLACKQUEEN;
-            case 'k':
-                return BLACKKING;
-            default:
-                return NONE;
-        }
-    }
-};
-}  // namespace chess
 
 namespace chess {
 
@@ -1443,14 +1468,11 @@ class movegen {
     template <Color::underlying c>
     [[nodiscard]] static std::pair<Bitboard, int> checkMask(const Board &board, Square sq);
 
-    // Generate the pin mask for horizontal and vertical pins. Returns a bitboard where the ray between the king and the
-    // pinner is set.
-    template <Color::underlying c>
-    [[nodiscard]] static Bitboard pinMaskRooks(const Board &board, Square sq, Bitboard occ_enemy, Bitboard occ_us);
-
-    // Generate the pin mask for diagonal pins. Returns a bitboard where the ray between the king and the pinner is set.
-    template <Color::underlying c>
-    [[nodiscard]] static Bitboard pinMaskBishops(const Board &board, Square sq, Bitboard occ_enemy, Bitboard occ_us);
+    // Generate the pin mask for horizontal and vertical pins -> PieceType::ROOK
+    // Generate the pin mask for diagonal pins. -> PieceType::BISHOP
+    // Returns a bitboard where the ray between the king and the pinner is set.
+    template <Color::underlying c, PieceType::underlying pt>
+    [[nodiscard]] static Bitboard pinMask(const Board &board, Square sq, Bitboard occ_enemy, Bitboard occ_us) noexcept;
 
     // Returns the squares that are attacked by the enemy
     template <Color::underlying c>
@@ -1684,15 +1706,15 @@ class Zobrist {
 
         [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(piece < 12)]];
 #endif
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
     }
 
     [[nodiscard]] static U64 enpassant(File file) noexcept {
-        assert(int(file) < 8);
-#if __cplusplus >= 202207L
+        assert(static_cast<int>(file) < 8);
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(int(file) < 8)]];
 #endif
         return RANDOM_ARRAY[772 + file];
@@ -1700,7 +1722,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 castling(int castling) noexcept {
         assert(castling >= 0 && castling < 16);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(castling < 16)]];
 #endif
         return castlingKey[castling];
@@ -1708,7 +1730,7 @@ class Zobrist {
 
     [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
         assert(idx >= 0 && idx < 4);
-#if __cplusplus >= 202207L
+#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
         [[assume(idx < 4)]];
 #endif
         return RANDOM_ARRAY[768 + idx];
@@ -1784,7 +1806,7 @@ class Board {
    public:
     class CastlingRights {
        public:
-        enum class Side : uint8_t { KING_SIDE, QUEEN_SIDE };
+        enum class Side : std::uint8_t { KING_SIDE, QUEEN_SIDE };
 
         constexpr void setCastlingRight(Color color, Side castle, File rook_file) {
             rooks[color][static_cast<int>(castle)] = rook_file;
@@ -1828,10 +1850,10 @@ class Board {
         U64 hash;
         CastlingRights castling;
         Square enpassant;
-        uint8_t half_moves;
+        std::uint8_t half_moves;
         Piece captured_piece;
 
-        State(const U64 &hash, const CastlingRights &castling, const Square &enpassant, const uint8_t &half_moves,
+        State(const U64 &hash, const CastlingRights &castling, const Square &enpassant, const std::uint8_t &half_moves,
               const Piece &captured_piece)
             : hash(hash),
               castling(castling),
@@ -2272,35 +2294,35 @@ class Board {
      * @param color
      * @return
      */
-    [[nodiscard]] Bitboard us(Color color) const { return occ_bb_[color]; }
+    [[nodiscard]] Bitboard us(Color color) const noexcept { return occ_bb_[color]; }
 
     /**
      * @brief Get the occupancy bitboard for the opposite color.
      * @param color
      * @return
      */
-    [[nodiscard]] Bitboard them(Color color) const { return us(~color); }
+    [[nodiscard]] Bitboard them(Color color) const noexcept { return us(~color); }
 
     /**
      * @brief Get the occupancy bitboard for both colors.
      * Faster than calling all() or us(Color::WHITE) | us(Color::BLACK).
      * @return
      */
-    [[nodiscard]] Bitboard occ() const { return occ_bb_[0] | occ_bb_[1]; }
+    [[nodiscard]] Bitboard occ() const noexcept { return occ_bb_[0] | occ_bb_[1]; }
 
     /**
      * @brief Get the occupancy bitboard for all pieces, should be only used internally.
      * @return
      */
-    [[nodiscard]] Bitboard all() const { return us(Color::WHITE) | us(Color::BLACK); }
+    [[nodiscard]] Bitboard all() const noexcept { return us(Color::WHITE) | us(Color::BLACK); }
 
     /**
      * @brief Returns the square of the king for a certain color
      * @param color
      * @return
      */
-    [[nodiscard]] Square kingSq(Color color) const {
-        assert(pieces(PieceType::KING, color) != Bitboard(0));
+    [[nodiscard]] Square kingSq(Color color) const noexcept {
+        assert(pieces(PieceType::KING, color) != 0ull);
         return pieces(PieceType::KING, color).lsb();
     }
 
@@ -2310,15 +2332,36 @@ class Board {
      * @param color
      * @return
      */
-    [[nodiscard]] Bitboard pieces(PieceType type, Color color) const { return pieces_bb_[type] & occ_bb_[color]; }
+    [[nodiscard]] Bitboard pieces(PieceType type, Color color) const noexcept {
+        return pieces_bb_[type] & occ_bb_[color];
+    }
+
+    /**
+     * @brief Returns all pieces of a two types and color
+     * @param type1, type2
+     * @param color
+     * @return
+     */
+    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2, Color color) const noexcept {
+        return (pieces_bb_[type1] | pieces_bb_[type2]) & occ_bb_[color];
+    }
 
     /**
      * @brief Returns all pieces of a certain type
      * @param type
      * @return
      */
-    [[nodiscard]] Bitboard pieces(PieceType type) const {
-        return pieces(type, Color::WHITE) | pieces(type, Color::BLACK);
+    [[nodiscard]] Bitboard pieces(PieceType type) const noexcept {
+        return pieces_bb_[type];
+    }
+
+    /**
+     * @brief Returns all pieces of a two types
+     * @param type1, type2
+     * @return
+     */
+    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2) const noexcept {
+        return pieces_bb_[type1] | pieces_bb_[type2];
     }
 
     /**
@@ -2328,8 +2371,8 @@ class Board {
      * @return
      */
     template <typename T = Piece>
-    [[nodiscard]] T at(Square sq) const {
-        assert(sq.index() < 64 && sq.index() >= 0);
+    [[nodiscard]] T at(Square sq) const noexcept {
+        assert(sq.is_valid());
 
         if constexpr (std::is_same_v<T, PieceType>) {
             return board_[sq.index()].type();
@@ -2343,7 +2386,7 @@ class Board {
      * @param move
      * @return
      */
-    bool isCapture(const Move move) const {
+    bool isCapture(const Move move) const noexcept {
         return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) || move.typeOf() == Move::ENPASSANT;
     }
 
@@ -2351,12 +2394,12 @@ class Board {
      * @brief Get the current zobrist hash key of the board
      * @return
      */
-    [[nodiscard]] U64 hash() const { return key_; }
-    [[nodiscard]] Color sideToMove() const { return stm_; }
-    [[nodiscard]] Square enpassantSq() const { return ep_sq_; }
-    [[nodiscard]] CastlingRights castlingRights() const { return cr_; }
-    [[nodiscard]] std::uint32_t halfMoveClock() const { return hfm_; }
-    [[nodiscard]] std::uint32_t fullMoveNumber() const { return 1 + plies_ / 2; }
+    [[nodiscard]] U64 hash() const noexcept { return key_; }
+    [[nodiscard]] Color sideToMove() const noexcept { return stm_; }
+    [[nodiscard]] Square enpassantSq() const noexcept { return ep_sq_; }
+    [[nodiscard]] CastlingRights castlingRights() const noexcept { return cr_; }
+    [[nodiscard]] std::uint32_t halfMoveClock() const noexcept { return hfm_; }
+    [[nodiscard]] std::uint32_t fullMoveNumber() const noexcept { return 1 + plies_ / 2; }
 
     void set960(bool is960) {
         chess960_ = is960;
@@ -2367,7 +2410,7 @@ class Board {
      * @brief Checks if the current position is a chess960, aka. FRC/DFRC position.
      * @return
      */
-    [[nodiscard]] bool chess960() const { return chess960_; }
+    [[nodiscard]] bool chess960() const noexcept { return chess960_; }
 
     /**
      * @brief Get the castling rights as a string
@@ -2405,8 +2448,8 @@ class Board {
      * @param count
      * @return
      */
-    [[nodiscard]] bool isRepetition(int count = 2) const {
-        uint8_t c = 0;
+    [[nodiscard]] bool isRepetition(int count = 2) const noexcept {
+        std::uint8_t c = 0;
 
         // We start the loop from the back and go forward in moves, at most to the
         // last move which reset the half-move counter because repetitions cant
@@ -2429,13 +2472,13 @@ class Board {
      * to determine whether the position is a draw or checkmate.
      * @return
      */
-    [[nodiscard]] bool isHalfMoveDraw() const { return hfm_ >= 100; }
+    [[nodiscard]] bool isHalfMoveDraw() const noexcept { return hfm_ >= 100; }
 
     /**
      * @brief Only call this function if isHalfMoveDraw() returns true.
      * @return
      */
-    [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const {
+    [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const noexcept {
         Movelist movelist;
         movegen::legalmoves(movelist, *this);
 
@@ -2450,7 +2493,7 @@ class Board {
      * @brief Basic check if the current position is a draw by insufficient material.
      * @return
      */
-    [[nodiscard]] bool isInsufficientMaterial() const {
+    [[nodiscard]] bool isInsufficientMaterial() const noexcept {
         const auto count = occ().count();
 
         // only kings, draw
@@ -2489,7 +2532,7 @@ class Board {
      * If you are writing a chess engine you should not use this function.
      * @return
      */
-    [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const {
+    [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const noexcept {
         if (isHalfMoveDraw()) return getHalfMoveDrawType();
         if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
         if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
@@ -2511,16 +2554,16 @@ class Board {
      * @param color
      * @return
      */
-    [[nodiscard]] bool isAttacked(Square square, Color color) const {
+    [[nodiscard]] bool isAttacked(Square square, Color color) const noexcept {
         // cheap checks first
         if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
         if (attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
         if (attacks::king(square) & pieces(PieceType::KING, color)) return true;
 
-        if (attacks::bishop(square, occ()) & (pieces(PieceType::BISHOP, color) | pieces(PieceType::QUEEN, color)))
+        if (attacks::bishop(square, occ()) & pieces(PieceType::BISHOP, PieceType::QUEEN, color))
             return true;
 
-        if (attacks::rook(square, occ()) & (pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color)))
+        if (attacks::rook(square, occ()) & pieces(PieceType::ROOK, PieceType::QUEEN, color))
             return true;
 
         return false;
@@ -2530,18 +2573,17 @@ class Board {
      * @brief Checks if the current side to move is in check
      * @return
      */
-    [[nodiscard]] bool inCheck() const { return isAttacked(kingSq(stm_), ~stm_); }
+    [[nodiscard]] bool inCheck() const noexcept { return isAttacked(kingSq(stm_), ~stm_); }
 
-    [[nodiscard]] CheckType givesCheck(const Move &m) const;
+    [[nodiscard]] CheckType givesCheck(const Move &m) const noexcept;
 
     /**
      * @brief Checks if the given color has at least 1 piece thats not pawn and not king
      * @param color
      * @return
      */
-    [[nodiscard]] bool hasNonPawnMaterial(Color color) const {
-        return bool(pieces(PieceType::KNIGHT, color) | pieces(PieceType::BISHOP, color) |
-                    pieces(PieceType::ROOK, color) | pieces(PieceType::QUEEN, color));
+    [[nodiscard]] bool hasNonPawnMaterial(Color color) const noexcept {
+        return bool(us(color) ^ pieces(PieceType::PAWN, PieceType::KING, color));
     }
 
     /**
@@ -2551,16 +2593,10 @@ class Board {
     [[nodiscard]] U64 zobrist() const {
         U64 hash_key = 0ULL;
 
-        auto wPieces = us(Color::WHITE);
-        auto bPieces = us(Color::BLACK);
+        auto pieces  = occ();
 
-        while (wPieces.getBits()) {
-            const Square sq = wPieces.pop();
-            hash_key ^= Zobrist::piece(at(sq), sq);
-        }
-
-        while (bPieces.getBits()) {
-            const Square sq = bPieces.pop();
+        while (pieces) {
+            const Square sq = pieces.pop();
             hash_key ^= Zobrist::piece(at(sq), sq);
         }
 
@@ -2666,8 +2702,7 @@ class Board {
         static PackedBoard encodeState(std::string_view fen, bool chess960 = false) {
             // fallback to slower method
             if (chess960) {
-                Board board = Board(fen, true);
-                return encodeState(board);
+                return encodeState(Board(fen, true));
             }
 
             PackedBoard packed{};
@@ -2703,9 +2738,9 @@ class Board {
 
             const auto parts = split_string_view<8>(position, '/');
 
-            auto offset = 8 * 2;
-            auto square = 0;
-            auto occ    = Bitboard(0);
+            int offset   = 8 * 2;
+            int square   = 0;
+            Bitboard occ = 0ull;
 
             for (auto i = parts.rbegin(); i != parts.rend(); i++) {
                 auto part = *i;
@@ -2836,7 +2871,7 @@ class Board {
         }
 
         // 1:1 mapping of Piece::internal() to the compressed piece
-        static std::uint8_t convertPiece(Piece piece) { return int(piece.internal()); }
+        static std::uint8_t convertPiece(Piece piece) { return static_cast<int>(piece.internal()); }
 
         // for pieces with a special meaning return Piece::NONE since this is otherwise not used
         static Piece convertPiece(std::uint8_t piece) {
@@ -2883,12 +2918,12 @@ class Board {
     std::array<Bitboard, 2> occ_bb_    = {};
     std::array<Piece, 64> board_       = {};
 
-    U64 key_           = 0ULL;
-    CastlingRights cr_ = {};
-    uint16_t plies_    = 0;
-    Color stm_         = Color::WHITE;
-    Square ep_sq_      = Square::NO_SQ;
-    uint8_t hfm_       = 0;
+    U64 key_             = 0ULL;
+    CastlingRights cr_   = {};
+    std::uint16_t plies_ = 0;
+    Color stm_           = Color::WHITE;
+    Square ep_sq_        = Square::NO_SQ;
+    std::uint8_t hfm_    = 0;
 
     bool chess960_ = false;
 
@@ -3144,7 +3179,7 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
             os << " " << static_cast<std::string>(b.board_[i - j]);
         }
 
-        os << " \n";
+        os << "\n";
     }
 
     os << "\n\n";
@@ -3160,12 +3195,10 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return os;
 }
 
-inline CheckType Board::givesCheck(const Move &m) const {
+inline CheckType Board::givesCheck(const Move &m) const noexcept {
     const static auto getSniper = [](const Board *board, Square ksq, Bitboard oc) {
-        return (attacks::bishop(ksq, oc) & (board->pieces(PieceType::BISHOP, board->sideToMove()) |
-                                            board->pieces(PieceType::QUEEN, board->sideToMove()))) |
-               (attacks::rook(ksq, oc) & (board->pieces(PieceType::ROOK, board->sideToMove()) |
-                                          board->pieces(PieceType::QUEEN, board->sideToMove())));
+        return (attacks::bishop(ksq, oc) & (board->pieces(PieceType::BISHOP, PieceType::QUEEN, board->sideToMove()))) |
+               (attacks::rook(ksq, oc) & (board->pieces(PieceType::ROOK, PieceType::QUEEN, board->sideToMove())));
     };
 
     assert(at(m.from()).color() == stm_);
@@ -3212,18 +3245,17 @@ inline CheckType Board::givesCheck(const Move &m) const {
             Bitboard attacks = 0ull;
 
             switch (m.promotionType()) {
-                case int(PieceType::KNIGHT):
+                case static_cast<int>(PieceType::KNIGHT):
                     attacks = attacks::knight(to);
                     break;
-                case int(PieceType::BISHOP):
+                case static_cast<int>(PieceType::BISHOP):
                     attacks = attacks::bishop(to, oc);
                     break;
-                case int(PieceType::ROOK):
+                case static_cast<int>(PieceType::ROOK):
                     attacks = attacks::rook(to, oc);
                     break;
-                case int(PieceType::QUEEN):
+                case static_cast<int>(PieceType::QUEEN):
                     attacks = attacks::queen(to, oc);
-                    break;
             }
 
             return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
@@ -3271,7 +3303,7 @@ template <Direction direction>
             return (b & ~MASK_FILE[7]) >> 7;
     }
 
-        // c++23
+    // c++23
 #if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
     std::unreachable();
 #endif
@@ -3325,71 +3357,36 @@ template <Color::underlying c>
     return atks & occupied;
 }
 
-[[nodiscard]] inline Bitboard attacks::bishopAttacks(Square sq, Bitboard occupied) {
-    Bitboard attacks = 0ULL;
+template <PieceType::underlying pt>
+[[nodiscard]] inline Bitboard attacks::slider(Square sq, Bitboard occupied) noexcept {
+    static_assert(pt == PieceType::BISHOP || pt == PieceType::ROOK || pt == PieceType::QUEEN,
+                  "PieceType must be a slider!");
 
-    int r, f;
-
-    int br = sq.rank();
-    int bf = sq.file();
-
-    for (r = br + 1, f = bf + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r++, f++) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (r = br - 1, f = bf + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r--, f++) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (r = br + 1, f = bf - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r++, f--) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (r = br - 1, f = bf - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(f)); r--, f--) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    return attacks;
+    if constexpr (pt == PieceType::BISHOP) return bishop(sq, occupied);
+    if constexpr (pt == PieceType::ROOK) return rook(sq, occupied);
+    if constexpr (pt == PieceType::QUEEN) return queen(sq, occupied);
 }
 
-[[nodiscard]] inline Bitboard attacks::rookAttacks(Square sq, Bitboard occupied) {
-    Bitboard attacks = 0ULL;
+template <bool ISROOK>
+[[nodiscard]] inline Bitboard attacks::sliderAttacks(Square sq, Bitboard occupied) noexcept {
+    static constexpr int dirs[2][4][2] = {{1, 1, 1, -1, -1, -1, -1, 1}, {1, 0, 0, -1, -1, 0, 0, 1}};
 
-    int r, f;
+    Bitboard attacks = 0ull;
 
-    int rr = sq.rank();
-    int rf = sq.file();
+    File pf = sq.file();
+    Rank pr = sq.rank();
 
-    for (r = rr + 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(rf)); r++) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
+    for (int i = 0; i < 4; ++i) {
+        int off_f = dirs[ISROOK][i][0];
+        int off_r = dirs[ISROOK][i][1];
 
-    for (r = rr - 1; Square::is_valid(static_cast<Rank>(r), static_cast<File>(rf)); r--) {
-        auto s = Square(static_cast<Rank>(r), static_cast<File>(rf)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (f = rf + 1; Square::is_valid(static_cast<Rank>(rr), static_cast<File>(f)); f++) {
-        auto s = Square(static_cast<Rank>(rr), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
-    }
-
-    for (f = rf - 1; Square::is_valid(static_cast<Rank>(rr), static_cast<File>(f)); f--) {
-        auto s = Square(static_cast<Rank>(rr), static_cast<File>(f)).index();
-        attacks.set(s);
-        if (occupied.check(s)) break;
+        File f;
+        Rank r;
+        for (f = pf + off_f, r = pr + off_r; Square::is_valid(r, f); f += off_f, r += off_r) {
+            const auto index = Square(f, r).index();
+            attacks.set(index);
+            if (occupied.check(index)) break;
+        }
     }
 
     return attacks;
@@ -3406,9 +3403,13 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
 
     auto &table_sq = table[sq.index()];
 
+#ifndef CHESS_USE_PEXT
     table_sq.magic = magic;
+#endif
     table_sq.mask  = (attacks(sq, occ) & ~edges).getBits();
+#ifndef CHESS_USE_PEXT
     table_sq.shift = 64 - Bitboard(table_sq.mask).count();
+#endif
 
     if (sq < 64 - 1) {
         table[sq.index() + 1].attacks = table_sq.attacks + (1ull << Bitboard(table_sq.mask).count());
@@ -3425,13 +3426,15 @@ inline void attacks::initAttacks() {
     RookTable[0].attacks   = RookAttacks;
 
     for (int i = 0; i < 64; i++) {
-        initSliders(static_cast<Square>(i), BishopTable, BishopMagics[i], bishopAttacks);
-        initSliders(static_cast<Square>(i), RookTable, RookMagics[i], rookAttacks);
+        initSliders(static_cast<Square>(i), BishopTable, BishopMagics[i], sliderAttacks<false>);
+        initSliders(static_cast<Square>(i), RookTable, RookMagics[i], sliderAttacks<true>);
     }
 }
 }  // namespace chess
 
-
+#if __cpp_lib_int_pow2 >= 202002L
+#   include <bit>
+#endif
 
 namespace chess {
 
@@ -3483,23 +3486,23 @@ template <Color::underlying c>
     Bitboard bishop_attacks = attacks::bishop(sq, board.occ()) & (opp_bishop | opp_queen);
 
     if (bishop_attacks) {
-        const auto index = bishop_attacks.lsb();
-
-        mask |= between(sq, index);
+        mask |= between(sq, bishop_attacks.lsb());
         checks++;
     }
 
     Bitboard rook_attacks = attacks::rook(sq, board.occ()) & (opp_rook | opp_queen);
 
     if (rook_attacks) {
+#if __cpp_lib_int_pow2 >= 202002L
+        if (!std::has_single_bit(rook_attacks.getBits())) {
+#else
         if (rook_attacks.count() > 1) {
+#endif
             checks = 2;
             return {mask, checks};
         }
 
-        const auto index = rook_attacks.lsb();
-
-        mask |= between(sq, index);
+        mask |= between(sq, rook_attacks.lsb());
         checks++;
     }
 
@@ -3510,41 +3513,27 @@ template <Color::underlying c>
     return {mask, checks};
 }
 
-template <Color::underlying c>
-[[nodiscard]] inline Bitboard movegen::pinMaskRooks(const Board &board, Square sq, Bitboard occ_opp, Bitboard occ_us) {
-    const auto opp_rook  = board.pieces(PieceType::ROOK, ~c);
-    const auto opp_queen = board.pieces(PieceType::QUEEN, ~c);
+template <Color::underlying c, PieceType::underlying pt>
+[[nodiscard]] inline Bitboard movegen::pinMask(const Board &board, Square sq, Bitboard occ_opp,
+                                               Bitboard occ_us) noexcept {
+    static_assert(pt == PieceType::BISHOP || pt == PieceType::ROOK, "Only bishop or rook allowed!");
 
-    Bitboard rook_attacks = attacks::rook(sq, occ_opp) & (opp_rook | opp_queen);
-    Bitboard pin_hv       = 0;
+    const auto opp_pt_queen = board.pieces(pt, PieceType::QUEEN, ~c);
 
-    while (rook_attacks) {
-        const auto index = rook_attacks.pop();
+    auto pt_attacks = attacks::slider<pt>(sq, occ_opp) & opp_pt_queen;
 
-        const Bitboard possible_pin = between(sq, index);
-        if ((possible_pin & occ_us).count() == 1) pin_hv |= possible_pin;
+    Bitboard pin = 0ull;
+
+    while (pt_attacks) {
+        const auto possible_pin = between(sq, pt_attacks.pop());
+#if __cpp_lib_int_pow2 >= 202002L
+        if (std::has_single_bit((possible_pin & occ_us).getBits())) pin |= possible_pin;
+#else
+        if ((possible_pin & occ_us).count() == 1) pin |= possible_pin;
+#endif
     }
 
-    return pin_hv;
-}
-
-template <Color::underlying c>
-[[nodiscard]] inline Bitboard movegen::pinMaskBishops(const Board &board, Square sq, Bitboard occ_opp,
-                                                      Bitboard occ_us) {
-    const auto opp_bishop = board.pieces(PieceType::BISHOP, ~c);
-    const auto opp_queen  = board.pieces(PieceType::QUEEN, ~c);
-
-    Bitboard bishop_attacks = attacks::bishop(sq, occ_opp) & (opp_bishop | opp_queen);
-    Bitboard pin_diag       = 0;
-
-    while (bishop_attacks) {
-        const auto index = bishop_attacks.pop();
-
-        const Bitboard possible_pin = between(sq, index);
-        if ((possible_pin & occ_us).count() == 1) pin_diag |= possible_pin;
-    }
-
-    return pin_diag;
+    return pin;
 }
 
 template <Color::underlying c>
@@ -3552,11 +3541,9 @@ template <Color::underlying c>
     auto king_sq          = board.kingSq(~c);
     Bitboard map_king_atk = attacks::king(king_sq) & enemy_empty;
 
-    if (map_king_atk == Bitboard(0ull) && !board.chess960()) {
-        return 0ull;
-    }
+    if (map_king_atk == Bitboard(0ull) && !board.chess960()) return 0ull;
 
-    auto occ     = board.occ() & ~Bitboard::fromSquare(king_sq);
+    auto occ     = board.occ() ^ Bitboard::fromSquare(king_sq);
     auto queens  = board.pieces(PieceType::QUEEN, c);
     auto pawns   = board.pieces(PieceType::PAWN, c);
     auto knights = board.pieces(PieceType::KNIGHT, c);
@@ -3566,22 +3553,18 @@ template <Color::underlying c>
     Bitboard seen = attacks::pawnLeftAttacks<c>(pawns) | attacks::pawnRightAttacks<c>(pawns);
 
     while (knights) {
-        const auto index = knights.pop();
-        seen |= attacks::knight(index);
+        seen |= attacks::knight(knights.pop());
     }
 
     while (bishops) {
-        const auto index = bishops.pop();
-        seen |= attacks::bishop(index, occ);
+        seen |= attacks::bishop(bishops.pop(), occ);
     }
 
     while (rooks) {
-        const auto index = rooks.pop();
-        seen |= attacks::rook(index, occ);
+        seen |= attacks::rook(rooks.pop(), occ);
     }
 
-    const Square index = board.kingSq(c);
-    seen |= attacks::king(index);
+    seen |= attacks::king(board.kingSq(c));
 
     return seen;
 }
@@ -3712,7 +3695,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
            (ep.rank() == Rank::RANK_6 && board.sideToMove() == Color::WHITE));
 
     std::array<Move, 2> moves = {Move::NO_MOVE, Move::NO_MOVE};
-    auto i                    = 0;
+    int i                    = 0;
 
     const auto DOWN     = make_direction(Direction::SOUTH, c);
     const auto epPawnSq = ep + DOWN;
@@ -3722,11 +3705,11 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
      that just moved are not on the checkmask
      en passant is not available.
     */
-    if ((checkmask & (Bitboard::fromSquare(epPawnSq) | Bitboard::fromSquare(ep))) == Bitboard(0)) return moves;
+    if ((checkmask & (Bitboard::fromSquare(epPawnSq) | Bitboard::fromSquare(ep))) == 0ull) return moves;
 
     const Square kSQ              = board.kingSq(c);
     const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & epPawnSq.rank().bb();
-    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, ~c) | board.pieces(PieceType::QUEEN, ~c);
+    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, PieceType::QUEEN, ~c);
 
     auto epBB = attacks::pawn(~c, ep) & pawns_lr;
 
@@ -3753,7 +3736,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         */
         const auto isPossiblePin = kingMask && enemyQueenRook;
 
-        if (isPossiblePin && (attacks::rook(kSQ, board.occ() & ~connectingPawns) & enemyQueenRook) != Bitboard(0))
+        if (isPossiblePin && (attacks::rook(kSQ, board.occ() ^ connectingPawns) & enemyQueenRook) != 0ull)
             break;
 
         moves[i++] = Move::make<Move::ENPASSANT>(from, to);
@@ -3855,17 +3838,17 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
     Bitboard opp_empty = ~occ_us;
 
     const auto [checkmask, checks] = checkMask<c>(board, king_sq);
-    const auto pin_hv              = pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
-    const auto pin_d               = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+    const auto pin_hv              = pinMask<c, PieceType::ROOK>(board, king_sq, occ_opp, occ_us);
+    const auto pin_d               = pinMask<c, PieceType::BISHOP>(board, king_sq, occ_opp, occ_us);
 
     assert(checks <= 2);
 
     Bitboard movable_square;
 
     // Slider, Knights and King moves can only go to enemy or empty squares.
-    if (mt == MoveGenType::ALL)
+    if constexpr (mt == MoveGenType::ALL)
         movable_square = opp_empty;
-    else if (mt == MoveGenType::CAPTURE)
+    else if constexpr (mt == MoveGenType::CAPTURE)
         movable_square = occ_opp;
     else  // QUIET moves
         movable_square = ~occ_all;
@@ -3948,8 +3931,8 @@ inline bool movegen::isEpSquareValid(const Board &board, Square ep) {
     auto king_sq     = board.kingSq(stm);
 
     const auto [checkmask, checks] = movegen::checkMask<c>(board, king_sq);
-    const auto pin_hv              = movegen::pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
-    const auto pin_d               = movegen::pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+    const auto pin_hv              = movegen::pinMask<c, PieceType::ROOK>(board, king_sq, occ_opp, occ_us);
+    const auto pin_d               = movegen::pinMask<c, PieceType::BISHOP>(board, king_sq, occ_opp, occ_us);
 
     const auto pawns    = board.pieces(PieceType::PAWN, stm);
     const auto pawns_lr = pawns & ~pin_hv;
@@ -4741,8 +4724,7 @@ class uci {
         std::stringstream ss;
 
         // Add the from and to squares to the string stream
-        ss << from_sq;
-        ss << to_sq;
+        ss << from_sq << to_sq;
 
         // If the move is a promotion, add the promoted piece to the string stream
         if (move.typeOf() == Move::PROMOTION) {
@@ -4801,12 +4783,7 @@ class uci {
             return Move::make<Move::PROMOTION>(source, target, PieceType(uci.substr(4, 1)));
         }
 
-        switch (uci.length()) {
-            case 4:
-                return Move::make<Move::NORMAL>(source, target);
-            default:
-                return Move::NO_MOVE;
-        }
+        return (uci.length() == 4) ? Move::make<Move::NORMAL>(source, target) : Move::NO_MOVE;
     }
 
     /**
