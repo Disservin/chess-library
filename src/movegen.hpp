@@ -1,9 +1,7 @@
 #pragma once
 
 #include <array>
-#if __cpp_lib_int_pow2 >= 202002L
-#   include <bit>
-#endif
+
 #include "attacks_fwd.hpp"
 #include "board.hpp"
 #include "constants.hpp"
@@ -67,11 +65,7 @@ template <Color::underlying c>
     Bitboard rook_attacks = attacks::rook(sq, board.occ()) & (opp_rook | opp_queen);
 
     if (rook_attacks) {
-#if __cpp_lib_int_pow2 >= 202002L
-        if (!std::has_single_bit(rook_attacks.getBits())) {
-#else
         if (rook_attacks.count() > 1) {
-#endif
             checks = 2;
             return {mask, checks};
         }
@@ -92,7 +86,7 @@ template <Color::underlying c, PieceType::underlying pt>
                                                Bitboard occ_us) noexcept {
     static_assert(pt == PieceType::BISHOP || pt == PieceType::ROOK, "Only bishop or rook allowed!");
 
-    const auto opp_pt_queen = board.pieces(pt, PieceType::QUEEN, ~c);
+    const auto opp_pt_queen = board.pieces(pt, PieceType::QUEEN) & board.us(~c);
 
     auto pt_attacks = attacks::slider<pt>(sq, occ_opp) & opp_pt_queen;
 
@@ -100,11 +94,7 @@ template <Color::underlying c, PieceType::underlying pt>
 
     while (pt_attacks) {
         const auto possible_pin = between(sq, pt_attacks.pop());
-#if __cpp_lib_int_pow2 >= 202002L
-        if (std::has_single_bit((possible_pin & occ_us).getBits())) pin |= possible_pin;
-#else
         if ((possible_pin & occ_us).count() == 1) pin |= possible_pin;
-#endif
     }
 
     return pin;
@@ -269,7 +259,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
            (ep.rank() == Rank::RANK_6 && board.sideToMove() == Color::WHITE));
 
     std::array<Move, 2> moves = {Move::NO_MOVE, Move::NO_MOVE};
-    int i                    = 0;
+    int i                     = 0;
 
     const auto DOWN     = make_direction(Direction::SOUTH, c);
     const auto epPawnSq = ep + DOWN;
@@ -283,7 +273,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
 
     const Square kSQ              = board.kingSq(c);
     const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & epPawnSq.rank().bb();
-    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, PieceType::QUEEN, ~c);
+    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, PieceType::QUEEN) & board.us(~c);
 
     auto epBB = attacks::pawn(~c, ep) & pawns_lr;
 
@@ -310,8 +300,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         */
         const auto isPossiblePin = kingMask && enemyQueenRook;
 
-        if (isPossiblePin && (attacks::rook(kSQ, board.occ() ^ connectingPawns) & enemyQueenRook) != 0ull)
-            break;
+        if (isPossiblePin && (attacks::rook(kSQ, board.occ() ^ connectingPawns) & enemyQueenRook) != 0ull) break;
 
         moves[i++] = Move::make<Move::ENPASSANT>(from, to);
     }

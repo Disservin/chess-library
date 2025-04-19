@@ -620,31 +620,15 @@ class Board {
     }
 
     /**
-     * @brief Returns all pieces of a two types and color
-     * @param type1, type2
-     * @param color
-     * @return
-     */
-    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2, Color color) const noexcept {
-        return (pieces_bb_[type1] | pieces_bb_[type2]) & occ_bb_[color];
-    }
-
-    /**
      * @brief Returns all pieces of a certain type
      * @param type
      * @return
      */
-    [[nodiscard]] Bitboard pieces(PieceType type) const noexcept {
-        return pieces_bb_[type];
-    }
+    [[nodiscard]] Bitboard pieces(PieceType type) const noexcept { return pieces_bb_[type]; }
 
-    /**
-     * @brief Returns all pieces of a two types
-     * @param type1, type2
-     * @return
-     */
-    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2) const noexcept {
-        return pieces_bb_[type1] | pieces_bb_[type2];
+    template <typename... Pieces, typename = std::enable_if_t<(std::is_convertible_v<Pieces, PieceType> && ...)>>
+    [[nodiscard]] Bitboard pieces(Pieces... pieces) const noexcept {
+        return (pieces_bb_[static_cast<PieceType>(pieces)] | ...);
     }
 
     /**
@@ -842,12 +826,8 @@ class Board {
         if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
         if (attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
         if (attacks::king(square) & pieces(PieceType::KING, color)) return true;
-
-        if (attacks::bishop(square, occ()) & pieces(PieceType::BISHOP, PieceType::QUEEN, color))
-            return true;
-
-        if (attacks::rook(square, occ()) & pieces(PieceType::ROOK, PieceType::QUEEN, color))
-            return true;
+        if (attacks::bishop(square, occ()) & pieces(PieceType::BISHOP, PieceType::QUEEN) & us(color)) return true;
+        if (attacks::rook(square, occ()) & pieces(PieceType::ROOK, PieceType::QUEEN) & us(color)) return true;
 
         return false;
     }
@@ -866,7 +846,7 @@ class Board {
      * @return
      */
     [[nodiscard]] bool hasNonPawnMaterial(Color color) const noexcept {
-        return bool(us(color) ^ pieces(PieceType::PAWN, PieceType::KING, color));
+        return bool(us(color) ^ (pieces(PieceType::PAWN, PieceType::KING) & us(color)));
     }
 
     /**
@@ -876,7 +856,7 @@ class Board {
     [[nodiscard]] U64 zobrist() const {
         U64 hash_key = 0ULL;
 
-        auto pieces  = occ();
+        auto pieces = occ();
 
         while (pieces) {
             const Square sq = pieces.pop();
@@ -1480,8 +1460,10 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
 
 inline CheckType Board::givesCheck(const Move &m) const noexcept {
     const static auto getSniper = [](const Board *board, Square ksq, Bitboard oc) {
-        return (attacks::bishop(ksq, oc) & (board->pieces(PieceType::BISHOP, PieceType::QUEEN, board->sideToMove()))) |
-               (attacks::rook(ksq, oc) & (board->pieces(PieceType::ROOK, PieceType::QUEEN, board->sideToMove())));
+        const auto us_occ = board->us(board->sideToMove());
+        const auto bishop = attacks::bishop(ksq, oc) & board->pieces(PieceType::BISHOP, PieceType::QUEEN) & us_occ;
+        const auto rook   = attacks::rook(ksq, oc) & board->pieces(PieceType::ROOK, PieceType::QUEEN) & us_occ;
+        return (bishop | rook);
     };
 
     assert(at(m.from()).color() == stm_);

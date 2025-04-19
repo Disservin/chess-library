@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.8.12
+VERSION: 0.8.13
 */
 
 #ifndef CHESS_HPP
@@ -727,7 +727,7 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         std::uint8_t pop() noexcept {
@@ -1704,35 +1704,23 @@ class Zobrist {
 
     static constexpr int MAP_HASH_PIECE[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 
-        [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
+    [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
-#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
-        [[assume(piece < 12)]];
-#endif
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
     }
 
     [[nodiscard]] static U64 enpassant(File file) noexcept {
         assert(static_cast<int>(file) < 8);
-#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
-        [[assume(int(file) < 8)]];
-#endif
         return RANDOM_ARRAY[772 + file];
     }
 
     [[nodiscard]] static U64 castling(int castling) noexcept {
         assert(castling >= 0 && castling < 16);
-#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
-        [[assume(castling < 16)]];
-#endif
         return castlingKey[castling];
     }
 
     [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
         assert(idx >= 0 && idx < 4);
-#if __cplusplus >= 202207L || (defined(_MSC_VER) && _MSVC_LANG >= 202302L)
-        [[assume(idx < 4)]];
-#endif
         return RANDOM_ARRAY[768 + idx];
     }
 
@@ -2337,31 +2325,15 @@ class Board {
     }
 
     /**
-     * @brief Returns all pieces of a two types and color
-     * @param type1, type2
-     * @param color
-     * @return
-     */
-    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2, Color color) const noexcept {
-        return (pieces_bb_[type1] | pieces_bb_[type2]) & occ_bb_[color];
-    }
-
-    /**
      * @brief Returns all pieces of a certain type
      * @param type
      * @return
      */
-    [[nodiscard]] Bitboard pieces(PieceType type) const noexcept {
-        return pieces_bb_[type];
-    }
+    [[nodiscard]] Bitboard pieces(PieceType type) const noexcept { return pieces_bb_[type]; }
 
-    /**
-     * @brief Returns all pieces of a two types
-     * @param type1, type2
-     * @return
-     */
-    [[nodiscard]] Bitboard pieces(PieceType type1, PieceType type2) const noexcept {
-        return pieces_bb_[type1] | pieces_bb_[type2];
+    template <typename... Pieces, typename = std::enable_if_t<(std::is_convertible_v<Pieces, PieceType> && ...)>>
+    [[nodiscard]] Bitboard pieces(Pieces... pieces) const noexcept {
+        return (pieces_bb_[static_cast<PieceType>(pieces)] | ...);
     }
 
     /**
@@ -2559,12 +2531,8 @@ class Board {
         if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
         if (attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
         if (attacks::king(square) & pieces(PieceType::KING, color)) return true;
-
-        if (attacks::bishop(square, occ()) & pieces(PieceType::BISHOP, PieceType::QUEEN, color))
-            return true;
-
-        if (attacks::rook(square, occ()) & pieces(PieceType::ROOK, PieceType::QUEEN, color))
-            return true;
+        if (attacks::bishop(square, occ()) & pieces(PieceType::BISHOP, PieceType::QUEEN) & us(color)) return true;
+        if (attacks::rook(square, occ()) & pieces(PieceType::ROOK, PieceType::QUEEN) & us(color)) return true;
 
         return false;
     }
@@ -2583,7 +2551,7 @@ class Board {
      * @return
      */
     [[nodiscard]] bool hasNonPawnMaterial(Color color) const noexcept {
-        return bool(us(color) ^ pieces(PieceType::PAWN, PieceType::KING, color));
+        return bool(us(color) ^ (pieces(PieceType::PAWN, PieceType::KING) & us(color)));
     }
 
     /**
@@ -2593,7 +2561,7 @@ class Board {
     [[nodiscard]] U64 zobrist() const {
         U64 hash_key = 0ULL;
 
-        auto pieces  = occ();
+        auto pieces = occ();
 
         while (pieces) {
             const Square sq = pieces.pop();
@@ -3197,8 +3165,10 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
 
 inline CheckType Board::givesCheck(const Move &m) const noexcept {
     const static auto getSniper = [](const Board *board, Square ksq, Bitboard oc) {
-        return (attacks::bishop(ksq, oc) & (board->pieces(PieceType::BISHOP, PieceType::QUEEN, board->sideToMove()))) |
-               (attacks::rook(ksq, oc) & (board->pieces(PieceType::ROOK, PieceType::QUEEN, board->sideToMove())));
+        const auto us_occ = board->us(board->sideToMove());
+        const auto bishop = attacks::bishop(ksq, oc) & board->pieces(PieceType::BISHOP, PieceType::QUEEN) & us_occ;
+        const auto rook   = attacks::rook(ksq, oc) & board->pieces(PieceType::ROOK, PieceType::QUEEN) & us_occ;
+        return (bishop | rook);
     };
 
     assert(at(m.from()).color() == stm_);
@@ -3303,11 +3273,6 @@ template <Direction direction>
             return (b & ~MASK_FILE[7]) >> 7;
     }
 
-    // c++23
-#if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
-    std::unreachable();
-#endif
-
     assert(false);
 
     return {};
@@ -3406,7 +3371,7 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
 #ifndef CHESS_USE_PEXT
     table_sq.magic = magic;
 #endif
-    table_sq.mask  = (attacks(sq, occ) & ~edges).getBits();
+    table_sq.mask = (attacks(sq, occ) & ~edges).getBits();
 #ifndef CHESS_USE_PEXT
     table_sq.shift = 64 - Bitboard(table_sq.mask).count();
 #endif
@@ -3432,9 +3397,7 @@ inline void attacks::initAttacks() {
 }
 }  // namespace chess
 
-#if __cpp_lib_int_pow2 >= 202002L
-#   include <bit>
-#endif
+
 
 namespace chess {
 
@@ -3493,11 +3456,7 @@ template <Color::underlying c>
     Bitboard rook_attacks = attacks::rook(sq, board.occ()) & (opp_rook | opp_queen);
 
     if (rook_attacks) {
-#if __cpp_lib_int_pow2 >= 202002L
-        if (!std::has_single_bit(rook_attacks.getBits())) {
-#else
         if (rook_attacks.count() > 1) {
-#endif
             checks = 2;
             return {mask, checks};
         }
@@ -3518,7 +3477,7 @@ template <Color::underlying c, PieceType::underlying pt>
                                                Bitboard occ_us) noexcept {
     static_assert(pt == PieceType::BISHOP || pt == PieceType::ROOK, "Only bishop or rook allowed!");
 
-    const auto opp_pt_queen = board.pieces(pt, PieceType::QUEEN, ~c);
+    const auto opp_pt_queen = board.pieces(pt, PieceType::QUEEN) & board.us(~c);
 
     auto pt_attacks = attacks::slider<pt>(sq, occ_opp) & opp_pt_queen;
 
@@ -3526,11 +3485,7 @@ template <Color::underlying c, PieceType::underlying pt>
 
     while (pt_attacks) {
         const auto possible_pin = between(sq, pt_attacks.pop());
-#if __cpp_lib_int_pow2 >= 202002L
-        if (std::has_single_bit((possible_pin & occ_us).getBits())) pin |= possible_pin;
-#else
         if ((possible_pin & occ_us).count() == 1) pin |= possible_pin;
-#endif
     }
 
     return pin;
@@ -3695,7 +3650,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
            (ep.rank() == Rank::RANK_6 && board.sideToMove() == Color::WHITE));
 
     std::array<Move, 2> moves = {Move::NO_MOVE, Move::NO_MOVE};
-    int i                    = 0;
+    int i                     = 0;
 
     const auto DOWN     = make_direction(Direction::SOUTH, c);
     const auto epPawnSq = ep + DOWN;
@@ -3709,7 +3664,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
 
     const Square kSQ              = board.kingSq(c);
     const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & epPawnSq.rank().bb();
-    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, PieceType::QUEEN, ~c);
+    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, PieceType::QUEEN) & board.us(~c);
 
     auto epBB = attacks::pawn(~c, ep) & pawns_lr;
 
@@ -3736,8 +3691,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         */
         const auto isPossiblePin = kingMask && enemyQueenRook;
 
-        if (isPossiblePin && (attacks::rook(kSQ, board.occ() ^ connectingPawns) & enemyQueenRook) != 0ull)
-            break;
+        if (isPossiblePin && (attacks::rook(kSQ, board.occ() ^ connectingPawns) & enemyQueenRook) != 0ull) break;
 
         moves[i++] = Move::make<Move::ENPASSANT>(from, to);
     }

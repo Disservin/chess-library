@@ -177,7 +177,7 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         std::uint8_t pop() noexcept {

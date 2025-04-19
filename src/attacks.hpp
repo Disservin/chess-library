@@ -32,11 +32,6 @@ template <Direction direction>
             return (b & ~MASK_FILE[7]) >> 7;
     }
 
-    // c++23
-#if defined(__cpp_lib_unreachable) && __cpp_lib_unreachable >= 202202L
-    std::unreachable();
-#endif
-
     assert(false);
 
     return {};
@@ -135,7 +130,7 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
 #ifndef CHESS_USE_PEXT
     table_sq.magic = magic;
 #endif
-    table_sq.mask  = (attacks(sq, occ) & ~edges).getBits();
+    table_sq.mask = (attacks(sq, occ) & ~edges).getBits();
 #ifndef CHESS_USE_PEXT
     table_sq.shift = 64 - Bitboard(table_sq.mask).count();
 #endif
