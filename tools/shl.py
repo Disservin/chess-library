@@ -310,6 +310,9 @@ class IncludeInliner:
 
 
 def main():
+    def output_file_type(filename):
+        return open(filename, 'w', newline='\n')
+
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument(
         "main_header", help="The main header file", type=argparse.FileType("r")
@@ -328,7 +331,7 @@ def main():
         "--output_file",
         help="The single-header output file",
         required=True,
-        type=argparse.FileType("w"),
+        type=output_file_type,
     )
     args = parser.parse_args()
     inliner = IncludeInliner(args.header_search_paths, args.ignored_headers)
