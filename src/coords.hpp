@@ -53,6 +53,11 @@ class File {
         return static_cast<int>(file) < static_cast<int>(rhs.file);
     }
 
+    constexpr File& operator+=(int rhs) noexcept {
+        file = underlying(static_cast<int>(file) + rhs);
+        return *this;
+    }
+
     constexpr operator int() const noexcept { return static_cast<int>(file); }
 
     explicit operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(file) + 'a')); }
@@ -96,11 +101,16 @@ class Rank {
         return static_cast<int>(rank_) <= static_cast<int>(rhs.rank_);
     }
 
+    constexpr Rank& operator+=(int rhs) noexcept {
+        rank_ = underlying(static_cast<int>(rank_) + rhs);
+        return *this;
+    }
+
     operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(rank_) + '1')); }
 
     constexpr operator int() const noexcept { return static_cast<int>(rank_); }
 
-    constexpr std::uint64_t bb() const noexcept { return 0xffULL << (8 * static_cast<int>(rank_)); }
+    [[nodiscard]] constexpr std::uint64_t bb() const noexcept { return 0xffULL << (8 * static_cast<int>(rank_)); }
 
     [[nodiscard]] static constexpr bool back_rank(Rank r, Color color) noexcept {
         return r == Rank(static_cast<int>(color) * 7);
@@ -141,7 +151,7 @@ class Square {
     // clang-format on
 
 // when c++20
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
     using enum underlying;
 #else
 
@@ -241,8 +251,7 @@ class Square {
      * @brief Check if the square is light.
      * @return
      */
-    [[nodiscard]] constexpr bool is_light() const noexcept {
-        return (static_cast<std::int8_t>(sq) / 8 + static_cast<std::int8_t>(sq) % 8) % 2 == 0;
+    [[nodiscard]] constexpr bool is_light() const noexcept { return (file() + rank()) & 1;
     }
 
     /**
@@ -304,10 +313,7 @@ class Square {
      * @return
      */
     [[nodiscard]] static constexpr bool back_rank(Square sq, Color color) noexcept {
-        if (color == Color::WHITE)
-            return sq.rank() == Rank::RANK_1;
-        else
-            return sq.rank() == Rank::RANK_8;
+        return Rank::back_rank(sq.rank(), color);
     }
 
     /**
@@ -325,7 +331,7 @@ class Square {
      * @return
      */
     [[nodiscard]] constexpr Square relative_square(Color c) const noexcept {
-        return Square(static_cast<int>(sq) ^ (c * 56));
+        return Square(static_cast<int>(sq) ^ (static_cast<int>(c) * 56));
     }
 
     [[nodiscard]] constexpr int diagonal_of() const noexcept { return 7 + rank() - file(); }
@@ -386,7 +392,7 @@ inline std::ostream& operator<<(std::ostream& os, const Square& sq) {
     return os;
 }
 
-enum class Direction : int8_t {
+enum class Direction : std::int8_t {
     NORTH      = 8,
     WEST       = -1,
     SOUTH      = -8,
@@ -398,12 +404,12 @@ enum class Direction : int8_t {
 };
 
 [[nodiscard]] constexpr Direction make_direction(Direction dir, Color c) noexcept {
-    if (c == Color::BLACK) return static_cast<Direction>(-static_cast<int8_t>(dir));
+    if (c == Color::BLACK) return static_cast<Direction>(-static_cast<std::int8_t>(dir));
     return dir;
 }
 
 constexpr Square operator+(Square sq, Direction dir) {
-    return static_cast<Square>(sq.index() + static_cast<int8_t>(dir));
+    return static_cast<Square>(sq.index() + static_cast<std::int8_t>(dir));
 }
 
 #undef CHESS_DECLARE_RANK

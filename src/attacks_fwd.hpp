@@ -2,29 +2,39 @@
 
 #include <cstdint>
 #include <functional>
+#ifdef CHESS_USE_PEXT
+#    include <immintrin.h>
+#endif
 
 #include "bitboard.hpp"
 #include "board_fwd.hpp"
 #include "color.hpp"
 #include "coords.hpp"
+#include "piece.hpp"
 
 namespace chess {
 class attacks {
     using U64 = std::uint64_t;
+
+#ifdef CHESS_USE_PEXT
+    struct Magic {
+        U64 mask;
+        Bitboard *attacks;
+        U64 operator()(Bitboard b) const noexcept { return _pext_u64(b.getBits(), mask); }
+    };
+#else
     struct Magic {
         U64 mask;
         U64 magic;
         Bitboard *attacks;
         U64 shift;
-
-        U64 operator()(Bitboard b) const { return (((b & mask)).getBits() * magic) >> shift; }
+        U64 operator()(Bitboard b) const noexcept { return (((b & mask)).getBits() * magic) >> shift; }
     };
+#endif
 
-    // Slow function to calculate bishop attacks
-    [[nodiscard]] static Bitboard bishopAttacks(Square sq, Bitboard occupied);
-
-    // Slow function to calculate rook attacks
-    [[nodiscard]] static Bitboard rookAttacks(Square sq, Bitboard occupied);
+    // Slow function to calculate bishop and rook attacks
+    template <bool ISROOK>
+    [[nodiscard]] static Bitboard sliderAttacks(Square sq, Bitboard occupied) noexcept;
 
     // Initializes the magic bitboard tables for sliding pieces
     static void initSliders(Square sq, Magic table[], U64 magic,
@@ -237,6 +247,16 @@ class attacks {
      * @return
      */
     [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
+
+    /**
+     * @brief Returns the slider attacks for a given square
+     * @param sq
+     * @param occupied
+     * @tparam pt
+     * @return
+     */
+    template <PieceType::underlying pt>
+    [[nodiscard]] static Bitboard slider(Square sq, Bitboard occupied) noexcept;
 
     /**
      * @brief [Internal Usage] Initializes the attacks for the bishop and rook. Called once at startup.

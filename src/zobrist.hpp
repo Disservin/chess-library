@@ -192,35 +192,23 @@ class Zobrist {
 
     static constexpr int MAP_HASH_PIECE[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 
-        [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
+    [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {
         assert(piece < 12);
-#if __cplusplus >= 202207L
-        [[assume(piece < 12)]];
-#endif
         return RANDOM_ARRAY[64 * MAP_HASH_PIECE[piece] + square.index()];
     }
 
     [[nodiscard]] static U64 enpassant(File file) noexcept {
-        assert(int(file) < 8);
-#if __cplusplus >= 202207L
-        [[assume(int(file) < 8)]];
-#endif
+        assert(static_cast<int>(file) < 8);
         return RANDOM_ARRAY[772 + file];
     }
 
     [[nodiscard]] static U64 castling(int castling) noexcept {
         assert(castling >= 0 && castling < 16);
-#if __cplusplus >= 202207L
-        [[assume(castling < 16)]];
-#endif
         return castlingKey[castling];
     }
 
     [[nodiscard]] static U64 castlingIndex(int idx) noexcept {
         assert(idx >= 0 && idx < 4);
-#if __cplusplus >= 202207L
-        [[assume(idx < 4)]];
-#endif
         return RANDOM_ARRAY[768 + idx];
     }
 

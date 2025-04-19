@@ -13,7 +13,7 @@ class Color {
     enum class underlying : std::int8_t { WHITE = 0, BLACK = 1, NONE = -1 };
 
     constexpr Color() : color(underlying::NONE) {}
-    constexpr Color(underlying c) : color(c) { assert(isValid(int(c))); }
+    constexpr Color(underlying c) : color(c) { assert(isValid(static_cast<int>(c))); }
     constexpr Color(int c) : Color(static_cast<underlying>(c)) { assert(isValid(c)); }
     constexpr Color(std::string_view str)
         : color(str == "w"   ? underlying::WHITE

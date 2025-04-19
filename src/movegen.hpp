@@ -58,9 +58,7 @@ template <Color::underlying c>
     Bitboard bishop_attacks = attacks::bishop(sq, board.occ()) & (opp_bishop | opp_queen);
 
     if (bishop_attacks) {
-        const auto index = bishop_attacks.lsb();
-
-        mask |= between(sq, index);
+        mask |= between(sq, bishop_attacks.lsb());
         checks++;
     }
 
@@ -72,9 +70,7 @@ template <Color::underlying c>
             return {mask, checks};
         }
 
-        const auto index = rook_attacks.lsb();
-
-        mask |= between(sq, index);
+        mask |= between(sq, rook_attacks.lsb());
         checks++;
     }
 
@@ -85,41 +81,23 @@ template <Color::underlying c>
     return {mask, checks};
 }
 
-template <Color::underlying c>
-[[nodiscard]] inline Bitboard movegen::pinMaskRooks(const Board &board, Square sq, Bitboard occ_opp, Bitboard occ_us) {
-    const auto opp_rook  = board.pieces(PieceType::ROOK, ~c);
-    const auto opp_queen = board.pieces(PieceType::QUEEN, ~c);
+template <Color::underlying c, PieceType::underlying pt>
+[[nodiscard]] inline Bitboard movegen::pinMask(const Board &board, Square sq, Bitboard occ_opp,
+                                               Bitboard occ_us) noexcept {
+    static_assert(pt == PieceType::BISHOP || pt == PieceType::ROOK, "Only bishop or rook allowed!");
 
-    Bitboard rook_attacks = attacks::rook(sq, occ_opp) & (opp_rook | opp_queen);
-    Bitboard pin_hv       = 0;
+    const auto opp_pt_queen = board.pieces(pt, PieceType::QUEEN) & board.us(~c);
 
-    while (rook_attacks) {
-        const auto index = rook_attacks.pop();
+    auto pt_attacks = attacks::slider<pt>(sq, occ_opp) & opp_pt_queen;
 
-        const Bitboard possible_pin = between(sq, index);
-        if ((possible_pin & occ_us).count() == 1) pin_hv |= possible_pin;
+    Bitboard pin = 0ull;
+
+    while (pt_attacks) {
+        const auto possible_pin = between(sq, pt_attacks.pop());
+        if ((possible_pin & occ_us).count() == 1) pin |= possible_pin;
     }
 
-    return pin_hv;
-}
-
-template <Color::underlying c>
-[[nodiscard]] inline Bitboard movegen::pinMaskBishops(const Board &board, Square sq, Bitboard occ_opp,
-                                                      Bitboard occ_us) {
-    const auto opp_bishop = board.pieces(PieceType::BISHOP, ~c);
-    const auto opp_queen  = board.pieces(PieceType::QUEEN, ~c);
-
-    Bitboard bishop_attacks = attacks::bishop(sq, occ_opp) & (opp_bishop | opp_queen);
-    Bitboard pin_diag       = 0;
-
-    while (bishop_attacks) {
-        const auto index = bishop_attacks.pop();
-
-        const Bitboard possible_pin = between(sq, index);
-        if ((possible_pin & occ_us).count() == 1) pin_diag |= possible_pin;
-    }
-
-    return pin_diag;
+    return pin;
 }
 
 template <Color::underlying c>
@@ -127,11 +105,9 @@ template <Color::underlying c>
     auto king_sq          = board.kingSq(~c);
     Bitboard map_king_atk = attacks::king(king_sq) & enemy_empty;
 
-    if (map_king_atk == Bitboard(0ull) && !board.chess960()) {
-        return 0ull;
-    }
+    if (map_king_atk == Bitboard(0ull) && !board.chess960()) return 0ull;
 
-    auto occ     = board.occ() & ~Bitboard::fromSquare(king_sq);
+    auto occ     = board.occ() ^ Bitboard::fromSquare(king_sq);
     auto queens  = board.pieces(PieceType::QUEEN, c);
     auto pawns   = board.pieces(PieceType::PAWN, c);
     auto knights = board.pieces(PieceType::KNIGHT, c);
@@ -141,22 +117,18 @@ template <Color::underlying c>
     Bitboard seen = attacks::pawnLeftAttacks<c>(pawns) | attacks::pawnRightAttacks<c>(pawns);
 
     while (knights) {
-        const auto index = knights.pop();
-        seen |= attacks::knight(index);
+        seen |= attacks::knight(knights.pop());
     }
 
     while (bishops) {
-        const auto index = bishops.pop();
-        seen |= attacks::bishop(index, occ);
+        seen |= attacks::bishop(bishops.pop(), occ);
     }
 
     while (rooks) {
-        const auto index = rooks.pop();
-        seen |= attacks::rook(index, occ);
+        seen |= attacks::rook(rooks.pop(), occ);
     }
 
-    const Square index = board.kingSq(c);
-    seen |= attacks::king(index);
+    seen |= attacks::king(board.kingSq(c));
 
     return seen;
 }
@@ -287,7 +259,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
            (ep.rank() == Rank::RANK_6 && board.sideToMove() == Color::WHITE));
 
     std::array<Move, 2> moves = {Move::NO_MOVE, Move::NO_MOVE};
-    auto i                    = 0;
+    int i                     = 0;
 
     const auto DOWN     = make_direction(Direction::SOUTH, c);
     const auto epPawnSq = ep + DOWN;
@@ -297,11 +269,11 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
      that just moved are not on the checkmask
      en passant is not available.
     */
-    if ((checkmask & (Bitboard::fromSquare(epPawnSq) | Bitboard::fromSquare(ep))) == Bitboard(0)) return moves;
+    if ((checkmask & (Bitboard::fromSquare(epPawnSq) | Bitboard::fromSquare(ep))) == 0ull) return moves;
 
     const Square kSQ              = board.kingSq(c);
     const Bitboard kingMask       = Bitboard::fromSquare(kSQ) & epPawnSq.rank().bb();
-    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, ~c) | board.pieces(PieceType::QUEEN, ~c);
+    const Bitboard enemyQueenRook = board.pieces(PieceType::ROOK, PieceType::QUEEN) & board.us(~c);
 
     auto epBB = attacks::pawn(~c, ep) & pawns_lr;
 
@@ -328,8 +300,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         */
         const auto isPossiblePin = kingMask && enemyQueenRook;
 
-        if (isPossiblePin && (attacks::rook(kSQ, board.occ() & ~connectingPawns) & enemyQueenRook) != Bitboard(0))
-            break;
+        if (isPossiblePin && (attacks::rook(kSQ, board.occ() ^ connectingPawns) & enemyQueenRook) != 0ull) break;
 
         moves[i++] = Move::make<Move::ENPASSANT>(from, to);
     }
@@ -430,17 +401,17 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
     Bitboard opp_empty = ~occ_us;
 
     const auto [checkmask, checks] = checkMask<c>(board, king_sq);
-    const auto pin_hv              = pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
-    const auto pin_d               = pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+    const auto pin_hv              = pinMask<c, PieceType::ROOK>(board, king_sq, occ_opp, occ_us);
+    const auto pin_d               = pinMask<c, PieceType::BISHOP>(board, king_sq, occ_opp, occ_us);
 
     assert(checks <= 2);
 
     Bitboard movable_square;
 
     // Slider, Knights and King moves can only go to enemy or empty squares.
-    if (mt == MoveGenType::ALL)
+    if constexpr (mt == MoveGenType::ALL)
         movable_square = opp_empty;
-    else if (mt == MoveGenType::CAPTURE)
+    else if constexpr (mt == MoveGenType::CAPTURE)
         movable_square = occ_opp;
     else  // QUIET moves
         movable_square = ~occ_all;
@@ -523,8 +494,8 @@ inline bool movegen::isEpSquareValid(const Board &board, Square ep) {
     auto king_sq     = board.kingSq(stm);
 
     const auto [checkmask, checks] = movegen::checkMask<c>(board, king_sq);
-    const auto pin_hv              = movegen::pinMaskRooks<c>(board, king_sq, occ_opp, occ_us);
-    const auto pin_d               = movegen::pinMaskBishops<c>(board, king_sq, occ_opp, occ_us);
+    const auto pin_hv              = movegen::pinMask<c, PieceType::ROOK>(board, king_sq, occ_opp, occ_us);
+    const auto pin_d               = movegen::pinMask<c, PieceType::BISHOP>(board, king_sq, occ_opp, occ_us);
 
     const auto pawns    = board.pieces(PieceType::PAWN, stm);
     const auto pawns_lr = pawns & ~pin_hv;

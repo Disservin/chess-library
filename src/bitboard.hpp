@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#if __cplusplus >= 202002L
+#if __cpp_lib_bitops >= 201907L
 #    include <bit>
 #endif
 #include <algorithm>
@@ -118,12 +118,12 @@ class Bitboard {
     [[nodiscard]] constexpr bool empty() const noexcept { return bits == 0; }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         int lsb() const noexcept {
         assert(bits != 0);
-#if __cplusplus >= 202002L
+#if __cpp_lib_bitops >= 201907L
         return std::countr_zero(bits);
 #else
 #    if defined(__GNUC__)
@@ -139,13 +139,13 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         int msb() const noexcept {
         assert(bits != 0);
 
-#if __cplusplus >= 202002L
+#if __cpp_lib_bitops >= 201907L
         return std::countl_zero(bits) ^ 63;
 #else
 #    if defined(__GNUC__)
@@ -161,11 +161,11 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         int count() const noexcept {
-#if __cplusplus >= 202002L
+#if __cpp_lib_bitops >= 201907L
         return std::popcount(bits);
 #else
 #    if defined(_MSC_VER) || defined(__INTEL_COMPILER)
@@ -177,7 +177,7 @@ class Bitboard {
     }
 
     [[nodiscard]]
-#if !defined(_MSC_VER)
+#if __cpp_lib_bitops >= 201907L
     constexpr
 #endif
         std::uint8_t pop() noexcept {
