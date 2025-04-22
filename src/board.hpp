@@ -151,6 +151,7 @@ class Board {
     Board(PrivateCtor) {}
 
    public:
+    std::vector<Move> move_stack;
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
         prev_states_.reserve(256);
         chess960_ = chess960;
@@ -464,8 +465,25 @@ class Board {
 
         key_ ^= Zobrist::sideToMove();
         stm_ = ~stm_;
+        move_stack.push_back(move);
     }
-
+	Move pop() {
+    	if (move_stack.empty()) {
+        	std::cerr << "Error: pop() called on empty move stack!" << std::endl;
+        	return Move::NO_MOVE; // Return a clearly invalid move
+    	}
+	
+    	Move move = move_stack.back();
+    	move_stack.pop_back();
+	
+    	if (move.from() != Square::underlying::NO_SQ && move.to() != Square::underlying::NO_SQ) {
+        	unmakeMove(move);  
+    	} else {
+        	std::cerr << "Error: Corrupted move detected in pop(): " << move << std::endl;
+    	}
+	
+    	return move;
+	}
     void unmakeMove(const Move move) {
         const auto &prev = prev_states_.back();
 
