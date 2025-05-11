@@ -583,7 +583,7 @@ TEST_SUITE("SAN Parser") {
         Move san = Move::NO_MOVE;
 
         CHECK_THROWS_WITH_AS(san = uci::parseSan(b, "Nec4"),
-                             "Failed to parse san. At step 3: Nec4 8/8/6K1/4k3/4N3/p4r2/N3N3/8 w - - 3 82",
+                             "Failed to parse san, illegal move: Nec4 8/8/6K1/4k3/4N3/p4r2/N3N3/8 w - - 3 82",
                              uci::SanParseError);
         CHECK(san == Move::NO_MOVE);
     }

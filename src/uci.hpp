@@ -250,7 +250,7 @@ class uci {
 
         if (!foundMatch) {
 #ifndef CHESS_NO_EXCEPTIONS
-            throw SanParseError("Failed to parse san. At step 3: " + std::string(san) + " " + board.getFen());
+            throw SanParseError("Failed to parse san, illegal move: " + std::string(san) + " " + board.getFen());
 #endif
         }
 
@@ -328,6 +328,7 @@ class uci {
         static constexpr auto sw     = [](const char &c) { return std::string_view(&c, 1); };
 
         SanMoveInformation info;
+        bool throw_error = false;
 
         // set to 1 to skip piece type offset
         std::size_t index = 1;
@@ -340,6 +341,9 @@ class uci {
             info.piece = PieceType::PAWN;
         } else {
             info.piece = PieceType(san);
+            if (info.piece == PieceType::NONE) {
+                throw_error = true;
+            }
         }
 
         File file_to = File::NO_FILE;
@@ -379,13 +383,10 @@ class uci {
         if (index < san.size() && san[index] == '=') {
             index++;
             info.promotion = PieceType(sw(san[index]));
-
-#ifndef CHESS_NO_EXCEPTIONS
             if (info.promotion == PieceType::KING || info.promotion == PieceType::PAWN ||
-                info.promotion == PieceType::NONE)
-                throw SanParseError("Failed to parse promotion, during san conversion." + std::string(san));
-#endif
-
+                info.promotion == PieceType::NONE) {
+                throw_error = true;
+            }
             index++;
         }
 
@@ -404,7 +405,17 @@ class uci {
             info.from_file = file_to;
         }
 
-        info.to = Square(file_to, rank_to);
+        if (file_to != File::NO_FILE && rank_to != Rank::NO_RANK) {
+            info.to = Square(file_to, rank_to);
+        } else {
+            throw_error = true;
+        }
+
+#ifndef CHESS_NO_EXCEPTIONS
+        if (throw_error) {
+            throw SanParseError("Failed to parse san. At step 1: " + std::string(san));
+        }
+#endif
 
         if (info.from_file != File::NO_FILE && info.from_rank != Rank::NO_RANK) {
             info.from = Square(info.from_file, info.from_rank);
