@@ -93,7 +93,7 @@ template <PieceType::underlying pt>
 
 template <bool ISROOK>
 [[nodiscard]] inline Bitboard attacks::sliderAttacks(Square sq, Bitboard occupied) noexcept {
-    static constexpr int dirs[2][4][2] = {{1, 1, 1, -1, -1, -1, -1, 1}, {1, 0, 0, -1, -1, 0, 0, 1}};
+    static constexpr int dirs[2][4][2] = {{{1, 1}, {1, -1}, {-1, -1}, {-1, 1}}, {{1, 0}, {0, -1}, {-1, 0}, {0, 1}}};
 
     Bitboard attacks = 0ull;
 
