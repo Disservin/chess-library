@@ -427,7 +427,7 @@ class StreamParser {
         while (auto c = stream_buffer.some()) {
             if (*c == ' ' || is_digit(*c)) {
                 stream_buffer.advance();
-            } else if (*c == '-' || *c == '*' || c == '/') {
+            } else if (*c == '-' || *c == '*' || *c == '/') {
                 is_termination_symbol = true;
                 stream_buffer.advance();
             } else if (*c == '{') {
@@ -458,7 +458,7 @@ class StreamParser {
         }
 
         // we need to reparse the termination symbol
-        if (has_comment && !is_termination_symbol) {
+        if (!visitor->skip() && has_comment && !is_termination_symbol) {
             goto start;
         }
 
