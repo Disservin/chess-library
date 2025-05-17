@@ -450,6 +450,7 @@ class StreamParser {
                 if (!visitor->skip()) {
                     visitor->move("", comment);
 
+                    has_comment = false;
                     comment.clear();
                 }
             } else {

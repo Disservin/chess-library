@@ -606,4 +606,15 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(parser.readGames(*vis) == pgn::StreamParserError::InvalidHeaderMissingClosingQuote);
         CHECK(vis->gameCount() == 1);
     }
+
+    TEST_CASE("Comment before moves") {
+        const auto file  = "./tests/pgns/comment_before_moves.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        SmallBufferStreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        // this test checks if the parser avoids an endless loop
+    }
 }

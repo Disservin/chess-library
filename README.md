@@ -97,6 +97,10 @@ meson compile -C build
 ```bash
 meson test -C build
 ```
+or
+```bash
+meson test -C build --test-args='--test-suite="PGN StreamParser"'
+```
 
 #### Example
 
