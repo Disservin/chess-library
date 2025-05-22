@@ -1169,10 +1169,10 @@ class attacks {
     [[nodiscard]] static Bitboard king(Square sq) noexcept;
 
     /**
-     * @brief Returns the attacks for a given piece on a given square
+     * @brief Returns the origin squares of pieces of a given color attacking a target square
      * @param board
-     * @param color
-     * @param square
+     * @param color Attacker Color
+     * @param square Attacked Square
      * @return
      */
     [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
