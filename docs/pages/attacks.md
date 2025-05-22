@@ -20,7 +20,7 @@ namespace attacks {
     template <Color c>
     Bitboard pawnRightAttacks(const Bitboard pawns);
 
-    /// @brief Returns a bitboard with the origin squares of the attacking pieces set
+    /// @brief Returns the origin squares of pieces of a given color attacking a target square
     /// @param board
     /// @param color Attacker Color
     /// @param square Attacked Square
