@@ -171,8 +171,10 @@ class Square {
     constexpr Square() : sq(underlying::NO_SQ) {}
 
     constexpr Square(int sq) : sq(static_cast<underlying>(sq)) { assert(sq <= 64 && sq >= 0); }
-    constexpr Square(File file, Rank rank) : sq(static_cast<underlying>(file + rank * 8)) {}
-    constexpr Square(Rank rank, File file) : sq(static_cast<underlying>(file + rank * 8)) {}
+    constexpr Square(File file, Rank rank) : sq(static_cast<underlying>(file + rank * 8)) { 
+         assert(static_cast<int>(sq) <= 64 && static_cast<int>(sq) >= 0); 
+    }
+    constexpr Square(Rank rank, File file) : Square(file, rank) {}
     constexpr Square(underlying sq) : sq(sq) {}
     constexpr Square(std::string_view str) : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {
         assert(str.size() >= 2);
