@@ -104,10 +104,10 @@ template <bool ISROOK>
         int off_f = dirs[ISROOK][i][0];
         int off_r = dirs[ISROOK][i][1];
 
-        File f;
-        Rank r;
+        int f;
+        int r;
         for (f = pf + off_f, r = pr + off_r; Square::is_valid(r, f); f += off_f, r += off_r) {
-            const auto index = Square(f, r).index();
+            const auto index = Square(File{f}, Rank{r}).index();
             attacks.set(index);
             if (occupied.check(index)) break;
         }
