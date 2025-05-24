@@ -29,7 +29,7 @@ class File {
     constexpr File(int file) : file_(static_cast<underlying>(file)) { assert(file <= 8 && file >= 0); }
     constexpr File(std::string_view sw)
         : file_(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - 'a')) {
-          assert(static_cast<std::uint8_t>(file_) <= 8);
+        assert(static_cast<std::uint8_t>(file_) <= 8);
     }
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return file_; }
@@ -86,8 +86,8 @@ class Rank {
     constexpr Rank(underlying rank) : rank_(rank) {}
     constexpr Rank(int rank) : rank_(static_cast<underlying>(rank)) { assert(rank <= 8 && rank >= 0); }
     constexpr Rank(std::string_view sw)
-        : rank_(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - '1')) {
-          assert(static_cast<std::uint8_t>(rank_) <= 8);
+        : rank_(static_cast<underlying>(static_cast<char>(utils::tolower(sw[0])) - '1')) {
+        assert(static_cast<std::uint8_t>(rank_) <= 8);
     }
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return rank_; }
@@ -176,11 +176,11 @@ class Square {
 
     constexpr Square(int sq) : sq(static_cast<underlying>(sq)) { assert(sq <= 64 && sq >= 0); }
     constexpr Square(File file, Rank rank) : sq(static_cast<underlying>(file + rank * 8)) {
-         assert(file != File::NO_FILE && rank != Rank::NO_RANK);
+        assert(file != File::NO_FILE && rank != Rank::NO_RANK);
     }
     constexpr Square(Rank rank, File file) : Square(file, rank) {}
     constexpr Square(underlying sq) : sq(sq) {}
-    constexpr Square(std::string_view str) : Square(File(str[0]), Rank(str[1])) {
+    constexpr Square(std::string_view str) : Square(File(str.substr(0, 1)), Rank(str.substr(1, 1))) {
         assert(str.size() >= 2);
     }
 
@@ -257,8 +257,7 @@ class Square {
      * @brief Check if the square is light.
      * @return
      */
-    [[nodiscard]] constexpr bool is_light() const noexcept { return (file() + rank()) & 1;
-    }
+    [[nodiscard]] constexpr bool is_light() const noexcept { return (file() + rank()) & 1; }
 
     /**
      * @brief Check if the square is dark.
@@ -280,6 +279,16 @@ class Square {
      */
     [[nodiscard]] constexpr static bool is_valid(Rank r, File f) noexcept {
         return r >= Rank::RANK_1 && r <= Rank::RANK_8 && f >= File::FILE_A && f <= File::FILE_H;
+    }
+
+    /**
+     * @brief Check if the square is valid.
+     * @param r
+     * @param f
+     * @return
+     */
+    [[nodiscard]] constexpr static bool is_valid(int r, int f) noexcept {
+        return r >= int(Rank::RANK_1) && r <= int(Rank::RANK_8) && f >= int(File::FILE_A) && f <= int(File::FILE_H);
     }
 
     /**
