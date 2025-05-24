@@ -24,43 +24,45 @@ class File {
    public:
     enum class underlying : std::uint8_t { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NO_FILE };
 
-    constexpr File() : file(underlying::NO_FILE) {}
-    constexpr File(underlying file) : file(file) {}
-    constexpr File(int file) : file(static_cast<underlying>(file)) {}
+    constexpr File() : file_(underlying::NO_FILE) {}
+    constexpr File(underlying file) : file_(file) {}
+    constexpr File(int file) : file_(static_cast<underlying>(file)) { assert(file <= 8 && file >= 0); }
     constexpr File(std::string_view sw)
-        : file(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - 'a')) {}
+        : file_(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - 'a')) {
+          assert(static_cast<std::uint8_t>(file_) <= 8);
+    }
 
-    [[nodiscard]] constexpr underlying internal() const noexcept { return file; }
+    [[nodiscard]] constexpr underlying internal() const noexcept { return file_; }
 
-    constexpr bool operator==(const File& rhs) const noexcept { return file == rhs.file; }
-    constexpr bool operator!=(const File& rhs) const noexcept { return file != rhs.file; }
+    constexpr bool operator==(const File& rhs) const noexcept { return file_ == rhs.file_; }
+    constexpr bool operator!=(const File& rhs) const noexcept { return file_ != rhs.file_; }
 
-    constexpr bool operator==(const underlying& rhs) const noexcept { return file == rhs; }
-    constexpr bool operator!=(const underlying& rhs) const noexcept { return file != rhs; }
+    constexpr bool operator==(const underlying& rhs) const noexcept { return file_ == rhs; }
+    constexpr bool operator!=(const underlying& rhs) const noexcept { return file_ != rhs; }
 
     constexpr bool operator>=(const File& rhs) const noexcept {
-        return static_cast<int>(file) >= static_cast<int>(rhs.file);
+        return static_cast<int>(file_) >= static_cast<int>(rhs.file_);
     }
     constexpr bool operator<=(const File& rhs) const noexcept {
-        return static_cast<int>(file) <= static_cast<int>(rhs.file);
+        return static_cast<int>(file_) <= static_cast<int>(rhs.file_);
     }
 
     constexpr bool operator>(const File& rhs) const noexcept {
-        return static_cast<int>(file) > static_cast<int>(rhs.file);
+        return static_cast<int>(file_) > static_cast<int>(rhs.file_);
     }
 
     constexpr bool operator<(const File& rhs) const noexcept {
-        return static_cast<int>(file) < static_cast<int>(rhs.file);
+        return static_cast<int>(file_) < static_cast<int>(rhs.file_);
     }
 
     constexpr File& operator+=(int rhs) noexcept {
-        file = underlying(static_cast<int>(file) + rhs);
+        file_ = underlying(static_cast<int>(file_) + rhs);
         return *this;
     }
 
-    constexpr operator int() const noexcept { return static_cast<int>(file); }
+    constexpr operator int() const noexcept { return static_cast<int>(file_); }
 
-    explicit operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(file) + 'a')); }
+    explicit operator std::string() const { return std::string(1, static_cast<char>(static_cast<int>(file_) + 'a')); }
 
     static constexpr underlying FILE_A  = underlying::FILE_A;
     static constexpr underlying FILE_B  = underlying::FILE_B;
@@ -73,18 +75,20 @@ class File {
     static constexpr underlying NO_FILE = underlying::NO_FILE;
 
    private:
-    underlying file;
+    underlying file_;
 };
 
 class Rank {
    public:
-    enum class underlying { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NO_RANK };
+    enum class underlying : std::uint8_t { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NO_RANK };
 
     constexpr Rank() : rank_(underlying::NO_RANK) {}
     constexpr Rank(underlying rank) : rank_(rank) {}
-    constexpr Rank(int rank) : rank_(static_cast<underlying>(rank)) {}
+    constexpr Rank(int rank) : rank_(static_cast<underlying>(rank)) { assert(rank <= 8 && rank >= 0); }
     constexpr Rank(std::string_view sw)
-        : rank_(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - '1')) {}
+        : rank_(static_cast<underlying>(static_cast<char>(utils::tolower(static_cast<unsigned char>(sw[0]))) - '1')) {
+          assert(static_cast<std::uint8_t>(rank_) <= 8);
+    }
 
     [[nodiscard]] constexpr underlying internal() const noexcept { return rank_; }
 
@@ -137,7 +141,7 @@ class Rank {
 class Square {
    public:
     // clang-format off
-    enum class underlying {
+    enum class underlying : std::uint8_t {
         SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
         SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
         SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
@@ -171,12 +175,12 @@ class Square {
     constexpr Square() : sq(underlying::NO_SQ) {}
 
     constexpr Square(int sq) : sq(static_cast<underlying>(sq)) { assert(sq <= 64 && sq >= 0); }
-    constexpr Square(File file, Rank rank) : sq(static_cast<underlying>(file + rank * 8)) { 
-         assert(static_cast<int>(sq) <= 64 && static_cast<int>(sq) >= 0); 
+    constexpr Square(File file, Rank rank) : sq(static_cast<underlying>(file + rank * 8)) {
+         assert(file != File::NO_FILE && rank != Rank::NO_RANK);
     }
     constexpr Square(Rank rank, File file) : Square(file, rank) {}
     constexpr Square(underlying sq) : sq(sq) {}
-    constexpr Square(std::string_view str) : sq(static_cast<underlying>((str[0] - 'a') + (str[1] - '1') * 8)) {
+    constexpr Square(std::string_view str) : Square(File(str[0]), Rank(str[1])) {
         assert(str.size() >= 2);
     }
 
