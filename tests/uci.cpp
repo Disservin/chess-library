@@ -84,6 +84,70 @@ TEST_SUITE("UCI Move Conversion") {
 
         CHECK(uci::uciToMove(b, uci) == Move::NO_MOVE);
     }
+
+    TEST_CASE("Standard Castle White") {
+        Board b("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1");
+
+        std::string uci = "e1g1";
+
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_H1));
+    }
+
+    TEST_CASE("Standard Castle Black") {
+        Board b("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R b KQkq - 0 1");
+
+        std::string uci = "e8g8";
+
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::CASTLING>(Square::SQ_E8, Square::SQ_H8));
+    }
+
+    TEST_CASE("Standard Castle White Long") {
+        Board b("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R b KQkq - 0 1");
+
+        std::string uci = "e1c1";
+
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_A1));
+    }
+
+    TEST_CASE("Standard Castle White Long") {
+        Board b("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R b KQkq - 0 1");
+
+        std::string uci = "e8c8";
+
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::CASTLING>(Square::SQ_E8, Square::SQ_A8));
+    }
+
+    TEST_CASE("Chess960 Castle White") {
+        Board b("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1", true);
+
+        std::string uci = "e1h1";
+
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_H1));
+    }
+
+    TEST_CASE("Chess960 Castle Black") {
+        Board b("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R b KQkq - 0 1", true);
+
+        std::string uci = "e8h8";
+
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::CASTLING>(Square::SQ_E8, Square::SQ_H8));
+    }
+
+    TEST_CASE("Chess960 Castle White Long") {
+        Board b("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1", true);
+
+        std::string uci = "e1a1";
+
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_A1));
+    }
+
+    TEST_CASE("Chess960 Castle Black Long") {
+        Board b("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R b KQkq - 0 1", true);
+
+        std::string uci = "e8a8";
+
+        CHECK(uci::uciToMove(b, uci) == Move::make<Move::CASTLING>(Square::SQ_E8, Square::SQ_A8));
+    }
 }
 
 TEST_SUITE("UCI isUciMove Check") {
