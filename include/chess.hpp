@@ -3237,26 +3237,33 @@ class Board {
 
    private:
     void appendFenPiecePlacement(std::string& ss) const {
-        for (int rank = 7; rank >= 0; rank--) {
-            std::uint32_t free_space = 0;
+        for (int rank = 7; rank >= 0; --rank) {
+            auto rank_bb = (occ() & Rank(rank).bb()) >> (rank * 8);
+            int lsb      = -1;
+            int last_lsb = -1;
 
-            for (int file = 0; file < 8; file++) {
-                const int sq = rank * 8 + file;
+            while (rank_bb) {
+                lsb = rank_bb.pop();
 
-                if (Piece piece = at(Square(sq)); piece != Piece::NONE) {
-                    if (free_space) {
-                        ss += std::to_string(free_space);
-                        free_space = 0;
-                    }
-
-                    ss += static_cast<std::string>(piece);
-                } else {
-                    free_space++;
+                if (lsb != 0 && lsb != last_lsb + 1) {
+                    int free_space = lsb - last_lsb - 1;
+                    if (free_space > 0) ss += char('0' + free_space);
                 }
+
+                last_lsb = lsb;
+
+                Square sq(lsb + rank * 8);
+                ss += static_cast<std::string_view>(at(sq));
             }
 
-            if (free_space != 0) ss += std::to_string(free_space);
-            ss += (rank > 0 ? "/" : "");
+            if (lsb != 7) {
+                if (lsb == -1)
+                    ss += '8';
+                else if (lsb < 7)
+                    ss += char('0' + (7 - lsb));
+            }
+
+            if (rank > 0) ss += '/';
         }
     }
 
