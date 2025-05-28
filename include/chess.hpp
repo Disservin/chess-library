@@ -875,6 +875,13 @@ class Piece {
         return pieceStr[static_cast<int>(piece)];
     }
 
+    explicit operator std::string_view() const {
+        constexpr static const char* pieceStr[] = {"P", "N", "B", "R", "Q", "K",  //
+                                                   "p", "n", "b", "r", "q", "k"};
+        if (piece == NONE) return ".";
+        return std::string_view(pieceStr[static_cast<int>(piece)], 1);
+    }
+
     constexpr operator int() const noexcept { return static_cast<int>(piece); }
 
     [[nodiscard]] constexpr PieceType type() const noexcept {
@@ -1930,12 +1937,13 @@ class Board {
                     // If there were any empty squares before this piece,
                     // append the number of empty squares to the FEN string
                     if (free_space) {
-                        ss += std::to_string(free_space);
+                        // ss += std::to_string(free_space);
+                        ss += char('0' + free_space);
                         free_space = 0;
                     }
 
                     // Append the character representing the piece to the FEN string
-                    ss += static_cast<std::string>(piece);
+                    ss += static_cast<std::string_view>(piece);
                 } else {
                     // If there is no piece at the current square, increment the
                     // counter for the number of empty squares
@@ -1946,7 +1954,8 @@ class Board {
             // If there are any empty squares at the end of the rank,
             // append the number of empty squares to the FEN string
             if (free_space != 0) {
-                ss += std::to_string(free_space);
+                // ss += std::to_string(free_space);
+                ss += char('0' + free_space);
             }
 
             // Append a "/" character to the FEN string, unless this is the last rank
