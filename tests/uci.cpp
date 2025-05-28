@@ -84,6 +84,34 @@ TEST_SUITE("UCI Move Conversion") {
 
         CHECK(uci::uciToMove(b, uci) == Move::NO_MOVE);
     }
+
+    TEST_CASE("Black castling") {
+        Board b;
+        b.setFen("r1b1k2r/pppp1ppp/2nbp3/5n2/6Q1/2N1PN2/PPPP1PPP/R1B1K2R b KQkq - 3 8");
+        std::string uci = "e8g8";
+
+        b.makeMove(uci::uciToMove(b, uci));
+        CHECK(b.getFen()=="r1b2rk1/pppp1ppp/2nbp3/5n2/6Q1/2N1PN2/PPPP1PPP/R1B1K2R w KQ - 4 9");
+    }
+    TEST_CASE("White castling") {
+        Board b;
+        b.setFen("r1b2rk1/pppp1ppp/2nbp3/5n2/6Q1/2N1PN2/PPPP1PPP/R1B1K2R w KQ - 4 9");
+        std::string uci = "e1g1";
+
+        b.makeMove(uci::uciToMove(b, uci));
+        CHECK(b.getFen()=="r1b2rk1/pppp1ppp/2nbp3/5n2/6Q1/2N1PN2/PPPP1PPP/R1B2RK1 b - - 5 9");
+    }
+    TEST_CASE("Movelist white castling") {
+        chess::Board board;
+        std::istringstream iss("e2e3 e7e6 d1g4 d8f6 f1d3 b8c6 b1c3 g8h6 g4h5 f6f5 "
+                                "d3f5 h6f5 g1f3 f8d6 h5g4 e8g8 e1h1");
+        std::string token;
+        while (iss >> token) {
+            chess::Move mv = chess::uci::uciToMove(board, token);
+            board.makeMove(mv);
+        }
+        CHECK(board.getFen()=="r1b2rk1/pppp1ppp/2nbp3/5n2/6Q1/2N1PN2/PPPP1PPP/R1B2RK1 b - - 5 9");
+    }
 }
 
 TEST_SUITE("UCI isUciMove Check") {
