@@ -1293,7 +1293,7 @@ class Move {
     std::int16_t score_;
 };
 
-inline std::ostream &operator<<(std::ostream &os, const Move &move) {
+[[deprecated]] inline std::ostream &operator<<(std::ostream &os, const Move &move) {
     Square from_sq = move.from();
     Square to_sq   = move.to();
 
