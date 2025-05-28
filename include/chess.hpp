@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.8.16
+VERSION: 0.8.2
 */
 
 #ifndef CHESS_HPP
@@ -1293,18 +1293,6 @@ class Move {
     std::int16_t score_;
 };
 
-inline std::ostream &operator<<(std::ostream &os, const Move &move) {
-    Square from_sq = move.from();
-    Square to_sq   = move.to();
-
-    os << from_sq << to_sq;
-
-    if (move.typeOf() == Move::PROMOTION) {
-        os << static_cast<std::string>(move.promotionType());
-    }
-
-    return os;
-}
 }  // namespace chess
 
 

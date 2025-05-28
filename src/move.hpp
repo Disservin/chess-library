@@ -81,16 +81,4 @@ class Move {
     std::int16_t score_;
 };
 
-inline std::ostream &operator<<(std::ostream &os, const Move &move) {
-    Square from_sq = move.from();
-    Square to_sq   = move.to();
-
-    os << from_sq << to_sq;
-
-    if (move.typeOf() == Move::PROMOTION) {
-        os << static_cast<std::string>(move.promotionType());
-    }
-
-    return os;
-}
 }  // namespace chess
