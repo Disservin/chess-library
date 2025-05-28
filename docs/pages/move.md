@@ -108,7 +108,5 @@ struct Move {
     static constexpr std::uint16_t PROMOTION = 1 << 14;
     static constexpr std::uint16_t ENPASSANT = 2 << 14;
     static constexpr std::uint16_t CASTLING  = 3 << 14;
-
-    friend std::ostream& operator<<(std::ostream& os, const Move& move);
 };
 ```
