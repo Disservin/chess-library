@@ -16,3 +16,4 @@ python = find_program('python3', 'python')
 
 subdir('include')
 subdir('tests')
+subdir('benchmarks')

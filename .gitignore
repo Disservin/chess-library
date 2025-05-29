@@ -87,6 +87,7 @@ docs/.vitepress/dist
 src/out
 
 *.pgn
+*.epd
 
 .idea
 
