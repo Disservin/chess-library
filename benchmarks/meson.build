@@ -9,7 +9,7 @@ foreach bench_file : benchmark_files
   
   executable(bench_name,
     sources : [bench_file],
-    cpp_args: [ '-std=c++17', '-g3', '-O3', '-fno-omit-frame-pointer', '-march=native'],
+    cpp_args: [ '-std=c++17', '-g3', '-O3', '-fno-omit-frame-pointer', '-march=native', '-DNDEBUG' ],
     dependencies : [],
     install : true,
     install_dir : 'bin/benchmarks')
