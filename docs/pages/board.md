@@ -143,7 +143,7 @@ class Board {
          */
         std::pair<GameResultReason, GameResult> isGameOver();
 
-        /// @brief Checks if the square is attackeqd by the color.
+        /// @brief Checks if the square is attacked by the color.
         bool isAttacked(Square square, Color color);
 
         /// @brief Check if the current position is in check.
