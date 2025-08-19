@@ -302,7 +302,7 @@ class Square {
     // clang-format on
 
 // when c++20
-#if __cplusplus >= 202002L || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
+#if (__cplusplus >= 202002L && __GNUC__ >= 12) || (defined(_MSC_VER) && _MSVC_LANG >= 202002L)
     using enum underlying;
 #else
 
