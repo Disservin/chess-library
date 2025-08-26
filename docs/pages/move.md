@@ -40,7 +40,7 @@ std::string moveToUci(const Move& move, bool chess960 = false);
  * @param uci
  * @return NO_MOVE if the move is invalid.
  */
-Move uciToMove(const Board& board, const std::string& uci);
+Move uciToMove(const Board& board, std::string_view uci);
 
 /**
  * @brief Converts a move to a SAN string
@@ -72,7 +72,7 @@ Move parseSan(const Board& board, std::string_view san);
  * @param move
  * @return
  */
-static bool isUciMove(const std::string &move) noexcept;
+static bool isUciMove(std::string_view move) noexcept;
 }  // namespace uci
 ```
 
