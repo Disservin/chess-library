@@ -4683,7 +4683,7 @@ class uci {
      * @param uci
      * @return
      */
-    [[nodiscard]] static Move uciToMove(const Board &board, const std::string &uci) noexcept(false) {
+    [[nodiscard]] static Move uciToMove(const Board &board, std::string_view uci) noexcept(false) {
         if (uci.length() < 4) {
             return Move::NO_MOVE;
         }
@@ -4893,7 +4893,7 @@ class uci {
      * @param move
      * @return
      */
-    static bool isUciMove(const std::string &move) noexcept {
+    static bool isUciMove(std::string_view move) noexcept {
         bool is_uci = false;
 
         static constexpr auto is_digit     = [](char c) { return c >= '1' && c <= '8'; };
