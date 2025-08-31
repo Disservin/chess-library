@@ -639,4 +639,20 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->headers()[5] == "Black Владимир Петров");
         CHECK(vis->headers()[6] == "Result 1-0");
     }
+
+    TEST_CASE("Unescaped header") {
+        const auto file  = "./tests/pgns/unescaped_quote_header.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        SmallBufferStreamParser parser(file_stream);
+        auto err = parser.readGames(*vis);
+
+        CHECK(err == pgn::StreamParserError::InvalidHeaderMissingClosingBracket);
+
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 0);
+        CHECK(vis->moveStartCount() == 0);
+        CHECK(vis->headers().size() == 0);
+    }
 }
