@@ -36,7 +36,9 @@ class MyVisitor : public pgn::Visitor {
         total_pos++;
     }
 
-    void endPgn() {}
+    void endPgn() {
+        board.setFen(constants::STARTPOS);
+    }
 
    private:
     Board board;
