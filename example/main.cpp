@@ -6,22 +6,41 @@
 
 using namespace chess;
 
+std::size_t total_games = 0, total_pos = 0;
+
 class MyVisitor : public pgn::Visitor {
    public:
     virtual ~MyVisitor() {}
 
     void startPgn() {}
 
-    void header(std::string_view key, std::string_view value) {}
+    void header(std::string_view key, std::string_view value) {
+        if (key == "FEN") {
+            board.setFen(value);
+        }
+    }
 
-    void startMoves() {}
+    void startMoves() {
+        total_games++;
+    }
 
-    void move(std::string_view move, std::string_view comment) {}
+    void move(std::string_view move, std::string_view) {
+        Move m = uci::parseSan(board, move, moves);
+
+        if (m == Move::NO_MOVE) {
+            this->skipPgn(true);
+            return;
+        }
+
+        board.makeMove<true>(m);
+        total_pos++;
+    }
 
     void endPgn() {}
 
    private:
     Board board;
+    Movelist moves;
 };
 
 int main(int argc, char const* argv[]) {
@@ -53,7 +72,7 @@ int main(int argc, char const* argv[]) {
               << (file_size_mb / (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0))
               << "\n";
 
-    std::cout << (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0) << "\n";
+    std::cout << "Parsed " << total_pos << " positions from " << total_games << " games in " << (std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() / 1000.0) << "s\n";
 
     return 0;
 }
