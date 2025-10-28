@@ -205,3 +205,30 @@ TEST_SUITE("UCI isUciMove Check") {
         CHECK_FALSE(uci::isUciMove("e7k8q"));  // Invalid file promotion
     }
 }
+
+TEST_SUITE("UCI moveToUci Conversion") {
+    TEST_CASE("Standard quiet move") {
+        Move m = Move::make(Square::SQ_E2, Square::SQ_E4);
+        CHECK(uci::moveToUci(m) == "e2e4");
+    }
+
+    TEST_CASE("Promotion move") {
+        Move m = Move::make<Move::PROMOTION>(Square::SQ_A7, Square::SQ_A8, PieceType::QUEEN);
+        CHECK(uci::moveToUci(m) == "a7a8q");
+    }
+
+    TEST_CASE("Standard king-side castling") {
+        Move m = Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_H1);
+        CHECK(uci::moveToUci(m) == "e1g1");
+    }
+
+    TEST_CASE("Standard queen-side castling") {
+        Move m = Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_A1);
+        CHECK(uci::moveToUci(m) == "e1c1");
+    }
+
+    TEST_CASE("Chess960 castling preserves rook square") {
+        Move m = Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_G1);
+        CHECK(uci::moveToUci(m, true) == "e1g1");
+    }
+}
