@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <cctype>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -33,17 +32,16 @@ class uci {
             to_sq = Square(to_sq > from_sq ? File::FILE_G : File::FILE_C, from_sq.rank());
         }
 
-        std::stringstream ss;
-
         // Add the from and to squares to the string stream
-        ss << from_sq << to_sq;
+        std::string result = static_cast<std::string>(from_sq);
+        result += static_cast<std::string>(to_sq);
 
         // If the move is a promotion, add the promoted piece to the string stream
         if (move.typeOf() == Move::PROMOTION) {
-            ss << static_cast<std::string>(move.promotionType());
+            result += static_cast<std::string>(move.promotionType());
         }
 
-        return ss.str();
+        return result;
     }
 
     /**

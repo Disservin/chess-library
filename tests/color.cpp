@@ -1,6 +1,8 @@
 #include "../src/include.hpp"
 #include "doctest/doctest.hpp"
 
+#include <sstream>
+
 using namespace chess;
 
 TEST_SUITE("Color") {
