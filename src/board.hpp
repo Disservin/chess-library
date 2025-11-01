@@ -371,28 +371,20 @@ class Board {
 
                 // add enpassant hash if enemy pawns are attacking the square
                 if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
-                    int found = -1;
+                    bool found;
 
                     // check if the enemy can legally capture the pawn on the next move
                     if constexpr (EXACT) {
                         const auto piece = at(move.from());
-
-                        found = 0;
 
                         removePieceInternal(piece, move.from());
                         placePieceInternal(piece, move.to());
 
                         stm_ = ~stm_;
 
-                        bool valid;
-
-                        if (stm_ == Color::WHITE) {
-                            valid = movegen::isEpSquareValid<Color::WHITE>(*this, move.to().ep_square());
-                        } else {
-                            valid = movegen::isEpSquareValid<Color::BLACK>(*this, move.to().ep_square());
-                        }
-
-                        if (valid) found = 1;
+                        found = (stm_ == Color::WHITE)
+                                    ? movegen::isEpSquareValid<Color::WHITE>(*this, move.to().ep_square())
+                                    : movegen::isEpSquareValid<Color::BLACK>(*this, move.to().ep_square());
 
                         // undo
                         stm_ = ~stm_;
@@ -401,7 +393,7 @@ class Board {
                         placePieceInternal(piece, move.from());
                     }
 
-                    if (found != 0) {
+                    if (!EXACT || found) {
                         assert(at(move.to().ep_square()) == Piece::NONE);
                         ep_sq_ = move.to().ep_square();
                         key_ ^= Zobrist::enpassant(move.to().ep_square().file());
