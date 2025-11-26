@@ -41,12 +41,12 @@ TEST_SUITE("SAN Parser") {
     }
 
     TEST_CASE("Test ambiguous rook move with checkmate") {
-        auto b = Board{"7k/8/8/8/8/8/2K3R1/3R4 w - - 0 1"};
+        auto b = Board{"4k3/8/8/8/8/8/2KR1R2/3R1R2 w - - 0 1"};
 
-        Move m = Move::make(Square::SQ_D1, Square::SQ_H1);
+        Move m = Move::make(Square::SQ_D2, Square::SQ_E2);
 
-        CHECK(uci::moveToSan(b, m) == "Rh1#");
-        CHECK(uci::parseSan(b, "Rh1#") == m);
+        CHECK(uci::moveToSan(b, m) == "Rde2#");
+        CHECK(uci::parseSan(b, "Rde2#") == m);
     }
 
     TEST_CASE("Test Knight move") {
