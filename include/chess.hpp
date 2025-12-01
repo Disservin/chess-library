@@ -1817,6 +1817,8 @@ class Board {
             return sq > pred ? Side::KING_SIDE : Side::QUEEN_SIDE;
         }
 
+        bool operator==(const CastlingRights &other) const noexcept { return rooks == other.rooks; }
+
        private:
         std::array<std::array<File, 2>, 2> rooks;
     };
@@ -2824,6 +2826,24 @@ class Board {
             }
 
             board.key_ = board.zobrist();
+
+            board.castling_path = {};
+
+            for (Color c : {Color::WHITE, Color::BLACK}) {
+                const auto king_from = board.kingSq(c);
+
+                for (const auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE}) {
+                    if (!board.cr_.has(c, side)) continue;
+
+                    const auto rook_from = Square(board.cr_.getRookFile(c, side), king_from.rank());
+                    const auto king_to   = Square::castling_king_square(side == CastlingRights::Side::KING_SIDE, c);
+                    const auto rook_to   = Square::castling_rook_square(side == CastlingRights::Side::KING_SIDE, c);
+
+                    board.castling_path[c][side == CastlingRights::Side::KING_SIDE] =
+                        (movegen::between(rook_from, rook_to) | movegen::between(king_from, king_to)) &
+                        ~(Bitboard::fromSquare(king_from) | Bitboard::fromSquare(rook_from));
+                }
+            }
         }
 
         // 1:1 mapping of Piece::internal() to the compressed piece
@@ -2862,6 +2882,20 @@ class Board {
             return convertPiece(piece);
         }
     };
+
+    bool operator==(const Board &other) const noexcept {
+        return pieces_bb_ == other.pieces_bb_   //
+               && occ_bb_ == other.occ_bb_      //
+               && board_ == other.board_        //
+               && key_ == other.key_            //
+               && cr_ == other.cr_              //
+               && plies_ == other.plies_        //
+               && stm_ == other.stm_            //
+               && ep_sq_ == other.ep_sq_        //
+               && hfm_ == other.hfm_            //
+               && chess960_ == other.chess960_  //
+               && castling_path == other.castling_path;
+    }
 
    protected:
     virtual void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
@@ -3070,6 +3104,8 @@ class Board {
         assert(key_ == zobrist());
 
         // init castling_path
+        castling_path = {};
+
         for (Color c : {Color::WHITE, Color::BLACK}) {
             const auto king_from = kingSq(c);
 
