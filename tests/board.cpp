@@ -192,7 +192,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
             CHECK(sizeof(compressed) == 24);
         }
 
@@ -209,7 +209,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("encode and decode with white to move") {
@@ -217,7 +217,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("encode and decode with white castling bug") {
@@ -225,7 +225,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("encode and decode with white castling queen") {
@@ -233,7 +233,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("encode and decode with white castling king") {
@@ -241,7 +241,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("encode and decode with black castling queen") {
@@ -249,7 +249,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("encode and decode with black castling king") {
@@ -257,7 +257,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("encode and decode with black side to move") {
@@ -265,7 +265,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("usable in Map") {
@@ -284,7 +284,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("castling 2") {
@@ -293,7 +293,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("castling 3") {
@@ -302,7 +302,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("castling 4") {
@@ -311,7 +311,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("castling 5") {
@@ -320,7 +320,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("castling 6") {
@@ -329,7 +329,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("castling 7") {
@@ -338,7 +338,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("castling 8") {
@@ -347,7 +347,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
 
         SUBCASE("castling 9") {
@@ -356,7 +356,7 @@ TEST_SUITE("Board") {
             auto compressed = Board::Compact::encode(board);
             auto newboard   = Board::Compact::decode(compressed, true);
 
-            CHECK(board.getFen() == newboard.getFen());
+            CHECK(board == newboard);
         }
     }
 
