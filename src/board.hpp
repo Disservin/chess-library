@@ -225,49 +225,38 @@ class Board {
         std::string ss;
         ss.reserve(100);
 
-        // Loop through the ranks of the board in reverse order
-        for (int rank = 7; rank >= 0; rank--) {
-            std::uint32_t free_space = 0;
+        for (int rank = 7; rank >= 0; --rank) {
+            auto rank_bb = (occ() & Rank(rank).bb()) >> (rank * 8);
+            int lsb      = -1;
+            int last_lsb = -1;
 
-            // Loop through the files of the board
-            for (int file = 0; file < 8; file++) {
-                // Calculate the square index
-                const int sq = rank * 8 + file;
+            while (rank_bb) {
+                lsb = rank_bb.pop();
 
-                // If there is a piece at the current square
-                if (Piece piece = at(Square(sq)); piece != Piece::NONE) {
-                    // If there were any empty squares before this piece,
-                    // append the number of empty squares to the FEN string
-                    if (free_space) {
-                        ss += std::to_string(free_space);
-                        free_space = 0;
-                    }
-
-                    // Append the character representing the piece to the FEN string
-                    ss += static_cast<std::string>(piece);
-                } else {
-                    // If there is no piece at the current square, increment the
-                    // counter for the number of empty squares
-                    free_space++;
+                if (lsb != 0 && lsb != last_lsb + 1) {
+                    int free_space = lsb - last_lsb - 1;
+                    if (free_space > 0) ss += char('0' + free_space);
                 }
+
+                last_lsb = lsb;
+
+                Square sq(lsb + rank * 8);
+                ss += static_cast<std::string_view>(at(sq));
             }
 
-            // If there are any empty squares at the end of the rank,
-            // append the number of empty squares to the FEN string
-            if (free_space != 0) {
-                ss += std::to_string(free_space);
+            if (lsb != 7) {
+                if (lsb == -1)
+                    ss += '8';
+                else if (lsb < 7)
+                    ss += char('0' + (7 - lsb));
             }
 
-            // Append a "/" character to the FEN string, unless this is the last rank
-            ss += (rank > 0 ? "/" : "");
+            if (rank > 0) ss += '/';
         }
 
-        // Append " w " or " b " to the FEN string, depending on which player's turn it is
         ss += ' ';
         ss += (stm_ == Color::WHITE ? 'w' : 'b');
 
-        // Append the appropriate characters to the FEN string to indicate
-        // whether castling is allowed for each player
         if (cr_.isEmpty())
             ss += " -";
         else {
@@ -275,8 +264,6 @@ class Board {
             ss += getCastleString();
         }
 
-        // Append information about the en passant square (if any)
-        // and the half-move clock and full move number to the FEN string
         if (ep_sq_ == Square::NO_SQ)
             ss += " -";
         else {
@@ -291,7 +278,6 @@ class Board {
             ss += std::to_string(fullMoveNumber());
         }
 
-        // Return the resulting FEN string
         return ss;
     }
 
