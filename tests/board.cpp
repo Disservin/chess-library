@@ -12,6 +12,47 @@ TEST_SUITE("Board") {
         CHECK(board.getFen() == "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
     }
 
+    TEST_CASE("Set xFEN") {
+        Board board;
+        CHECK(board.setXfen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+        CHECK(board.chess960());
+        CHECK(board.castlingRights().getRookFile(Color::WHITE, Board::CastlingRights::Side::KING_SIDE) == File::FILE_H);
+        CHECK(board.castlingRights().getRookFile(Color::WHITE, Board::CastlingRights::Side::QUEEN_SIDE) ==
+              File::FILE_A);
+        CHECK(board.castlingRights().getRookFile(Color::BLACK, Board::CastlingRights::Side::KING_SIDE) == File::FILE_H);
+        CHECK(board.castlingRights().getRookFile(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE) ==
+              File::FILE_A);
+        CHECK(board.getXfen() == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    }
+
+    TEST_CASE("xFen Lichess Example") {
+        CHECK(Board::fromXfen("rnbnkqrb/pppppppp/8/8/8/8/PPPPPPPP/RNBNKQRB w KQkq - 0 1").getXfen() ==
+              "rnbnkqrb/pppppppp/8/8/8/8/PPPPPPPP/RNBNKQRB w KQkq - 0 1");
+        CHECK(Board::fromXfen("rnb1k1r1/ppp1pp1p/3p2p1/6n1/P7/2N2B2/1PPPPP2/2BNK1RR b Gkq - 3 10").getXfen() ==
+              "rnb1k1r1/ppp1pp1p/3p2p1/6n1/P7/2N2B2/1PPPPP2/2BNK1RR b Gkq - 3 10");
+    }
+
+    TEST_CASE("xFEN castling uses outermost rook") {
+        Board board;
+        CHECK(board.setXfen("4k3/8/8/8/8/8/8/4KR1R w K - 0 1"));
+        CHECK(board.castlingRights().getRookFile(Color::WHITE, Board::CastlingRights::Side::KING_SIDE) == File::FILE_H);
+        CHECK(board.getXfen() == "4k3/8/8/8/8/8/8/4KR1R w K - 0 1");
+    }
+
+    TEST_CASE("xFEN castling file letter selects rook") {
+        Board board;
+        CHECK(board.setXfen("4k3/8/8/8/8/8/8/4KR1R w F - 0 1"));
+        CHECK(board.castlingRights().getRookFile(Color::WHITE, Board::CastlingRights::Side::KING_SIDE) == File::FILE_F);
+        CHECK(board.getXfen() == "4k3/8/8/8/8/8/8/4KR1R w F - 0 1");
+    }
+
+    TEST_CASE("xFEN castling file letter lowercase for black") {
+        Board board;
+        CHECK(board.setXfen("4kr1r/8/8/8/8/8/8/4K3 b f - 0 1"));
+        CHECK(board.castlingRights().getRookFile(Color::BLACK, Board::CastlingRights::Side::KING_SIDE) == File::FILE_F);
+        CHECK(board.getXfen() == "4kr1r/8/8/8/8/8/8/4K3 b f - 0 1");
+    }
+
     TEST_CASE("Board makeMove/unmakeMove") {
         SUBCASE("makeMove") {
             Board board = Board();
