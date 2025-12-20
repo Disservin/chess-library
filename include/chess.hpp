@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.9.0
+VERSION: 0.9.1
 */
 
 #ifndef CHESS_HPP
@@ -1952,50 +1952,10 @@ class Board {
                 ss += '-';
                 return;
             }
-
-            const auto outer_rook_file = [this](Color color, CastlingRights::Side side) -> File {
-                const auto ksq = kingSq(color);
-                const auto r   = ksq.rank();
-                std::optional<File> best;
-
-                for (File f = File::FILE_A; f <= File::FILE_H; f += 1) {
-                    const Square sq(f, r);
-                    if (at<PieceType>(sq) != PieceType::ROOK || at(sq).color() != color) continue;
-
-                    if (side == CastlingRights::Side::KING_SIDE) {
-                        if (f <= ksq.file()) continue;
-                        if (!best || f > *best) best = f;
-                    } else {
-                        if (f >= ksq.file()) continue;
-                        if (!best || f < *best) best = f;
-                    }
-                }
-
-                return best.has_value() ? *best : File::NO_FILE;
-            };
-
-            const auto append_token = [&](Color color, CastlingRights::Side side) {
-                if (!cr_.has(color, side)) return;
-
-                const auto rook_file  = cr_.getRookFile(color, side);
-                const auto outer_file = outer_rook_file(color, side);
-
-                if (outer_file != File::NO_FILE && rook_file == outer_file) {
-                    const char t = (side == CastlingRights::Side::KING_SIDE ? 'K' : 'Q');
-                    ss +=
-                        (color == Color::WHITE ? t : static_cast<char>(utils::tolower(static_cast<unsigned char>(t))));
-                    return;
-                }
-
-                auto file_str = static_cast<std::string>(rook_file);
-                const char t  = (color == Color::WHITE ? static_cast<char>(std::toupper(file_str[0])) : file_str[0]);
-                ss += t;
-            };
-
-            append_token(Color::WHITE, CastlingRights::Side::KING_SIDE);
-            append_token(Color::WHITE, CastlingRights::Side::QUEEN_SIDE);
-            append_token(Color::BLACK, CastlingRights::Side::KING_SIDE);
-            append_token(Color::BLACK, CastlingRights::Side::QUEEN_SIDE);
+            appendXfenToken(ss, Color::WHITE, CastlingRights::Side::KING_SIDE);
+            appendXfenToken(ss, Color::WHITE, CastlingRights::Side::QUEEN_SIDE);
+            appendXfenToken(ss, Color::BLACK, CastlingRights::Side::KING_SIDE);
+            appendXfenToken(ss, Color::BLACK, CastlingRights::Side::QUEEN_SIDE);
         });
     }
 
@@ -2390,17 +2350,12 @@ class Board {
      * @return
      */
     [[nodiscard]] std::string getCastleString() const {
-        static const auto get_file = [](const CastlingRights& cr, Color c, CastlingRights::Side side) {
-            auto file = static_cast<std::string>(cr.getRookFile(c, side));
-            return c == Color::WHITE ? std::toupper(file[0]) : file[0];
-        };
-
         if (chess960_) {
             std::string ss;
 
             for (auto color : {Color::WHITE, Color::BLACK})
                 for (auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE})
-                    if (cr_.has(color, side)) ss += get_file(cr_, color, side);
+                    if (cr_.has(color, side)) ss += castlingFileToken(color, cr_.getRookFile(color, side));
 
             return ss;
         }
@@ -3013,44 +2968,85 @@ class Board {
         board_[index] = piece;
     }
 
+    [[nodiscard]] char castlingFileToken(Color color, File file) const {
+        auto file_str = static_cast<std::string>(file);
+        return color == Color::WHITE ? static_cast<char>(std::toupper(file_str[0])) : file_str[0];
+    }
+
+    [[nodiscard]] File findRookOnSide(Color color, CastlingRights::Side side) const {
+        const auto king_side = CastlingRights::Side::KING_SIDE;
+        const auto king_sq   = kingSq(color);
+        const auto sq_corner = Square(side == king_side ? Square::SQ_H1 : Square::SQ_A1).relative_square(color);
+
+        const auto start = side == king_side ? king_sq + 1 : king_sq - 1;
+
+        for (Square sq = start; (side == king_side ? sq <= sq_corner : sq >= sq_corner);
+             (side == king_side ? sq++ : sq--)) {
+            if (at<PieceType>(sq) == PieceType::ROOK && at(sq).color() == color) return sq.file();
+        }
+
+        return File(File::NO_FILE);
+    }
+
+    [[nodiscard]] File outerRookFile(Color color, CastlingRights::Side side) const {
+        const auto king_sq = kingSq(color);
+        if (king_sq == Square::NO_SQ) return File::NO_FILE;
+
+        const auto back_rank = king_sq.rank();
+        std::optional<File> best;
+
+        for (File f = File::FILE_A; f <= File::FILE_H; f += 1) {
+            const Square sq(f, back_rank);
+            if (at<PieceType>(sq) != PieceType::ROOK || at(sq).color() != color) continue;
+
+            if (side == CastlingRights::Side::KING_SIDE) {
+                if (f <= king_sq.file()) continue;
+                if (!best || f > *best) best = f;
+            } else {
+                if (f >= king_sq.file()) continue;
+                if (!best || f < *best) best = f;
+            }
+        }
+
+        return best.has_value() ? *best : File::NO_FILE;
+    }
+
+    [[nodiscard]] bool hasRookOnFile(Color color, File file) const {
+        const auto king_sq = kingSq(color);
+        if (king_sq == Square::NO_SQ) return false;
+
+        const Square rook_sq(file, king_sq.rank());
+        return at<PieceType>(rook_sq) == PieceType::ROOK && at(rook_sq).color() == color;
+    }
+
+    bool applyCastlingRight(Color color, CastlingRights::Side side, File fallback) {
+        File file = fallback;
+
+        if (!hasRookOnFile(color, fallback)) {
+            file = findRookOnSide(color, side);
+            if (file == File::NO_FILE) return false;
+        }
+
+        cr_.setCastlingRight(color, side, file);
+        return true;
+    }
+
+    void appendXfenToken(std::string& ss, Color color, CastlingRights::Side side) const {
+        if (!cr_.has(color, side)) return;
+
+        const auto rook_file  = cr_.getRookFile(color, side);
+        const auto outer_file = outerRookFile(color, side);
+
+        if (outer_file != File::NO_FILE && rook_file == outer_file) {
+            const char t = (side == CastlingRights::Side::KING_SIDE ? 'K' : 'Q');
+            ss += (color == Color::WHITE ? t : static_cast<char>(utils::tolower(static_cast<unsigned char>(t))));
+            return;
+        }
+
+        ss += castlingFileToken(color, rook_file);
+    }
+
     void parseFenCastling(std::string_view castling) {
-        static const auto find_rook = [](const Board& board, CastlingRights::Side side, Color color) -> File {
-            const auto king_side = CastlingRights::Side::KING_SIDE;
-            const auto king_sq   = board.kingSq(color);
-            const auto sq_corner = Square(side == king_side ? Square::SQ_H1 : Square::SQ_A1).relative_square(color);
-
-            const auto start = side == king_side ? king_sq + 1 : king_sq - 1;
-
-            for (Square sq = start; (side == king_side ? sq <= sq_corner : sq >= sq_corner);
-                 (side == king_side ? sq++ : sq--)) {
-                if (board.at<PieceType>(sq) == PieceType::ROOK && board.at(sq).color() == color) {
-                    return sq.file();
-                }
-            }
-
-            return File(File::NO_FILE);
-        };
-
-        const auto has_rook_on_file = [](const Board& board, Color color, File file) -> bool {
-            const auto king_sq = board.kingSq(color);
-            if (king_sq == Square::NO_SQ) return false;
-
-            const Square rook_sq(file, king_sq.rank());
-            return board.at<PieceType>(rook_sq) == PieceType::ROOK && board.at(rook_sq).color() == color;
-        };
-
-        const auto apply_castling_right = [&](Color color, CastlingRights::Side side, File fallback) -> bool {
-            File file = fallback;
-
-            if (!has_rook_on_file(*this, color, fallback)) {
-                file = find_rook(*this, side, color);
-                if (file == File::NO_FILE) return false;
-            }
-
-            cr_.setCastlingRight(color, side, file);
-            return true;
-        };
-
         for (char i : castling) {
             if (i == '-') break;
 
@@ -3059,13 +3055,13 @@ class Board {
 
             if (!chess960_) {
                 if (i == 'K') {
-                    apply_castling_right(Color::WHITE, king_side, File::FILE_H);
+                    applyCastlingRight(Color::WHITE, king_side, File::FILE_H);
                 } else if (i == 'Q') {
-                    apply_castling_right(Color::WHITE, queen_side, File::FILE_A);
+                    applyCastlingRight(Color::WHITE, queen_side, File::FILE_A);
                 } else if (i == 'k') {
-                    apply_castling_right(Color::BLACK, king_side, File::FILE_H);
+                    applyCastlingRight(Color::BLACK, king_side, File::FILE_H);
                 } else if (i == 'q') {
-                    apply_castling_right(Color::BLACK, queen_side, File::FILE_A);
+                    applyCastlingRight(Color::BLACK, queen_side, File::FILE_A);
                 } else {
                     continue;
                 }
@@ -3078,10 +3074,10 @@ class Board {
             const auto king_sq = kingSq(color);
 
             if (i == 'K' || i == 'k') {
-                auto file = find_rook(*this, king_side, color);
+                auto file = findRookOnSide(color, king_side);
                 if (file != File::NO_FILE) cr_.setCastlingRight(color, king_side, file);
             } else if (i == 'Q' || i == 'q') {
-                auto file = find_rook(*this, queen_side, color);
+                auto file = findRookOnSide(color, queen_side);
                 if (file != File::NO_FILE) cr_.setCastlingRight(color, queen_side, file);
             } else {
                 const auto file = File(std::string_view(&i, 1));
@@ -3093,29 +3089,6 @@ class Board {
     }
 
     void parseXfenCastling(std::string_view castling) {
-        static const auto outer_rook_file = [](const Board& board, CastlingRights::Side side, Color color) -> File {
-            const auto king_sq = board.kingSq(color);
-            if (king_sq == Square::NO_SQ) return File::NO_FILE;
-
-            const auto back_rank = king_sq.rank();
-            std::optional<File> best;
-
-            for (File f = File::FILE_A; f <= File::FILE_H; f += 1) {
-                const Square sq(f, back_rank);
-                if (board.at<PieceType>(sq) != PieceType::ROOK || board.at(sq).color() != color) continue;
-
-                if (side == CastlingRights::Side::KING_SIDE) {
-                    if (f <= king_sq.file()) continue;
-                    if (!best || f > *best) best = f;
-                } else {
-                    if (f >= king_sq.file()) continue;
-                    if (!best || f < *best) best = f;
-                }
-            }
-
-            return best.has_value() ? *best : File::NO_FILE;
-        };
-
         for (char i : castling) {
             if (i == '-') break;
 
@@ -3127,13 +3100,13 @@ class Board {
             if (king_sq == Square::NO_SQ) return;
 
             if (i == 'K' || i == 'k') {
-                const auto file = outer_rook_file(*this, king_side, color);
+                const auto file = outerRookFile(color, king_side);
                 if (file != File::NO_FILE) cr_.setCastlingRight(color, king_side, file);
                 continue;
             }
 
             if (i == 'Q' || i == 'q') {
-                const auto file = outer_rook_file(*this, queen_side, color);
+                const auto file = outerRookFile(color, queen_side);
                 if (file != File::NO_FILE) cr_.setCastlingRight(color, queen_side, file);
                 continue;
             }
@@ -3141,8 +3114,7 @@ class Board {
             const auto file = File(std::string_view(&i, 1));
             if (file == File::NO_FILE || file == king_sq.file()) continue;
 
-            const Square rook_sq(file, king_sq.rank());
-            if (at<PieceType>(rook_sq) != PieceType::ROOK || at(rook_sq).color() != color) continue;
+            if (!hasRookOnFile(color, file)) continue;
 
             const auto side = CastlingRights::closestSide(file, king_sq.file());
             cr_.setCastlingRight(color, side, file);
