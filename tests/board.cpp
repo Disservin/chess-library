@@ -61,6 +61,43 @@ TEST_SUITE("Board") {
         CHECK(board.getXfen() == "rnb1k1r1/ppp1pp1p/3p2p1/6n1/P7/2N2B2/1PPPPP2/2BNK1RR b Gkq - 3 10");
     }
 
+    TEST_CASE("xFEN python-chess ports") {
+        SUBCASE("Wiki example") {
+            const auto xfen = std::string("rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gkq - 4 11");
+            auto board      = Board::fromXfen(xfen);
+            const auto cr   = board.castlingRights();
+
+            CHECK(board.chess960());
+            CHECK(cr.getRookFile(Color::WHITE, Board::CastlingRights::Side::KING_SIDE) == File::FILE_G);
+            CHECK(cr.getRookFile(Color::BLACK, Board::CastlingRights::Side::KING_SIDE) == File::FILE_G);
+            CHECK(cr.getRookFile(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE) == File::FILE_A);
+            CHECK(!cr.has(Color::WHITE, Board::CastlingRights::Side::QUEEN_SIDE));
+
+            CHECK(board.getFen() == "rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gga - 4 11");
+            CHECK(board.getXfen() == xfen);
+
+            CHECK(cr.has(Color::WHITE));
+            CHECK(cr.has(Color::BLACK));
+            CHECK(cr.has(Color::BLACK, Board::CastlingRights::Side::KING_SIDE));
+            CHECK(cr.has(Color::WHITE, Board::CastlingRights::Side::KING_SIDE));
+            CHECK(cr.has(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE));
+        }
+
+        SUBCASE("Chess960 position 284") {
+            const auto xfen = std::string("rkbqrbnn/pppppppp/8/8/8/8/PPPPPPPP/RKBQRBNN w KQkq - 0 1");
+            auto board      = Board::fromXfen(xfen);
+            const auto cr   = board.castlingRights();
+
+            CHECK(cr.getRookFile(Color::WHITE, Board::CastlingRights::Side::KING_SIDE) == File::FILE_E);
+            CHECK(cr.getRookFile(Color::WHITE, Board::CastlingRights::Side::QUEEN_SIDE) == File::FILE_A);
+            CHECK(cr.getRookFile(Color::BLACK, Board::CastlingRights::Side::KING_SIDE) == File::FILE_E);
+            CHECK(cr.getRookFile(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE) == File::FILE_A);
+
+            CHECK(board.getXfen() == xfen);
+            CHECK(board.getFen() == "rkbqrbnn/pppppppp/8/8/8/8/PPPPPPPP/RKBQRBNN w EAea - 0 1");
+        }
+    }
+
     TEST_CASE("Board makeMove/unmakeMove") {
         SUBCASE("makeMove") {
             Board board = Board();
