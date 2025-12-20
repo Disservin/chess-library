@@ -40,8 +40,8 @@ inline std::optional<int> parseStringViewToInt(std::string_view sv) {
 
 #ifdef CHESS_USE_CHARCONV
     int result;
-    const char *begin = parsed_sv.data();
-    const char *end   = begin + parsed_sv.size();
+    const char* begin = parsed_sv.data();
+    const char* end   = begin + parsed_sv.size();
 
     auto [ptr, ec] = std::from_chars(begin, end, result);
 
@@ -124,7 +124,7 @@ class Board {
             return sq > pred ? Side::KING_SIDE : Side::QUEEN_SIDE;
         }
 
-        bool operator==(const CastlingRights &other) const noexcept { return rooks == other.rooks; }
+        bool operator==(const CastlingRights& other) const noexcept { return rooks == other.rooks; }
 
        private:
         std::array<std::array<File, 2>, 2> rooks;
@@ -138,8 +138,8 @@ class Board {
         std::uint8_t half_moves;
         Piece captured_piece;
 
-        State(const U64 &hash, const CastlingRights &castling, const Square &enpassant, const std::uint8_t &half_moves,
-              const Piece &captured_piece)
+        State(const U64& hash, const CastlingRights& castling, const Square& enpassant, const std::uint8_t& half_moves,
+              const Piece& captured_piece)
             : hash(hash),
               castling(castling),
               enpassant(enpassant),
@@ -156,7 +156,7 @@ class Board {
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
         prev_states_.reserve(256);
         chess960_ = chess960;
-        assert(setFenInternal<true>(constants::STARTPOS));
+        // assert(setFenInternal<true>(constants::STARTPOS));
         setFenInternal<true>(fen);
     }
 
@@ -191,9 +191,8 @@ class Board {
     bool setXfen(std::string_view xfen) {
         const bool prev_960 = chess960_;
         chess960_           = true;
-        const auto ok = setFenCommon<false>(xfen,
-                                            [this](std::string_view castling) { return parseXfenCastling(castling); },
-                                            true);
+        const auto ok =
+            setFenCommon<false>(xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
         if (!ok) chess960_ = prev_960;
         return ok;
     }
@@ -246,7 +245,7 @@ class Board {
      * @return
      */
     [[nodiscard]] std::string getFen(bool move_counters = true) const {
-        return getFenCommon(move_counters, [this](std::string &ss) {
+        return getFenCommon(move_counters, [this](std::string& ss) {
             if (cr_.isEmpty())
                 ss += '-';
             else
@@ -255,7 +254,7 @@ class Board {
     }
 
     [[nodiscard]] std::string getXfen(bool move_counters = true) const {
-        return getFenCommon(move_counters, [this](std::string &ss) {
+        return getFenCommon(move_counters, [this](std::string& ss) {
             if (cr_.isEmpty()) {
                 ss += '-';
                 return;
@@ -290,7 +289,8 @@ class Board {
 
                 if (outer_file != File::NO_FILE && rook_file == outer_file) {
                     const char t = (side == CastlingRights::Side::KING_SIDE ? 'K' : 'Q');
-                    ss += (color == Color::WHITE ? t : static_cast<char>(utils::tolower(static_cast<unsigned char>(t))));
+                    ss +=
+                        (color == Color::WHITE ? t : static_cast<char>(utils::tolower(static_cast<unsigned char>(t))));
                     return;
                 }
 
@@ -480,7 +480,7 @@ class Board {
     }
 
     void unmakeMove(const Move move) {
-        const auto &prev = prev_states_.back();
+        const auto& prev = prev_states_.back();
 
         ep_sq_ = prev.enpassant;
         cr_    = prev.castling;
@@ -571,7 +571,7 @@ class Board {
      * @brief Unmake a null move. (Switches the side to move)
      */
     void unmakeNullMove() {
-        const auto &prev = prev_states_.back();
+        const auto& prev = prev_states_.back();
 
         ep_sq_ = prev.enpassant;
         cr_    = prev.castling;
@@ -697,7 +697,7 @@ class Board {
      * @return
      */
     [[nodiscard]] std::string getCastleString() const {
-        static const auto get_file = [](const CastlingRights &cr, Color c, CastlingRights::Side side) {
+        static const auto get_file = [](const CastlingRights& cr, Color c, CastlingRights::Side side) {
             auto file = static_cast<std::string>(cr.getRookFile(c, side));
             return c == Color::WHITE ? std::toupper(file[0]) : file[0];
         };
@@ -851,7 +851,7 @@ class Board {
      */
     [[nodiscard]] bool inCheck() const noexcept { return isAttacked(kingSq(stm_), ~stm_); }
 
-    [[nodiscard]] CheckType givesCheck(const Move &m) const noexcept;
+    [[nodiscard]] CheckType givesCheck(const Move& m) const noexcept;
 
     /**
      * @brief Checks if the given color has at least 1 piece thats not pawn and not king
@@ -892,7 +892,7 @@ class Board {
         return castling_path[c][isKingSide];
     }
 
-    friend std::ostream &operator<<(std::ostream &os, const Board &board);
+    friend std::ostream& operator<<(std::ostream& os, const Board& board);
 
     /**
      * @brief Compresses the board into a PackedBoard.
@@ -907,7 +907,7 @@ class Board {
          * @param board
          * @return
          */
-        static PackedBoard encode(const Board &board) { return encodeState(board); }
+        static PackedBoard encode(const Board& board) { return encodeState(board); }
 
         static PackedBoard encode(std::string_view fen, bool chess960 = false) { return encodeState(fen, chess960); }
 
@@ -917,7 +917,7 @@ class Board {
          * @param chess960 If the board is a chess960 position, set this to true
          * @return
          */
-        static Board decode(const PackedBoard &compressed, bool chess960 = false) {
+        static Board decode(const PackedBoard& compressed, bool chess960 = false) {
             Board board     = Board(PrivateCtor::CREATE);
             board.chess960_ = chess960;
             decode(board, compressed);
@@ -945,7 +945,7 @@ class Board {
          *
          * We will later deduce the square of the pieces from the occupancy bitboard.
          */
-        static PackedBoard encodeState(const Board &board) {
+        static PackedBoard encodeState(const Board& board) {
             PackedBoard packed{};
 
             packed[0] = board.occ().getBits() >> 56;
@@ -1051,7 +1051,7 @@ class Board {
             return packed;
         }
 
-        static void decode(Board &board, const PackedBoard &compressed) {
+        static void decode(Board& board, const PackedBoard& compressed) {
             Bitboard occupied = 0ull;
 
             for (int i = 0; i < 8; i++) {
@@ -1177,7 +1177,7 @@ class Board {
         // 13 => any white rook with castling rights, side will be deduced from the file
         // 14 => any black rook with castling rights, side will be deduced from the file
         // 15 => black king and black is side to move
-        static std::uint8_t convertMeaning(const CastlingRights &cr, Color stm, Square ep, Square sq, Piece piece) {
+        static std::uint8_t convertMeaning(const CastlingRights& cr, Color stm, Square ep, Square sq, Piece piece) {
             if (piece.type() == PieceType::PAWN && ep != Square::NO_SQ) {
                 if (Square(static_cast<int>(sq.index()) ^ 8) == ep) return 12;
             }
@@ -1201,7 +1201,7 @@ class Board {
         }
     };
 
-    bool operator==(const Board &other) const noexcept {
+    bool operator==(const Board& other) const noexcept {
         return pieces_bb_ == other.pieces_bb_   //
                && occ_bb_ == other.occ_bb_      //
                && board_ == other.board_        //
@@ -1238,7 +1238,7 @@ class Board {
     std::array<std::array<Bitboard, 2>, 2> castling_path = {};
 
    private:
-    void appendFenPiecePlacement(std::string &ss) const {
+    void appendFenPiecePlacement(std::string& ss) const {
         for (int rank = 7; rank >= 0; rank--) {
             std::uint32_t free_space = 0;
 
@@ -1320,8 +1320,8 @@ class Board {
         board_[index] = piece;
     }
 
-    bool parseFenCastling(std::string_view castling) {
-        static const auto find_rook = [](const Board &board, CastlingRights::Side side, Color color) -> File {
+    void parseFenCastling(std::string_view castling) {
+        static const auto find_rook = [](const Board& board, CastlingRights::Side side, Color color) -> File {
             const auto king_side = CastlingRights::Side::KING_SIDE;
             const auto king_sq   = board.kingSq(color);
             const auto sq_corner = Square(side == king_side ? Square::SQ_H1 : Square::SQ_A1).relative_square(color);
@@ -1338,6 +1338,26 @@ class Board {
             return File(File::NO_FILE);
         };
 
+        const auto has_rook_on_file = [](const Board& board, Color color, File file) -> bool {
+            const auto king_sq = board.kingSq(color);
+            if (king_sq == Square::NO_SQ) return false;
+
+            const Square rook_sq(file, king_sq.rank());
+            return board.at<PieceType>(rook_sq) == PieceType::ROOK && board.at(rook_sq).color() == color;
+        };
+
+        const auto apply_castling_right = [&](Color color, CastlingRights::Side side, File fallback) -> bool {
+            File file = fallback;
+
+            if (!has_rook_on_file(*this, color, fallback)) {
+                file = find_rook(*this, side, color);
+                if (file == File::NO_FILE) return false;
+            }
+
+            cr_.setCastlingRight(color, side, file);
+            return true;
+        };
+
         for (char i : castling) {
             if (i == '-') break;
 
@@ -1345,16 +1365,17 @@ class Board {
             const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
 
             if (!chess960_) {
-                if (i == 'K')
-                    cr_.setCastlingRight(Color::WHITE, king_side, File::FILE_H);
-                else if (i == 'Q')
-                    cr_.setCastlingRight(Color::WHITE, queen_side, File::FILE_A);
-                else if (i == 'k')
-                    cr_.setCastlingRight(Color::BLACK, king_side, File::FILE_H);
-                else if (i == 'q')
-                    cr_.setCastlingRight(Color::BLACK, queen_side, File::FILE_A);
-                else
-                    return false;
+                if (i == 'K') {
+                    apply_castling_right(Color::WHITE, king_side, File::FILE_H);
+                } else if (i == 'Q') {
+                    apply_castling_right(Color::WHITE, queen_side, File::FILE_A);
+                } else if (i == 'k') {
+                    apply_castling_right(Color::BLACK, king_side, File::FILE_H);
+                } else if (i == 'q') {
+                    apply_castling_right(Color::BLACK, queen_side, File::FILE_A);
+                } else {
+                    continue;
+                }
 
                 continue;
             }
@@ -1365,25 +1386,21 @@ class Board {
 
             if (i == 'K' || i == 'k') {
                 auto file = find_rook(*this, king_side, color);
-                if (file == File::NO_FILE) return false;
-                cr_.setCastlingRight(color, king_side, file);
+                if (file != File::NO_FILE) cr_.setCastlingRight(color, king_side, file);
             } else if (i == 'Q' || i == 'q') {
                 auto file = find_rook(*this, queen_side, color);
-                if (file == File::NO_FILE) return false;
-                cr_.setCastlingRight(color, queen_side, file);
+                if (file != File::NO_FILE) cr_.setCastlingRight(color, queen_side, file);
             } else {
                 const auto file = File(std::string_view(&i, 1));
-                if (file == File::NO_FILE) return false;
+                if (file == File::NO_FILE || king_sq == Square::NO_SQ) continue;
                 const auto side = CastlingRights::closestSide(file, king_sq.file());
                 cr_.setCastlingRight(color, side, file);
             }
         }
-
-        return true;
     }
 
-    bool parseXfenCastling(std::string_view castling) {
-        static const auto outer_rook_file = [](const Board &board, CastlingRights::Side side, Color color) -> File {
+    void parseXfenCastling(std::string_view castling) {
+        static const auto outer_rook_file = [](const Board& board, CastlingRights::Side side, Color color) -> File {
             const auto king_sq = board.kingSq(color);
             if (king_sq == Square::NO_SQ) return File::NO_FILE;
 
@@ -1414,33 +1431,29 @@ class Board {
             const auto king_side  = CastlingRights::Side::KING_SIDE;
             const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
 
-            if (king_sq == Square::NO_SQ) return false;
+            if (king_sq == Square::NO_SQ) return;
 
             if (i == 'K' || i == 'k') {
                 const auto file = outer_rook_file(*this, king_side, color);
-                if (file == File::NO_FILE) return false;
-                cr_.setCastlingRight(color, king_side, file);
+                if (file != File::NO_FILE) cr_.setCastlingRight(color, king_side, file);
                 continue;
             }
 
             if (i == 'Q' || i == 'q') {
                 const auto file = outer_rook_file(*this, queen_side, color);
-                if (file == File::NO_FILE) return false;
-                cr_.setCastlingRight(color, queen_side, file);
+                if (file != File::NO_FILE) cr_.setCastlingRight(color, queen_side, file);
                 continue;
             }
 
             const auto file = File(std::string_view(&i, 1));
-            if (file == File::NO_FILE || file == king_sq.file()) return false;
+            if (file == File::NO_FILE || file == king_sq.file()) continue;
 
             const Square rook_sq(file, king_sq.rank());
-            if (at<PieceType>(rook_sq) != PieceType::ROOK || at(rook_sq).color() != color) return false;
+            if (at<PieceType>(rook_sq) != PieceType::ROOK || at(rook_sq).color() != color) continue;
 
             const auto side = CastlingRights::closestSide(file, king_sq.file());
             cr_.setCastlingRight(color, side, file);
         }
-
-        return true;
     }
 
     template <bool ctor, typename CastlingParser>
@@ -1516,7 +1529,7 @@ class Board {
             return false;
         }
 
-        if (!parse_castling(castling)) return false;
+        parse_castling(castling);
 
         if (ep_sq_ != Square::NO_SQ && !((ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
                                          (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE))) {
@@ -1609,7 +1622,7 @@ class Board {
     std::string original_fen_;
 };
 
-inline std::ostream &operator<<(std::ostream &os, const Board &b) {
+inline std::ostream& operator<<(std::ostream& os, const Board& b) {
     for (int i = 63; i >= 0; i -= 8) {
         for (int j = 7; j >= 0; j--) {
             os << " " << static_cast<std::string>(b.board_[i - j]);
@@ -1631,8 +1644,8 @@ inline std::ostream &operator<<(std::ostream &os, const Board &b) {
     return os;
 }
 
-inline CheckType Board::givesCheck(const Move &m) const noexcept {
-    const static auto getSniper = [](const Board *board, Square ksq, Bitboard oc) {
+inline CheckType Board::givesCheck(const Move& m) const noexcept {
+    const static auto getSniper = [](const Board* board, Square ksq, Bitboard oc) {
         const auto us_occ = board->us(board->sideToMove());
         const auto bishop = attacks::bishop(ksq, oc) & board->pieces(PieceType::BISHOP, PieceType::QUEEN) & us_occ;
         const auto rook   = attacks::rook(ksq, oc) & board->pieces(PieceType::ROOK, PieceType::QUEEN) & us_occ;
