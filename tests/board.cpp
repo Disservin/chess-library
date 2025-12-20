@@ -53,6 +53,14 @@ TEST_SUITE("Board") {
         CHECK(board.getXfen() == "4kr1r/8/8/8/8/8/8/4K3 b f - 0 1");
     }
 
+    TEST_CASE("xFen with Makemove") {
+        auto board = Board("rnb1k1r1/ppp1pp1p/3p2p1/6n1/P7/2N2B1R/1PPPPP2/2BNK1R1 w Kkq - 2 10");
+
+        board.makeMove(uci::parseSan(board, "Rhh1"));
+
+        CHECK(board.getXfen() == "rnb1k1r1/ppp1pp1p/3p2p1/6n1/P7/2N2B2/1PPPPP2/2BNK1RR b Gkq - 3 10");
+    }
+
     TEST_CASE("Board makeMove/unmakeMove") {
         SUBCASE("makeMove") {
             Board board = Board();
