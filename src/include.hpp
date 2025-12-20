@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.8.20
+VERSION: 0.9.0
 */
 
 #ifndef CHESS_HPP
