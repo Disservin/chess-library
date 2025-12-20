@@ -29,7 +29,11 @@ using PackedBoard = std::array<std::uint8_t, 24>;
 
 class Board {
     public:
-        Board::Board(std::string_view fen)
+        explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false);
+
+        static Board fromFen(std::string_view fen);
+        static Board fromXfen(std::string_view xfen);
+        static Board fromEpd(std::string_view epd);
 
         /**
          * @brief Returns true if the given FEN was successfully parsed and set
@@ -40,6 +44,14 @@ class Board {
         bool setFen(std::string_view fen);
 
         /**
+         * @brief Returns true if the given xFEN was successfully parsed and set
+         * (position might still be illegal).
+         * @param xfen
+         * @return
+         */
+        bool setXfen(std::string_view xfen);
+
+        /**
          * @brief Returns true if the given EPD was successfully parsed and set
          * (position might still be illegal).
          * @param epd
@@ -47,7 +59,9 @@ class Board {
          */
         bool setEpd(const std::string_view epd);
 
-        std::string getFen(bool moveCounters = true);
+        std::string getFen(bool moveCounters = true) const;
+        std::string getXfen(bool moveCounters = true) const;
+        std::string getEpd() const;
 
         /// @brief Make a move on the board. The move must be legal otherwise the
         /// behavior is undefined. EXACT can be set to true to only record
@@ -56,54 +70,56 @@ class Board {
         /// @param move
         /// @tparam EXACT
         /// @return
+        template <bool EXACT = false>
         void makeMove(const Move move);
         void unmakeMove(const Move move);
 
         void makeNullMove();
         void unmakeNullMove();
 
-        Bitboard us(Color color);
-        Bitboard them(Color color);
+        Bitboard us(Color color) const;
+        Bitboard them(Color color) const;
 
         /// @brief recalculate all bitboards
         /// @return
-        Bitboard all();
+        Bitboard all() const;
 
         /// @brief more efficient version of all(), which is incremental
         /// @return
-        Bitboard occ();
+        Bitboard occ() const;
 
-        Square kingSq(Color color);
+        Square kingSq(Color color) const;
 
-        Bitboard pieces(PieceType type, Color color);
+        Bitboard pieces(PieceType type, Color color) const;
 
-        Bitboard pieces(PieceType type);
+        Bitboard pieces(PieceType type) const;
+
+        template <typename... Pieces>
+        Bitboard pieces(Pieces... pieces) const;
 
         /// @brief Checks if a move is a capture, enpassant moves are also considered captures.
         /// @param move
         /// @return
-        bool isCapture(const Move move);
+        bool isCapture(const Move move) const;
 
         /// @brief Returns either the piece or the piece type on a square
         /// @tparam T
         /// @param sq
         /// @return
         template <typename T = Piece>
-        T at(Square sq);
+        T at(Square sq) const;
 
-        Color color(Piece piece);
-
-        U64 hash();
-        Color sideToMove();
-        Square enpassantSq();
-        CastlingRights castlingRights();
-        int halfMoveClock();
-        int fullMoveNumber();
+        U64 hash() const;
+        Color sideToMove() const;
+        Square enpassantSq() const;
+        CastlingRights castlingRights() const;
+        std::uint32_t halfMoveClock() const;
+        std::uint32_t fullMoveNumber() const;
 
         void set960(bool is960);
-        bool chess960();
+        bool chess960() const;
 
-        std::string getCastleString();
+        std::string getCastleString() const;
 
         /**
          * @brief Checks if the current position is a repetition, set this to 1 if
@@ -111,7 +127,7 @@ class Board {
          * @param count
          * @return
          */
-        bool isRepetition(int count = 2);
+        bool isRepetition(int count = 2) const;
 
         /**
          * @brief Checks if the current position is a draw by 50 move rule.
@@ -121,19 +137,19 @@ class Board {
          * to determine whether the position is a draw or checkmate.
          * @return
          */
-        bool isHalfMoveDraw();
+        bool isHalfMoveDraw() const;
 
         /**
          * @brief Only call this function if isHalfMoveDraw() returns true.
          * @return
          */
-        std::pair<GameResultReason, GameResult> getHalfMoveDrawType();
+        std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const;
 
         /**
          * @brief Basic check if the current position is a draw by insufficient material.
          * @return
          */
-        bool isInsufficientMaterial();
+        bool isInsufficientMaterial() const;
 
         /**
          * @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
@@ -141,27 +157,34 @@ class Board {
          * If you are writing a chess engine you should not use this function.
          * @return
          */
-        std::pair<GameResultReason, GameResult> isGameOver();
+        std::pair<GameResultReason, GameResult> isGameOver() const;
 
         /// @brief Checks if the square is attacked by the color.
-        bool isAttacked(Square square, Color color);
+        bool isAttacked(Square square, Color color) const;
 
         /// @brief Check if the current position is in check.
-        bool inCheck();
+        bool inCheck() const;
 
         CheckType givesCheck(const Move &m) const;
 
         /// @brief Check if the color has any non pawn material left.
-        bool hasNonPawnMaterial(Color color);
+        bool hasNonPawnMaterial(Color color) const;
 
         /// @brief Recalculates the zobrist hash and return it.
         /// If you want get the zobrist hash use hash().
-        U64 zobrist();
+        U64 zobrist() const;
+
+        Bitboard getCastlingPath(Color c, bool isKingSide) const;
 
         class Compact {
             public:
                 /// @brief Compresses the board into a PackedBoard
                 static PackedBoard encode(const Board &board);
+
+                /// @brief Compresses a FEN into a PackedBoard
+                /// @param fen
+                /// @param chess960 If the board is a chess960 position, set this to true
+                static PackedBoard encode(std::string_view fen, bool chess960 = false);
 
                 /// @brief Creates a Board object from a PackedBoard
                 /// @param compressed
