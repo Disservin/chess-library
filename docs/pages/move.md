@@ -14,7 +14,7 @@ Move m = Move::make<Move::NORMAL>(Square::SQ_E2, Square::SQ_E4);
 ## Other formats
 
 Sometimes you want to convert an internal move object into something else which, like a uci move string or into san notation.
-You can easily do this by using the functions inside `uci` namespace.
+You can easily do this by using the static functions on the `uci` class.
 
 ::: warning
 The `moveToSan`, `moveToLan` and `parseSan` functions are relatively new and might produce incorrect results.
@@ -24,7 +24,7 @@ Please open an issue for such cases.
 ## API
 
 ```cpp
-namespace uci {
+class uci {
 
 /**
  * @brief Converts a move to a UCI string.
@@ -73,17 +73,17 @@ Move parseSan(const Board& board, std::string_view san);
  * @return
  */
 static bool isUciMove(std::string_view move) noexcept;
-}  // namespace uci
+};
 ```
 
 ```cpp
-struct Move {
+class Move {
    public:
     Move() = default;
-    Move(uint16_t move);
+    constexpr Move(uint16_t move);
 
     template <uint16_t MoveType = 0>
-    Move make(
+    static constexpr Move make(
         Square source,
         Square target,
         PieceType pt = PieceType::KNIGHT
@@ -94,13 +94,13 @@ struct Move {
     uint16_t typeOf() const;
     PieceType promotionType() const;
 
-    void setScore(int16_t score) { score_ = score; }
+    void setScore(int16_t score);
 
     uint16_t move() const;
     int16_t score() const;
 
-    bool operator==(const Move& rhs) const { return move_ == rhs.move_; }
-    bool operator!=(const Move& rhs) const { return move_ != rhs.move_; }
+    bool operator==(const Move& rhs) const;
+    bool operator!=(const Move& rhs) const;
 
     static constexpr std::uint16_t NO_MOVE   = 0;
     static constexpr std::uint16_t NULL_MOVE = 65;
