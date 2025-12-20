@@ -246,115 +246,21 @@ class Board {
      * @return
      */
     [[nodiscard]] std::string getFen(bool move_counters = true) const {
-        std::string ss;
-        ss.reserve(100);
-
-        // Loop through the ranks of the board in reverse order
-        for (int rank = 7; rank >= 0; rank--) {
-            std::uint32_t free_space = 0;
-
-            // Loop through the files of the board
-            for (int file = 0; file < 8; file++) {
-                // Calculate the square index
-                const int sq = rank * 8 + file;
-
-                // If there is a piece at the current square
-                if (Piece piece = at(Square(sq)); piece != Piece::NONE) {
-                    // If there were any empty squares before this piece,
-                    // append the number of empty squares to the FEN string
-                    if (free_space) {
-                        ss += std::to_string(free_space);
-                        free_space = 0;
-                    }
-
-                    // Append the character representing the piece to the FEN string
-                    ss += static_cast<std::string>(piece);
-                } else {
-                    // If there is no piece at the current square, increment the
-                    // counter for the number of empty squares
-                    free_space++;
-                }
-            }
-
-            // If there are any empty squares at the end of the rank,
-            // append the number of empty squares to the FEN string
-            if (free_space != 0) {
-                ss += std::to_string(free_space);
-            }
-
-            // Append a "/" character to the FEN string, unless this is the last rank
-            ss += (rank > 0 ? "/" : "");
-        }
-
-        // Append " w " or " b " to the FEN string, depending on which player's turn it is
-        ss += ' ';
-        ss += (stm_ == Color::WHITE ? 'w' : 'b');
-
-        // Append the appropriate characters to the FEN string to indicate
-        // whether castling is allowed for each player
-        if (cr_.isEmpty())
-            ss += " -";
-        else {
-            ss += ' ';
-            ss += getCastleString();
-        }
-
-        // Append information about the en passant square (if any)
-        // and the half-move clock and full move number to the FEN string
-        if (ep_sq_ == Square::NO_SQ)
-            ss += " -";
-        else {
-            ss += ' ';
-            ss += static_cast<std::string>(ep_sq_);
-        }
-
-        if (move_counters) {
-            ss += ' ';
-            ss += std::to_string(halfMoveClock());
-            ss += ' ';
-            ss += std::to_string(fullMoveNumber());
-        }
-
-        // Return the resulting FEN string
-        return ss;
+        return getFenCommon(move_counters, [this](std::string &ss) {
+            if (cr_.isEmpty())
+                ss += '-';
+            else
+                ss += getCastleString();
+        });
     }
 
     [[nodiscard]] std::string getXfen(bool move_counters = true) const {
-        std::string ss;
-        ss.reserve(100);
-
-        // piece placement
-        for (int rank = 7; rank >= 0; rank--) {
-            std::uint32_t free_space = 0;
-
-            for (int file = 0; file < 8; file++) {
-                const int sq = rank * 8 + file;
-
-                if (Piece piece = at(Square(sq)); piece != Piece::NONE) {
-                    if (free_space) {
-                        ss += std::to_string(free_space);
-                        free_space = 0;
-                    }
-
-                    ss += static_cast<std::string>(piece);
-                } else {
-                    free_space++;
-                }
+        return getFenCommon(move_counters, [this](std::string &ss) {
+            if (cr_.isEmpty()) {
+                ss += '-';
+                return;
             }
 
-            if (free_space != 0) ss += std::to_string(free_space);
-            ss += (rank > 0 ? "/" : "");
-        }
-
-        // side to move
-        ss += ' ';
-        ss += (stm_ == Color::WHITE ? 'w' : 'b');
-
-        // castling (xFEN)
-        ss += ' ';
-        if (cr_.isEmpty()) {
-            ss += '-';
-        } else {
             const auto outer_rook_file = [this](Color color, CastlingRights::Side side) -> File {
                 const auto ksq = kingSq(color);
                 const auto r   = ksq.rank();
@@ -397,20 +303,7 @@ class Board {
             append_token(Color::WHITE, CastlingRights::Side::QUEEN_SIDE);
             append_token(Color::BLACK, CastlingRights::Side::KING_SIDE);
             append_token(Color::BLACK, CastlingRights::Side::QUEEN_SIDE);
-        }
-
-        // en passant
-        ss += ' ';
-        ss += (ep_sq_ == Square::NO_SQ ? "-" : static_cast<std::string>(ep_sq_));
-
-        if (move_counters) {
-            ss += ' ';
-            ss += std::to_string(halfMoveClock());
-            ss += ' ';
-            ss += std::to_string(fullMoveNumber());
-        }
-
-        return ss;
+        });
     }
 
     [[nodiscard]] std::string getEpd() const {
@@ -1345,6 +1238,56 @@ class Board {
     std::array<std::array<Bitboard, 2>, 2> castling_path = {};
 
    private:
+    void appendFenPiecePlacement(std::string &ss) const {
+        for (int rank = 7; rank >= 0; rank--) {
+            std::uint32_t free_space = 0;
+
+            for (int file = 0; file < 8; file++) {
+                const int sq = rank * 8 + file;
+
+                if (Piece piece = at(Square(sq)); piece != Piece::NONE) {
+                    if (free_space) {
+                        ss += std::to_string(free_space);
+                        free_space = 0;
+                    }
+
+                    ss += static_cast<std::string>(piece);
+                } else {
+                    free_space++;
+                }
+            }
+
+            if (free_space != 0) ss += std::to_string(free_space);
+            ss += (rank > 0 ? "/" : "");
+        }
+    }
+
+    template <typename CastlingWriter>
+    std::string getFenCommon(bool move_counters, CastlingWriter write_castling) const {
+        std::string ss;
+        ss.reserve(100);
+
+        appendFenPiecePlacement(ss);
+
+        ss += ' ';
+        ss += (stm_ == Color::WHITE ? 'w' : 'b');
+
+        ss += ' ';
+        write_castling(ss);
+
+        ss += ' ';
+        ss += (ep_sq_ == Square::NO_SQ ? "-" : static_cast<std::string>(ep_sq_));
+
+        if (move_counters) {
+            ss += ' ';
+            ss += std::to_string(halfMoveClock());
+            ss += ' ';
+            ss += std::to_string(fullMoveNumber());
+        }
+
+        return ss;
+    }
+
     void removePieceInternal(Piece piece, Square sq) {
         assert(board_[sq.index()] == piece && piece != Piece::NONE);
 
