@@ -156,7 +156,7 @@ class Board {
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
         prev_states_.reserve(256);
         chess960_ = chess960;
-        // assert(setFenInternal<true>(constants::STARTPOS));
+        assert(setFenInternal<true>(constants::STARTPOS));
         setFenInternal<true>(fen);
     }
 
