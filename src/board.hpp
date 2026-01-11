@@ -635,6 +635,7 @@ class Board {
      * @return
      */
     [[nodiscard]] U64 hash() const noexcept { return key_; }
+
     [[nodiscard]] Color sideToMove() const noexcept { return stm_; }
     [[nodiscard]] Square enpassantSq() const noexcept { return ep_sq_; }
     [[nodiscard]] CastlingRights castlingRights() const noexcept { return cr_; }
