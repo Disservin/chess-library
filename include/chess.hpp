@@ -2539,7 +2539,7 @@ class Board {
     /**
      * @brief Calculates the zobrist hash key of the board after a move.
      * The move must be legal otherwise the behavior is undefined.
-     * EXACT can be set to false to skip enpassant and castling logic.
+     * EXACT can be set to false to skip enpassant and castling updates.
      * @tparam EXACT
      * @param move
      * @return
@@ -2551,7 +2551,7 @@ class Board {
         key ^= Zobrist::sideToMove();
         if (EXACT && ep_sq_ != Square::NO_SQ) key ^= Zobrist::enpassant(ep_sq_.file());
 
-        if (move.typeOf() == Move::NULL_MOVE) {
+        if (move == Move::NULL_MOVE) {
             return key;
         }
 
@@ -2577,7 +2577,7 @@ class Board {
             // remove castling rights if king moves
             if (pt == PieceType::KING && cr_.has(stm_)) {
                 const auto oldIdx = cr_.hashIndex();
-                const auto newIdx = oldIdx & (stm_) ? 3 : 12;
+                const auto newIdx = oldIdx & ((stm_) ? 3 : 12);
 
                 key ^= Zobrist::castling(oldIdx);
                 key ^= Zobrist::castling(newIdx);
@@ -2587,7 +2587,7 @@ class Board {
 
                 // remove castling rights if rook moves from back rank
                 if (cr_.getRookFile(stm_, file) == move.from().file()) {
-                    key ^= Zobrist::castlingIndex(~stm_ * 2 + static_cast<int>(file));
+                    key ^= Zobrist::castlingIndex(stm_ * 2 + static_cast<int>(file));
                 }
             } else if (pt == PieceType::PAWN) {
                 // double push
@@ -2597,7 +2597,6 @@ class Board {
 
                     // add enpassant hash if enemy pawns are attacking the square
                     if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
-                        assert(at(move.to().ep_square()) == Piece::NONE);
                         key ^= Zobrist::enpassant(move.to().ep_square().file());
                     }
                 }
@@ -2605,26 +2604,17 @@ class Board {
         }
 
         if (move.typeOf() != Move::CASTLING && move.typeOf() != Move::PROMOTION) {
-            assert(at(move.from()) != Piece::NONE);
-            assert(at(move.to()) == Piece::NONE);
-
             const auto piece = at(move.from());
 
             key ^= Zobrist::piece(piece, move.from()) ^ Zobrist::piece(piece, move.to());
         } else if constexpr (EXACT) {
             if (move.typeOf() == Move::CASTLING) {
-                assert(at<PieceType>(move.from()) == PieceType::KING);
-                assert(at<PieceType>(move.to()) == PieceType::ROOK);
-
                 const bool king_side = move.to() > move.from();
                 const auto rookTo    = Square::castling_rook_square(king_side, stm_);
                 const auto kingTo    = Square::castling_king_square(king_side, stm_);
 
                 const auto king = at(move.from());
                 const auto rook = at(move.to());
-
-                assert(king == Piece(PieceType::KING, stm_));
-                assert(rook == Piece(PieceType::ROOK, stm_));
 
                 key ^= Zobrist::piece(king, move.from()) ^ Zobrist::piece(king, kingTo);
                 key ^= Zobrist::piece(rook, move.to()) ^ Zobrist::piece(rook, rookTo);
@@ -2637,8 +2627,6 @@ class Board {
         }
 
         if (EXACT && move.typeOf() == Move::ENPASSANT) {
-            assert(at<PieceType>(move.to().ep_square()) == PieceType::PAWN);
-
             const auto piece = Piece(PieceType::PAWN, ~stm_);
 
             key ^= Zobrist::piece(piece, move.to().ep_square());
