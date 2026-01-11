@@ -858,7 +858,7 @@ class Board {
         key ^= Zobrist::sideToMove();
         if (EXACT && ep_sq_ != Square::NO_SQ) key ^= Zobrist::enpassant(ep_sq_.file());
 
-        if (move.typeOf() == Move::NULL_MOVE) {
+        if (move == Move::NULL_MOVE) {
             return key;
         }
 

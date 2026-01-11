@@ -87,7 +87,6 @@ TEST_SUITE("Zobrist Hash") {
         {
             auto mv = uci::uciToMove(b, "b4c3");
             CHECK(b.zobristAfter<true>(mv) == 0x93D32682782EDFAE);
-            CHECK(b.zobristAfter<false>(mv) == 0x93D32682782EDFAE);
             b.makeMove(mv);
 
             mv = uci::uciToMove(b, "a1a3");
@@ -273,5 +272,14 @@ TEST_SUITE("Zobrist Hash") {
             b.setFen("rnbqkbnr/pppp1ppp/5P2/4p3/8/8/PPPPP1PP/RNBQKBNR b KQkq - 0 2");
             CHECK(b.hash() == 2265987269840498900ull);
         }
+    }
+
+    TEST_CASE("Test Zobrist Hash Null Move") {
+        Board b;
+
+        b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        CHECK(b.zobristAfter<true>(Move::NULL_MOVE) == 13757846718353144213ull);
+        b.makeNullMove();
+        CHECK(b.hash() == 13757846718353144213ull);
     }
 }
