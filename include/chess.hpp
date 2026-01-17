@@ -2365,6 +2365,25 @@ class Board {
     }
 
     /**
+     * @brief Returns the captured piece or piece type
+     * @tparam T
+     * @param move
+     * @return
+     */
+    template <typename T = Piece>
+    [[nodiscard]] T getCaptured(const Move move) const noexcept {
+        if constexpr (std::is_same_v<T, PieceType>) {
+            if (move.typeOf() == Move::ENPASSANT) return PieceType::PAWN;
+            if (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) return at<PieceType>(move.to());
+            return PieceType::NONE;
+        } else {
+            if (move.typeOf() == Move::ENPASSANT) return (stm_) ? Piece::WHITEPAWN : Piece::BLACKPAWN;
+            if (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) return at(move.to());
+            return Piece::NONE;
+        }
+    }
+
+    /**
      * @brief Get the current zobrist hash key of the board
      * @return
      */
