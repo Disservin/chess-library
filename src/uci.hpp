@@ -96,30 +96,6 @@ class uci {
         return (uci.length() == 4) ? Move::make<Move::NORMAL>(source, target) : Move::NO_MOVE;
     }
 
-    /**
-     * @brief Converts a move to a SAN string
-     * @param board
-     * @param move
-     * @return
-     */
-    [[nodiscard]] static std::string moveToSan(const Board &board, const Move &move) noexcept(false) {
-        std::string san;
-        moveToRep<false>(board, move, san);
-        return san;
-    }
-
-    /**
-     * @brief Converts a move to a LAN string
-     * @param board
-     * @param move
-     * @return
-     */
-    [[nodiscard]] static std::string moveToLan(const Board &board, const Move &move) noexcept(false) {
-        std::string lan;
-        moveToRep<true>(board, move, lan);
-        return lan;
-    }
-
     class SanParseError : public std::exception {
        public:
         explicit SanParseError(const char *message) : msg_(message) {}
@@ -422,46 +398,6 @@ class uci {
         return info;
     }
 
-    template <bool LAN = false>
-    static void moveToRep(Board board, const Move &move, std::string &str) {
-        if (handleCastling(move, str)) {
-            board.makeMove(move);
-            if (board.inCheck()) appendCheckSymbol(board, str);
-            return;
-        }
-
-        const PieceType pt   = board.at(move.from()).type();
-        const bool isCapture = board.at(move.to()) != Piece::NONE || move.typeOf() == Move::ENPASSANT;
-
-        assert(pt != PieceType::NONE);
-
-        if (pt != PieceType::PAWN) {
-            appendPieceSymbol(pt, str);
-        }
-
-        if constexpr (LAN) {
-            appendSquare(move.from(), str);
-        } else {
-            if (pt == PieceType::PAWN) {
-                str += isCapture ? static_cast<std::string>(move.from().file()) : "";
-            } else {
-                resolveAmbiguity(board, move, pt, str);
-            }
-        }
-
-        if (isCapture) {
-            str += 'x';
-        }
-
-        appendSquare(move.to(), str);
-
-        if (move.typeOf() == Move::PROMOTION) appendPromotion(move, str);
-
-        board.makeMove(move);
-
-        if (board.inCheck()) appendCheckSymbol(board, str);
-    }
-
     static bool handleCastling(const Move &move, std::string &str) {
         if (move.typeOf() != Move::CASTLING) return false;
 
@@ -481,11 +417,6 @@ class uci {
     static void appendPromotion(const Move &move, std::string &str) {
         str += '=';
         str += std::toupper(static_cast<std::string>(move.promotionType())[0]);
-    }
-
-    static void appendCheckSymbol(Board &board, std::string &str) {
-        const auto gameState = board.isGameOver().second;
-        str += (gameState == GameResult::LOSE) ? '#' : '+';
     }
 
     static void resolveAmbiguity(const Board &board, const Move &move, PieceType pieceType, std::string &str) {

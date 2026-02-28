@@ -274,12 +274,4 @@ TEST_SUITE("Zobrist Hash") {
         }
     }
 
-    TEST_CASE("Test Zobrist Hash Null Move") {
-        Board b;
-
-        b.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        CHECK(b.zobristAfter<true>(Move::NULL_MOVE) == 13757846718353144213ull);
-        b.makeNullMove();
-        CHECK(b.hash() == 13757846718353144213ull);
-    }
 }

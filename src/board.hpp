@@ -131,21 +131,6 @@ class Board {
     };
 
    private:
-    struct State {
-        U64 hash;
-        CastlingRights castling;
-        Square enpassant;
-        std::uint8_t half_moves;
-        Piece captured_piece;
-
-        State(const U64& hash, const CastlingRights& castling, const Square& enpassant, const std::uint8_t& half_moves,
-              const Piece& captured_piece)
-            : hash(hash),
-              castling(castling),
-              enpassant(enpassant),
-              half_moves(half_moves),
-              captured_piece(captured_piece) {}
-    };
 
     enum class PrivateCtor { CREATE };
 
@@ -154,7 +139,6 @@ class Board {
 
    public:
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
-        prev_states_.reserve(256);
         chess960_ = chess960;
         assert(setFenInternal<true>(constants::STARTPOS));
         setFenInternal<true>(fen);
@@ -177,7 +161,7 @@ class Board {
      * @param fen
      * @return
      */
-    virtual bool setFen(std::string_view fen) { return setFenInternal(fen); }
+    bool setFen(std::string_view fen) { return setFenInternal(fen); }
 
     /**
      * @brief Parse and set a position from xFEN (Chess960/Shredder-FEN style castling).
@@ -295,8 +279,6 @@ class Board {
 
         // Validate side to move
         assert((at(move.from()) < Piece::BLACKPAWN) == (stm_ == Color::WHITE));
-
-        prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, captured);
 
         hfm_++;
         plies_++;
@@ -439,112 +421,6 @@ class Board {
         stm_ = ~stm_;
     }
 
-    void unmakeMove(const Move move) {
-        const auto& prev = prev_states_.back();
-
-        ep_sq_ = prev.enpassant;
-        cr_    = prev.castling;
-        hfm_   = prev.half_moves;
-        stm_   = ~stm_;
-        plies_--;
-
-        if (move.typeOf() == Move::CASTLING) {
-            const bool king_side    = move.to() > move.from();
-            const auto rook_from_sq = Square(king_side ? File::FILE_F : File::FILE_D, move.from().rank());
-            const auto king_to_sq   = Square(king_side ? File::FILE_G : File::FILE_C, move.from().rank());
-
-            assert(at<PieceType>(rook_from_sq) == PieceType::ROOK);
-            assert(at<PieceType>(king_to_sq) == PieceType::KING);
-
-            const auto rook = at(rook_from_sq);
-            const auto king = at(king_to_sq);
-
-            removePiece(rook, rook_from_sq);
-            removePiece(king, king_to_sq);
-
-            assert(king == Piece(PieceType::KING, stm_));
-            assert(rook == Piece(PieceType::ROOK, stm_));
-
-            placePiece(king, move.from());
-            placePiece(rook, move.to());
-
-        } else if (move.typeOf() == Move::PROMOTION) {
-            const auto pawn  = Piece(PieceType::PAWN, stm_);
-            const auto piece = at(move.to());
-
-            assert(piece.type() == move.promotionType());
-            assert(piece.type() != PieceType::PAWN);
-            assert(piece.type() != PieceType::KING);
-            assert(piece.type() != PieceType::NONE);
-
-            removePiece(piece, move.to());
-            placePiece(pawn, move.from());
-
-            if (prev.captured_piece != Piece::NONE) {
-                assert(at(move.to()) == Piece::NONE);
-                placePiece(prev.captured_piece, move.to());
-            }
-
-        } else {
-            assert(at(move.to()) != Piece::NONE);
-            assert(at(move.from()) == Piece::NONE);
-
-            const auto piece = at(move.to());
-
-            removePiece(piece, move.to());
-            placePiece(piece, move.from());
-
-            if (move.typeOf() == Move::ENPASSANT) {
-                const auto pawn   = Piece(PieceType::PAWN, ~stm_);
-                const auto pawnTo = static_cast<Square>(ep_sq_ ^ 8);
-
-                assert(at(pawnTo) == Piece::NONE);
-
-                placePiece(pawn, pawnTo);
-            } else if (prev.captured_piece != Piece::NONE) {
-                assert(at(move.to()) == Piece::NONE);
-
-                placePiece(prev.captured_piece, move.to());
-            }
-        }
-
-        key_ = prev.hash;
-        prev_states_.pop_back();
-    }
-
-    /**
-     * @brief Make a null move. (Switches the side to move)
-     */
-    void makeNullMove() {
-        prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, Piece::NONE);
-
-        key_ ^= Zobrist::sideToMove();
-        if (ep_sq_ != Square::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
-        ep_sq_ = Square::NO_SQ;
-
-        stm_ = ~stm_;
-
-        plies_++;
-    }
-
-    /**
-     * @brief Unmake a null move. (Switches the side to move)
-     */
-    void unmakeNullMove() {
-        const auto& prev = prev_states_.back();
-
-        ep_sq_ = prev.enpassant;
-        cr_    = prev.castling;
-        hfm_   = prev.half_moves;
-        key_   = prev.hash;
-
-        plies_--;
-
-        stm_ = ~stm_;
-
-        prev_states_.pop_back();
-    }
-
     /**
      * @brief Get the occupancy bitboard for the color.
      * @param color
@@ -644,7 +520,6 @@ class Board {
 
     void set960(bool is960) {
         chess960_ = is960;
-        if (!original_fen_.empty()) setFen(original_fen_);
     }
 
     /**
@@ -676,28 +551,6 @@ class Board {
         if (cr_.has(Color::BLACK, CastlingRights::Side::QUEEN_SIDE)) ss += 'q';
 
         return ss;
-    }
-
-    /**
-     * @brief Checks if the current position is a repetition, set this to 1 if
-     * you are writing a chess engine.
-     * @param count
-     * @return
-     */
-    [[nodiscard]] bool isRepetition(int count = 2) const noexcept {
-        std::uint8_t c = 0;
-
-        // We start the loop from the back and go forward in moves, at most to the
-        // last move which reset the half-move counter because repetitions cant
-        // be across half-moves.
-        const auto size = static_cast<int>(prev_states_.size());
-
-        for (int i = size - 2; i >= 0 && i >= size - hfm_ - 1; i -= 2) {
-            if (prev_states_[i].hash == key_) c++;
-            if (c == count) return true;
-        }
-
-        return false;
     }
 
     /**
@@ -760,28 +613,6 @@ class Board {
         }
 
         return false;
-    }
-
-    /**
-     * @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
-     * This function calculates all legal moves for the current position to check if the game is over.
-     * If you are writing a chess engine you should not use this function.
-     * @return
-     */
-    [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const noexcept {
-        if (isHalfMoveDraw()) return getHalfMoveDrawType();
-        if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
-        if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
-
-        Movelist movelist;
-        movegen::legalmoves(movelist, *this);
-
-        if (movelist.empty()) {
-            if (inCheck()) return {GameResultReason::CHECKMATE, GameResult::LOSE};
-            return {GameResultReason::STALEMATE, GameResult::DRAW};
-        }
-
-        return {GameResultReason::NONE, GameResult::NONE};
     }
 
     /**
@@ -960,313 +791,6 @@ class Board {
 
     friend std::ostream& operator<<(std::ostream& os, const Board& board);
 
-    /**
-     * @brief Compresses the board into a PackedBoard.
-     */
-    class Compact {
-        friend class Board;
-        Compact() = default;
-
-       public:
-        /**
-         * @brief Compresses the board into a PackedBoard
-         * @param board
-         * @return
-         */
-        static PackedBoard encode(const Board& board) { return encodeState(board); }
-
-        static PackedBoard encode(std::string_view fen, bool chess960 = false) { return encodeState(fen, chess960); }
-
-        /**
-         * @brief Creates a Board object from a PackedBoard
-         * @param compressed
-         * @param chess960 If the board is a chess960 position, set this to true
-         * @return
-         */
-        static Board decode(const PackedBoard& compressed, bool chess960 = false) {
-            Board board     = Board(PrivateCtor::CREATE);
-            board.chess960_ = chess960;
-            decode(board, compressed);
-            return board;
-        }
-
-       private:
-        /**
-         * A compact board representation can be achieved in 24 bytes,
-         * we use 8 bytes (64bit) to store the occupancy bitboard,
-         * and 16 bytes (128bit) to store the pieces (plus some special information).
-         *
-         * Each of the 16 bytes can store 2 pieces, since chess only has 12 different pieces,
-         * we can represent the pieces from 0 to 11 in 4 bits (a nibble) and use the other 4 bit for
-         * the next piece.
-         * Since we need to store information about enpassant, castling rights and the side to move,
-         * we can use the remaining 4 bits to store this information.
-         *
-         * However we need to store the information and the piece information together.
-         * This means in our case that
-         * 12 -> enpassant + a pawn, we can deduce the color of the pawn from the rank of the square
-         * 13 -> white rook with castling rights, we later use the file to deduce if it's a short or long castle
-         * 14 -> black rook with castling rights, we later use the file to deduce if it's a short or long castle
-         * 15 -> black king and black is side to move
-         *
-         * We will later deduce the square of the pieces from the occupancy bitboard.
-         */
-        static PackedBoard encodeState(const Board& board) {
-            PackedBoard packed{};
-
-            packed[0] = board.occ().getBits() >> 56;
-            packed[1] = (board.occ().getBits() >> 48) & 0xFF;
-            packed[2] = (board.occ().getBits() >> 40) & 0xFF;
-            packed[3] = (board.occ().getBits() >> 32) & 0xFF;
-            packed[4] = (board.occ().getBits() >> 24) & 0xFF;
-            packed[5] = (board.occ().getBits() >> 16) & 0xFF;
-            packed[6] = (board.occ().getBits() >> 8) & 0xFF;
-            packed[7] = board.occ().getBits() & 0xFF;
-
-            auto offset = 8 * 2;
-            auto occ    = board.occ();
-
-            while (occ) {
-                // we now fill the packed array, since our convertedpiece only actually needs 4 bits,
-                // we can store 2 pieces in one byte.
-                const auto sq      = Square(occ.pop());
-                const auto shift   = (offset % 2 == 0 ? 4 : 0);
-                const auto meaning = convertMeaning(board.cr_, board.sideToMove(), board.ep_sq_, sq, board.at(sq));
-                const auto nibble  = meaning << shift;
-
-                packed[offset / 2] |= nibble;
-                offset++;
-            }
-
-            return packed;
-        }
-
-        static PackedBoard encodeState(std::string_view fen, bool chess960 = false) {
-            // fallback to slower method
-            if (chess960) {
-                return encodeState(Board(fen, true));
-            }
-
-            PackedBoard packed{};
-
-            while (fen[0] == ' ') fen.remove_prefix(1);
-
-            const auto params     = split_string_view<4>(fen);
-            const auto position   = params[0].has_value() ? *params[0] : "";
-            const auto move_right = params[1].has_value() ? *params[1] : "w";
-            const auto castling   = params[2].has_value() ? *params[2] : "-";
-            const auto en_passant = params[3].has_value() ? *params[3] : "-";
-
-            const auto ep  = en_passant == "-" ? Square::NO_SQ : Square(en_passant);
-            const auto stm = (move_right == "w") ? Color::WHITE : Color::BLACK;
-
-            CastlingRights cr;
-
-            for (char i : castling) {
-                if (i == '-') break;
-
-                const auto king_side  = CastlingRights::Side::KING_SIDE;
-                const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
-
-                if (i == 'K') cr.setCastlingRight(Color::WHITE, king_side, File::FILE_H);
-                if (i == 'Q') cr.setCastlingRight(Color::WHITE, queen_side, File::FILE_A);
-                if (i == 'k') cr.setCastlingRight(Color::BLACK, king_side, File::FILE_H);
-                if (i == 'q') cr.setCastlingRight(Color::BLACK, queen_side, File::FILE_A);
-
-                assert(i == 'K' || i == 'Q' || i == 'k' || i == 'q');
-
-                continue;
-            }
-
-            const auto parts = split_string_view<8>(position, '/');
-
-            int offset   = 8 * 2;
-            int square   = 0;
-            Bitboard occ = 0ull;
-
-            for (auto i = parts.rbegin(); i != parts.rend(); i++) {
-                auto part = *i;
-
-                for (char curr : *part) {
-                    if (isdigit(curr)) {
-                        square += (curr - '0');
-                    } else if (curr == '/') {
-                        square++;
-                    } else {
-                        const auto p     = Piece(std::string_view(&curr, 1));
-                        const auto shift = (offset % 2 == 0 ? 4 : 0);
-
-                        packed[offset / 2] |= convertMeaning(cr, stm, ep, Square(square), p) << shift;
-                        offset++;
-
-                        occ.set(square);
-                        ++square;
-                    }
-                }
-            }
-
-            packed[0] = occ.getBits() >> 56;
-            packed[1] = (occ.getBits() >> 48) & 0xFF;
-            packed[2] = (occ.getBits() >> 40) & 0xFF;
-            packed[3] = (occ.getBits() >> 32) & 0xFF;
-            packed[4] = (occ.getBits() >> 24) & 0xFF;
-            packed[5] = (occ.getBits() >> 16) & 0xFF;
-            packed[6] = (occ.getBits() >> 8) & 0xFF;
-            packed[7] = occ.getBits() & 0xFF;
-
-            return packed;
-        }
-
-        static void decode(Board& board, const PackedBoard& compressed) {
-            Bitboard occupied = 0ull;
-
-            for (int i = 0; i < 8; i++) {
-                occupied |= Bitboard(compressed[i]) << (56 - i * 8);
-            }
-
-            int offset           = 16;
-            int white_castle_idx = 0, black_castle_idx = 0;
-            File white_castle[2] = {File::NO_FILE, File::NO_FILE};
-            File black_castle[2] = {File::NO_FILE, File::NO_FILE};
-
-            // clear board state
-
-            board.hfm_   = 0;
-            board.plies_ = 0;
-
-            board.stm_ = Color::WHITE;
-
-            board.cr_.clear();
-            board.prev_states_.clear();
-            board.original_fen_.clear();
-
-            board.occ_bb_.fill(0ULL);
-            board.pieces_bb_.fill(0ULL);
-            board.board_.fill(Piece::NONE);
-
-            // place pieces back on the board
-            while (occupied) {
-                const auto sq     = Square(occupied.pop());
-                const auto nibble = compressed[offset / 2] >> (offset % 2 == 0 ? 4 : 0) & 0b1111;
-                const auto piece  = convertPiece(nibble);
-
-                if (piece != Piece::NONE) {
-                    board.placePiece(piece, sq);
-
-                    offset++;
-                    continue;
-                }
-
-                // Piece has a special meaning, interpret it from the raw integer
-                // pawn with ep square behind it
-                if (nibble == 12) {
-                    board.ep_sq_ = sq.ep_square();
-                    // depending on the rank this is a white or black pawn
-                    auto color = sq.rank() == Rank::RANK_4 ? Color::WHITE : Color::BLACK;
-                    board.placePiece(Piece(PieceType::PAWN, color), sq);
-                }
-                // castling rights for white
-                else if (nibble == 13) {
-                    assert(white_castle_idx < 2);
-                    white_castle[white_castle_idx++] = sq.file();
-                    board.placePiece(Piece(PieceType::ROOK, Color::WHITE), sq);
-                }
-                // castling rights for black
-                else if (nibble == 14) {
-                    assert(black_castle_idx < 2);
-                    black_castle[black_castle_idx++] = sq.file();
-                    board.placePiece(Piece(PieceType::ROOK, Color::BLACK), sq);
-                }
-                // black to move
-                else if (nibble == 15) {
-                    board.stm_ = Color::BLACK;
-                    board.placePiece(Piece(PieceType::KING, Color::BLACK), sq);
-                }
-
-                offset++;
-            }
-
-            // reapply castling
-            for (int i = 0; i < 2; i++) {
-                if (white_castle[i] != File::NO_FILE) {
-                    const auto king_sq = board.kingSq(Color::WHITE);
-                    const auto file    = white_castle[i];
-                    const auto side    = CastlingRights::closestSide(file, king_sq.file());
-
-                    board.cr_.setCastlingRight(Color::WHITE, side, file);
-                }
-
-                if (black_castle[i] != File::NO_FILE) {
-                    const auto king_sq = board.kingSq(Color::BLACK);
-                    const auto file    = black_castle[i];
-                    const auto side    = CastlingRights::closestSide(file, king_sq.file());
-
-                    board.cr_.setCastlingRight(Color::BLACK, side, file);
-                }
-            }
-
-            if (board.stm_ == Color::BLACK) {
-                board.plies_++;
-            }
-
-            board.key_ = board.zobrist();
-
-            board.castling_path = {};
-
-            for (Color c : {Color::WHITE, Color::BLACK}) {
-                const auto king_from = board.kingSq(c);
-
-                for (const auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE}) {
-                    if (!board.cr_.has(c, side)) continue;
-
-                    const auto rook_from = Square(board.cr_.getRookFile(c, side), king_from.rank());
-                    const auto king_to   = Square::castling_king_square(side == CastlingRights::Side::KING_SIDE, c);
-                    const auto rook_to   = Square::castling_rook_square(side == CastlingRights::Side::KING_SIDE, c);
-
-                    board.castling_path[c][side == CastlingRights::Side::KING_SIDE] =
-                        (movegen::between(rook_from, rook_to) | movegen::between(king_from, king_to)) &
-                        ~(Bitboard::fromSquare(king_from) | Bitboard::fromSquare(rook_from));
-                }
-            }
-        }
-
-        // 1:1 mapping of Piece::internal() to the compressed piece
-        static std::uint8_t convertPiece(Piece piece) { return static_cast<int>(piece.internal()); }
-
-        // for pieces with a special meaning return Piece::NONE since this is otherwise not used
-        static Piece convertPiece(std::uint8_t piece) {
-            if (piece >= 12) return Piece::NONE;
-            return Piece(Piece::underlying(piece));
-        }
-
-        // 12 => theres an ep square behind the pawn, rank will be deduced from the rank
-        // 13 => any white rook with castling rights, side will be deduced from the file
-        // 14 => any black rook with castling rights, side will be deduced from the file
-        // 15 => black king and black is side to move
-        static std::uint8_t convertMeaning(const CastlingRights& cr, Color stm, Square ep, Square sq, Piece piece) {
-            if (piece.type() == PieceType::PAWN && ep != Square::NO_SQ) {
-                if (Square(static_cast<int>(sq.index()) ^ 8) == ep) return 12;
-            }
-
-            if (piece.type() == PieceType::ROOK) {
-                if (piece.color() == Color::WHITE && Square::back_rank(sq, Color::WHITE) &&
-                    (cr.getRookFile(Color::WHITE, CastlingRights::Side::KING_SIDE) == sq.file() ||
-                     cr.getRookFile(Color::WHITE, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
-                    return 13;
-                if (piece.color() == Color::BLACK && Square::back_rank(sq, Color::BLACK) &&
-                    (cr.getRookFile(Color::BLACK, CastlingRights::Side::KING_SIDE) == sq.file() ||
-                     cr.getRookFile(Color::BLACK, CastlingRights::Side::QUEEN_SIDE) == sq.file()))
-                    return 14;
-            }
-
-            if (piece.type() == PieceType::KING && piece.color() == Color::BLACK && stm == Color::BLACK) {
-                return 15;
-            }
-
-            return convertPiece(piece);
-        }
-    };
-
     bool operator==(const Board& other) const noexcept {
         return pieces_bb_ == other.pieces_bb_   //
                && occ_bb_ == other.occ_bb_      //
@@ -1282,11 +806,9 @@ class Board {
     }
 
    protected:
-    virtual void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
+    void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
 
-    virtual void removePiece(Piece piece, Square sq) { removePieceInternal(piece, sq); }
-
-    std::vector<State> prev_states_;
+    void removePiece(Piece piece, Square sq) { removePieceInternal(piece, sq); }
 
     std::array<Bitboard, 6> pieces_bb_ = {};
     std::array<Bitboard, 2> occ_bb_    = {};
@@ -1541,7 +1063,6 @@ class Board {
 
     template <bool ctor, typename CastlingParser>
     bool setFenCommon(std::string_view fen, CastlingParser parse_castling, bool require_kings = false) {
-        original_fen_ = fen;
 
         reset();
 
@@ -1697,12 +1218,7 @@ class Board {
         plies_ = 1;
         key_   = 0ULL;
         cr_.clear();
-        prev_states_.clear();
     }
-
-    // store the original fen string
-    // useful when setting up a frc position and the user called set960(true) afterwards
-    std::string original_fen_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Board& b) {

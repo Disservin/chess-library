@@ -8,10 +8,8 @@ srcs = files(
     'main.cpp',
     'move.cpp',
     'movelist.cpp',
-    'perft.cpp',
     'pgn.cpp',
     'piece.cpp',
-    'san.cpp',
     'uci.cpp'
 )
 
