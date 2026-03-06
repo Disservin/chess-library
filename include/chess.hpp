@@ -4164,8 +4164,8 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
         Bitboard queens_mask = board.pieces(PieceType::QUEEN, c) & ~(pin_d & pin_hv);
 
         if (whileBitboardAdd<gm>(movelist, queens_mask, [&](Square sq) {
-            return generateQueenMoves(sq, pin_d, pin_hv, occ_all) & movable_square;
-        })) {
+                return generateQueenMoves(sq, pin_d, pin_hv, occ_all) & movable_square;
+            })) {
             return;
         }
     }
