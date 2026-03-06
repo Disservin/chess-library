@@ -773,10 +773,7 @@ class Board {
         if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
         if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
 
-        Movelist movelist;
-        movegen::legalmoves(movelist, *this);
-
-        if (movelist.empty()) {
+        if (!movegen::anylegalmoves(*this)) {
             if (inCheck()) return {GameResultReason::CHECKMATE, GameResult::LOSE};
             return {GameResultReason::STALEMATE, GameResult::DRAW};
         }
