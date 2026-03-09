@@ -526,6 +526,192 @@ inline bool movegen::anylegalmoves(const Board& board, int pieces) {
 }
 
 template <Color::underlying c>
+[[nodiscard]] inline bool movegen::isLegal(const Board& board, const Move move) {
+    assert(board.sideToMove() == c);
+
+    const auto from    = move.from();
+    const auto to      = move.to();
+    const auto from_pt = board.at(from);
+    const auto to_pt   = board.at(to);
+
+    const auto from_index = from.index();
+    const auto to_index   = to.index();
+
+    if (from_pt == Piece::NONE || from_pt.color() != c) return false;
+    if (to_pt != Piece::NONE     // capturing (ignoring enpassant)
+        && ((to_pt.color() == c  // capturing own piece (except castling)
+             && (move.typeOf() != Move::CASTLING || from_pt.type() != PieceType::KING ||
+                 to_pt != Piece(PieceType::ROOK, c))) ||
+            to_pt.type() == PieceType::KING  // capturing king
+            ))
+        return false;
+
+    const auto occ_us    = board.us(c);
+    const auto occ_opp   = board.them(c);
+    const auto occ_all   = occ_us | occ_opp;
+    const auto opp_empty = ~occ_us;
+
+    // non-castling king moves (check for normal as king could be in place of a previous promo/ep)
+    if (from_pt.type() == PieceType::KING && move.typeOf() == Move::NORMAL) {
+        const auto seen = seenSquares<~c>(board, opp_empty);
+        if (seen.check(to_index)) return false;
+        if (!(attacks::king(from).check(to_index))) return false;
+        return true;
+    }
+
+    const auto king_sq = board.kingSq(c);
+
+    const auto [checkmask, checks] = checkMask<c>(board, king_sq);
+    const auto pin_hv              = pinMask<c, PieceType::ROOK>(board, king_sq, occ_opp, occ_us);
+    const auto pin_d               = pinMask<c, PieceType::BISHOP>(board, king_sq, occ_opp, occ_us);
+    assert(checks <= 2);
+
+    // only king moves allowed in double check
+    if (checks == 2 && from_pt.type() != PieceType::KING) return false;
+
+    if (move.typeOf() == Move::CASTLING) {
+        // can't castle when in check
+        if (checks != 0) return false;
+
+        // should be back rank for this side
+        if (!Square::back_rank(to, c)) return false;
+
+        // from and to squares should be our king and rook
+        if (from_pt != Piece(PieceType::KING, c)) return false;
+        if (to_pt != Piece(PieceType::ROOK, c)) return false;
+
+        const auto rights = board.castlingRights();
+        const auto side   = rights.closestSide(to.file(), from.file());
+
+        // should have castling rights
+        if (!rights.has(c, side)) return false;
+
+        // should castle with the correct rook in chess960
+        // e.g., castling file = E, king on B, rook on E & H, king cannot castle with rook on H
+        if (board.chess960() && rights.getRookFile(c, side) != to.file()) return false;
+
+        // should not have pieces on the castling path
+        const auto is_king_side = (side == Board::CastlingRights::Side::KING_SIDE);
+        if (occ_all & board.getCastlingPath(c, is_king_side)) return false;
+
+        // king path should not be attacked
+        const auto king_to = Square::castling_king_square(is_king_side, c);
+        const auto seen    = seenSquares<~c>(board, opp_empty);
+        if (between(from, king_to) & seen) return false;
+
+        // rook on backrank should not be pinned in chess960
+        const auto rook_from = Bitboard::fromSquare(Square(rights.getRookFile(c, side), from.rank()));
+        if (board.chess960() && (pin_hv & board.us(c) & rook_from)) return false;
+
+        return true;
+
+    } else if (move.typeOf() == Move::ENPASSANT) {
+        const auto ep       = board.enpassantSq();
+        const auto ep_index = ep.index();
+        if (ep == Square::NO_SQ || to != ep) return false;
+
+        assert(to_pt == Piece::NONE);
+
+        // should be a pawn
+        if (from_pt.type() != PieceType::PAWN) return false;
+
+        // should be attacking the ep square
+        if (!(attacks::pawn(c, from).check(ep_index))) return false;
+
+        // should resolve check if in check
+        const auto captured_sq = ep.ep_square();  // the pawn that double pushed
+        if (!checkmask.check(captured_sq.index()) && !checkmask.check(ep_index)) return false;
+
+        // should stay along diagonal pin (and not hv pinned)
+        if (pin_hv.check(from_index)) return false;
+        if (pin_d.check(from_index) && !pin_d.check(ep_index)) return false;
+
+        const auto connecting_pawns = Bitboard::fromSquare(captured_sq) | Bitboard::fromSquare(from);
+        const Bitboard king_mask    = Bitboard::fromSquare(king_sq) & Bitboard(captured_sq.rank());
+        const Bitboard opp_qr       = (board.pieces(PieceType::ROOK) | board.pieces(PieceType::QUEEN)) & board.them(c);
+        const auto is_possible_pin  = king_mask && opp_qr;
+
+        // moving and captured squares should not be pinned
+        if (is_possible_pin && !(attacks::rook(king_sq, occ_all ^ connecting_pawns) & opp_qr).empty()) return false;
+
+        return true;
+
+    } else if (move.typeOf() == Move::PROMOTION) {
+        // should be pawn
+        if (from_pt.type() != PieceType::PAWN) return false;
+
+        // fall through to normal logic
+    }
+
+    // moves should be on the checkmask
+    if (!checkmask.check(to_index)) return false;
+
+    // piece-specific movement
+    switch (from_pt.type()) {
+        case PieceType(PieceType::PAWN): {
+            // should push to promotion rank iff promoting
+            constexpr auto PROMO_RANK = Rank::rank(Rank::RANK_8, c);
+            if ((to.rank() == PROMO_RANK) != (move.typeOf() == Move::PROMOTION)) return false;
+
+            // should stay along diagonal pin if capturing
+            if (to_pt != Piece::NONE) {
+                if (pin_hv.check(from_index)) return false;
+                if (pin_d.check(from_index) && !pin_d.check(to_index)) return false;
+                return attacks::pawn(c, from).check(to_index);
+            }
+
+            // should stay along hv pin if pushing
+            if (pin_d.check(from_index)) return false;
+            if (pin_hv.check(from_index) && !pin_hv.check(to_index)) return false;
+
+            constexpr auto UP               = make_direction(Direction::NORTH, c);
+            constexpr auto DOUBLE_PUSH_RANK = Rank::rank(Rank::RANK_2, c);
+
+            // single push
+            if (to == from + UP) return true;
+
+            // middle square should be empty if double push
+            if (from.rank() == DOUBLE_PUSH_RANK && to == from + UP + UP) return board.at(from + UP) == Piece::NONE;
+
+            return false;
+        }
+
+        case PieceType(PieceType::KNIGHT): {
+            if (pin_d.check(from_index) || pin_hv.check(from_index)) return false;
+            return attacks::knight(from).check(to_index);
+        }
+
+        case PieceType(PieceType::BISHOP): {
+            if (pin_hv.check(from_index)) return false;
+            if (pin_d.check(from_index) && !pin_d.check(to_index)) return false;
+            return attacks::bishop(from, occ_all).check(to_index);
+        }
+
+        case PieceType(PieceType::ROOK): {
+            if (pin_d.check(from_index)) return false;
+            if (pin_hv.check(from_index) && !pin_hv.check(to_index)) return false;
+            return attacks::rook(from, occ_all).check(to_index);
+        }
+
+        case PieceType(PieceType::QUEEN): {
+            if (pin_d.check(from_index)) return (attacks::bishop(from, occ_all) & pin_d).check(to_index);
+            if (pin_hv.check(from_index)) return (attacks::rook(from, occ_all) & pin_hv).check(to_index);
+            return attacks::queen(from, occ_all).check(to_index);
+        }
+    }
+
+    assert(false);
+    return false;
+}
+
+[[nodiscard]] inline bool movegen::isLegal(const Board& board, const Move move) {
+    if (board.sideToMove() == Color::WHITE)
+        return movegen::isLegal<Color::WHITE>(board, move);
+    else
+        return movegen::isLegal<Color::BLACK>(board, move);
+}
+
+template <Color::underlying c>
 inline bool movegen::isEpSquareValid(const Board& board, Square ep) {
     const auto stm = board.sideToMove();
 

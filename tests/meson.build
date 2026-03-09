@@ -5,6 +5,7 @@ srcs = files(
     'color.cpp',
     'coords.cpp',
     'hash.cpp',
+    'legal.cpp',
     'main.cpp',
     'move.cpp',
     'movelist.cpp',
