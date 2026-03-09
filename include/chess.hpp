@@ -1863,10 +1863,11 @@ class Board {
               captured_piece(captured_piece) {}
     };
 
-    enum class PrivateCtor { CREATE };
+   protected:
+    enum class ProtectedCtor { CREATE };
 
-    // private constructor to avoid initialization
-    Board(PrivateCtor) {}
+    // protected constructor to avoid initialization
+    Board(ProtectedCtor) {}
 
    public:
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
@@ -1907,8 +1908,8 @@ class Board {
     bool setXfen(std::string_view xfen) {
         const bool prev_960 = chess960_;
         chess960_           = true;
-        const auto ok =
-            setFenCommon<false>(xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
+        const auto ok       = setFenCommon<false>(
+            xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
         if (!ok) chess960_ = prev_960;
         return ok;
     }
@@ -2697,7 +2698,7 @@ class Board {
          * @return
          */
         static Board decode(const PackedBoard& compressed, bool chess960 = false) {
-            Board board     = Board(PrivateCtor::CREATE);
+            Board board     = Board(ProtectedCtor::CREATE);
             board.chess960_ = chess960;
             decode(board, compressed);
             return board;
