@@ -281,6 +281,13 @@ class Board {
     }
 
     /**
+     * @brief Check if a move is legal from the current position. Assumes there
+     * is some position where the move is legal (e.g., no promotion to a king).
+     * \param move
+     */
+    [[nodiscard]] bool isLegal(const Move move) const { return movegen::isLegal(*this, move); }
+
+    /**
      * @brief Make a move on the board. The move must be legal otherwise the
      * behavior is undefined. EXACT can be set to true to only record
      * the enpassant square if the enemy can legally capture the pawn on their

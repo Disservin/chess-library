@@ -46,6 +46,13 @@ class movegen {
                                                                PieceGenType::BISHOP | PieceGenType::ROOK |
                                                                PieceGenType::QUEEN | PieceGenType::KING);
 
+    /**
+     * @brief Check if a move is legal from the given position.
+     * @param board
+     * @param move
+     */
+    [[nodiscard]] static bool isLegal(const Board& board, const Move move);
+
    private:
     static auto init_squares_between();
     static const std::array<std::array<Bitboard, 64>, 64> SQUARES_BETWEEN_BB;
@@ -107,6 +114,9 @@ class movegen {
     static bool isEpSquareValid(const Board& board, Square ep);
 
     [[nodiscard]] static Bitboard between(Square sq1, Square sq2) noexcept;
+
+    template <Color::underlying c>
+    [[nodiscard]] static bool isLegal(const Board& board, const Move move);
 
     friend class Board;
 };
