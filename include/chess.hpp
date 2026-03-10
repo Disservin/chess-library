@@ -136,7 +136,7 @@ namespace chess {
 namespace utils {
 
 // Split a string by a delimiter
-[[nodiscard]] inline std::vector<std::string_view> splitString(std::string_view string, const char &delimiter) {
+[[nodiscard]] inline std::vector<std::string_view> splitString(std::string_view string, const char& delimiter) {
     std::vector<std::string_view> result;
     size_t start = 0;
     size_t end   = string.find(delimiter);
@@ -402,8 +402,7 @@ class Square {
      * @brief Check if the square is light.
      * @return
      */
-    [[nodiscard]] constexpr bool is_light() const noexcept { return (file() + rank()) & 1;
-    }
+    [[nodiscard]] constexpr bool is_light() const noexcept { return (file() + rank()) & 1; }
 
     /**
      * @brief Check if the square is dark.
@@ -948,14 +947,14 @@ class attacks {
 #ifdef CHESS_USE_PEXT
     struct Magic {
         U64 mask;
-        Bitboard *attacks;
+        Bitboard* attacks;
         U64 operator()(Bitboard b) const noexcept { return _pext_u64(b.getBits(), mask); }
     };
 #else
     struct Magic {
         U64 mask;
         U64 magic;
-        Bitboard *attacks;
+        Bitboard* attacks;
         U64 shift;
         U64 operator()(Bitboard b) const noexcept { return (((b & mask)).getBits() * magic) >> shift; }
     };
@@ -967,7 +966,7 @@ class attacks {
 
     // Initializes the magic bitboard tables for sliding pieces
     static void initSliders(Square sq, Magic table[], U64 magic,
-                            const std::function<Bitboard(Square, Bitboard)> &attacks);
+                            const std::function<Bitboard(Square, Bitboard)>& attacks);
 
     // clang-format off
     // pre-calculated lookup table for pawn attacks
@@ -1175,7 +1174,7 @@ class attacks {
      * @param square Attacked Square
      * @return
      */
-    [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
+    [[nodiscard]] static Bitboard attackers(const Board& board, Color color, Square square) noexcept;
 
     /**
      * @brief Returns the slider attacks for a given square
@@ -1278,8 +1277,8 @@ class Move {
     [[nodiscard]] constexpr std::uint16_t move() const noexcept { return move_; }
     [[nodiscard]] constexpr std::int16_t score() const noexcept { return score_; }
 
-    constexpr bool operator==(const Move &rhs) const noexcept { return move_ == rhs.move_; }
-    constexpr bool operator!=(const Move &rhs) const noexcept { return move_ != rhs.move_; }
+    constexpr bool operator==(const Move& rhs) const noexcept { return move_ == rhs.move_; }
+    constexpr bool operator!=(const Move& rhs) const noexcept { return move_ != rhs.move_; }
 
     static constexpr std::uint16_t NO_MOVE   = 0;
     static constexpr std::uint16_t NULL_MOVE = 65;
@@ -1919,8 +1918,8 @@ class Board {
     bool setXfen(std::string_view xfen) {
         const bool prev_960 = chess960_;
         chess960_           = true;
-        const auto ok       = setFenCommon<false>(
-            xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
+        const auto ok =
+            setFenCommon<false>(xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
         if (!ok) chess960_ = prev_960;
         return ok;
     }
@@ -3604,7 +3603,7 @@ template <Color::underlying c>
 
 [[nodiscard]] inline Bitboard attacks::king(Square sq) noexcept { return KingAttacks[sq.index()]; }
 
-[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square) noexcept {
+[[nodiscard]] inline Bitboard attacks::attackers(const Board& board, Color color, Square square) noexcept {
     const auto queens   = board.pieces(PieceType::QUEEN, color);
     const auto occupied = board.occ();
 
@@ -3654,7 +3653,7 @@ template <bool ISROOK>
 }
 
 inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
-                                 const std::function<Bitboard(Square, Bitboard)> &attacks) {
+                                 const std::function<Bitboard(Square, Bitboard)>& attacks) {
     // The edges of the board are not considered for the attacks
     // i.e. for the sq h7 edges will be a1-h1, a1-a8, a8-h8, ignoring the edge of the current square
     const Bitboard edges = ((Bitboard(Rank::RANK_1) | Bitboard(Rank::RANK_8)) & ~Bitboard(sq.rank())) |
@@ -3662,7 +3661,7 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
 
     U64 occ = 0ULL;
 
-    auto &table_sq = table[sq.index()];
+    auto& table_sq = table[sq.index()];
 
 #ifndef CHESS_USE_PEXT
     table_sq.magic = magic;
@@ -4485,7 +4484,7 @@ class StreamBuffer {
     using BufferType               = std::array<char, N * N>;
 
    public:
-    StreamBuffer(std::istream &stream) : stream_(stream) {}
+    StreamBuffer(std::istream& stream) : stream_(stream) {}
 
     // Get the current character, skip carriage returns
     std::optional<char> some() {
@@ -4573,7 +4572,7 @@ class StreamBuffer {
     }
 
    private:
-    std::istream &stream_;
+    std::istream& stream_;
     BufferType buffer_;
     std::streamsize bytes_read_   = 0;
     std::streamsize buffer_index_ = 0;
@@ -4666,8 +4665,8 @@ class StreamParserError {
 
     bool operator==(Code code) const { return code_ == code; }
     bool operator!=(Code code) const { return code_ != code; }
-    bool operator==(const StreamParserError &other) const { return code_ == other.code_; }
-    bool operator!=(const StreamParserError &other) const { return code_ != other.code_; }
+    bool operator==(const StreamParserError& other) const { return code_ == other.code_; }
+    bool operator!=(const StreamParserError& other) const { return code_ != other.code_; }
 
     operator bool() const { return code_ != None; }
 
@@ -4686,9 +4685,9 @@ template <std::size_t BUFFER_SIZE =
           >
 class StreamParser {
    public:
-    StreamParser(std::istream &stream) : stream_buffer(stream) {}
+    StreamParser(std::istream& stream) : stream_buffer(stream) {}
 
-    StreamParserError readGames(Visitor &vis) {
+    StreamParserError readGames(Visitor& vis) {
         visitor = &vis;
 
         if (!stream_buffer.fill()) {
@@ -5154,7 +5153,7 @@ class StreamParser {
 
     detail::StreamBuffer<BUFFER_SIZE> stream_buffer;
 
-    Visitor *visitor = nullptr;
+    Visitor* visitor = nullptr;
 
     // one time allocations
     std::pair<detail::StringBuffer, detail::StringBuffer> header = {detail::StringBuffer{}, detail::StringBuffer{}};
@@ -5186,7 +5185,7 @@ class uci {
      * @param chess960
      * @return
      */
-    [[nodiscard]] static std::string moveToUci(const Move &move, bool chess960 = false) noexcept(false) {
+    [[nodiscard]] static std::string moveToUci(const Move& move, bool chess960 = false) noexcept(false) {
         // Get the from and to squares
         Square from_sq = move.from();
         Square to_sq   = move.to();
@@ -5215,7 +5214,7 @@ class uci {
      * @param uci
      * @return
      */
-    [[nodiscard]] static Move uciToMove(const Board &board, std::string_view uci) noexcept(false) {
+    [[nodiscard]] static Move uciToMove(const Board& board, std::string_view uci) noexcept(false) {
         if (uci.length() < 4) {
             return Move::NO_MOVE;
         }
@@ -5267,7 +5266,7 @@ class uci {
      * @param move
      * @return
      */
-    [[nodiscard]] static std::string moveToSan(const Board &board, const Move &move) noexcept(false) {
+    [[nodiscard]] static std::string moveToSan(const Board& board, const Move& move) noexcept(false) {
         std::string san;
         moveToRep<false>(board, move, san);
         return san;
@@ -5279,7 +5278,7 @@ class uci {
      * @param move
      * @return
      */
-    [[nodiscard]] static std::string moveToLan(const Board &board, const Move &move) noexcept(false) {
+    [[nodiscard]] static std::string moveToLan(const Board& board, const Move& move) noexcept(false) {
         std::string lan;
         moveToRep<true>(board, move, lan);
         return lan;
@@ -5287,13 +5286,13 @@ class uci {
 
     class SanParseError : public std::exception {
        public:
-        explicit SanParseError(const char *message) : msg_(message) {}
+        explicit SanParseError(const char* message) : msg_(message) {}
 
-        explicit SanParseError(const std::string &message) : msg_(message) {}
+        explicit SanParseError(const std::string& message) : msg_(message) {}
 
         virtual ~SanParseError() noexcept {}
 
-        virtual const char *what() const noexcept { return msg_.c_str(); }
+        virtual const char* what() const noexcept { return msg_.c_str(); }
 
        protected:
         std::string msg_;
@@ -5301,13 +5300,13 @@ class uci {
 
     class AmbiguousMoveError : public std::exception {
        public:
-        explicit AmbiguousMoveError(const char *message) : msg_(message) {}
+        explicit AmbiguousMoveError(const char* message) : msg_(message) {}
 
-        explicit AmbiguousMoveError(const std::string &message) : msg_(message) {}
+        explicit AmbiguousMoveError(const std::string& message) : msg_(message) {}
 
         virtual ~AmbiguousMoveError() noexcept {}
 
-        virtual const char *what() const noexcept { return msg_.c_str(); }
+        virtual const char* what() const noexcept { return msg_.c_str(); }
 
        protected:
         std::string msg_;
@@ -5320,7 +5319,7 @@ class uci {
      * @param san
      * @return
      */
-    [[nodiscard]] static Move parseSan(const Board &board, std::string_view san) noexcept(false) {
+    [[nodiscard]] static Move parseSan(const Board& board, std::string_view san) noexcept(false) {
         Movelist moves;
 
         return parseSan(board, san, moves);
@@ -5334,7 +5333,7 @@ class uci {
      * @param moves
      * @return
      */
-    [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
+    [[nodiscard]] static Move parseSan(const Board& board, std::string_view san, Movelist& moves) noexcept(false) {
         if (san.empty()) {
             return Move::NO_MOVE;
         }
@@ -5349,7 +5348,7 @@ class uci {
         }
 
         if (info.castling_short || info.castling_long) {
-            for (const auto &move : moves) {
+            for (const auto& move : moves) {
                 if (move.typeOf() == Move::CASTLING) {
                     if ((info.castling_short && move.to() > move.from()) ||
                         (info.castling_long && move.to() < move.from())) {
@@ -5366,7 +5365,7 @@ class uci {
         Move matchingMove = Move::NO_MOVE;
         bool foundMatch   = false;
 
-        for (const auto &move : moves) {
+        for (const auto& move : moves) {
             // Skip all moves that are not to the correct square
             // or are castling moves
             if (move.to() != info.to || move.typeOf() == Move::CASTLING) {
@@ -5474,7 +5473,7 @@ class uci {
             throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
         }
 #endif
-        constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info, char castling_char) {
+        constexpr auto parse_castle = [](std::string_view& san, SanMoveInformation& info, char castling_char) {
             info.piece = PieceType::KING;
 
             san.remove_prefix(3);
@@ -5488,7 +5487,7 @@ class uci {
 
         static constexpr auto isRank = [](char c) { return c >= '1' && c <= '8'; };
         static constexpr auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
-        static constexpr auto sw     = [](const char &c) { return std::string_view(&c, 1); };
+        static constexpr auto sw     = [](const char& c) { return std::string_view(&c, 1); };
 
         SanMoveInformation info;
         bool throw_error = false;
@@ -5588,7 +5587,7 @@ class uci {
     }
 
     template <bool LAN = false>
-    static void moveToRep(Board board, const Move &move, std::string &str) {
+    static void moveToRep(Board board, const Move& move, std::string& str) {
         if (handleCastling(move, str)) {
             board.makeMove(move);
             if (board.inCheck()) appendCheckSymbol(board, str);
@@ -5627,33 +5626,33 @@ class uci {
         if (board.inCheck()) appendCheckSymbol(board, str);
     }
 
-    static bool handleCastling(const Move &move, std::string &str) {
+    static bool handleCastling(const Move& move, std::string& str) {
         if (move.typeOf() != Move::CASTLING) return false;
 
         str = (move.to().file() > move.from().file()) ? "O-O" : "O-O-O";
         return true;
     }
 
-    static void appendPieceSymbol(PieceType pieceType, std::string &str) {
+    static void appendPieceSymbol(PieceType pieceType, std::string& str) {
         str += std::toupper(static_cast<std::string>(pieceType)[0]);
     }
 
-    static void appendSquare(Square square, std::string &str) {
+    static void appendSquare(Square square, std::string& str) {
         str += static_cast<std::string>(square.file());
         str += static_cast<std::string>(square.rank());
     }
 
-    static void appendPromotion(const Move &move, std::string &str) {
+    static void appendPromotion(const Move& move, std::string& str) {
         str += '=';
         str += std::toupper(static_cast<std::string>(move.promotionType())[0]);
     }
 
-    static void appendCheckSymbol(Board &board, std::string &str) {
+    static void appendCheckSymbol(Board& board, std::string& str) {
         const auto gameState = board.isGameOver().second;
         str += (gameState == GameResult::LOSE) ? '#' : '+';
     }
 
-    static void resolveAmbiguity(const Board &board, const Move &move, PieceType pieceType, std::string &str) {
+    static void resolveAmbiguity(const Board& board, const Move& move, PieceType pieceType, std::string& str) {
         Movelist moves;
         movegen::legalmoves(moves, board, 1 << pieceType);
 
@@ -5661,7 +5660,7 @@ class uci {
         bool needRank         = false;
         bool hasAmbiguousMove = false;
 
-        for (const auto &m : moves) {
+        for (const auto& m : moves) {
             if (m != move && m.to() == move.to()) {
                 hasAmbiguousMove = true;
 
@@ -5700,11 +5699,11 @@ class uci {
     }
 
     template <typename CoordinateType>
-    static bool isIdentifiableByType(const Movelist &moves, const Move move, CoordinateType type) {
+    static bool isIdentifiableByType(const Movelist& moves, const Move move, CoordinateType type) {
         static_assert(std::is_same_v<CoordinateType, File> || std::is_same_v<CoordinateType, Rank>,
                       "CoordinateType must be either File or Rank");
 
-        for (const auto &m : moves) {
+        for (const auto& m : moves) {
             if (m == move || m.to() != move.to()) {
                 continue;
             }
