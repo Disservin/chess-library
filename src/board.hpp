@@ -639,13 +639,13 @@ class Board {
     }
 
     /**
-     * @brief Returns the captured piece or piece type
+     * @brief Returns the capturing piece or piece type
      * @tparam T
      * @param move
      * @return
      */
     template <typename T = Piece>
-    [[nodiscard]] T getCaptured(const Move move) const noexcept {
+    [[nodiscard]] T getCapturing(const Move move) const noexcept {
         if constexpr (std::is_same_v<T, PieceType>) {
             if (move.typeOf() == Move::ENPASSANT) return PieceType::PAWN;
             if (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) return at<PieceType>(move.to());

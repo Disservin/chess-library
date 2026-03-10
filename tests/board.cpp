@@ -144,55 +144,55 @@ TEST_SUITE("Board") {
             Board board = Board();
             auto mv     = Move::make(Square::SQ_E2, Square::SQ_E4);
             CHECK(board.isCapture(mv) == false);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::NONE);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::NONE);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::NONE);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::NONE);
         }
 
         SUBCASE("isCapture False Castling") {
             Board board = Board("r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1");
             auto mv     = Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_H1);
             CHECK(board.isCapture(mv) == false);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::NONE);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::NONE);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::NONE);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::NONE);
 
             mv = Move::make<Move::CASTLING>(Square::SQ_E8, Square::SQ_A8);
             CHECK(board.isCapture(mv) == false);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::NONE);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::NONE);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::NONE);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::NONE);
         }
 
         SUBCASE("isCapture False Promotion") {
             Board board = Board("1k6/6P1/5K2/8/8/8/8/8 w - - 0 1");
             auto mv     = Move::make<Move::PROMOTION>(Square::SQ_G7, Square::SQ_G8, PieceType::QUEEN);
             CHECK(board.isCapture(mv) == false);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::NONE);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::NONE);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::NONE);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::NONE);
         }
 
         SUBCASE("isCapture True") {
             Board board = Board("8/8/8/2nk4/4r3/5P2/2B3K1/8 w - - 0 1");
             auto mv     = Move::make(Square::SQ_F3, Square::SQ_E4);
             CHECK(board.isCapture(mv) == true);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::BLACKROOK);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::ROOK);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::BLACKROOK);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::ROOK);
             board.makeMove(mv);
 
             mv = Move::make(Square::SQ_C5, Square::SQ_E4);
             CHECK(board.isCapture(mv) == true);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::WHITEPAWN);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::PAWN);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::WHITEPAWN);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::PAWN);
             board.makeMove(mv);
 
             mv = Move::make(Square::SQ_C2, Square::SQ_E4);
             CHECK(board.isCapture(mv) == true);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::BLACKKNIGHT);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::KNIGHT);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::BLACKKNIGHT);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::KNIGHT);
             board.makeMove(mv);
 
             mv = Move::make(Square::SQ_D5, Square::SQ_E4);
             CHECK(board.isCapture(mv) == true);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::WHITEBISHOP);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::BISHOP);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::WHITEBISHOP);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::BISHOP);
         }
 
         SUBCASE("isCapture True Enpassant") {
@@ -200,15 +200,15 @@ TEST_SUITE("Board") {
                 Board board = Board("8/2k2p2/8/6P1/1Pp5/8/6K1/8 b - b3 0 1");
                 auto mv     = Move::make<Move::ENPASSANT>(Square::SQ_C4, Square::SQ_B3);
                 CHECK(board.isCapture(mv) == true);
-                CHECK(board.getCaptured<Piece>(mv) == Piece::WHITEPAWN);
-                CHECK(board.getCaptured<PieceType>(mv) == PieceType::PAWN);
+                CHECK(board.getCapturing<Piece>(mv) == Piece::WHITEPAWN);
+                CHECK(board.getCapturing<PieceType>(mv) == PieceType::PAWN);
             }
             {
                 Board board = Board("8/2k5/8/5pP1/8/1p6/7K/8 w - f6 0 3");
                 auto mv     = Move::make<Move::ENPASSANT>(Square::SQ_G5, Square::SQ_F6);
                 CHECK(board.isCapture(mv) == true);
-                CHECK(board.getCaptured<Piece>(mv) == Piece::BLACKPAWN);
-                CHECK(board.getCaptured<PieceType>(mv) == PieceType::PAWN);
+                CHECK(board.getCapturing<Piece>(mv) == Piece::BLACKPAWN);
+                CHECK(board.getCapturing<PieceType>(mv) == PieceType::PAWN);
             }
         }
 
@@ -216,8 +216,8 @@ TEST_SUITE("Board") {
             Board board = Board("1k3n2/6P1/5K2/8/8/8/8/8 w - - 0 1");
             auto mv     = Move::make<Move::PROMOTION>(Square::SQ_G7, Square::SQ_F8, PieceType::ROOK);
             CHECK(board.isCapture(mv) == true);
-            CHECK(board.getCaptured<Piece>(mv) == Piece::BLACKKNIGHT);
-            CHECK(board.getCaptured<PieceType>(mv) == PieceType::KNIGHT);
+            CHECK(board.getCapturing<Piece>(mv) == Piece::BLACKKNIGHT);
+            CHECK(board.getCapturing<PieceType>(mv) == PieceType::KNIGHT);
         }
     }
 
