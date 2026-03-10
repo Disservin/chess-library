@@ -283,7 +283,8 @@ class Board {
     /**
      * @brief Check if a move is legal from the current position. Assumes there
      * is some position where the move is legal (e.g., no promotion to a king).
-     * \param move
+     * @param move
+     * @return
      */
     [[nodiscard]] bool isLegal(const Move move) const { return movegen::isLegal(*this, move); }
 
@@ -639,7 +640,7 @@ class Board {
     }
 
     /**
-     * @brief Returns the capturing piece or piece type
+     * @brief Returns the capturing piece or piece type of a move
      * @tparam T
      * @param move
      * @return

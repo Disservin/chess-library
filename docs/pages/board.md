@@ -63,6 +63,12 @@ class Board {
         std::string getXfen(bool moveCounters = true) const;
         std::string getEpd() const;
 
+        /// @brief Check if a move is legal from the current position. Assumes there
+        /// is some position where the move is legal (e.g., no promotion to a king).
+        /// @param move
+        /// @return
+        bool isLegal(const Move move) const;
+
         /// @brief Make a move on the board. The move must be legal otherwise the
         /// behavior is undefined. EXACT can be set to true to only record
         /// the enpassant square if the enemy can legally capture the pawn on their
@@ -101,6 +107,13 @@ class Board {
         /// @param move
         /// @return
         bool isCapture(const Move move) const;
+
+        /// @brief Returns the capturing piece or piece type of a move
+        /// @tparam T
+        /// @param move
+        /// @return
+        template <typename T = Piece>
+        T getCapturing(const Move move) const;
 
         /// @brief Returns either the piece or the piece type on a square
         /// @tparam T

@@ -31,12 +31,16 @@ VERSION: 0.9.2
 #ifndef CHESS_HPP
 #define CHESS_HPP
 
-#include <cstdint>
+
 #include <functional>
 #include <utility>
+
+
+#include <cstdint>
 #ifdef CHESS_USE_PEXT
 #    include <immintrin.h>
 #endif
+
 
 #if __cpp_lib_bitops >= 201907L
 #    include <bit>
@@ -52,8 +56,11 @@ VERSION: 0.9.2
 #    include <nmmintrin.h>
 #endif
 
-#include <ostream>
+
 #include <string_view>
+
+
+#include <ostream>
 
 namespace chess {
 
@@ -750,6 +757,8 @@ namespace chess {
 class Board;
 }  // namespace chess
 
+
+
 namespace chess {
 
 class PieceType {
@@ -1196,12 +1205,16 @@ class attacks {
 #    include <sstream>
 #endif
 
+
+
 namespace chess::constants {
 
 constexpr Bitboard DEFAULT_CHECKMASK = Bitboard(0xFFFFFFFFFFFFFFFFull);
 constexpr auto STARTPOS              = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 constexpr auto MAX_MOVES             = 256;
 }  // namespace chess::constants
+
+
 
 namespace chess {
 
@@ -1281,9 +1294,12 @@ class Move {
 
 }  // namespace chess
 
+
+
 #include <cstddef>
 #include <iterator>
 #include <stdexcept>
+
 
 namespace chess {
 class Movelist {
@@ -1519,6 +1535,8 @@ class movegen {
 };
 
 }  // namespace chess
+
+
 
 namespace chess {
 class Zobrist {
@@ -1991,7 +2009,8 @@ class Board {
     /**
      * @brief Check if a move is legal from the current position. Assumes there
      * is some position where the move is legal (e.g., no promotion to a king).
-     * \param move
+     * @param move
+     * @return
      */
     [[nodiscard]] bool isLegal(const Move move) const { return movegen::isLegal(*this, move); }
 
@@ -2347,7 +2366,7 @@ class Board {
     }
 
     /**
-     * @brief Returns the captured piece or piece type
+     * @brief Returns the capturing piece or piece type of a move
      * @tparam T
      * @param move
      * @return
@@ -3692,6 +3711,8 @@ inline void attacks::initAttacks() {
     }
 }
 }  // namespace chess
+
+
 
 namespace chess {
 
@@ -5172,6 +5193,8 @@ class StreamParser {
     bool dont_advance_after_body = false;
 };
 }  // namespace chess::pgn
+
+
 
 namespace chess {
 class uci {
