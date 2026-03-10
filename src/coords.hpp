@@ -251,8 +251,7 @@ class Square {
      * @brief Check if the square is light.
      * @return
      */
-    [[nodiscard]] constexpr bool is_light() const noexcept { return (file() + rank()) & 1;
-    }
+    [[nodiscard]] constexpr bool is_light() const noexcept { return (file() + rank()) & 1; }
 
     /**
      * @brief Check if the square is dark.

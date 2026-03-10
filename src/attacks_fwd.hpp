@@ -19,14 +19,14 @@ class attacks {
 #ifdef CHESS_USE_PEXT
     struct Magic {
         U64 mask;
-        Bitboard *attacks;
+        Bitboard* attacks;
         U64 operator()(Bitboard b) const noexcept { return _pext_u64(b.getBits(), mask); }
     };
 #else
     struct Magic {
         U64 mask;
         U64 magic;
-        Bitboard *attacks;
+        Bitboard* attacks;
         U64 shift;
         U64 operator()(Bitboard b) const noexcept { return (((b & mask)).getBits() * magic) >> shift; }
     };
@@ -38,7 +38,7 @@ class attacks {
 
     // Initializes the magic bitboard tables for sliding pieces
     static void initSliders(Square sq, Magic table[], U64 magic,
-                            const std::function<Bitboard(Square, Bitboard)> &attacks);
+                            const std::function<Bitboard(Square, Bitboard)>& attacks);
 
     // clang-format off
     // pre-calculated lookup table for pawn attacks
@@ -246,7 +246,7 @@ class attacks {
      * @param square Attacked Square
      * @return
      */
-    [[nodiscard]] static Bitboard attackers(const Board &board, Color color, Square square) noexcept;
+    [[nodiscard]] static Bitboard attackers(const Board& board, Color color, Square square) noexcept;
 
     /**
      * @brief Returns the slider attacks for a given square

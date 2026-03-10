@@ -33,7 +33,7 @@ inline auto movegen::init_squares_between() {
 }
 
 template <Color::underlying c>
-[[nodiscard]] inline std::pair<Bitboard, int> movegen::checkMask(const Board &board, Square sq) {
+[[nodiscard]] inline std::pair<Bitboard, int> movegen::checkMask(const Board& board, Square sq) {
     const auto opp_knight = board.pieces(PieceType::KNIGHT, ~c);
     const auto opp_bishop = board.pieces(PieceType::BISHOP, ~c);
     const auto opp_rook   = board.pieces(PieceType::ROOK, ~c);
@@ -82,7 +82,7 @@ template <Color::underlying c>
 }
 
 template <Color::underlying c, PieceType::underlying pt>
-[[nodiscard]] inline Bitboard movegen::pinMask(const Board &board, Square sq, Bitboard occ_opp,
+[[nodiscard]] inline Bitboard movegen::pinMask(const Board& board, Square sq, Bitboard occ_opp,
                                                Bitboard occ_us) noexcept {
     static_assert(pt == PieceType::BISHOP || pt == PieceType::ROOK, "Only bishop or rook allowed!");
 
@@ -101,7 +101,7 @@ template <Color::underlying c, PieceType::underlying pt>
 }
 
 template <Color::underlying c>
-[[nodiscard]] inline Bitboard movegen::seenSquares(const Board &board, Bitboard enemy_empty) {
+[[nodiscard]] inline Bitboard movegen::seenSquares(const Board& board, Bitboard enemy_empty) {
     auto king_sq          = board.kingSq(~c);
     Bitboard map_king_atk = attacks::king(king_sq) & enemy_empty;
 
@@ -134,7 +134,7 @@ template <Color::underlying c>
 }
 
 template <Color::underlying c, movegen::MoveGenType mt, movegen::GenMode gm>
-inline bool movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
+inline bool movegen::generatePawnMoves(const Board& board, Movelist& moves, Bitboard pin_d, Bitboard pin_hv,
                                        Bitboard checkmask, Bitboard occ_opp) {
     // flipped for black
 
@@ -254,7 +254,7 @@ inline bool movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     if (ep != Square::NO_SQ) {
         auto m = generateEPMove(board, checkmask, pin_d, pawns_lr, ep, c);
 
-        for (const auto &move : m) {
+        for (const auto& move : m) {
             if (move != Move::NO_MOVE) {
                 moves.add(move);
                 if (gm == GenMode::ONE_MOVE_ONLY) return true;
@@ -264,7 +264,7 @@ inline bool movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     return false;
 }
 
-[[nodiscard]] inline std::array<Move, 2> movegen::generateEPMove(const Board &board, Bitboard checkmask, Bitboard pin_d,
+[[nodiscard]] inline std::array<Move, 2> movegen::generateEPMove(const Board& board, Bitboard checkmask, Bitboard pin_d,
                                                                  Bitboard pawns_lr, Square ep, Color c) {
     assert((ep.rank() == Rank::RANK_3 && board.sideToMove() == Color::BLACK) ||
            (ep.rank() == Rank::RANK_6 && board.sideToMove() == Color::WHITE));
@@ -354,7 +354,7 @@ inline bool movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
 }
 
 template <Color::underlying c>
-[[nodiscard]] inline Bitboard movegen::generateCastleMoves(const Board &board, Square sq, Bitboard seen,
+[[nodiscard]] inline Bitboard movegen::generateCastleMoves(const Board& board, Square sq, Bitboard seen,
                                                            Bitboard pin_hv) noexcept {
     if (!Square::back_rank(sq, c) || !board.castlingRights().has(c)) return 0ull;
 
@@ -385,7 +385,7 @@ template <Color::underlying c>
 }
 
 template <movegen::GenMode gm, typename T>
-inline bool movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func) {
+inline bool movegen::whileBitboardAdd(Movelist& movelist, Bitboard mask, T func) {
     while (mask) {
         const Square from = mask.pop();
         auto moves        = func(from);
@@ -399,7 +399,7 @@ inline bool movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func)
 }
 
 template <Color::underlying c, movegen::MoveGenType mt, movegen::GenMode gm>
-inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
+inline void movegen::legalmoves(Movelist& movelist, const Board& board, int pieces) {
     /*
      The size of the movelist might not
      be 0! This is done on purpose since it enables
@@ -504,7 +504,7 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
 }
 
 template <movegen::MoveGenType mt>
-inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
+inline void movegen::legalmoves(Movelist& movelist, const Board& board, int pieces) {
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
@@ -514,7 +514,7 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
 }
 
 template <movegen::MoveGenType mt>
-inline bool movegen::anylegalmoves(const Board &board, int pieces) {
+inline bool movegen::anylegalmoves(const Board& board, int pieces) {
     Movelist movelist;
 
     if (board.sideToMove() == Color::WHITE)
@@ -526,7 +526,7 @@ inline bool movegen::anylegalmoves(const Board &board, int pieces) {
 }
 
 template <Color::underlying c>
-inline bool movegen::isEpSquareValid(const Board &board, Square ep) {
+inline bool movegen::isEpSquareValid(const Board& board, Square ep) {
     const auto stm = board.sideToMove();
 
     Bitboard occ_us  = board.us(stm);
@@ -542,7 +542,7 @@ inline bool movegen::isEpSquareValid(const Board &board, Square ep) {
     const auto m        = movegen::generateEPMove(board, checkmask, pin_d, pawns_lr, ep, stm);
     bool found          = false;
 
-    for (const auto &move : m) {
+    for (const auto& move : m) {
         if (move != Move::NO_MOVE) {
             found = true;
             break;

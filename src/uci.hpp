@@ -21,7 +21,7 @@ class uci {
      * @param chess960
      * @return
      */
-    [[nodiscard]] static std::string moveToUci(const Move &move, bool chess960 = false) noexcept(false) {
+    [[nodiscard]] static std::string moveToUci(const Move& move, bool chess960 = false) noexcept(false) {
         // Get the from and to squares
         Square from_sq = move.from();
         Square to_sq   = move.to();
@@ -50,7 +50,7 @@ class uci {
      * @param uci
      * @return
      */
-    [[nodiscard]] static Move uciToMove(const Board &board, std::string_view uci) noexcept(false) {
+    [[nodiscard]] static Move uciToMove(const Board& board, std::string_view uci) noexcept(false) {
         if (uci.length() < 4) {
             return Move::NO_MOVE;
         }
@@ -102,7 +102,7 @@ class uci {
      * @param move
      * @return
      */
-    [[nodiscard]] static std::string moveToSan(const Board &board, const Move &move) noexcept(false) {
+    [[nodiscard]] static std::string moveToSan(const Board& board, const Move& move) noexcept(false) {
         std::string san;
         moveToRep<false>(board, move, san);
         return san;
@@ -114,7 +114,7 @@ class uci {
      * @param move
      * @return
      */
-    [[nodiscard]] static std::string moveToLan(const Board &board, const Move &move) noexcept(false) {
+    [[nodiscard]] static std::string moveToLan(const Board& board, const Move& move) noexcept(false) {
         std::string lan;
         moveToRep<true>(board, move, lan);
         return lan;
@@ -122,13 +122,13 @@ class uci {
 
     class SanParseError : public std::exception {
        public:
-        explicit SanParseError(const char *message) : msg_(message) {}
+        explicit SanParseError(const char* message) : msg_(message) {}
 
-        explicit SanParseError(const std::string &message) : msg_(message) {}
+        explicit SanParseError(const std::string& message) : msg_(message) {}
 
         virtual ~SanParseError() noexcept {}
 
-        virtual const char *what() const noexcept { return msg_.c_str(); }
+        virtual const char* what() const noexcept { return msg_.c_str(); }
 
        protected:
         std::string msg_;
@@ -136,13 +136,13 @@ class uci {
 
     class AmbiguousMoveError : public std::exception {
        public:
-        explicit AmbiguousMoveError(const char *message) : msg_(message) {}
+        explicit AmbiguousMoveError(const char* message) : msg_(message) {}
 
-        explicit AmbiguousMoveError(const std::string &message) : msg_(message) {}
+        explicit AmbiguousMoveError(const std::string& message) : msg_(message) {}
 
         virtual ~AmbiguousMoveError() noexcept {}
 
-        virtual const char *what() const noexcept { return msg_.c_str(); }
+        virtual const char* what() const noexcept { return msg_.c_str(); }
 
        protected:
         std::string msg_;
@@ -155,7 +155,7 @@ class uci {
      * @param san
      * @return
      */
-    [[nodiscard]] static Move parseSan(const Board &board, std::string_view san) noexcept(false) {
+    [[nodiscard]] static Move parseSan(const Board& board, std::string_view san) noexcept(false) {
         Movelist moves;
 
         return parseSan(board, san, moves);
@@ -169,7 +169,7 @@ class uci {
      * @param moves
      * @return
      */
-    [[nodiscard]] static Move parseSan(const Board &board, std::string_view san, Movelist &moves) noexcept(false) {
+    [[nodiscard]] static Move parseSan(const Board& board, std::string_view san, Movelist& moves) noexcept(false) {
         if (san.empty()) {
             return Move::NO_MOVE;
         }
@@ -184,7 +184,7 @@ class uci {
         }
 
         if (info.castling_short || info.castling_long) {
-            for (const auto &move : moves) {
+            for (const auto& move : moves) {
                 if (move.typeOf() == Move::CASTLING) {
                     if ((info.castling_short && move.to() > move.from()) ||
                         (info.castling_long && move.to() < move.from())) {
@@ -201,7 +201,7 @@ class uci {
         Move matchingMove = Move::NO_MOVE;
         bool foundMatch   = false;
 
-        for (const auto &move : moves) {
+        for (const auto& move : moves) {
             // Skip all moves that are not to the correct square
             // or are castling moves
             if (move.to() != info.to || move.typeOf() == Move::CASTLING) {
@@ -309,7 +309,7 @@ class uci {
             throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
         }
 #endif
-        constexpr auto parse_castle = [](std::string_view &san, SanMoveInformation &info, char castling_char) {
+        constexpr auto parse_castle = [](std::string_view& san, SanMoveInformation& info, char castling_char) {
             info.piece = PieceType::KING;
 
             san.remove_prefix(3);
@@ -323,7 +323,7 @@ class uci {
 
         static constexpr auto isRank = [](char c) { return c >= '1' && c <= '8'; };
         static constexpr auto isFile = [](char c) { return c >= 'a' && c <= 'h'; };
-        static constexpr auto sw     = [](const char &c) { return std::string_view(&c, 1); };
+        static constexpr auto sw     = [](const char& c) { return std::string_view(&c, 1); };
 
         SanMoveInformation info;
         bool throw_error = false;
@@ -423,7 +423,7 @@ class uci {
     }
 
     template <bool LAN = false>
-    static void moveToRep(Board board, const Move &move, std::string &str) {
+    static void moveToRep(Board board, const Move& move, std::string& str) {
         if (handleCastling(move, str)) {
             board.makeMove(move);
             if (board.inCheck()) appendCheckSymbol(board, str);
@@ -462,33 +462,33 @@ class uci {
         if (board.inCheck()) appendCheckSymbol(board, str);
     }
 
-    static bool handleCastling(const Move &move, std::string &str) {
+    static bool handleCastling(const Move& move, std::string& str) {
         if (move.typeOf() != Move::CASTLING) return false;
 
         str = (move.to().file() > move.from().file()) ? "O-O" : "O-O-O";
         return true;
     }
 
-    static void appendPieceSymbol(PieceType pieceType, std::string &str) {
+    static void appendPieceSymbol(PieceType pieceType, std::string& str) {
         str += std::toupper(static_cast<std::string>(pieceType)[0]);
     }
 
-    static void appendSquare(Square square, std::string &str) {
+    static void appendSquare(Square square, std::string& str) {
         str += static_cast<std::string>(square.file());
         str += static_cast<std::string>(square.rank());
     }
 
-    static void appendPromotion(const Move &move, std::string &str) {
+    static void appendPromotion(const Move& move, std::string& str) {
         str += '=';
         str += std::toupper(static_cast<std::string>(move.promotionType())[0]);
     }
 
-    static void appendCheckSymbol(Board &board, std::string &str) {
+    static void appendCheckSymbol(Board& board, std::string& str) {
         const auto gameState = board.isGameOver().second;
         str += (gameState == GameResult::LOSE) ? '#' : '+';
     }
 
-    static void resolveAmbiguity(const Board &board, const Move &move, PieceType pieceType, std::string &str) {
+    static void resolveAmbiguity(const Board& board, const Move& move, PieceType pieceType, std::string& str) {
         Movelist moves;
         movegen::legalmoves(moves, board, 1 << pieceType);
 
@@ -496,7 +496,7 @@ class uci {
         bool needRank         = false;
         bool hasAmbiguousMove = false;
 
-        for (const auto &m : moves) {
+        for (const auto& m : moves) {
             if (m != move && m.to() == move.to()) {
                 hasAmbiguousMove = true;
 
@@ -535,11 +535,11 @@ class uci {
     }
 
     template <typename CoordinateType>
-    static bool isIdentifiableByType(const Movelist &moves, const Move move, CoordinateType type) {
+    static bool isIdentifiableByType(const Movelist& moves, const Move move, CoordinateType type) {
         static_assert(std::is_same_v<CoordinateType, File> || std::is_same_v<CoordinateType, Rank>,
                       "CoordinateType must be either File or Rank");
 
-        for (const auto &m : moves) {
+        for (const auto& m : moves) {
             if (m == move || m.to() != move.to()) {
                 continue;
             }

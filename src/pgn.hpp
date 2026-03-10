@@ -53,7 +53,7 @@ class StreamBuffer {
     using BufferType               = std::array<char, N * N>;
 
    public:
-    StreamBuffer(std::istream &stream) : stream_(stream) {}
+    StreamBuffer(std::istream& stream) : stream_(stream) {}
 
     // Get the current character, skip carriage returns
     std::optional<char> some() {
@@ -141,7 +141,7 @@ class StreamBuffer {
     }
 
    private:
-    std::istream &stream_;
+    std::istream& stream_;
     BufferType buffer_;
     std::streamsize bytes_read_   = 0;
     std::streamsize buffer_index_ = 0;
@@ -234,8 +234,8 @@ class StreamParserError {
 
     bool operator==(Code code) const { return code_ == code; }
     bool operator!=(Code code) const { return code_ != code; }
-    bool operator==(const StreamParserError &other) const { return code_ == other.code_; }
-    bool operator!=(const StreamParserError &other) const { return code_ != other.code_; }
+    bool operator==(const StreamParserError& other) const { return code_ == other.code_; }
+    bool operator!=(const StreamParserError& other) const { return code_ != other.code_; }
 
     operator bool() const { return code_ != None; }
 
@@ -254,9 +254,9 @@ template <std::size_t BUFFER_SIZE =
           >
 class StreamParser {
    public:
-    StreamParser(std::istream &stream) : stream_buffer(stream) {}
+    StreamParser(std::istream& stream) : stream_buffer(stream) {}
 
-    StreamParserError readGames(Visitor &vis) {
+    StreamParserError readGames(Visitor& vis) {
         visitor = &vis;
 
         if (!stream_buffer.fill()) {
@@ -722,7 +722,7 @@ class StreamParser {
 
     detail::StreamBuffer<BUFFER_SIZE> stream_buffer;
 
-    Visitor *visitor = nullptr;
+    Visitor* visitor = nullptr;
 
     // one time allocations
     std::pair<detail::StringBuffer, detail::StringBuffer> header = {detail::StringBuffer{}, detail::StringBuffer{}};

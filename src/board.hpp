@@ -192,8 +192,8 @@ class Board {
     bool setXfen(std::string_view xfen) {
         const bool prev_960 = chess960_;
         chess960_           = true;
-        const auto ok       = setFenCommon<false>(
-            xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
+        const auto ok =
+            setFenCommon<false>(xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
         if (!ok) chess960_ = prev_960;
         return ok;
     }

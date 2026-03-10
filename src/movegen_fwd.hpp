@@ -31,7 +31,7 @@ class movegen {
      * @param pieces
      */
     template <MoveGenType mt = MoveGenType::ALL>
-    void static legalmoves(Movelist &movelist, const Board &board,
+    void static legalmoves(Movelist& movelist, const Board& board,
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                                         PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
 
@@ -42,7 +42,7 @@ class movegen {
      * @param pieces
      */
     template <MoveGenType mt = MoveGenType::ALL>
-    bool static anylegalmoves(const Board &board, int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT |
+    bool static anylegalmoves(const Board& board, int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT |
                                                                PieceGenType::BISHOP | PieceGenType::ROOK |
                                                                PieceGenType::QUEEN | PieceGenType::KING);
 
@@ -52,17 +52,17 @@ class movegen {
 
     // Generate the checkmask. Returns a bitboard where the attacker path between the king and enemy piece is set.
     template <Color::underlying c>
-    [[nodiscard]] static std::pair<Bitboard, int> checkMask(const Board &board, Square sq);
+    [[nodiscard]] static std::pair<Bitboard, int> checkMask(const Board& board, Square sq);
 
     // Generate the pin mask for horizontal and vertical pins -> PieceType::ROOK
     // Generate the pin mask for diagonal pins. -> PieceType::BISHOP
     // Returns a bitboard where the ray between the king and the pinner is set.
     template <Color::underlying c, PieceType::underlying pt>
-    [[nodiscard]] static Bitboard pinMask(const Board &board, Square sq, Bitboard occ_enemy, Bitboard occ_us) noexcept;
+    [[nodiscard]] static Bitboard pinMask(const Board& board, Square sq, Bitboard occ_enemy, Bitboard occ_us) noexcept;
 
     // Returns the squares that are attacked by the enemy
     template <Color::underlying c>
-    [[nodiscard]] static Bitboard seenSquares(const Board &board, Bitboard enemy_empty);
+    [[nodiscard]] static Bitboard seenSquares(const Board& board, Bitboard enemy_empty);
 
     // Generate pawn moves.
     //
@@ -72,10 +72,10 @@ class movegen {
     //
     // Note that for gm == GenMode::ALL_MOVES, the return value is always false.
     template <Color::underlying c, MoveGenType mt, GenMode gm>
-    static bool generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
+    static bool generatePawnMoves(const Board& board, Movelist& moves, Bitboard pin_d, Bitboard pin_hv,
                                   Bitboard checkmask, Bitboard occ_enemy);
 
-    [[nodiscard]] static std::array<Move, 2> generateEPMove(const Board &board, Bitboard checkmask, Bitboard pin_d,
+    [[nodiscard]] static std::array<Move, 2> generateEPMove(const Board& board, Bitboard checkmask, Bitboard pin_d,
                                                             Bitboard pawns_lr, Square ep, Color c);
 
     [[nodiscard]] static Bitboard generateKnightMoves(Square sq);
@@ -89,7 +89,8 @@ class movegen {
     [[nodiscard]] static Bitboard generateKingMoves(Square sq, Bitboard seen, Bitboard movable_square);
 
     template <Color::underlying c>
-    [[nodiscard]] static Bitboard generateCastleMoves(const Board &board, Square sq, Bitboard seen, Bitboard pinHV) noexcept;
+    [[nodiscard]] static Bitboard generateCastleMoves(const Board& board, Square sq, Bitboard seen,
+                                                      Bitboard pinHV) noexcept;
 
     // If gm == GenMode::ONE_MOVE_ONLY, the function only adds onemove to the movelist.
     //
@@ -97,13 +98,13 @@ class movegen {
     //
     // Note that for gm == GenMode::ALL_MOVES, the return value is always false.
     template <GenMode gm, typename T>
-    static bool whileBitboardAdd(Movelist &movelist, Bitboard mask, T func);
+    static bool whileBitboardAdd(Movelist& movelist, Bitboard mask, T func);
 
     template <Color::underlying c, MoveGenType mt, GenMode gm>
-    static void legalmoves(Movelist &movelist, const Board &board, int pieces);
+    static void legalmoves(Movelist& movelist, const Board& board, int pieces);
 
     template <Color::underlying c>
-    static bool isEpSquareValid(const Board &board, Square ep);
+    static bool isEpSquareValid(const Board& board, Square ep);
 
     [[nodiscard]] static Bitboard between(Square sq1, Square sq2) noexcept;
 

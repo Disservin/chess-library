@@ -67,7 +67,7 @@ template <Color::underlying c>
 
 [[nodiscard]] inline Bitboard attacks::king(Square sq) noexcept { return KingAttacks[sq.index()]; }
 
-[[nodiscard]] inline Bitboard attacks::attackers(const Board &board, Color color, Square square) noexcept {
+[[nodiscard]] inline Bitboard attacks::attackers(const Board& board, Color color, Square square) noexcept {
     const auto queens   = board.pieces(PieceType::QUEEN, color);
     const auto occupied = board.occ();
 
@@ -117,7 +117,7 @@ template <bool ISROOK>
 }
 
 inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
-                                 const std::function<Bitboard(Square, Bitboard)> &attacks) {
+                                 const std::function<Bitboard(Square, Bitboard)>& attacks) {
     // The edges of the board are not considered for the attacks
     // i.e. for the sq h7 edges will be a1-h1, a1-a8, a8-h8, ignoring the edge of the current square
     const Bitboard edges = ((Bitboard(Rank::RANK_1) | Bitboard(Rank::RANK_8)) & ~Bitboard(sq.rank())) |
@@ -125,7 +125,7 @@ inline void attacks::initSliders(Square sq, Magic table[], U64 magic,
 
     U64 occ = 0ULL;
 
-    auto &table_sq = table[sq.index()];
+    auto& table_sq = table[sq.index()];
 
 #ifndef CHESS_USE_PEXT
     table_sq.magic = magic;

@@ -7,7 +7,7 @@ namespace chess {
 namespace utils {
 
 // Split a string by a delimiter
-[[nodiscard]] inline std::vector<std::string_view> splitString(std::string_view string, const char &delimiter) {
+[[nodiscard]] inline std::vector<std::string_view> splitString(std::string_view string, const char& delimiter) {
     std::vector<std::string_view> result;
     size_t start = 0;
     size_t end   = string.find(delimiter);
