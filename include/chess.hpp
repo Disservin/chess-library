@@ -1435,6 +1435,7 @@ class Board;
 class movegen {
    public:
     enum class MoveGenType : std::uint8_t { ALL, CAPTURE, QUIET };
+    enum class GenMode : std::uint8_t { ALL_MOVES, ONE_MOVE_ONLY };
 
     /**
      * @brief Generates all legal moves for a position.
@@ -1447,6 +1448,17 @@ class movegen {
     void static legalmoves(Movelist &movelist, const Board &board,
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                                         PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+
+    /**
+     * @brief Returns true if there are any legal moves for a position.
+     * @tparam mt
+     * @param board
+     * @param pieces
+     */
+    template <MoveGenType mt = MoveGenType::ALL>
+    bool static anylegalmoves(const Board &board, int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT |
+                                                               PieceGenType::BISHOP | PieceGenType::ROOK |
+                                                               PieceGenType::QUEEN | PieceGenType::KING);
 
    private:
     static auto init_squares_between();
@@ -1467,8 +1479,14 @@ class movegen {
     [[nodiscard]] static Bitboard seenSquares(const Board &board, Bitboard enemy_empty);
 
     // Generate pawn moves.
-    template <Color::underlying c, MoveGenType mt>
-    static void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
+    //
+    // If gm == GenMode::ONE_MOVE_ONLY, the function only adds onemove to the movelist.
+    //
+    // Returns true iff gm == GenMode::ONE_MOVE_ONLY and at least one move was added to the movelist.
+    //
+    // Note that for gm == GenMode::ALL_MOVES, the return value is always false.
+    template <Color::underlying c, MoveGenType mt, GenMode gm>
+    static bool generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
                                   Bitboard checkmask, Bitboard occ_enemy);
 
     [[nodiscard]] static std::array<Move, 2> generateEPMove(const Board &board, Bitboard checkmask, Bitboard pin_d,
@@ -1487,10 +1505,15 @@ class movegen {
     template <Color::underlying c>
     [[nodiscard]] static Bitboard generateCastleMoves(const Board &board, Square sq, Bitboard seen, Bitboard pinHV) noexcept;
 
-    template <typename T>
-    static void whileBitboardAdd(Movelist &movelist, Bitboard mask, T func);
+    // If gm == GenMode::ONE_MOVE_ONLY, the function only adds onemove to the movelist.
+    //
+    // Returns true iff gm == GenMode::ONE_MOVE_ONLY and at least one move was added to the movelist.
+    //
+    // Note that for gm == GenMode::ALL_MOVES, the return value is always false.
+    template <GenMode gm, typename T>
+    static bool whileBitboardAdd(Movelist &movelist, Bitboard mask, T func);
 
-    template <Color::underlying c, MoveGenType mt>
+    template <Color::underlying c, MoveGenType mt, GenMode gm>
     static void legalmoves(Movelist &movelist, const Board &board, int pieces);
 
     template <Color::underlying c>
@@ -2466,10 +2489,7 @@ class Board {
         if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
         if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
 
-        Movelist movelist;
-        movegen::legalmoves(movelist, *this);
-
-        if (movelist.empty()) {
+        if (!movegen::anylegalmoves(*this)) {
             if (inCheck()) return {GameResultReason::CHECKMATE, GameResult::LOSE};
             return {GameResultReason::STALEMATE, GameResult::DRAW};
         }
@@ -3781,8 +3801,8 @@ template <Color::underlying c>
     return seen;
 }
 
-template <Color::underlying c, movegen::MoveGenType mt>
-inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
+template <Color::underlying c, movegen::MoveGenType mt, movegen::GenMode gm>
+inline bool movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
                                        Bitboard checkmask, Bitboard occ_opp) {
     // flipped for black
 
@@ -3838,6 +3858,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         while (mt != MoveGenType::QUIET && promo_left) {
             const auto index = promo_left.pop();
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::QUEEN));
+            if (gm == GenMode::ONE_MOVE_ONLY) return true;
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::ROOK));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::BISHOP));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_RIGHT, index, PieceType::KNIGHT));
@@ -3848,6 +3869,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         while (mt != MoveGenType::QUIET && promo_right) {
             const auto index = promo_right.pop();
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::QUEEN));
+            if (gm == GenMode::ONE_MOVE_ONLY) return true;
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::ROOK));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::BISHOP));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN_LEFT, index, PieceType::KNIGHT));
@@ -3858,6 +3880,7 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         while (mt != MoveGenType::CAPTURE && promo_push) {
             const auto index = promo_push.pop();
             moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::QUEEN));
+            if (gm == GenMode::ONE_MOVE_ONLY) return true;
             moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::ROOK));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::BISHOP));
             moves.add(Move::make<Move::PROMOTION>(index + DOWN, index, PieceType::KNIGHT));
@@ -3871,24 +3894,28 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
     while (mt != MoveGenType::QUIET && l_pawns) {
         const auto index = l_pawns.pop();
         moves.add(Move::make<Move::NORMAL>(index + DOWN_RIGHT, index));
+        if (gm == GenMode::ONE_MOVE_ONLY) return true;
     }
 
     while (mt != MoveGenType::QUIET && r_pawns) {
         const auto index = r_pawns.pop();
         moves.add(Move::make<Move::NORMAL>(index + DOWN_LEFT, index));
+        if (gm == GenMode::ONE_MOVE_ONLY) return true;
     }
 
     while (mt != MoveGenType::CAPTURE && single_push) {
         const auto index = single_push.pop();
         moves.add(Move::make<Move::NORMAL>(index + DOWN, index));
+        if (gm == GenMode::ONE_MOVE_ONLY) return true;
     }
 
     while (mt != MoveGenType::CAPTURE && double_push) {
         const auto index = double_push.pop();
         moves.add(Move::make<Move::NORMAL>(index + DOWN + DOWN, index));
+        if (gm == GenMode::ONE_MOVE_ONLY) return true;
     }
 
-    if constexpr (mt == MoveGenType::QUIET) return;
+    if constexpr (mt == MoveGenType::QUIET) return false;
 
     const Square ep = board.enpassantSq();
 
@@ -3896,9 +3923,13 @@ inline void movegen::generatePawnMoves(const Board &board, Movelist &moves, Bitb
         auto m = generateEPMove(board, checkmask, pin_d, pawns_lr, ep, c);
 
         for (const auto &move : m) {
-            if (move != Move::NO_MOVE) moves.add(move);
+            if (move != Move::NO_MOVE) {
+                moves.add(move);
+                if (gm == GenMode::ONE_MOVE_ONLY) return true;
+            }
         }
     }
+    return false;
 }
 
 [[nodiscard]] inline std::array<Move, 2> movegen::generateEPMove(const Board &board, Bitboard checkmask, Bitboard pin_d,
@@ -4021,19 +4052,21 @@ template <Color::underlying c>
     return moves;
 }
 
-template <typename T>
-inline void movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func) {
+template <movegen::GenMode gm, typename T>
+inline bool movegen::whileBitboardAdd(Movelist &movelist, Bitboard mask, T func) {
     while (mask) {
         const Square from = mask.pop();
         auto moves        = func(from);
         while (moves) {
             const Square to = moves.pop();
             movelist.add(Move::make<Move::NORMAL>(from, to));
+            if (gm == GenMode::ONE_MOVE_ONLY) return true;
         }
     }
+    return false;
 }
 
-template <Color::underlying c, movegen::MoveGenType mt>
+template <Color::underlying c, movegen::MoveGenType mt, movegen::GenMode gm>
 inline void movegen::legalmoves(Movelist &movelist, const Board &board, int pieces) {
     /*
      The size of the movelist might not
@@ -4067,8 +4100,10 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
     if (pieces & PieceGenType::KING) {
         Bitboard seen = seenSquares<~c>(board, opp_empty);
 
-        whileBitboardAdd(movelist, Bitboard::fromSquare(king_sq),
-                         [&](Square sq) { return generateKingMoves(sq, seen, movable_square); });
+        if (whileBitboardAdd<gm>(movelist, Bitboard::fromSquare(king_sq),
+                                 [&](Square sq) { return generateKingMoves(sq, seen, movable_square); })) {
+            return;
+        }
 
         if (mt != MoveGenType::CAPTURE && checks == 0) {
             Bitboard moves_bb = generateCastleMoves<c>(board, king_sq, seen, pin_hv);
@@ -4076,6 +4111,7 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
             while (moves_bb) {
                 Square to = moves_bb.pop();
                 movelist.add(Move::make<Move::CASTLING>(king_sq, to));
+                if (gm == GenMode::ONE_MOVE_ONLY) return;
             }
         }
     }
@@ -4088,38 +4124,50 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
 
     // Add the moves to the movelist.
     if (pieces & PieceGenType::PAWN) {
-        generatePawnMoves<c, mt>(board, movelist, pin_d, pin_hv, checkmask, occ_opp);
+        if (generatePawnMoves<c, mt, gm>(board, movelist, pin_d, pin_hv, checkmask, occ_opp)) {
+            return;
+        }
     }
 
     if (pieces & PieceGenType::KNIGHT) {
         // Prune knights that are pinned since these cannot move.
         Bitboard knights_mask = board.pieces(PieceType::KNIGHT, c) & ~(pin_d | pin_hv);
 
-        whileBitboardAdd(movelist, knights_mask, [&](Square sq) { return generateKnightMoves(sq) & movable_square; });
+        if (whileBitboardAdd<gm>(movelist, knights_mask,
+                                 [&](Square sq) { return generateKnightMoves(sq) & movable_square; })) {
+            return;
+        }
     }
 
     if (pieces & PieceGenType::BISHOP) {
         // Prune horizontally pinned bishops
         Bitboard bishops_mask = board.pieces(PieceType::BISHOP, c) & ~pin_hv;
 
-        whileBitboardAdd(movelist, bishops_mask,
-                         [&](Square sq) { return generateBishopMoves(sq, pin_d, occ_all) & movable_square; });
+        if (whileBitboardAdd<gm>(movelist, bishops_mask,
+                                 [&](Square sq) { return generateBishopMoves(sq, pin_d, occ_all) & movable_square; })) {
+            return;
+        }
     }
 
     if (pieces & PieceGenType::ROOK) {
         //  Prune diagonally pinned rooks
         Bitboard rooks_mask = board.pieces(PieceType::ROOK, c) & ~pin_d;
 
-        whileBitboardAdd(movelist, rooks_mask,
-                         [&](Square sq) { return generateRookMoves(sq, pin_hv, occ_all) & movable_square; });
+        if (whileBitboardAdd<gm>(movelist, rooks_mask,
+                                 [&](Square sq) { return generateRookMoves(sq, pin_hv, occ_all) & movable_square; })) {
+            return;
+        }
     }
 
     if (pieces & PieceGenType::QUEEN) {
         // Prune double pinned queens
         Bitboard queens_mask = board.pieces(PieceType::QUEEN, c) & ~(pin_d & pin_hv);
 
-        whileBitboardAdd(movelist, queens_mask,
-                         [&](Square sq) { return generateQueenMoves(sq, pin_d, pin_hv, occ_all) & movable_square; });
+        if (whileBitboardAdd<gm>(movelist, queens_mask, [&](Square sq) {
+                return generateQueenMoves(sq, pin_d, pin_hv, occ_all) & movable_square;
+            })) {
+            return;
+        }
     }
 }
 
@@ -4128,9 +4176,21 @@ inline void movegen::legalmoves(Movelist &movelist, const Board &board, int piec
     movelist.clear();
 
     if (board.sideToMove() == Color::WHITE)
-        legalmoves<Color::WHITE, mt>(movelist, board, pieces);
+        legalmoves<Color::WHITE, mt, GenMode::ALL_MOVES>(movelist, board, pieces);
     else
-        legalmoves<Color::BLACK, mt>(movelist, board, pieces);
+        legalmoves<Color::BLACK, mt, GenMode::ALL_MOVES>(movelist, board, pieces);
+}
+
+template <movegen::MoveGenType mt>
+inline bool movegen::anylegalmoves(const Board &board, int pieces) {
+    Movelist movelist;
+
+    if (board.sideToMove() == Color::WHITE)
+        legalmoves<Color::WHITE, mt, GenMode::ONE_MOVE_ONLY>(movelist, board, pieces);
+    else
+        legalmoves<Color::BLACK, mt, GenMode::ONE_MOVE_ONLY>(movelist, board, pieces);
+
+    return !movelist.empty();
 }
 
 template <Color::underlying c>

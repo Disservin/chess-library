@@ -21,6 +21,7 @@ class Board;
 class movegen {
    public:
     enum class MoveGenType : std::uint8_t { ALL, CAPTURE, QUIET };
+    enum class GenMode : std::uint8_t { ALL_MOVES, ONE_MOVE_ONLY };
 
     /**
      * @brief Generates all legal moves for a position.
@@ -33,6 +34,17 @@ class movegen {
     void static legalmoves(Movelist &movelist, const Board &board,
                            int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT | PieceGenType::BISHOP |
                                         PieceGenType::ROOK | PieceGenType::QUEEN | PieceGenType::KING);
+
+    /**
+     * @brief Returns true if there are any legal moves for a position.
+     * @tparam mt
+     * @param board
+     * @param pieces
+     */
+    template <MoveGenType mt = MoveGenType::ALL>
+    bool static anylegalmoves(const Board &board, int pieces = PieceGenType::PAWN | PieceGenType::KNIGHT |
+                                                               PieceGenType::BISHOP | PieceGenType::ROOK |
+                                                               PieceGenType::QUEEN | PieceGenType::KING);
 
    private:
     static auto init_squares_between();
@@ -53,8 +65,14 @@ class movegen {
     [[nodiscard]] static Bitboard seenSquares(const Board &board, Bitboard enemy_empty);
 
     // Generate pawn moves.
-    template <Color::underlying c, MoveGenType mt>
-    static void generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
+    //
+    // If gm == GenMode::ONE_MOVE_ONLY, the function only adds onemove to the movelist.
+    //
+    // Returns true iff gm == GenMode::ONE_MOVE_ONLY and at least one move was added to the movelist.
+    //
+    // Note that for gm == GenMode::ALL_MOVES, the return value is always false.
+    template <Color::underlying c, MoveGenType mt, GenMode gm>
+    static bool generatePawnMoves(const Board &board, Movelist &moves, Bitboard pin_d, Bitboard pin_hv,
                                   Bitboard checkmask, Bitboard occ_enemy);
 
     [[nodiscard]] static std::array<Move, 2> generateEPMove(const Board &board, Bitboard checkmask, Bitboard pin_d,
@@ -73,10 +91,15 @@ class movegen {
     template <Color::underlying c>
     [[nodiscard]] static Bitboard generateCastleMoves(const Board &board, Square sq, Bitboard seen, Bitboard pinHV) noexcept;
 
-    template <typename T>
-    static void whileBitboardAdd(Movelist &movelist, Bitboard mask, T func);
+    // If gm == GenMode::ONE_MOVE_ONLY, the function only adds onemove to the movelist.
+    //
+    // Returns true iff gm == GenMode::ONE_MOVE_ONLY and at least one move was added to the movelist.
+    //
+    // Note that for gm == GenMode::ALL_MOVES, the return value is always false.
+    template <GenMode gm, typename T>
+    static bool whileBitboardAdd(Movelist &movelist, Bitboard mask, T func);
 
-    template <Color::underlying c, MoveGenType mt>
+    template <Color::underlying c, MoveGenType mt, GenMode gm>
     static void legalmoves(Movelist &movelist, const Board &board, int pieces);
 
     template <Color::underlying c>

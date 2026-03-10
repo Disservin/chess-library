@@ -15,6 +15,12 @@ class Perft {
         Movelist moves;
         movegen::legalmoves(moves, board_);
 
+        const bool any = movegen::anylegalmoves(board_);
+        if (any != (moves.size() > 0)) {
+            throw std::runtime_error("anylegalmoves() inconsistent with legalmoves(): any=" + std::to_string(any) +
+                                     " size=" + std::to_string(moves.size()) + " fen=" + board_.getFen());
+        }
+
         if (depth == 1) {
             return moves.size();
         }
