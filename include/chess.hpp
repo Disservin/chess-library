@@ -2373,6 +2373,8 @@ class Board {
      */
     template <typename T = Piece>
     [[nodiscard]] T getCapturing(const Move move) const noexcept {
+        assert(at(move.from()) != Piece::NONE);
+
         if constexpr (std::is_same_v<T, PieceType>) {
             if (move.typeOf() == Move::ENPASSANT) return PieceType::PAWN;
             if (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) return at<PieceType>(move.to());
