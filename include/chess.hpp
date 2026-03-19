@@ -1272,10 +1272,10 @@ class Move {
      * @brief Set the score for a move. Useful if you later want to sort the moves.
      * @param score
      */
-    constexpr void setScore(std::int16_t score) noexcept { score_ = score; }
+    constexpr void setScore(std::int32_t score) noexcept { score_ = score; }
 
     [[nodiscard]] constexpr std::uint16_t move() const noexcept { return move_; }
-    [[nodiscard]] constexpr std::int16_t score() const noexcept { return score_; }
+    [[nodiscard]] constexpr std::int32_t score() const noexcept { return score_; }
 
     constexpr bool operator==(const Move& rhs) const noexcept { return move_ == rhs.move_; }
     constexpr bool operator!=(const Move& rhs) const noexcept { return move_ != rhs.move_; }
@@ -1289,7 +1289,7 @@ class Move {
 
    private:
     std::uint16_t move_;
-    std::int16_t score_;
+    std::int32_t score_;
 };
 
 }  // namespace chess
