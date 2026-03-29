@@ -568,7 +568,10 @@ class Board {
      * @param previous
      */
     void backtrackTo(const Board& previous) {
-        size_t n = previous.prev_states_.size();
+        const size_t n = previous.prev_states_.size();
+
+        assert(n <= this->prev_states_.size());
+
         this->prev_states_.erase(this->prev_states_.begin() + n, this->prev_states_.end());
 
         this->pieces_bb_    = previous.pieces_bb_;
