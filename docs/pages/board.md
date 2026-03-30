@@ -83,6 +83,18 @@ class Board {
         void makeNullMove();
         void unmakeNullMove();
 
+
+        /**
+        * @brief Backtrack the board state to a previous state. Assumes that the current
+        * state was reached from previous by a series, S, of makeMove() calls. Otherwise
+        * the behavior is undefined. Equivalent to calling unmakeMove() for every move of
+        * S. Ad-hoc testing shows that backtrackTo() is roughly 20% faster than a single
+        * unmakeMove() call. This method can be useful in tree-searching algorithms that
+        * repeatedly backtrack from leaf nodes to the root node, like MCTS.
+        * @param previous
+        */
+        void backtrackTo(const Board& previous)
+
         Bitboard us(Color color) const;
         Bitboard them(Color color) const;
 
