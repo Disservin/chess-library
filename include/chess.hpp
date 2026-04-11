@@ -1318,6 +1318,26 @@ class Movelist {
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+    // constructors and assignment operator
+    Movelist() = default;
+
+    Movelist(const Movelist& other) {
+        size_ = other.size_;
+        for (size_type i = 0; i < size_; ++i) {
+            moves_[i] = other.moves_[i];
+        }
+    }
+
+    Movelist& operator=(const Movelist& other) {
+        if (this != &other) {
+            size_ = other.size_;
+            for (size_type i = 0; i < size_; ++i) {
+                moves_[i] = other.moves_[i];
+            }
+        }
+        return *this;
+    }
+
     // Element access
 
     [[nodiscard]] constexpr reference at(size_type pos) {
