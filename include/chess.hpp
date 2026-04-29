@@ -1297,6 +1297,7 @@ class Move {
 
 
 #include <cstddef>
+#include <cstring>
 #include <iterator>
 #include <stdexcept>
 
@@ -1323,17 +1324,28 @@ class Movelist {
 
     Movelist(const Movelist& other) {
         size_ = other.size_;
-        for (size_type i = 0; i < size_; ++i) {
-            moves_[i] = other.moves_[i];
-        }
+        std::memcpy(moves_.data(), other.moves_.data(), size_ * sizeof(Move));
     }
 
     Movelist& operator=(const Movelist& other) {
         if (this != &other) {
             size_ = other.size_;
-            for (size_type i = 0; i < size_; ++i) {
-                moves_[i] = other.moves_[i];
-            }
+            std::memcpy(moves_.data(), other.moves_.data(), size_ * sizeof(Move));
+        }
+        return *this;
+    }
+
+    Movelist(Movelist&& other) noexcept {
+        size_ = other.size_;
+        std::memcpy(moves_.data(), other.moves_.data(), size_ * sizeof(Move));
+        other.size_ = 0;
+    }
+
+    Movelist& operator=(Movelist&& other) noexcept {
+        if (this != &other) {
+            size_ = other.size_;
+            std::memcpy(moves_.data(), other.moves_.data(), size_ * sizeof(Move));
+            other.size_ = 0;
         }
         return *this;
     }
