@@ -6,7 +6,7 @@
 
 **chess-library** is a multi-purpose library for chess in C++17.
 
-It can be used for any type of chess program, be it a chess engine, a chess GUI, or a chess data anaylsis tool.
+It can be used for any type of chess program, be it a chess engine, a chess GUI, or a chess data analysis tool.
 
 ### Why this library?
 
