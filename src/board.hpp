@@ -77,7 +77,20 @@ enum class GameResultReason {
     NONE
 };
 
-enum class CheckType { NO_CHECK, DIRECT_CHECK, DISCOVERY_CHECK };
+enum class CheckType {
+    NO_CHECK,
+
+    // In normal mode, you only get CHECK as a return value when move
+    // can actually give a check. No other distinguishing is made.
+    CHECK,
+
+    // In detailed mode you get the precise check type of the move.
+    // The effort is costly, so only use it when detailed information is needed.
+    DIRECT_CHECK = CHECK,
+    DIRECT_DISCOVERY_CHECK,
+    SINGLE_DISCOVERY_CHECK,
+    DOUBLE_DISCOVERY_CHECK
+};
 
 // A compact representation of the board in 24 bytes,
 // does not include the half-move clock or full move number.
@@ -867,7 +880,20 @@ class Board {
      */
     [[nodiscard]] bool inCheck() const noexcept { return isAttacked(kingSq(stm_), ~stm_); }
 
-    [[nodiscard]] CheckType givesCheck(const Move& m) const noexcept;
+    /**
+     * @brief Checks if the current side to move is in a double check
+     * @return
+     */
+    [[nodiscard]] bool inDoubleCheck() const noexcept { return checkers().count() == 2; }
+
+    /**
+     * @brief Returns the position of all enemy pieces that give check to our king
+     * @return
+     */
+    [[nodiscard]] Bitboard checkers() const noexcept { return attacks::attackers(*this, ~stm_, kingSq(stm_)) & them(stm_); }
+
+    template <bool Detail = false>
+    [[nodiscard]] CheckType givesCheck(const Move m) const noexcept;
 
     /**
      * @brief Checks if the given color has at least 1 piece thats not pawn and not king
@@ -1771,6 +1797,31 @@ class Board {
     // store the original fen string
     // useful when setting up a frc position and the user called set960(true) afterwards
     std::string original_fen_;
+
+    [[nodiscard]] Bitboard pins() const noexcept {
+        Square king_sq = kingSq(stm_);
+        Bitboard occ_us = us(stm_);
+        Bitboard occ_opp = them(stm_);
+
+        return (stm_ == Color::WHITE)
+            ? movegen::pinMask<Color::WHITE, PieceType::ROOK>(*this, king_sq, occ_opp, occ_us)
+            | movegen::pinMask<Color::WHITE, PieceType::BISHOP>(*this, king_sq, occ_opp, occ_us)
+            : movegen::pinMask<Color::BLACK, PieceType::ROOK>(*this, king_sq, occ_opp, occ_us)
+            | movegen::pinMask<Color::BLACK, PieceType::BISHOP>(*this, king_sq, occ_opp, occ_us);
+    }
+
+public:
+    /**
+     * @brief Get the position of all enemy sliders that pin our pieces to our king
+     * @return
+     */
+    [[nodiscard]] Bitboard pinner() const noexcept { return pins() & them(stm_); }
+
+    /**
+     * @brief Get the position of our pieces that are pinned to our king
+     * @return
+     */
+    [[nodiscard]] Bitboard pinned() const noexcept { return pins() & us(stm_); }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Board& b) {
@@ -1795,88 +1846,137 @@ inline std::ostream& operator<<(std::ostream& os, const Board& b) {
     return os;
 }
 
-inline CheckType Board::givesCheck(const Move& m) const noexcept {
-    const static auto getSniper = [](const Board* board, Square ksq, Bitboard oc) {
-        const auto us_occ = board->us(board->sideToMove());
-        const auto bishop = attacks::bishop(ksq, oc) & board->pieces(PieceType::BISHOP, PieceType::QUEEN) & us_occ;
-        const auto rook   = attacks::rook(ksq, oc) & board->pieces(PieceType::ROOK, PieceType::QUEEN) & us_occ;
+template <bool Detail>
+inline CheckType Board::givesCheck(Move move) const noexcept {
+    assert(at(move.from()).color() == stm_);
+
+    const auto from = move.from();
+    const auto to = move.to();
+    const auto ksq = kingSq(~stm_);
+    const auto fromBB = Bitboard::fromSquare(from);
+    const auto toBB = Bitboard::fromSquare(to);
+    const auto oc = occ() ^ fromBB;
+    const auto occ_us = us(stm_);
+
+    auto getSniper = [&, this](Bitboard oc) {
+        const Bitboard bishop = attacks::bishop(ksq, oc) & pieces(PieceType::BISHOP, PieceType::QUEEN) & occ_us;
+        const Bitboard rook = attacks::rook(ksq, oc) & pieces(PieceType::ROOK, PieceType::QUEEN) & occ_us;
         return (bishop | rook);
-    };
+        };
 
-    assert(at(m.from()).color() == stm_);
+    auto direct_check = [&, this]() {
+        Bitboard fromKing = 0;
 
-    const Square from   = m.from();
-    const Square to     = m.to();
-    const Square ksq    = kingSq(~stm_);
-    const Bitboard toBB = Bitboard::fromSquare(to);
-    const PieceType pt  = at(from).type();
+        switch (at(from).type()) {
+        case static_cast<int>(PieceType::PAWN):
+            fromKing = attacks::pawn(~stm_, ksq);
+            break;
+        case static_cast<int>(PieceType::KNIGHT):
+            fromKing = attacks::knight(ksq);
+            break;
+        case static_cast<int>(PieceType::BISHOP):
+            fromKing = attacks::bishop(ksq, occ());
+            break;
+        case static_cast<int>(PieceType::ROOK):
+            fromKing = attacks::rook(ksq, occ());
+            break;
+        case static_cast<int>(PieceType::QUEEN):
+            fromKing = attacks::queen(ksq, occ());
+        }
 
-    Bitboard fromKing = 0ull;
+        return (fromKing & toBB);
+        };
 
-    if (pt == PieceType::PAWN) {
-        fromKing = attacks::pawn(~stm_, ksq);
-    } else if (pt == PieceType::KNIGHT) {
-        fromKing = attacks::knight(ksq);
-    } else if (pt == PieceType::BISHOP) {
-        fromKing = attacks::bishop(ksq, occ());
-    } else if (pt == PieceType::ROOK) {
-        fromKing = attacks::rook(ksq, occ());
-    } else if (pt == PieceType::QUEEN) {
-        fromKing = attacks::queen(ksq, occ());
-    }
+    auto have_blocker = [&]() {
+        Bitboard discovery_blocker = 0;
+        {
+            Bitboard snipers = getSniper(0);
+            const Bitboard occ_sn = occ() ^ snipers;
 
-    if (fromKing & toBB) return CheckType::DIRECT_CHECK;
+            while (snipers) {
+                const Bitboard blocker = movegen::between(ksq, snipers.pop()) & occ_sn;
+                if (blocker.hasSingleBit()) discovery_blocker |= blocker & occ_us;
+            }
+        }
 
-    // Discovery check
-    const Bitboard fromBB = Bitboard::fromSquare(from);
-    const Bitboard oc     = occ() ^ fromBB;
+        return discovery_blocker & fromBB;
+        };
 
-    Bitboard sniper = getSniper(this, ksq, oc);
+    auto discovery_check = [&]() {
+        return bool(!movegen::line(from, to).check(ksq.index())) || move.typeOf() == Move::CASTLING;
+        };
 
-    while (sniper) {
-        Square sq = sniper.pop();
-        return (!(movegen::between(ksq, sq) & toBB) || m.typeOf() == Move::CASTLING) ? CheckType::DISCOVERY_CHECK
-                                                                                     : CheckType::NO_CHECK;
-    }
+    auto ep_check = [&, this]() { return getSniper((oc ^ Bitboard::fromSquare(enpassantSq().ep_square())) | toBB); };
 
-    switch (m.typeOf()) {
-        case Move::NORMAL:
-            return CheckType::NO_CHECK;
+    if constexpr (Detail) {
+        // The moving piece is a blocker.
+        if (have_blocker()) {
+            // Blocker is moving away from the attack line.
+            if (discovery_check()) {
+                // We can also directly attack the king.
+                if (direct_check()) return CheckType::DIRECT_DISCOVERY_CHECK;
 
-        case Move::PROMOTION: {
-            Bitboard attacks = 0ull;
-
-            switch (m.promotionType()) {
-                case static_cast<int>(PieceType::KNIGHT):
-                    attacks = attacks::knight(to);
-                    break;
-                case static_cast<int>(PieceType::BISHOP):
-                    attacks = attacks::bishop(to, oc);
-                    break;
-                case static_cast<int>(PieceType::ROOK):
-                    attacks = attacks::rook(to, oc);
-                    break;
-                case static_cast<int>(PieceType::QUEEN):
-                    attacks = attacks::queen(to, oc);
+                // Tricky: This is THE most rare checking move in chess
+                // when an enpassant reveals two snipers at once.
+                return (move.typeOf() == Move::ENPASSANT) ? ep_check().hasSingleBit()
+                    ? CheckType::SINGLE_DISCOVERY_CHECK : CheckType::DOUBLE_DISCOVERY_CHECK
+                    : CheckType::SINGLE_DISCOVERY_CHECK;
             }
 
-            return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
+            // King is on its second home rank.
+            // There is a slider behind our pawn,
+            // it can capture enpassant the pawn and attack the king.
+            else
+                return (move.typeOf() == Move::ENPASSANT && direct_check()) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
         }
 
-        case Move::ENPASSANT: {
-            Square capSq(to.file(), from.rank());
-            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB)) ? CheckType::DISCOVERY_CHECK
-                                                                                     : CheckType::NO_CHECK;
+        if (direct_check()) return CheckType::DIRECT_CHECK;
+
+    }
+    else {
+        if (direct_check()) return CheckType::CHECK;
+
+        if (have_blocker()) return discovery_check() ? CheckType::CHECK : CheckType::NO_CHECK;
+    }
+
+    switch (move.typeOf()) {
+    case Move::NORMAL:
+        return CheckType::NO_CHECK;
+
+    case Move::PROMOTION: {
+        Bitboard attacks;
+
+        switch (move.promotionType()) {
+        case static_cast<int>(PieceType::KNIGHT):
+            attacks = attacks::knight(to);
+            break;
+        case static_cast<int>(PieceType::BISHOP):
+            attacks = attacks::bishop(to, oc);
+            break;
+        case static_cast<int>(PieceType::ROOK):
+            attacks = attacks::rook(to, oc);
+            break;
+        case static_cast<int>(PieceType::QUEEN):
+            attacks = attacks::queen(to, oc);
         }
 
-        case Move::CASTLING: {
-            Square rookTo = Square::castling_rook_square(to > from, stm_);
-            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo)) ? CheckType::DISCOVERY_CHECK
-                                                                              : CheckType::NO_CHECK;
-        }
+        return (attacks.check(ksq.index())) ? Detail ? CheckType::DIRECT_CHECK : CheckType::CHECK : CheckType::NO_CHECK;
+    }
+
+    case Move::ENPASSANT:
+        return ep_check() ? Detail ? CheckType::SINGLE_DISCOVERY_CHECK : CheckType::CHECK : CheckType::NO_CHECK;
+
+    case Move::CASTLING: {
+        auto rookBB = Bitboard::fromSquare(Square::castling_rook_square(to > from, stm_));
+
+        return (attacks::rook(ksq, occ()) & rookBB) ? Detail
+            ? CheckType::SINGLE_DISCOVERY_CHECK : CheckType::CHECK
+            : CheckType::NO_CHECK;
+    }
     }
 
     assert(false);
+
     return CheckType::NO_CHECK;  // Prevent a compiler warning
 }
 

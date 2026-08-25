@@ -32,6 +32,25 @@ inline auto movegen::init_squares_between() {
     return squares_between_bb;
 }
 
+inline auto movegen::init_squares_line() {
+    std::array<std::array<Bitboard, 64>, 64> squares_line_bb{};
+
+    auto att = [](PieceType pt, Square sq, Bitboard occ) {
+        return (pt == PieceType::BISHOP) ? attacks::bishop(sq, occ) : attacks::rook(sq, occ);
+        };
+
+    for (int sq1 = 0; sq1 < 64; ++sq1) {
+        for (PieceType pt : {PieceType::BISHOP, PieceType::ROOK}) {
+            for (int sq2 = 0; sq2 < 64; ++sq2) {
+                Bitboard b = att(pt, sq1, 0);
+                if (b.check(sq2)) squares_line_bb[sq1][sq2] = (b & att(pt, sq2, 0)).set(sq1).set(sq2);
+            }
+        }
+    }
+
+    return squares_line_bb;
+}
+
 template <Color::underlying c>
 [[nodiscard]] inline std::pair<Bitboard, int> movegen::checkMask(const Board& board, Square sq) {
     const auto opp_knight = board.pieces(PieceType::KNIGHT, ~c);
@@ -742,9 +761,17 @@ inline bool movegen::isEpSquareValid(const Board& board, Square ep) {
     return SQUARES_BETWEEN_BB[sq1.index()][sq2.index()];
 }
 
+[[nodiscard]] inline Bitboard movegen::line(Square sq1, Square sq2) noexcept {
+    return SQUARES_LINE_BB[sq1.index()][sq2.index()];
+}
+
 inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_BB = [] {
     attacks::initAttacks();
     return movegen::init_squares_between();
 }();
+
+inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_LINE_BB = [] {
+    return movegen::init_squares_line();
+    }();
 
 }  // namespace chess

@@ -187,6 +187,18 @@ class Bitboard {
         return index;
     }
 
+    [[nodiscard]]
+#if __cpp_lib_int_pow2 >= 202002L
+    constexpr
+#endif
+        bool hasSingleBit() const noexcept {
+#if __cpp_lib_int_pow2 >= 202002L
+        return std::has_single_bit(bits);
+#else
+        return count() == 1;
+#endif
+    }
+
     [[nodiscard]] constexpr std::uint64_t getBits() const noexcept { return bits; }
 
     friend std::ostream& operator<<(std::ostream& os, const Bitboard& bb);

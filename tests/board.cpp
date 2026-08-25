@@ -714,4 +714,173 @@ TEST_SUITE("Board") {
             CHECK("rr6/2kpp3/1ppnb1p1/p2Q1q1p/P4P1P/1PNN2P1/2PP4/1K2RR2 b E - 0 1" == newboard.getFen());
         }
     }
+
+    TEST_CASE("givesCheck normal mode") {
+        SUBCASE("castling check") {
+            Board board("rn3bn1/pp4qp/4Q3/1Np3B1/3p1P2/3k4/PP4PP/R3K2R w KQ - 0 1");
+            auto move       = Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_A1);
+            auto check_type = board.givesCheck(move);
+
+            CHECK(CheckType::CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("single discovered check") {
+            Board board("rn1qkbnr/p1pppppp/b7/1p6/8/P3P3/1PPPKPPP/RNBQ1BNR b kq - 0 1");
+            auto move       = Move::make(Square::SQ_B5, Square::SQ_B4);
+            auto check_type = board.givesCheck(move);
+
+            CHECK(CheckType::CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("direct discovered check") {
+            Board board("rnb1kbnr/ppqppppp/8/2p5/3P4/2K5/PPP1PPPP/RNBQ1BNR b kq - 0 1");
+            auto move       = Move::make(Square::SQ_C5, Square::SQ_D4);
+            auto check_type = board.givesCheck(move);
+
+            CHECK(CheckType::CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == board.inDoubleCheck());
+            CHECK(2 == board.checkers().count());
+        }
+
+        SUBCASE("direct check en passant") {
+            Board board("8/4k3/8/R1Pp4/8/2K5/8/8 w - d6 0 1");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_C5, Square::SQ_D6);
+            auto check_type = board.givesCheck(move);
+
+            CHECK(CheckType::CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("direct check en passant with possible sniper") {
+            Board board("r6r/Ppp1kppp/1b3nbN/nPPp4/BB2P3/q4N2/Pp1P2PP/R2Q1R1K w - d6 0 3");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_C5, Square::SQ_D6);
+            auto check_type = board.givesCheck(move);
+
+            CHECK(CheckType::CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("single discovered check en passant") {
+            Board board("8/8/8/R1Ppk3/8/2K5/8/8 w - d6 0 1");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_C5, Square::SQ_D6);
+            auto check_type = board.givesCheck(move);
+
+            CHECK(CheckType::CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("single discovered check en passant with sniper") {
+            Board board("r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq f3 0 1");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_E4, Square::SQ_F3);
+            auto check_type = board.givesCheck(move);
+
+            CHECK(CheckType::CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("double discovered check") {
+            Board board("2K5/4qr1r/1k6/1PpP4/1R1B4/8/R7/8 w - c6 0 1");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_B5, Square::SQ_C6);
+            auto check_type = board.givesCheck(move);
+
+            CHECK(CheckType::CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == board.inDoubleCheck());
+            CHECK(2 == board.checkers().count());
+        }
+    }
+
+    TEST_CASE("givesCheck detailed mode") {
+        SUBCASE("single discovered check") {
+            Board board("rn1qkbnr/p1pppppp/b7/1p6/8/P3P3/1PPPKPPP/RNBQ1BNR b kq - 0 1");
+            auto move       = Move::make(Square::SQ_B5, Square::SQ_B4);
+            auto check_type = board.givesCheck<true>(move);
+
+            CHECK(CheckType::SINGLE_DISCOVERY_CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("direct discovered check") {
+            Board board("rnb1kbnr/ppqppppp/8/2p5/3P4/2K5/PPP1PPPP/RNBQ1BNR b kq - 0 1");
+            auto move       = Move::make(Square::SQ_C5, Square::SQ_D4);
+            auto check_type = board.givesCheck<true>(move);
+
+            CHECK(CheckType::DIRECT_DISCOVERY_CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == board.inDoubleCheck());
+            CHECK(2 == board.checkers().count());
+        }
+
+        SUBCASE("direct check en passant") {
+            Board board("8/4k3/8/R1Pp4/8/2K5/8/8 w - d6 0 1");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_C5, Square::SQ_D6);
+            auto check_type = board.givesCheck<true>(move);
+
+            CHECK(CheckType::DIRECT_CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("direct check en passant with possible sniper") {
+            Board board("r6r/Ppp1kppp/1b3nbN/nPPp4/BB2P3/q4N2/Pp1P2PP/R2Q1R1K w - d6 0 3");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_C5, Square::SQ_D6);
+            auto check_type = board.givesCheck<true>(move);
+
+            CHECK(CheckType::DIRECT_CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("single discovered check en passant") {
+            Board board("8/8/8/R1Ppk3/8/2K5/8/8 w - d6 0 1");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_C5, Square::SQ_D6);
+            auto check_type = board.givesCheck<true>(move);
+
+            CHECK(CheckType::SINGLE_DISCOVERY_CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("single discovered check en passant with sniper") {
+            Board board("r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq f3 0 1");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_E4, Square::SQ_F3);
+            auto check_type = board.givesCheck<true>(move);
+
+            CHECK(CheckType::SINGLE_DISCOVERY_CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == (board.inCheck() && !board.inDoubleCheck()));
+            CHECK(1 == board.checkers().count());
+        }
+
+        SUBCASE("double discovered check") {
+            Board board("2K5/4qr1r/1k6/1PpP4/1R1B4/8/R7/8 w - c6 0 1");
+            auto move       = Move::make<Move::ENPASSANT>(Square::SQ_B5, Square::SQ_C6);
+            auto check_type = board.givesCheck<true>(move);
+
+            CHECK(CheckType::DOUBLE_DISCOVERY_CHECK == check_type);
+            board.makeMove(move);
+            CHECK(true == board.inDoubleCheck());
+            CHECK(2 == board.checkers().count());
+        }
+    }
 }
