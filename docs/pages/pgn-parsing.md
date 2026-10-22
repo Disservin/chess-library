@@ -38,11 +38,25 @@ public:
         // Called for each move in the game
     }
 
+    void startVariation() {
+        // Called at the opening parenthesis of a side variation
+    }
+
+    void endVariation() {
+        // Called at the closing parenthesis of a side variation
+    }
+
     void endPgn() {
         // Called at the end of each PGN game
     }
 };
 ```
+
+Parenthesized PGN variations are skipped by default, preserving the parser's previous
+mainline-only behavior. Enable them with `parser.setParseVariations(true)`. When enabled,
+the parser calls `startVariation()` and `endVariation()` around variation moves, including
+nested variations. The visitor's `move()` method receives mainline and variation moves in
+PGN order.
 
 ### Parsing PGN Files
 

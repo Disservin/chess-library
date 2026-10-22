@@ -1,7 +1,10 @@
 #include <cassert>
 #include <fstream>
 #include <memory>
+#include <sstream>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include "../src/include.hpp"
 #include "doctest/doctest.hpp"
@@ -16,6 +19,8 @@ class MyVisitor : public pgn::Visitor {
         moves_.clear();
         comments_.clear();
         count_ = 0;
+        variation_start_count_ = 0;
+        variation_end_count_ = 0;
         game_count_++;
     }
 
@@ -41,12 +46,17 @@ class MyVisitor : public pgn::Visitor {
         moves_.push_back(std::string(move));
     }
 
+    void startVariation() { variation_start_count_++; }
+    void endVariation() { variation_end_count_++; }
+
     void endPgn() { end_count_++; }
 
     int count() const { return count_; }
     int gameCount() const { return game_count_; }
     int endCount() const { return end_count_; }
     int moveStartCount() const { return move_start_count_; }
+    int variationStartCount() const { return variation_start_count_; }
+    int variationEndCount() const { return variation_end_count_; }
     const auto& comments() const { return comments_; }
     const auto& moves() const { return moves_; }
     const auto& headers() const { return headers_; }
@@ -60,6 +70,8 @@ class MyVisitor : public pgn::Visitor {
     int game_count_       = 0;
     int count_            = 0;
     int move_start_count_ = 0;
+    int variation_start_count_ = 0;
+    int variation_end_count_ = 0;
 };
 
 class MyVisitor2 : public pgn::Visitor {
@@ -143,6 +155,21 @@ class MockVisitorGameover : public pgn::Visitor {
 };
 
 using SmallBufferStreamParser = pgn::StreamParser<1>;
+
+class VariationTraceVisitor : public pgn::Visitor {
+   public:
+    void startPgn() override {}
+    void header(std::string_view, std::string_view) override {}
+    void startMoves() override {}
+    void move(std::string_view move, std::string_view) override {
+        events.emplace_back(move);
+    }
+    void startVariation() override { events.emplace_back("("); }
+    void endVariation() override { events.emplace_back(")"); }
+    void endPgn() override {}
+
+    std::vector<std::string> events;
+};
 
 TEST_SUITE("PGN StreamParser") {
     TEST_CASE("Basic PGN") {
@@ -397,7 +424,7 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->count() == 3);
     }
 
-    TEST_CASE("Skip Variations") {
+    TEST_CASE("Skip Variations by default") {
         const auto file  = "./tests/pgns/variations.pgn";
         auto file_stream = std::ifstream(file);
 
@@ -409,6 +436,38 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->endCount() == 1);
         CHECK(vis->moveStartCount() == 1);
         CHECK(vis->count() == 108);
+        CHECK(vis->variationStartCount() == 0);
+        CHECK(vis->variationEndCount() == 0);
+    }
+
+    TEST_CASE("Read Variations") {
+        const auto file  = "./tests/pgns/variations.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MyVisitor>();
+        SmallBufferStreamParser parser(file_stream);
+        parser.setParseVariations(true);
+        parser.readGames(*vis);
+
+        CHECK(vis->gameCount() == 1);
+        CHECK(vis->endCount() == 1);
+        CHECK(vis->moveStartCount() == 1);
+        CHECK(vis->count() == 212);
+        CHECK(vis->variationStartCount() == 26);
+        CHECK(vis->variationEndCount() == 26);
+    }
+
+    TEST_CASE("Read nested variations and preserve move order") {
+        std::istringstream stream("[Event \"Nested variations\"]\n"
+                                  "1. e4 e5 2. Nf3 (2. Bc4 (2... Nf6) Nc6) Nc6 *");
+        VariationTraceVisitor vis;
+        SmallBufferStreamParser parser(stream);
+        parser.setParseVariations(true);
+        const std::vector<std::string> expected = {"e4", "e5", "Nf3", "(", "Bc4", "(",
+                                                   "Nf6", ")", "Nc6", ")", "Nc6"};
+
+        CHECK(parser.readGames(vis) == pgn::StreamParserError::None);
+        CHECK(vis.events == expected);
     }
 
     TEST_CASE("Read Book") {
