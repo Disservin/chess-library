@@ -797,3 +797,46 @@ TEST_CASE("Comment delimiters and bytes survive buffered scanning") {
         }
     }
 }
+
+TEST_CASE("Pending comments survive skipped variations and refills") {
+    for (std::size_t padding = 0; padding < 32; ++padding) {
+        std::istringstream input("[Event \"pending\"]\n\n" + std::string(padding, ' ') +
+                                 "1. e4 {left} $1 (1. d4 {ignored variation comment}) {right} e5 {black} *");
+        pgn::GameRange<4> range(input);
+        auto game = range.begin();
+        REQUIRE(game != range.end());
+        REQUIRE(game->events.size() == 2);
+        CHECK(game->events[0].san == "e4");
+        CHECK(game->events[0].comment == "leftright");
+        CHECK(game->events[1].comment == "black");
+    }
+}
+
+TEST_CASE("Buffered comment views retain their trailing null byte") {
+    struct CommentVisitor : pgn::Visitor {
+        std::vector<std::string> comments;
+        void startPgn() override {}
+        void header(std::string_view, std::string_view) override {}
+        void startMoves() override {}
+        void move(std::string_view, std::string_view comment) override {
+            CHECK(comment.data()[comment.size()] == '\0');
+            comments.emplace_back(comment);
+        }
+        void endPgn() override {}
+    };
+    for (std::size_t padding = 0; padding < 32; ++padding) {
+        for (const std::string body : {std::string("text"), std::string("text\r"), std::string("te\rxt"),
+                                       std::string(40, 'x')}) {
+            std::istringstream input("[Event \"nul\"]\n\n" + std::string(padding, ' ') +
+                                     "1. e4 {" + body + "} e5 {} *");
+            CommentVisitor visitor;
+            pgn::StreamParser<4> parser(input);
+            CHECK(parser.readGames(visitor) == pgn::StreamParserError::None);
+            REQUIRE(visitor.comments.size() == 2);
+            std::string expected = body;
+            expected.erase(std::remove(expected.begin(), expected.end(), '\r'), expected.end());
+            CHECK(visitor.comments[0] == expected);
+            CHECK(visitor.comments[1].empty());
+        }
+    }
+}

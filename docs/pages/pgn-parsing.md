@@ -25,7 +25,7 @@ as separate tokens (`e4 $1`, rather than `e4$1`); attached NAGs remain in the mo
 string. Semicolon line comments and percent escape lines are not handled as PGN
 comments. Use brace comments instead. The reader expects games with tag pairs;
 it is not a general reader for headerless movetext. Header keys, header values,
-and move tokens have a 255-character buffer limit. Comments use a dynamic string.
+and move tokens have a 255-character buffer limit. Comments have no fixed token-length limit.
 Malformed variations and incomplete input are not comprehensively diagnosed.
 
 ## Process games with a visitor
@@ -72,8 +72,8 @@ int main() {
 
 The usual callback sequence is `startPgn()`, `header(...)` for each tag,
 `startMoves()`, `move(...)` for each move, then `endPgn()`. Empty games may have
-no move callbacks. Header and move arguments are `std::string_view`, not owning
-strings. Copy them into `std::string` if you need them after the callback returns.
+no move callbacks. Callback string arguments, including comments, are non-owning `std::string_view`
+values. Copy them into `std::string` if you need them after the callback returns.
 The input stream must outlive the parser.
 
 To filter games, call `skipPgn(true)` from a callback after the game starts, for

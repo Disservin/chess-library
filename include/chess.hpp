@@ -4968,9 +4968,22 @@ class StreamBuffer {
         return false;
     }
 
-    // Append whole buffered spans instead of growing the comment one character at a time.
-    // Match some(): carriage returns are discarded, including across buffer boundaries.
-    void readComment(std::string& comment) {
+    std::string_view comment() const noexcept {
+        if (comment_borrowed_) return {buffer_.data() + comment_offset_, comment_length_};
+        return comment_storage_;
+    }
+
+    void clearComment() noexcept {
+        if (comment_borrowed_) {
+            comment_borrowed_ = false;
+        } else {
+            comment_storage_.clear();
+        }
+    }
+
+    // Borrow contiguous comments until the callback. Copy only when a comment
+    // spans refills, contains carriage returns, or follows another comment.
+    void readComment() {
         while (true) {
             if (buffer_index_ >= bytes_read_ && !fill()) return;
             const auto begin = buffer_index_;
@@ -4992,9 +5005,21 @@ class StreamBuffer {
                    buffer_[buffer_index_] != '\r') {
                 ++buffer_index_;
             }
-            comment.append(buffer_.data() + begin, static_cast<std::size_t>(buffer_index_ - begin));
+            const auto size = static_cast<std::size_t>(buffer_index_ - begin);
+            if (size != 0) {
+                if (!comment_borrowed_ && comment_storage_.empty()) {
+                    comment_offset_ = static_cast<std::size_t>(begin);
+                    comment_length_ = size;
+                    comment_borrowed_ = true;
+                } else {
+                    preserveComment();
+                    comment_storage_.append(buffer_.data() + begin, size);
+                }
+            }
             if (buffer_index_ < bytes_read_) {
-                const auto delimiter = buffer_[buffer_index_++];
+                const auto delimiter = buffer_[buffer_index_];
+                // Reuse the consumed delimiter to terminate a borrowed span.
+                buffer_[buffer_index_++] = '\0';
                 if (delimiter == '}') return;
             }
         }
@@ -5018,6 +5043,7 @@ class StreamBuffer {
     }
 
     bool fill() {
+        preserveComment();
         buffer_index_ = 0;
 
         stream_.read(buffer_.data(), N * N);
@@ -5051,6 +5077,18 @@ class StreamBuffer {
     }
 
    private:
+    void preserveComment() {
+        if (comment_borrowed_) {
+            comment_storage_.assign(buffer_.data() + comment_offset_, comment_length_);
+            comment_borrowed_ = false;
+        }
+    }
+
+    std::string comment_storage_;
+    std::size_t comment_offset_ = 0;
+    std::size_t comment_length_ = 0;
+    bool comment_borrowed_ = false;
+
     std::istream& stream_;
     BufferType buffer_;
     std::streamsize bytes_read_   = 0;
@@ -5261,7 +5299,7 @@ class StreamParser {
         header.second.clear();
 
         move.clear();
-        comment.clear();
+        stream_buffer.clearComment();
         variation_depth = 0;
 
         in_header = true;
@@ -5270,10 +5308,10 @@ class StreamParser {
 
     void callVisitorMoveFunction() {
         if (!move.empty()) {
-            if (!visitor->skip()) visitor->move(move.get(), comment);
+            if (!visitor->skip()) visitor->move(move.get(), stream_buffer.comment());
 
             move.clear();
-            comment.clear();
+            stream_buffer.clearComment();
         }
     }
 
@@ -5395,14 +5433,14 @@ class StreamParser {
                 // reading comment
                 stream_buffer.advance();
 
-                stream_buffer.readComment(comment);
+                stream_buffer.readComment();
 
                 // the game has no moves, but a comment followed by a game termination
                 if (!visitor->skip()) {
-                    visitor->move("", comment);
+                    visitor->move("", stream_buffer.comment());
 
                     has_comment = false;
-                    comment.clear();
+                    stream_buffer.clearComment();
                 }
             } else {
                 break;
@@ -5599,7 +5637,7 @@ class StreamParser {
                     // reading comment
                     stream_buffer.advance();
 
-                    stream_buffer.readComment(comment);
+                    stream_buffer.readComment();
 
                     break;
                 }
@@ -5700,7 +5738,6 @@ class StreamParser {
     std::pair<detail::StringBuffer, detail::StringBuffer> header = {detail::StringBuffer{}, detail::StringBuffer{}};
 
     detail::StringBuffer move = {};
-    std::string comment       = {};
 
     // State
 
