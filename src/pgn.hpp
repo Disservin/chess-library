@@ -1,10 +1,15 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <iostream>
 #include <istream>
 #include <optional>
+#include <iterator>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace chess::pgn {
 
@@ -268,6 +273,42 @@ class StreamParser {
      */
     void setParseVariations(bool enabled) { parse_variations = enabled; }
 
+    bool readNextGame(Visitor& vis) {
+        visitor = &vis;
+        if (parser_error != StreamParserError::None) return false;
+        bool game_started = !pgn_end;
+
+        while (true) {
+            auto c = stream_buffer.some();
+            if (!c.has_value()) {
+                if (!pgn_end) {
+                    onEnd();
+                    return true;
+                }
+                return false;
+            }
+
+            if (in_header) {
+                visitor->skipPgn(false);
+                if (*c == '[') {
+                    visitor->startPgn();
+                    pgn_end = false;
+                    game_started = true;
+                    processHeader();
+                }
+            } else if (in_body) {
+                processBody();
+            }
+
+            if (parser_error != StreamParserError::None) return false;
+            if (!dont_advance_after_body) stream_buffer.advance();
+            dont_advance_after_body = false;
+            if (game_started && pgn_end) return true;
+        }
+    }
+
+    const StreamParserError& error() const { return parser_error; }
+
     StreamParserError readGames(Visitor& vis) {
         visitor = &vis;
 
@@ -285,16 +326,16 @@ class StreamParser {
 
                     processHeader();
 
-                    if (error != StreamParserError::None) {
-                        return error;
+                    if (parser_error != StreamParserError::None) {
+                        return parser_error;
                     }
                 }
 
             } else if (in_body) {
                 processBody();
 
-                if (error != StreamParserError::None) {
-                    return error;
+                if (parser_error != StreamParserError::None) {
+                    return parser_error;
                 }
             }
 
@@ -306,7 +347,7 @@ class StreamParser {
             onEnd();
         }
 
-        return error;
+        return parser_error;
     }
 
    private:
@@ -345,7 +386,7 @@ class StreamParser {
                             break;
                         } else {
                             if (!header.first.add(*k)) {
-                                error = StreamParserError::ExceededMaxStringLength;
+                                parser_error = StreamParserError::ExceededMaxStringLength;
                                 return;
                             }
 
@@ -368,7 +409,7 @@ class StreamParser {
 
                             // we should be now at ]
                             if (stream_buffer.current().value_or('\0') != ']') {
-                                error = StreamParserError::InvalidHeaderMissingClosingBracket;
+                                parser_error = StreamParserError::InvalidHeaderMissingClosingBracket;
                                 return;
                             }
 
@@ -378,13 +419,13 @@ class StreamParser {
                         } else if (*k == '\n') {
                             // we missed the closing quote and read until the newline character
                             // this is an invalid pgn, let's throw an error
-                            error = StreamParserError::InvalidHeaderMissingClosingQuote;
+                            parser_error = StreamParserError::InvalidHeaderMissingClosingQuote;
                             return;
                         } else {
                             backslash = false;
 
                             if (!header.second.add(*k)) {
-                                error = StreamParserError::ExceededMaxStringLength;
+                                parser_error = StreamParserError::ExceededMaxStringLength;
                                 return;
                             }
 
@@ -625,7 +666,7 @@ class StreamParser {
                 // castling
                 else {
                     if (!move.add('0') || !move.add('-')) {
-                        error = StreamParserError::ExceededMaxStringLength;
+                        parser_error = StreamParserError::ExceededMaxStringLength;
                         return;
                     }
 
@@ -646,7 +687,7 @@ class StreamParser {
             }
 
             if (!move.add(*c)) {
-                error = StreamParserError::ExceededMaxStringLength;
+                parser_error = StreamParserError::ExceededMaxStringLength;
                 return true;
             }
 
@@ -783,7 +824,7 @@ class StreamParser {
 
     // State
 
-    StreamParserError error = StreamParserError::None;
+    StreamParserError parser_error = StreamParserError::None;
 
     bool in_header = true;
     bool in_body   = false;
@@ -794,4 +835,108 @@ class StreamParser {
     std::size_t variation_depth = 0;
     bool parse_variations = false;
 };
+
+enum class GameEventType { Move, VariationStart, VariationEnd };
+
+struct GameEvent {
+    GameEventType type;
+    std::string san;
+    std::string comment;
+};
+
+/// An owning PGN game. Events retain move order and variation nesting.
+struct Game {
+    std::vector<std::pair<std::string, std::string>> headers;
+    std::vector<GameEvent> events;
+};
+
+namespace detail {
+class GameCollector final : public Visitor {
+   public:
+    void startPgn() override { game = {}; }
+    void header(std::string_view key, std::string_view value) override {
+        game.headers.emplace_back(key, value);
+    }
+    void startMoves() override {}
+    void move(std::string_view san, std::string_view comment) override {
+        game.events.push_back({GameEventType::Move, std::string(san), std::string(comment)});
+    }
+    void startVariation() override { game.events.push_back({GameEventType::VariationStart, {}, {}}); }
+    void endVariation() override { game.events.push_back({GameEventType::VariationEnd, {}, {}}); }
+    void endPgn() override { ready = true; }
+
+    Game game;
+    bool ready = false;
+};
+}  // namespace detail
+
+/// A single-pass range that parses one owning game at a time.
+template <std::size_t BUFFER_SIZE =
+#if defined(__APPLE__) || defined(__MACH__)
+              256
+#elif defined(__unix__) || defined(__unix) || defined(unix)
+              1024
+#else
+              256
+#endif
+          >
+class GameRange {
+   public:
+    explicit GameRange(std::istream& stream) : parser_(stream) {}
+
+    /// Enable or disable variation events. Must be called before iteration.
+    void setParseVariations(bool enabled) { parser_.setParseVariations(enabled); }
+
+    class iterator {
+       public:
+        using iterator_category = std::input_iterator_tag;
+        using value_type = Game;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const Game*;
+        using reference = const Game&;
+
+        iterator() = default;
+        explicit iterator(GameRange* range) : range_(range) { advance(); }
+        reference operator*() const { return range_->collector_.game; }
+        pointer operator->() const { return &range_->collector_.game; }
+        iterator& operator++() { advance(); return *this; }
+        void operator++(int) { advance(); }
+        friend bool operator==(const iterator& lhs, const iterator& rhs) {
+            return (lhs.end_ && rhs.end_) || (lhs.range_ == rhs.range_ && lhs.end_ == rhs.end_);
+        }
+        friend bool operator!=(const iterator& lhs, const iterator& rhs) { return !(lhs == rhs); }
+
+       private:
+        void advance() {
+            if (!range_ || range_->finished_) { end_ = true; return; }
+            range_->collector_.ready = false;
+            end_ = !range_->parser_.readNextGame(range_->collector_) || !range_->collector_.ready;
+            if (end_) range_->finished_ = true;
+        }
+        GameRange* range_ = nullptr;
+        bool end_ = true;
+    };
+
+    iterator begin() { return iterator(this); }
+    iterator end() const { return iterator(); }
+    const StreamParserError& error() const { return parser_.error(); }
+
+   private:
+    StreamParser<BUFFER_SIZE> parser_;
+    detail::GameCollector collector_;
+    bool finished_ = false;
+};
+
+template <std::size_t BUFFER_SIZE =
+#if defined(__APPLE__) || defined(__MACH__)
+              256
+#elif defined(__unix__) || defined(__unix) || defined(unix)
+              1024
+#else
+              256
+#endif
+          >
+GameRange<BUFFER_SIZE> games(std::istream& stream) {
+    return GameRange<BUFFER_SIZE>(stream);
+}
 }  // namespace chess::pgn
