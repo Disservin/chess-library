@@ -5082,7 +5082,7 @@ class StreamBuffer {
     std::streamsize delimiterIndex() const {
         auto index = buffer_index_;
 #if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
-        if constexpr (kind == TokenKind::Comment || kind == TokenKind::HeaderValue) {
+        if constexpr (kind == TokenKind::Comment || kind == TokenKind::HeaderValue || kind == TokenKind::Move) {
             while (bytes_read_ - index >= 16) {
                 const auto bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer_.data() + index));
                 auto delimiters = _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\r'));
@@ -5090,8 +5090,15 @@ class StreamBuffer {
                     delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('}')));
                 } else {
                     delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\n')));
-                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('"')));
-                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\\')));
+                    if constexpr (kind == TokenKind::HeaderValue) {
+                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('"')));
+                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\\')));
+                    } else {
+                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8(' ')));
+                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\t')));
+                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('(')));
+                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8(')')));
+                    }
                 }
                 const auto mask = static_cast<unsigned>(_mm_movemask_epi8(delimiters));
                 if (mask != 0) return index + __builtin_ctz(mask);
