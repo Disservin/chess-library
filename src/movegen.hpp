@@ -748,3 +748,145 @@ inline const std::array<std::array<Bitboard, 64>, 64> movegen::SQUARES_BETWEEN_B
 }();
 
 }  // namespace chess
+
+namespace chess {
+
+/** Generates pseudo-legal forward moves which can be undone to reach a board. */
+class RevMoveGen {
+    static void addCaptures(std::vector<RevMove>& moves, Move move, Color captured_color) {
+        constexpr PieceType capture_types[] = {PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP,
+                                               PieceType::ROOK, PieceType::QUEEN};
+        for (PieceType pt : capture_types) moves.emplace_back(move, Piece(pt, captured_color));
+    }
+
+    static void genCastlingMoves(std::vector<RevMove>& moves, const Board& board, Color mover) {
+        const Rank back_rank = mover == Color::WHITE ? Rank::RANK_1 : Rank::RANK_8;
+        for (bool king_side : {false, true}) {
+            const Square king_to = Square::castling_king_square(king_side, mover);
+            const Square rook_to = Square::castling_rook_square(king_side, mover);
+            if (board.at(king_to) != Piece(PieceType::KING, mover) ||
+                board.at(rook_to) != Piece(PieceType::ROOK, mover))
+                continue;
+
+            const int first_king_file = board.chess960() ? static_cast<int>(File::FILE_A) : static_cast<int>(File::FILE_E);
+            const int last_king_file = board.chess960() ? static_cast<int>(File::FILE_H) : static_cast<int>(File::FILE_E);
+            const int first_rook_file = board.chess960()
+                                            ? static_cast<int>(File::FILE_A)
+                                            : static_cast<int>(king_side ? File::FILE_H : File::FILE_A);
+            const int last_rook_file = board.chess960() ? static_cast<int>(File::FILE_H) : first_rook_file;
+            for (int king_file = first_king_file; king_file <= last_king_file; ++king_file) {
+                for (int rook_file = first_rook_file; rook_file <= last_rook_file; ++rook_file) {
+                    if ((king_side && rook_file <= king_file) || (!king_side && rook_file >= king_file)) continue;
+                    const Square king_from(static_cast<File>(king_file), back_rank);
+                    const Square rook_from(static_cast<File>(rook_file), back_rank);
+                    if ((king_from != king_to && king_from != rook_to && board.at(king_from) != Piece::NONE) ||
+                        (rook_from != king_to && rook_from != rook_to && board.at(rook_from) != Piece::NONE))
+                        continue;
+                    moves.emplace_back(Move::make<Move::CASTLING>(king_from, rook_from));
+                }
+            }
+        }
+    }
+
+   public:
+    /**
+     * Generate reverse candidates. Each entry stores the forward move and the
+     * captured piece (or Piece::NONE). Output is cleared before generation.
+     * Candidates are geometric; callers can validate predecessor legality by
+     * applying the matching forward move to a copy of the predecessor.
+     */
+    static void genMoves(std::vector<RevMove>& moves, const Board& board) {
+        moves.clear();
+        const Color mover = ~board.sideToMove();
+        const Color captured_color = ~mover;
+        const Bitboard occupied = board.occ();
+        const Bitboard empty = ~occupied;
+        genCastlingMoves(moves, board, mover);
+
+        Bitboard pieces = board.us(mover);
+        while (pieces) {
+            const Square to = pieces.pop();
+            const PieceType pt = board.at<PieceType>(to);
+            Bitboard origins;
+
+            // A promoted piece can also be the result of a pawn move. Keep the
+            // piece's ordinary reverse moves below, and add its pawn origins.
+            if ((pt == PieceType::KNIGHT || pt == PieceType::BISHOP || pt == PieceType::ROOK ||
+                 pt == PieceType::QUEEN) &&
+                to.rank() == (mover == Color::WHITE ? Rank::RANK_8 : Rank::RANK_1)) {
+                const int step = mover == Color::WHITE ? 8 : -8;
+                const int pawn_from = static_cast<int>(to.index()) - step;
+                if (Square::is_valid_sq(pawn_from) && empty.check(pawn_from))
+                    moves.emplace_back(Move::make<Move::PROMOTION>(Square(pawn_from), to, pt));
+
+                Bitboard pawn_captures = attacks::pawn(~mover, to) & empty;
+                while (pawn_captures) {
+                    const Square from = pawn_captures.pop();
+                    const Move move = Move::make<Move::PROMOTION>(from, to, pt);
+                    addCaptures(moves, move, captured_color);
+                }
+            }
+
+            if (pt == PieceType::KNIGHT) {
+                origins = attacks::knight(to);
+            } else if (pt == PieceType::BISHOP) {
+                origins = attacks::bishop(to, occupied);
+            } else if (pt == PieceType::ROOK) {
+                origins = attacks::rook(to, occupied);
+            } else if (pt == PieceType::QUEEN) {
+                origins = attacks::queen(to, occupied);
+            } else if (pt == PieceType::KING) {
+                origins = attacks::king(to);
+            } else if (pt == PieceType::PAWN) {
+                const int step = mover == Color::WHITE ? 8 : -8;
+                const int one = static_cast<int>(to.index()) - step;
+                if (Square::is_valid_sq(one) && empty.check(one)) {
+                    const Square from(one);
+                    if (from.rank() != Rank::RANK_1 && from.rank() != Rank::RANK_8) {
+                        if (to.rank() != Rank::RANK_1 && to.rank() != Rank::RANK_8)
+                            moves.emplace_back(Move::make<Move::NORMAL>(from, to));
+                        else
+                            for (PieceType promo : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK,
+                                                    PieceType::QUEEN})
+                                moves.emplace_back(Move::make<Move::PROMOTION>(from, to, promo));
+                    }
+                }
+                const int two = static_cast<int>(to.index()) - 2 * step;
+                if ((mover == Color::WHITE ? to.rank() == Rank::RANK_4 : to.rank() == Rank::RANK_5) &&
+                    Square::is_valid_sq(two) && empty.check(two) && empty.check(one))
+                    moves.emplace_back(Move::make<Move::NORMAL>(Square(two), to));
+
+                Bitboard pawn_origins = attacks::pawn(~mover, to) & empty;
+                while (pawn_origins) {
+                    const Square from = pawn_origins.pop();
+                    if (from.rank() == Rank::RANK_1 || from.rank() == Rank::RANK_8) continue;
+                    const bool promotes = to.rank() == (mover == Color::WHITE ? Rank::RANK_8 : Rank::RANK_1);
+                    if (promotes) {
+                        for (PieceType promo : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK,
+                                                PieceType::QUEEN}) {
+                            const Move m = Move::make<Move::PROMOTION>(from, to, promo);
+                            addCaptures(moves, m, captured_color);
+                        }
+                    } else {
+                        addCaptures(moves, Move::make<Move::NORMAL>(from, to), captured_color);
+                        // En passant captures restore a pawn beside the destination.
+                        if (to.rank() == (mover == Color::WHITE ? Rank::RANK_6 : Rank::RANK_3))
+                            moves.emplace_back(Move::make<Move::ENPASSANT>(from, to),
+                                               Piece(PieceType::PAWN, captured_color));
+                    }
+                }
+                continue;
+            } else {
+                continue;
+            }
+            origins &= empty;
+            while (origins) {
+                const Square from = origins.pop();
+                moves.emplace_back(Move::make<Move::NORMAL>(from, to));
+                addCaptures(moves, Move::make<Move::NORMAL>(from, to), captured_color);
+            }
+        }
+    }
+};
+
+}  // namespace chess

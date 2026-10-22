@@ -81,4 +81,13 @@ class Move {
     std::int16_t score_;
 };
 
+/** A forward move together with the piece that it captured, for reverse play. */
+struct RevMove {
+    Move move;
+    Piece captured = Piece::NONE;
+
+    RevMove() = default;
+    constexpr RevMove(Move move, Piece captured = Piece::NONE) : move(move), captured(captured) {}
+};
+
 }  // namespace chess
