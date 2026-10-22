@@ -58,6 +58,41 @@ the parser calls `startVariation()` and `endVariation()` around variation moves,
 nested variations. The visitor's `move()` method receives mainline and variation moves in
 PGN order.
 
+### Iterating over games
+
+`pgn::games` provides a single-pass range that lazily reads one game at a time. Each
+`pgn::Game` owns its headers and events. To retain parenthesized variations, enable parsing
+before iteration; the events include move, variation-start, and variation-end entries in
+PGN order, so nested variations can be reconstructed.
+
+```cpp
+std::ifstream file_stream("games.pgn");
+auto range = pgn::games(file_stream);
+range.setParseVariations(true);
+
+for (const pgn::Game& game : range) {
+    for (const auto& [key, value] : game.headers) {
+        // Process a header
+    }
+    for (const auto& event : game.events) {
+        if (event.type == pgn::GameEventType::Move) {
+            // event.san and event.comment
+        } else if (event.type == pgn::GameEventType::VariationStart) {
+            // Enter a variation
+        } else {
+            // Leave a variation
+        }
+    }
+}
+
+if (range.error()) {
+    std::cerr << "Error parsing PGN: " << range.error().message() << '\n';
+}
+```
+
+The input stream must outlive the range. The range owns the current game's strings, and
+each increment replaces that game with the next one.
+
 ### Parsing PGN Files
 
 To parse a PGN file using your custom visitor:
