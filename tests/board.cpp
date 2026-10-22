@@ -54,6 +54,48 @@ static RevMove checkReverseRoundTrip(const Board& before, Move move) {
 }
 
 TEST_SUITE("Board") {
+    TEST_CASE("FEN serialization of every rank occupancy pattern") {
+        for (int rank = 0; rank < 8; ++rank) {
+            for (unsigned mask = 0; mask < 256; ++mask) {
+                CAPTURE(rank);
+                CAPTURE(mask);
+                std::string placement;
+                for (int row = 7; row >= 0; --row) {
+                    if (row == rank) {
+                        int empty = 0;
+                        for (int file = 0; file < 8; ++file) {
+                            if (mask & (1u << file)) {
+                                if (empty) placement += std::to_string(empty);
+                                empty = 0;
+                                placement += (file % 2 == 0 ? 'N' : 'n');
+                            } else {
+                                ++empty;
+                            }
+                        }
+                        if (empty) placement += std::to_string(empty);
+                    } else if (row == (rank + 1) % 8) {
+                        placement += "4k3";
+                    } else if (row == (rank + 2) % 8) {
+                        placement += "4K3";
+                    } else {
+                        placement += '8';
+                    }
+                    if (row) placement += '/';
+                }
+                for (const auto* fields : {" w - -", " b - -"}) {
+                    const auto short_fen = placement + fields;
+                    const auto fen = short_fen + " 17 123";
+                    Board board(fen);
+                    CHECK(board.getFen() == fen);
+                    CHECK(board.getFen(false) == short_fen);
+                    CHECK(board.getXfen() == fen);
+                    CHECK(board.getXfen(false) == short_fen);
+                    CHECK(board.getEpd() == short_fen + " hmvc 17; fmvn 123;");
+                }
+            }
+        }
+    }
+
     TEST_CASE("Set Fen") {
         Board board;
         CHECK(board.setFen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - "));
