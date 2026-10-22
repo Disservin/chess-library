@@ -275,7 +275,7 @@ class StreamParser {
 
     bool readNextGame(Visitor& vis) {
         visitor = &vis;
-        if (error != StreamParserError::None) return false;
+        if (parser_error != StreamParserError::None) return false;
         bool game_started = !pgn_end;
 
         while (true) {
@@ -300,14 +300,14 @@ class StreamParser {
                 processBody();
             }
 
-            if (error != StreamParserError::None) return false;
+            if (parser_error != StreamParserError::None) return false;
             if (!dont_advance_after_body) stream_buffer.advance();
             dont_advance_after_body = false;
             if (game_started && pgn_end) return true;
         }
     }
 
-    const StreamParserError& error() const { return error; }
+    const StreamParserError& error() const { return parser_error; }
 
     StreamParserError readGames(Visitor& vis) {
         visitor = &vis;
@@ -326,16 +326,16 @@ class StreamParser {
 
                     processHeader();
 
-                    if (error != StreamParserError::None) {
-                        return error;
+                    if (parser_error != StreamParserError::None) {
+                        return parser_error;
                     }
                 }
 
             } else if (in_body) {
                 processBody();
 
-                if (error != StreamParserError::None) {
-                    return error;
+                if (parser_error != StreamParserError::None) {
+                    return parser_error;
                 }
             }
 
@@ -347,7 +347,7 @@ class StreamParser {
             onEnd();
         }
 
-        return error;
+        return parser_error;
     }
 
    private:
@@ -386,7 +386,7 @@ class StreamParser {
                             break;
                         } else {
                             if (!header.first.add(*k)) {
-                                error = StreamParserError::ExceededMaxStringLength;
+                                parser_error = StreamParserError::ExceededMaxStringLength;
                                 return;
                             }
 
@@ -409,7 +409,7 @@ class StreamParser {
 
                             // we should be now at ]
                             if (stream_buffer.current().value_or('\0') != ']') {
-                                error = StreamParserError::InvalidHeaderMissingClosingBracket;
+                                parser_error = StreamParserError::InvalidHeaderMissingClosingBracket;
                                 return;
                             }
 
@@ -419,13 +419,13 @@ class StreamParser {
                         } else if (*k == '\n') {
                             // we missed the closing quote and read until the newline character
                             // this is an invalid pgn, let's throw an error
-                            error = StreamParserError::InvalidHeaderMissingClosingQuote;
+                            parser_error = StreamParserError::InvalidHeaderMissingClosingQuote;
                             return;
                         } else {
                             backslash = false;
 
                             if (!header.second.add(*k)) {
-                                error = StreamParserError::ExceededMaxStringLength;
+                                parser_error = StreamParserError::ExceededMaxStringLength;
                                 return;
                             }
 
@@ -666,7 +666,7 @@ class StreamParser {
                 // castling
                 else {
                     if (!move.add('0') || !move.add('-')) {
-                        error = StreamParserError::ExceededMaxStringLength;
+                        parser_error = StreamParserError::ExceededMaxStringLength;
                         return;
                     }
 
@@ -687,7 +687,7 @@ class StreamParser {
             }
 
             if (!move.add(*c)) {
-                error = StreamParserError::ExceededMaxStringLength;
+                parser_error = StreamParserError::ExceededMaxStringLength;
                 return true;
             }
 
@@ -824,7 +824,7 @@ class StreamParser {
 
     // State
 
-    StreamParserError error = StreamParserError::None;
+    StreamParserError parser_error = StreamParserError::None;
 
     bool in_header = true;
     bool in_body   = false;
