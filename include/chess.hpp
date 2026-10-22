@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.9.4
+VERSION: 0.9.5
 */
 
 #ifndef CHESS_HPP
@@ -4715,6 +4715,12 @@ class Visitor {
      */
     virtual void move(std::string_view move, std::string_view comment) = 0;
 
+    /** @brief Called when a parenthesized side variation begins. */
+    virtual void startVariation() {}
+
+    /** @brief Called when a parenthesized side variation ends. */
+    virtual void endVariation() {}
+
     /**
      * @brief Called when a game ends
      */
@@ -4782,6 +4788,12 @@ class StreamParser {
    public:
     StreamParser(std::istream& stream) : stream_buffer(stream) {}
 
+    /**
+     * @brief Enable or disable parsing parenthesized side variations.
+     * Variations are disabled by default to preserve mainline-only behavior.
+     */
+    void setParseVariations(bool enabled) { parse_variations = enabled; }
+
     StreamParserError readGames(Visitor& vis) {
         visitor = &vis;
 
@@ -4830,6 +4842,7 @@ class StreamParser {
 
         move.clear();
         comment.clear();
+        variation_depth = 0;
 
         in_header = true;
         in_body   = false;
@@ -5018,6 +5031,28 @@ class StreamParser {
                 break;
             }
 
+            // Side variation delimiters can be adjacent to move tokens.
+            if (*cd == '(' || *cd == ')') {
+                if (*cd == '(') {
+                    if (parse_variations) {
+                        callVisitorMoveFunction();
+                        ++variation_depth;
+                        if (!visitor->skip()) visitor->startVariation();
+                    } else {
+                        stream_buffer.skipUntil('(', ')');
+                        continue;
+                    }
+                } else {
+                    callVisitorMoveFunction();
+                    if (variation_depth > 0) {
+                        --variation_depth;
+                        if (!visitor->skip()) visitor->endVariation();
+                    }
+                }
+                stream_buffer.advance();
+                continue;
+            }
+
             // skip move number digits
             while (auto c = stream_buffer.some()) {
                 if (is_space(*c) || is_digit(*c)) {
@@ -5068,7 +5103,7 @@ class StreamParser {
             }
 
             // game termination
-            if (*curr == '*') {
+            if (*curr == '*' && variation_depth == 0) {
                 onEnd();
                 stream_buffer.advance();
 
@@ -5077,7 +5112,7 @@ class StreamParser {
 
             const auto peek = stream_buffer.peek();
 
-            if (*curr == '1') {
+            if (*curr == '1' && variation_depth == 0) {
                 if (peek == '-') {
                     stream_buffer.advance();
                     stream_buffer.advance();
@@ -5095,7 +5130,7 @@ class StreamParser {
             }
 
             // might be 0-1 (game termination) or 0-0-0/0-0 (castling)
-            if (*curr == '0' && stream_buffer.peek() == '-') {
+            if (*curr == '0' && variation_depth == 0 && stream_buffer.peek() == '-') {
                 stream_buffer.advance();
                 stream_buffer.advance();
 
@@ -5132,7 +5167,7 @@ class StreamParser {
     bool parseMove() {
         // reading move
         while (auto c = stream_buffer.some()) {
-            if (is_space(*c)) {
+            if (is_space(*c) || *c == '(' || *c == ')') {
                 break;
             }
 
@@ -5174,12 +5209,28 @@ class StreamParser {
                     break;
                 }
                 case '(': {
-                    stream_buffer.skipUntil('(', ')');
+                    if (parse_variations) {
+                        callVisitorMoveFunction();
+                        ++variation_depth;
+                        if (!visitor->skip()) visitor->startVariation();
+                        stream_buffer.advance();
+                    } else {
+                        stream_buffer.skipUntil('(', ')');
+                    }
+                    break;
+                }
+                case ')': {
+                    callVisitorMoveFunction();
+                    if (variation_depth > 0) {
+                        --variation_depth;
+                        if (!visitor->skip()) visitor->endVariation();
+                    }
+                    stream_buffer.advance();
                     break;
                 }
                 case '$': {
                     while (auto c = stream_buffer.some()) {
-                        if (is_space(*c)) {
+                        if (is_space(*c) || *c == '(' || *c == ')') {
                             break;
                         }
 
@@ -5266,6 +5317,8 @@ class StreamParser {
     bool pgn_end = true;
 
     bool dont_advance_after_body = false;
+    std::size_t variation_depth = 0;
+    bool parse_variations = false;
 };
 }  // namespace chess::pgn
 
