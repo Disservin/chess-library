@@ -840,3 +840,44 @@ TEST_CASE("Buffered comment views retain their trailing null byte") {
         }
     }
 }
+
+TEST_CASE("Buffered headers preserve escapes and string limits") {
+    for (std::size_t padding = 0; padding < 17; ++padding) {
+        const std::string prefix(padding, ' ');
+        {
+            std::istringstream input(prefix + "[Ev\rent \"a\\\"b\\\\c\r\nz\"]\n\n1. e4 *");
+            pgn::GameRange<4> range(input);
+            auto game = range.begin();
+            // A newline inside a header value remains an error.
+            CHECK(game == range.end());
+            CHECK(range.error() == pgn::StreamParserError::InvalidHeaderMissingClosingQuote);
+        }
+        {
+            std::istringstream input(prefix + "[Ev\rent \"a\\\"b\\\\c\rz\"]\n\n1. e4 *");
+            pgn::GameRange<4> range(input);
+            auto game = range.begin();
+            REQUIRE(game != range.end());
+            REQUIRE(game->headers.size() == 1);
+            CHECK(game->headers[0].first == "Event");
+            CHECK(game->headers[0].second == "a\"bcz");
+        }
+        for (std::size_t length : {1, 15, 16, 17, 254, 255, 256}) {
+            for (bool long_key : {false, true}) {
+                const std::string key = long_key ? std::string(length, 'K') : "Event";
+                const std::string value = long_key ? "value" : std::string(length, 'v');
+                std::istringstream input(prefix + "[" + key + " \"" + value + "\"]\n\n1. e4 *");
+                pgn::GameRange<4> range(input);
+                auto game = range.begin();
+                if (length <= 255) {
+                    REQUIRE(game != range.end());
+                    REQUIRE(game->headers.size() == 1);
+                    CHECK(game->headers[0].first == key);
+                    CHECK(game->headers[0].second == value);
+                } else {
+                    CHECK(game == range.end());
+                    CHECK(range.error() == pgn::StreamParserError::ExceededMaxStringLength);
+                }
+            }
+        }
+    }
+}

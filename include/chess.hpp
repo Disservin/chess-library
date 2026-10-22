@@ -5025,13 +5025,14 @@ class StreamBuffer {
         }
     }
 
-    bool readMoveToken(StringBuffer& token) {
+    template <typename Predicate>
+    bool readTokenUntil(StringBuffer& token, Predicate delimiter) {
         while (true) {
             if (buffer_index_ >= bytes_read_ && !fill()) return true;
             const auto begin = buffer_index_;
             while (buffer_index_ < bytes_read_) {
                 const auto c = buffer_[buffer_index_];
-                if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '(' || c == ')') break;
+                if (c == '\r' || delimiter(c)) break;
                 ++buffer_index_;
             }
             if (!token.add(buffer_.data() + begin, static_cast<std::size_t>(buffer_index_ - begin))) return false;
@@ -5040,6 +5041,12 @@ class StreamBuffer {
                 ++buffer_index_;
             }
         }
+    }
+
+    bool readMoveToken(StringBuffer& token) {
+        return readTokenUntil(token, [](char c) {
+            return c == ' ' || c == '\t' || c == '\n' || c == '(' || c == ')';
+        });
     }
 
     bool fill() {
@@ -5324,17 +5331,9 @@ class StreamParser {
                 case '[':
                     stream_buffer.advance();
 
-                    while (auto k = stream_buffer.some()) {
-                        if (is_space(*k)) {
-                            break;
-                        } else {
-                            if (!header.first.add(*k)) {
-                                parser_error = StreamParserError::ExceededMaxStringLength;
-                                return;
-                            }
-
-                            stream_buffer.advance();
-                        }
+                    if (!stream_buffer.readTokenUntil(header.first, [this](char c) { return is_space(c); })) {
+                        parser_error = StreamParserError::ExceededMaxStringLength;
+                        return;
                     }
 
                     stream_buffer.advance();
@@ -5367,12 +5366,18 @@ class StreamParser {
                         } else {
                             backslash = false;
 
-                            if (!header.second.add(*k)) {
+                            if (*k == '"') {
+                                if (!header.second.add(*k)) {
+                                    parser_error = StreamParserError::ExceededMaxStringLength;
+                                    return;
+                                }
+                                stream_buffer.advance();
+                            } else if (!stream_buffer.readTokenUntil(header.second, [](char c) {
+                                           return c == '"' || c == '\\' || c == '\n';
+                                       })) {
                                 parser_error = StreamParserError::ExceededMaxStringLength;
                                 return;
                             }
-
-                            stream_buffer.advance();
                         }
                     }
 
