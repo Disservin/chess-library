@@ -1,78 +1,72 @@
-# PGN Utilities
+# PGN utilities
 
-## PGN Parsing
+The `chess::pgn` namespace offers two interfaces to the same streaming reader.
+See the [PGN parsing guide](/pages/pgn-parsing) for complete examples, supported
+features, and format limitations, including RAV and NAG handling.
 
-Since 0.4.0 the pgn reader is now using a stream parser, which calls methods of a user implemented `Visitor` class. This allows for a more flexible and efficient parsing of the pgn file.
+## StreamParser
 
-These methods will always receive a `std::string`, this means that if you want to parse a move to
-an internal one, you need to call `pgn::parseSan` yourself.
+| Member | Purpose |
+| --- | --- |
+| `StreamParser(std::istream&)` | Read from an existing stream, which must outlive the parser. |
+| `setParseVariations(bool)` | Enable nested variation callbacks; disabled by default. |
+| `readGames(Visitor&)` | Consume games and return a `StreamParserError`. |
+| `readNextGame(Visitor&)` | Read one game; return false on exhaustion or error. |
+| `error() const` | Inspect the error from incremental reading. |
 
-The `Visitor` class is defined as follows:
+## Visitor
 
-::: tip
-If you want to convert the `string_view move` to an internal move object, you can use `pgn::parseSan`.
-See [here](/pages/move.md#other-formats) for more information.
-:::
+Derive from `Visitor` and implement the required callbacks:
 
-So you will need to create a derived class from it.
+```cpp
+void startPgn() override;
+void header(std::string_view key, std::string_view value) override;
+void startMoves() override;
+void move(std::string_view san, std::string_view comment) override;
+void endPgn() override;
+```
 
-```c++
-class MyVisitor : public pgn::Visitor {
-   public:
-    virtual ~MyVisitor() {}
+Optional callbacks `startVariation()` and `endVariation()` delimit side lines when
+variation parsing is enabled. They have empty default implementations.
 
-    void startPgn() { board.setFen(STARTPOS); }
+`skipPgn(true)` suppresses further data callbacks for the current game, but still
+calls `endPgn()`. Call it after the game starts. `skip()` returns the current flag;
+it resets when the game ends.
 
-    void header(std::string_view key, std::string_view value) {}
+Callback strings are borrowed views. Copy them to retain them. A move can be empty
+when a comment precedes the movetext. Convert nonempty SAN strings with
+`chess::uci::parseSan(board, san)`; PGN parsing does not maintain a board or check
+move legality.
 
-    void startMoves() {}
+## Game range and events
 
-    void move(std::string_view move, std::string_view comment) {}
+`games(std::istream&)` returns a `GameRange` with `begin()`, `end()`,
+`setParseVariations(bool)`, and `error()`. Configure variations before iteration.
 
-    void endPgn() {}
+```cpp
+enum class GameEventType { Move, VariationStart, VariationEnd };
 
-   private:
-    Board board;
+struct GameEvent {
+    GameEventType type;
+    std::string san;
+    std::string comment;
+};
+
+struct Game {
+    std::vector<std::pair<std::string, std::string>> headers;
+    std::vector<GameEvent> events;
 };
 ```
 
-## API
+Headers retain their input order. Events retain move order and variation nesting;
+variation boundary events have empty SAN and comment strings. NAG values and
+movetext result markers are not retained. The range owns only its current game;
+copy that game before advancing if you need to keep it.
 
-```c++
-/// @brief Visitor interface for parsing PGN files
-/// the order of the calls is as follows:
-class Visitor {
-   public:
-    virtual ~Visitor(){};
+## StreamParserError
 
-    /// @brief When true, the current PGN will be skipped and only
-    /// endPgn will be called, this will also reset the skip flag to false.
-    /// Has to be called after startPgn.
-    /// @param skip
-    void skipPgn(bool skip);
-    bool skip();
-
-    /// @brief Called when a new PGN starts
-    virtual void startPgn() = 0;
-
-    /// @brief Called for each header
-    /// @param key
-    /// @param value
-    virtual void header(std::string_view key, std::string_view value) = 0;
-
-    /// @brief Called before the first move of a game
-    virtual void startMoves() = 0;
-
-    /// @brief Called for each move of a game
-    /// @param move
-    /// @param comment
-    virtual void move(std::string_view move, std::string_view comment) = 0;
-
-    /// @brief Called when a game ends
-    virtual void endPgn() = 0;
-};
-```
-
-::: tip
-It might be that `header` or `move` are called with an empty string for one of the arguments.
-:::
+`code()` returns one of `None`, `ExceededMaxStringLength`,
+`InvalidHeaderMissingClosingBracket`, `InvalidHeaderMissingClosingQuote`, or
+`NotEnoughData`. `hasError()` and the boolean conversion report whether the code
+is nonzero. See the guide's [error handling notes](/pages/pgn-parsing#errors-and-incremental-reading)
+for limits on diagnostics and `message()`.

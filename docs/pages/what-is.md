@@ -13,7 +13,7 @@ chess-library is a single header library that provides a simple and easy to use 
 - **Robust**:  
     Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/official-stockfish/WDL_model).
 - **PGN Support**:  
-    Parse basic PGN files.
+    Stream PGN games with comments and optional nested variations. Numeric annotation glyphs (NAGs) are skipped, not retained; see the [PGN parsing guide](/pages/pgn-parsing) for format limitations.
 - **Namespace**:  
     Everything is in the `chess::` namespace, so it won't pollute your namespace.
 - **Compact Board Representation in 24 bytes**:  

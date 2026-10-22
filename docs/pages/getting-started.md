@@ -1,29 +1,53 @@
-# Getting Started
+# Getting started
 
-chess-library is a single header library.
+chess-library is a header-only C++17 library. Copy `include/chess.hpp` into your
+project's include path and include it wherever you need chess operations. No
+separate library needs to be linked. All public types live in the `chess` namespace.
 
-Thus to use it in your project just copy the header file `chess.hpp` into your project  
-and include in the necessary files.
-
-The entire library is behind the `chess` namespace so for easy usage just say
-
-## Example
+## Play a move and generate legal replies
 
 ```cpp
+#include <iostream>
 #include "chess.hpp"
 
-using namespace chess;
+int main() {
+    chess::Board board; // Standard starting position.
+    const auto move = chess::uci::parseSan(board, "e4");
+    board.makeMove(move);
 
+    chess::Movelist replies;
+    chess::movegen::legalmoves(replies, board);
+    std::cout << board.getFen() << '\n';
+    for (const auto reply : replies) {
+        std::cout << chess::uci::moveToUci(reply) << '\n';
+    }
+
+    board.unmakeMove(move); // Restore the position before e4.
+}
 ```
 
-That's it!
+For example, with the header beside `main.cpp`, compile using:
 
-Also see [my examples.](/pages/examples)
+```sh
+c++ -std=c++17 -O2 main.cpp -o example
+```
 
-::: tip
-The library internally uses `assert` and may print debug information to `std::cerr`.
-To disable this define `NDEBUG` when compiling.
-:::
+Use generated legal moves or parse moves against the current board before calling
+`makeMove`. The board does not serve as an input validator for arbitrary manually
+constructed moves. SAN notation depends on the position; UCI notation uses source
+and destination squares, such as `e2e4`.
+
+Next, see [the Board API](/pages/board), [move formats](/pages/move#other-formats),
+[PGN parsing](/pages/pgn-parsing), and [more examples](/pages/examples).
+
+## Build configuration
+
+The library uses assertions and may print debug information to `std::cerr`.
+Defining `NDEBUG` disables assertions; keep them enabled during development to help
+catch incorrect API usage. Some operations throw exceptions for invalid input.
+Define `CHESS_NO_EXCEPTIONS` before including the header to disable the library's
+exception paths. This does not make invalid input safe; validate external input
+and check return values where the API provides them.
 
 ### Board.isGameOver() API
 
@@ -79,6 +103,6 @@ Bitboard all_pawns = white_pawns | black_pawns;  // Union of both
 
 - `count()` - Returns the number of 1 bits in the bitboard. For example, if you have a bitboard representing all pawns, count() would tell you how many pawns are on the board.
 
-- `pop()` - Returns and clears the least significant bit. This is particularly useful when you need to process each piece on a bitboard one at a time. Each call to pop() gives you the next piece position and removes it from the bitboard. This approach is much faster than any for loop.
+- `pop()` - Returns and clears the least significant bit. This is particularly useful when you need to process each piece on a bitboard one at a time. Each call to pop() gives you the next piece position and removes it from the bitboard. This avoids checking every square individually.
 
-- `getBits()` - Returns the raw 64-bit integer underlying the bitboard. This gives you direct access to the underyling 64-bit integer when you need it.
+- `getBits()` - Returns the raw 64-bit integer underlying the bitboard. This gives you direct access to the underlying 64-bit integer when you need it.

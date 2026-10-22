@@ -13,7 +13,7 @@ It can be used for any type of chess program, be it a chess engine, a chess GUI,
 - **Fast**: This library is fast enough for pretty much any purpose in C++ and it is faster than most other chess libraries in C++.
 - **Documentation**: Easy to browse **documentation** at <https://disservin.github.io/chess-library>
 - **Robust**: Unit Tests & it has been tested on millions of chess positions, while developing the C++ part of [Stockfish's Winrate Model](https://github.com/official-stockfish/WDL_model).
-- **PGN Support**: Parse basic PGN files.
+- **PGN Support**: Stream PGN games with comments and optional nested variations. Numeric annotation glyphs (NAGs) are skipped, not retained; see the [PGN parsing guide](docs/pages/pgn-parsing.md) for format limitations.
 - **Namespace**: Everything is in the `chess::` namespace, so it won't pollute your namespace.
 - **Compact Board Representation in 24bytes**: The board state can be compressed into 24 bytes, using `PackedBoard` and `Board::Compact::encode`/`Board::Compact::decode`.
 
@@ -25,7 +25,7 @@ It can be used for any type of chess program, be it a chess engine, a chess GUI,
 This is a single header library.
 
 You only need to include `chess.hpp` header!
-Aftewards you can access the chess logic over the `chess::` namespace.
+Afterwards you can access the chess logic over the `chess::` namespace.
 
 ### Exceptions
 
