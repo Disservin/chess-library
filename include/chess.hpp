@@ -4883,6 +4883,13 @@ class StringBuffer {
         return true;
     }
 
+    bool add(const char* data, std::size_t size) {
+        if (size > N - index_) return false;
+        std::memcpy(buffer_.data() + index_, data, size);
+        index_ += size;
+        return true;
+    }
+
    private:
     // PGN String Tokens are limited to 255 characters
     static constexpr int N = 255;
@@ -4971,6 +4978,23 @@ class StreamBuffer {
             if (buffer_index_ < bytes_read_) {
                 const auto delimiter = buffer_[buffer_index_++];
                 if (delimiter == '}') return;
+            }
+        }
+    }
+
+    bool readMoveToken(StringBuffer& token) {
+        while (true) {
+            if (buffer_index_ >= bytes_read_ && !fill()) return true;
+            const auto begin = buffer_index_;
+            while (buffer_index_ < bytes_read_) {
+                const auto c = buffer_[buffer_index_];
+                if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '(' || c == ')') break;
+                ++buffer_index_;
+            }
+            if (!token.add(buffer_.data() + begin, static_cast<std::size_t>(buffer_index_ - begin))) return false;
+            if (buffer_index_ < bytes_read_) {
+                if (buffer_[buffer_index_] != '\r') return true;
+                ++buffer_index_;
             }
         }
     }
@@ -5535,18 +5559,9 @@ class StreamParser {
     }
 
     bool parseMove() {
-        // reading move
-        while (auto c = stream_buffer.some()) {
-            if (is_space(*c) || *c == '(' || *c == ')') {
-                break;
-            }
-
-            if (!move.add(*c)) {
-                parser_error = StreamParserError::ExceededMaxStringLength;
-                return true;
-            }
-
-            stream_buffer.advance();
+        if (!stream_buffer.readMoveToken(move)) {
+            parser_error = StreamParserError::ExceededMaxStringLength;
+            return true;
         }
 
         return parseMoveAppendix();

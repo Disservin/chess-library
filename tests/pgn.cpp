@@ -750,3 +750,30 @@ TEST_CASE("Buffered comments preserve bytes across refills") {
         }
     }
 }
+
+TEST_CASE("Buffered move tokens preserve boundaries and length limits") {
+    for (std::size_t padding = 0; padding < 17; ++padding) {
+        const std::string prefix = "[Event \"tokens\"]\n\n" + std::string(padding, ' ');
+        // Carriage returns inside tokens are ignored; newlines end them.
+        std::istringstream input(prefix + "1. Ng\r1 e5 *");
+        pgn::GameRange<4> range(input);
+        auto it = range.begin();
+        REQUIRE(it != range.end());
+        REQUIRE(it->events.size() == 2);
+        CHECK(it->events[0].san == "Ng1");
+        CHECK(it->events[1].san == "e5");
+        for (std::size_t length : {255, 256}) {
+            std::istringstream long_input(prefix + "1. " + std::string(length, 'N') + " *");
+            pgn::GameRange<4> long_range(long_input);
+            auto game = long_range.begin();
+            if (length == 255) {
+                REQUIRE(game != long_range.end());
+                REQUIRE(!game->events.empty());
+                CHECK(game->events.front().san == std::string(length, 'N'));
+            } else {
+                CHECK(game == long_range.end());
+                CHECK(long_range.error() == pgn::StreamParserError::ExceededMaxStringLength);
+            }
+        }
+    }
+}
