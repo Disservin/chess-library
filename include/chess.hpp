@@ -4537,11 +4537,43 @@ template <Color::underlying c>
     const auto occ_all   = occ_us | occ_opp;
     const auto opp_empty = ~occ_us;
 
-    // non-castling king moves (check for normal as king could be in place of a previous promo/ep)
-    if (from_pt.type() == PieceType::KING && move.typeOf() == Move::NORMAL) {
-        const auto seen = seenSquares<~c>(board, opp_empty);
-        if (seen.check(to_index)) return false;
-        if (!(attacks::king(from).check(to_index))) return false;
+    if (move.typeOf() == Move::NORMAL || move.typeOf() == Move::PROMOTION) {
+        // First establish pseudo-legality, then test attacks on our king with
+        // the occupancy after the move. A single candidate needs no pin masks.
+        bool reaches = false;
+        if (from_pt.type() == PieceType::PAWN) {
+            constexpr auto UP = make_direction(Direction::NORTH, c);
+            constexpr auto START_RANK = Rank::rank(Rank::RANK_2, c);
+            constexpr auto PROMO_RANK = Rank::rank(Rank::RANK_8, c);
+            if ((to.rank() == PROMO_RANK) != (move.typeOf() == Move::PROMOTION)) return false;
+            if (to_pt != Piece::NONE) {
+                reaches = attacks::pawn(c, from).check(to_index);
+            } else {
+                reaches = to == from + UP ||
+                    (from.rank() == START_RANK && to == from + UP + UP &&
+                     board.at(from + UP) == Piece::NONE);
+            }
+        } else {
+            if (move.typeOf() != Move::NORMAL) return false;
+            switch (from_pt.type()) {
+                case PieceType(PieceType::KNIGHT): reaches = attacks::knight(from).check(to_index); break;
+                case PieceType(PieceType::BISHOP): reaches = attacks::bishop(from, occ_all).check(to_index); break;
+                case PieceType(PieceType::ROOK): reaches = attacks::rook(from, occ_all).check(to_index); break;
+                case PieceType(PieceType::QUEEN): reaches = attacks::queen(from, occ_all).check(to_index); break;
+                case PieceType(PieceType::KING): reaches = attacks::king(from).check(to_index); break;
+                default: return false;
+            }
+        }
+        if (!reaches) return false;
+
+        const auto king = from_pt.type() == PieceType::KING ? to : board.kingSq(c);
+        const auto occupied = (occ_all ^ Bitboard::fromSquare(from)) | Bitboard::fromSquare(to);
+        const auto enemies = occ_opp & ~Bitboard::fromSquare(to);
+        if (attacks::pawn(c, king) & board.pieces(PieceType::PAWN) & enemies) return false;
+        if (attacks::knight(king) & board.pieces(PieceType::KNIGHT) & enemies) return false;
+        if (attacks::king(king) & board.pieces(PieceType::KING) & enemies) return false;
+        if (attacks::bishop(king, occupied) & board.pieces(PieceType::BISHOP, PieceType::QUEEN) & enemies) return false;
+        if (attacks::rook(king, occupied) & board.pieces(PieceType::ROOK, PieceType::QUEEN) & enemies) return false;
         return true;
     }
 
@@ -4621,69 +4653,6 @@ template <Color::underlying c>
         if (is_possible_pin && !(attacks::rook(king_sq, occ_all ^ connecting_pawns) & opp_qr).empty()) return false;
 
         return true;
-
-    } else if (move.typeOf() == Move::PROMOTION) {
-        // should be pawn
-        if (from_pt.type() != PieceType::PAWN) return false;
-
-        // fall through to normal logic
-    }
-
-    // moves should be on the checkmask
-    if (!checkmask.check(to_index)) return false;
-
-    // piece-specific movement
-    switch (from_pt.type()) {
-        case PieceType(PieceType::PAWN): {
-            // should push to promotion rank iff promoting
-            constexpr auto PROMO_RANK = Rank::rank(Rank::RANK_8, c);
-            if ((to.rank() == PROMO_RANK) != (move.typeOf() == Move::PROMOTION)) return false;
-
-            // should stay along diagonal pin if capturing
-            if (to_pt != Piece::NONE) {
-                if (pin_hv.check(from_index)) return false;
-                if (pin_d.check(from_index) && !pin_d.check(to_index)) return false;
-                return attacks::pawn(c, from).check(to_index);
-            }
-
-            // should stay along hv pin if pushing
-            if (pin_d.check(from_index)) return false;
-            if (pin_hv.check(from_index) && !pin_hv.check(to_index)) return false;
-
-            constexpr auto UP               = make_direction(Direction::NORTH, c);
-            constexpr auto DOUBLE_PUSH_RANK = Rank::rank(Rank::RANK_2, c);
-
-            // single push
-            if (to == from + UP) return true;
-
-            // middle square should be empty if double push
-            if (from.rank() == DOUBLE_PUSH_RANK && to == from + UP + UP) return board.at(from + UP) == Piece::NONE;
-
-            return false;
-        }
-
-        case PieceType(PieceType::KNIGHT): {
-            if (pin_d.check(from_index) || pin_hv.check(from_index)) return false;
-            return attacks::knight(from).check(to_index);
-        }
-
-        case PieceType(PieceType::BISHOP): {
-            if (pin_hv.check(from_index)) return false;
-            if (pin_d.check(from_index) && !pin_d.check(to_index)) return false;
-            return attacks::bishop(from, occ_all).check(to_index);
-        }
-
-        case PieceType(PieceType::ROOK): {
-            if (pin_d.check(from_index)) return false;
-            if (pin_hv.check(from_index) && !pin_hv.check(to_index)) return false;
-            return attacks::rook(from, occ_all).check(to_index);
-        }
-
-        case PieceType(PieceType::QUEEN): {
-            if (pin_d.check(from_index)) return (attacks::bishop(from, occ_all) & pin_d).check(to_index);
-            if (pin_hv.check(from_index)) return (attacks::rook(from, occ_all) & pin_hv).check(to_index);
-            return attacks::queen(from, occ_all).check(to_index);
-        }
     }
 
     assert(false);
