@@ -177,6 +177,59 @@ class uci {
         static constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
         const SanMoveInformation info   = parseSanInfo(san);
 
+        // SAN already supplies the destination. When exactly one piece can reach
+        // it, validate that candidate instead of generating every move of its type.
+        if (!info.castling_short && !info.castling_long) {
+            const auto side = board.sideToMove();
+            const auto target = board.at(info.to);
+            const bool ep = info.piece == PieceType::PAWN && info.capture &&
+                            info.to == board.enpassantSq();
+            const bool capture = target != Piece::NONE && target.color() != side;
+            if (info.capture == capture || ep) {
+                Bitboard origins;
+                switch (info.piece) {
+                    case PieceType(PieceType::PAWN):
+                        if (info.capture) {
+                            origins = attacks::pawn(~side, info.to);
+                        } else {
+                            const int step = side == Color::WHITE ? 8 : -8;
+                            const int one = info.to.index() - step;
+                            const int two = info.to.index() - 2 * step;
+                            if (Square::is_valid_sq(one)) origins.set(one);
+                            if (Square::is_valid_sq(two)) origins.set(two);
+                        }
+                        break;
+                    case PieceType(PieceType::KNIGHT): origins = attacks::knight(info.to); break;
+                    case PieceType(PieceType::BISHOP): origins = attacks::bishop(info.to, board.occ()); break;
+                    case PieceType(PieceType::ROOK): origins = attacks::rook(info.to, board.occ()); break;
+                    case PieceType(PieceType::QUEEN): origins = attacks::queen(info.to, board.occ()); break;
+                    case PieceType(PieceType::KING): origins = attacks::king(info.to); break;
+                    default: break;
+                }
+                origins &= board.pieces(info.piece, side);
+                if (info.from_file != File::NO_FILE) origins &= Bitboard(info.from_file);
+                if (info.from_rank != Rank::NO_RANK) origins &= Bitboard(info.from_rank);
+                if (origins.count() == 1) {
+                    const auto from = origins.lsb();
+                    const bool promotion_rank = info.piece == PieceType::PAWN &&
+                        (info.to.rank() == Rank::RANK_1 || info.to.rank() == Rank::RANK_8);
+                    // Keep the general path for underspecified promotions.
+                    if ((!promotion_rank || info.promotion != PieceType::NONE) &&
+                        (!ep || info.promotion == PieceType::NONE)) {
+                        const auto candidate = ep ? Move::make<Move::ENPASSANT>(from, info.to) :
+                            info.promotion != PieceType::NONE ?
+                                Move::make<Move::PROMOTION>(from, info.to, info.promotion) :
+                                Move::make<Move::NORMAL>(from, info.to);
+                        if (board.isLegal(candidate)) {
+                            moves.clear();
+                            moves.add(candidate);
+                            return candidate;
+                        }
+                    }
+                }
+            }
+        }
+
         if (info.capture) {
             movegen::legalmoves<movegen::MoveGenType::CAPTURE>(moves, board, pt_to_pgt(info.piece));
         } else {

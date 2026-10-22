@@ -606,3 +606,32 @@ TEST_SUITE("SAN Parser") {
         CHECK(uci::parseSan(b, "O-O+") == m);
     }
 }
+
+TEST_CASE("SAN candidates agree with generated legal moves") {
+    for (const auto& fen : {
+             constants::STARTPOS,
+             "r3k2r/ppp2ppp/2n5/3pP3/8/2N5/PPP2PPP/R3K2R w KQkq d6 0 1",
+             "4k3/P6p/8/8/8/8/p6P/4K3 w - - 0 1"}) {
+        Board board(fen);
+        for (unsigned ply = 0; ply < 96; ++ply) {
+            Movelist legal;
+            movegen::legalmoves(legal, board);
+            if (legal.empty()) break;
+            for (const auto& move : legal) {
+                const auto san = uci::moveToSan(board, move);
+                CAPTURE(board.getFen());
+                CAPTURE(san);
+                CHECK(uci::parseSan(board, san) == move);
+            }
+            board.makeMove(legal[(ply * 37 + 11) % legal.size()]);
+        }
+    }
+}
+
+TEST_CASE("SAN candidates retain legality checks") {
+    Board board("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1");
+    CHECK_THROWS_AS(uci::parseSan(board, "exd6=Q"), uci::SanParseError);
+    CHECK_THROWS_AS(uci::parseSan(board, "e6=Q"), uci::SanParseError);
+    CHECK_THROWS_AS(uci::parseSan(board, "exe6"), uci::SanParseError);
+    CHECK(uci::parseSan(board, "exd6").typeOf() == Move::ENPASSANT);
+}
