@@ -5025,14 +5025,41 @@ class StreamBuffer {
         }
     }
 
-    template <typename Predicate>
-    bool readTokenUntil(StringBuffer& token, Predicate delimiter) {
+    enum class TokenKind { Move, HeaderKey, HeaderValue };
+
+    template <TokenKind kind>
+    bool readTokenUntil(StringBuffer& token) {
         while (true) {
             if (buffer_index_ >= bytes_read_ && !fill()) return true;
             const auto begin = buffer_index_;
+#if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
+            if constexpr (kind == TokenKind::HeaderValue) {
+                while (bytes_read_ - buffer_index_ >= 16) {
+                    const auto bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer_.data() + buffer_index_));
+                    auto delimiters = _mm_or_si128(_mm_cmpeq_epi8(bytes, _mm_set1_epi8('\r')),
+                                                   _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\n')));
+                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('"')));
+                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\\')));
+                    const auto mask = static_cast<unsigned>(_mm_movemask_epi8(delimiters));
+                    if (mask != 0) {
+                        buffer_index_ += __builtin_ctz(mask);
+                        break;
+                    }
+                    buffer_index_ += 16;
+                }
+            }
+#endif
             while (buffer_index_ < bytes_read_) {
                 const auto c = buffer_[buffer_index_];
-                if (c == '\r' || delimiter(c)) break;
+                if (c == '\r' || c == '\n') break;
+                if constexpr (kind == TokenKind::HeaderValue) {
+                    if (c == '"' || c == '\\') break;
+                } else {
+                    if (c == ' ' || c == '\t') break;
+                    if constexpr (kind == TokenKind::Move) {
+                        if (c == '(' || c == ')') break;
+                    }
+                }
                 ++buffer_index_;
             }
             if (!token.add(buffer_.data() + begin, static_cast<std::size_t>(buffer_index_ - begin))) return false;
@@ -5044,9 +5071,7 @@ class StreamBuffer {
     }
 
     bool readMoveToken(StringBuffer& token) {
-        return readTokenUntil(token, [](char c) {
-            return c == ' ' || c == '\t' || c == '\n' || c == '(' || c == ')';
-        });
+        return readTokenUntil<TokenKind::Move>(token);
     }
 
     bool fill() {
@@ -5214,6 +5239,8 @@ template <std::size_t BUFFER_SIZE =
 #endif
           >
 class StreamParser {
+    using TokenKind = typename detail::StreamBuffer<BUFFER_SIZE>::TokenKind;
+
    public:
     StreamParser(std::istream& stream) : stream_buffer(stream) {}
 
@@ -5331,7 +5358,7 @@ class StreamParser {
                 case '[':
                     stream_buffer.advance();
 
-                    if (!stream_buffer.readTokenUntil(header.first, [this](char c) { return is_space(c); })) {
+                    if (!stream_buffer.template readTokenUntil<TokenKind::HeaderKey>(header.first)) {
                         parser_error = StreamParserError::ExceededMaxStringLength;
                         return;
                     }
@@ -5372,9 +5399,7 @@ class StreamParser {
                                     return;
                                 }
                                 stream_buffer.advance();
-                            } else if (!stream_buffer.readTokenUntil(header.second, [](char c) {
-                                           return c == '"' || c == '\\' || c == '\n';
-                                       })) {
+                            } else if (!stream_buffer.template readTokenUntil<TokenKind::HeaderValue>(header.second)) {
                                 parser_error = StreamParserError::ExceededMaxStringLength;
                                 return;
                             }
