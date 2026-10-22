@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.9.8
+VERSION: 0.9.9
 */
 
 #ifndef CHESS_HPP
@@ -6230,10 +6230,9 @@ class uci {
     }
 
     template <bool LAN = false>
-    static void moveToRep(Board board, const Move& move, std::string& str) {
+    static void moveToRep(const Board& board, const Move& move, std::string& str) {
         if (handleCastling(move, str)) {
-            board.makeMove(move);
-            if (board.inCheck()) appendCheckSymbol(board, str);
+            if (board.givesCheck(move) != CheckType::NO_CHECK) appendCheckSymbol(board, move, str);
             return;
         }
 
@@ -6263,10 +6262,7 @@ class uci {
         appendSquare(move.to(), str);
 
         if (move.typeOf() == Move::PROMOTION) appendPromotion(move, str);
-
-        board.makeMove(move);
-
-        if (board.inCheck()) appendCheckSymbol(board, str);
+        if (board.givesCheck(move) != CheckType::NO_CHECK) appendCheckSymbol(board, move, str);
     }
 
     static bool handleCastling(const Move& move, std::string& str) {
@@ -6290,9 +6286,12 @@ class uci {
         str += std::toupper(static_cast<std::string>(move.promotionType())[0]);
     }
 
-    static void appendCheckSymbol(Board& board, std::string& str) {
-        const auto gameState = board.isGameOver().second;
-        str += (gameState == GameResult::LOSE) ? '#' : '+';
+    static void appendCheckSymbol(const Board& board, const Move& move, std::string& str) {
+        Board tempBoard = board;
+        tempBoard.makeMove(move);
+        assert(tempBoard.inCheck());
+        const auto gameState = tempBoard.isGameOver().first;
+        str += (gameState == GameResultReason::CHECKMATE) ? '#' : '+';
     }
 
     static void resolveAmbiguity(const Board& board, const Move& move, PieceType pieceType, std::string& str) {
