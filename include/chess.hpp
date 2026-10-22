@@ -4988,6 +4988,24 @@ class StreamBuffer {
         return false;
     }
 
+    // Append whole buffered spans instead of growing the comment one character at a time.
+    // Match some(): carriage returns are discarded, including across buffer boundaries.
+    void readComment(std::string& comment) {
+        while (true) {
+            if (buffer_index_ >= bytes_read_ && !fill()) return;
+            const auto begin = buffer_index_;
+            while (buffer_index_ < bytes_read_ && buffer_[buffer_index_] != '}' &&
+                   buffer_[buffer_index_] != '\r') {
+                ++buffer_index_;
+            }
+            comment.append(buffer_.data() + begin, static_cast<std::size_t>(buffer_index_ - begin));
+            if (buffer_index_ < bytes_read_) {
+                const auto delimiter = buffer_[buffer_index_++];
+                if (delimiter == '}') return;
+            }
+        }
+    }
+
     bool fill() {
         buffer_index_ = 0;
 
@@ -5366,15 +5384,7 @@ class StreamParser {
                 // reading comment
                 stream_buffer.advance();
 
-                while (auto k = stream_buffer.some()) {
-                    stream_buffer.advance();
-
-                    if (*k == '}') {
-                        break;
-                    }
-
-                    comment += *k;
-                }
+                stream_buffer.readComment(comment);
 
                 // the game has no moves, but a comment followed by a game termination
                 if (!visitor->skip()) {
@@ -5587,15 +5597,7 @@ class StreamParser {
                     // reading comment
                     stream_buffer.advance();
 
-                    while (auto c = stream_buffer.some()) {
-                        stream_buffer.advance();
-
-                        if (*c == '}') {
-                            break;
-                        }
-
-                        comment += *c;
-                    }
+                    stream_buffer.readComment(comment);
 
                     break;
                 }
