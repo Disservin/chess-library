@@ -244,12 +244,3 @@ legality checks. A FEN does not retain every castling right, prior en-passant
 square, or exact half-move clock that was lost by the forward move; reverse undo
 infers castling rights where possible, restores the en-passant square for an
 en-passant move, and uses a conservative clock.
-
-The command-line example at `example/reverse_moves.cpp` searches backward from a
-FEN for a path to the standard starting position. Build it with
-`g++ -std=c++17 -O3 example/reverse_moves.cpp -o reverse_moves`, then run
-`./reverse_moves '<position FEN>'`. It searches up to 8 plies and 1,000,000
-reverse candidates by default; adjust these with `--max-depth N` and
-`--node-limit N`. It assumes standard starting material unless
-`--no-standard-material` is supplied. `--960` uses the Chess960 starting
-position.
