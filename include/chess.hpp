@@ -4987,24 +4987,7 @@ class StreamBuffer {
         while (true) {
             if (buffer_index_ >= bytes_read_ && !fill()) return;
             const auto begin = buffer_index_;
-#if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
-            const auto close = _mm_set1_epi8('}');
-            const auto cr = _mm_set1_epi8('\r');
-            while (bytes_read_ - buffer_index_ >= 16) {
-                const auto bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer_.data() + buffer_index_));
-                const auto delimiters = _mm_or_si128(_mm_cmpeq_epi8(bytes, close), _mm_cmpeq_epi8(bytes, cr));
-                const auto mask = static_cast<unsigned>(_mm_movemask_epi8(delimiters));
-                if (mask != 0) {
-                    buffer_index_ += __builtin_ctz(mask);
-                    break;
-                }
-                buffer_index_ += 16;
-            }
-#endif
-            while (buffer_index_ < bytes_read_ && buffer_[buffer_index_] != '}' &&
-                   buffer_[buffer_index_] != '\r') {
-                ++buffer_index_;
-            }
+            buffer_index_ = delimiterIndex<TokenKind::Comment>();
             const auto size = static_cast<std::size_t>(buffer_index_ - begin);
             if (size != 0) {
                 if (!comment_borrowed_ && comment_storage_.empty()) {
@@ -5025,43 +5008,14 @@ class StreamBuffer {
         }
     }
 
-    enum class TokenKind { Move, HeaderKey, HeaderValue };
+    enum class TokenKind { Move, HeaderKey, HeaderValue, Comment };
 
     template <TokenKind kind>
     bool readTokenUntil(StringBuffer& token) {
         while (true) {
             if (buffer_index_ >= bytes_read_ && !fill()) return true;
             const auto begin = buffer_index_;
-#if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
-            if constexpr (kind == TokenKind::HeaderValue) {
-                while (bytes_read_ - buffer_index_ >= 16) {
-                    const auto bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer_.data() + buffer_index_));
-                    auto delimiters = _mm_or_si128(_mm_cmpeq_epi8(bytes, _mm_set1_epi8('\r')),
-                                                   _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\n')));
-                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('"')));
-                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\\')));
-                    const auto mask = static_cast<unsigned>(_mm_movemask_epi8(delimiters));
-                    if (mask != 0) {
-                        buffer_index_ += __builtin_ctz(mask);
-                        break;
-                    }
-                    buffer_index_ += 16;
-                }
-            }
-#endif
-            while (buffer_index_ < bytes_read_) {
-                const auto c = buffer_[buffer_index_];
-                if (c == '\r' || c == '\n') break;
-                if constexpr (kind == TokenKind::HeaderValue) {
-                    if (c == '"' || c == '\\') break;
-                } else {
-                    if (c == ' ' || c == '\t') break;
-                    if constexpr (kind == TokenKind::Move) {
-                        if (c == '(' || c == ')') break;
-                    }
-                }
-                ++buffer_index_;
-            }
+            buffer_index_ = delimiterIndex<kind>();
             if (!token.add(buffer_.data() + begin, static_cast<std::size_t>(buffer_index_ - begin))) return false;
             if (buffer_index_ < bytes_read_) {
                 if (buffer_[buffer_index_] != '\r') return true;
@@ -5109,6 +5063,48 @@ class StreamBuffer {
     }
 
    private:
+    template <TokenKind kind>
+    std::streamsize delimiterIndex() const {
+        auto index = buffer_index_;
+#if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
+        if constexpr (kind == TokenKind::Comment || kind == TokenKind::HeaderValue) {
+            while (bytes_read_ - index >= 16) {
+                const auto bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer_.data() + index));
+                auto delimiters = _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\r'));
+                if constexpr (kind == TokenKind::Comment) {
+                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('}')));
+                } else {
+                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\n')));
+                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('"')));
+                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\\')));
+                }
+                const auto mask = static_cast<unsigned>(_mm_movemask_epi8(delimiters));
+                if (mask != 0) return index + __builtin_ctz(mask);
+                index += 16;
+            }
+        }
+#endif
+        while (index < bytes_read_) {
+            const auto c = buffer_[index];
+            if (c == '\r') break;
+            if constexpr (kind == TokenKind::Comment) {
+                if (c == '}') break;
+            } else {
+                if (c == '\n') break;
+                if constexpr (kind == TokenKind::HeaderValue) {
+                    if (c == '"' || c == '\\') break;
+                } else {
+                    if (c == ' ' || c == '\t') break;
+                    if constexpr (kind == TokenKind::Move) {
+                        if (c == '(' || c == ')') break;
+                    }
+                }
+            }
+            ++index;
+        }
+        return index;
+    }
+
     void preserveComment() {
         if (comment_borrowed_) {
             comment_storage_.assign(buffer_.data() + comment_offset_, comment_length_);
