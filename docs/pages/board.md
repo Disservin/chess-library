@@ -79,6 +79,7 @@ class Board {
         template <bool EXACT = false>
         void makeMove(const Move move);
         void unmakeMove(const Move move);
+        void unmakeMove(const RevMove& reverse);
 
         void makeNullMove();
         void unmakeNullMove();
@@ -218,3 +219,37 @@ class Board {
         }
 };
 ```
+
+## Reverse move generation
+
+`RevMoveGen::genMoves` generates pseudo-legal forward moves that could have
+produced the current board. A `RevMove` stores the forward `Move` and the
+captured `Piece`, since the move encoding alone does not identify a capture.
+Pass a generated entry to `Board::unmakeMove(const RevMove&)` to restore its
+predecessor piece placement without a recorded move history.
+
+```cpp
+std::vector<chess::RevMove> reverseMoves;
+chess::RevMoveGen::genMoves(reverseMoves, board);
+
+for (const auto& reverse : reverseMoves) {
+    auto predecessor = board;
+    predecessor.unmakeMove(reverse);
+    // Check predecessor legality or continue the proof game search.
+}
+```
+
+The generator uses geometric move rules, so candidates still need predecessor
+legality checks. A FEN does not retain every castling right, prior en-passant
+square, or exact half-move clock that was lost by the forward move; reverse undo
+infers castling rights where possible, restores the en-passant square for an
+en-passant move, and uses a conservative clock.
+
+The command-line example at `example/reverse_moves.cpp` searches backward from a
+FEN for a path to the standard starting position. Build it with
+`g++ -std=c++17 -O3 example/reverse_moves.cpp -o reverse_moves`, then run
+`./reverse_moves '<position FEN>'`. It searches up to 8 plies and 1,000,000
+reverse candidates by default; adjust these with `--max-depth N` and
+`--node-limit N`. It assumes standard starting material unless
+`--no-standard-material` is supplied. `--960` uses the Chess960 starting
+position.

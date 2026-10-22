@@ -5,6 +5,54 @@
 
 using namespace chess;
 
+static RevMove checkReverseRoundTrip(const Board& before, Move move) {
+    const Piece captured = before.getCapturing(move);
+    Board after = before;
+    after.makeMove(move);
+
+    // Drop recorded history so the reverse undo path is exercised from FEN alone.
+    Board target(after.getFen(false), before.chess960());
+    std::vector<RevMove> reverse_moves;
+    RevMoveGen::genMoves(reverse_moves, target);
+
+    const RevMove* found = nullptr;
+    for (const auto& candidate : reverse_moves) {
+        if (candidate.move == move && candidate.captured == captured) {
+            found = &candidate;
+            break;
+        }
+    }
+    REQUIRE(found != nullptr);
+
+    const RevMove reverse = *found;
+    Board predecessor = target;
+    predecessor.unmakeMove(reverse);
+    const std::string predecessor_fen_string = predecessor.getFen(false);
+    const std::string before_fen_string = before.getFen(false);
+    const auto predecessor_fen = utils::splitString(predecessor_fen_string, ' ');
+    const auto before_fen = utils::splitString(before_fen_string, ' ');
+    REQUIRE(predecessor_fen.size() == 4);
+    REQUIRE(before_fen.size() == 4);
+    CHECK(predecessor_fen[0] == before_fen[0]);
+    CHECK(predecessor_fen[1] == before_fen[1]);
+    if (move.typeOf() == Move::ENPASSANT) CHECK(predecessor_fen[3] == before_fen[3]);
+    CHECK(predecessor.sideToMove() == before.sideToMove());
+    CHECK(predecessor.zobrist() == predecessor.hash());
+
+    predecessor.makeMove(reverse.move);
+    const std::string replay_fen_string = predecessor.getFen(false);
+    const std::string after_fen_string = after.getFen(false);
+    const auto replay_fen = utils::splitString(replay_fen_string, ' ');
+    const auto after_fen = utils::splitString(after_fen_string, ' ');
+    REQUIRE(replay_fen.size() == 4);
+    REQUIRE(after_fen.size() == 4);
+    CHECK(replay_fen[0] == after_fen[0]);
+    CHECK(replay_fen[1] == after_fen[1]);
+    CHECK(replay_fen[3] == after_fen[3]);
+    CHECK(predecessor.zobrist() == predecessor.hash());
+    return reverse;
+}
+
 TEST_SUITE("Board") {
     TEST_CASE("Set Fen") {
         Board board;
@@ -127,6 +175,123 @@ TEST_SUITE("Board") {
 
             CHECK(board.zobrist() == Board().zobrist());
             CHECK(board.sideToMove() == Color::WHITE);
+        }
+    }
+
+    TEST_CASE("Reverse move generation and undo") {
+        SUBCASE("all legal opening moves can be reversed") {
+            Board board;
+            Movelist legal_moves;
+            movegen::legalmoves(legal_moves, board);
+            REQUIRE(legal_moves.size() == 20);
+            for (const Move move : legal_moves) checkReverseRoundTrip(board, move);
+        }
+
+        SUBCASE("all legal moves in a mixed position can be reversed") {
+            Board board("r3k2r/ppp2ppp/2n1b3/3pP3/3P4/2N1B3/PPP2PPP/R3K2R w KQkq d6 0 1");
+            Movelist legal_moves;
+            movegen::legalmoves(legal_moves, board);
+            REQUIRE(legal_moves.size() > 20);
+            for (const Move move : legal_moves) checkReverseRoundTrip(board, move);
+        }
+
+        SUBCASE("ordinary captures preserve the captured piece identity") {
+            Board board("4k3/8/8/8/8/8/4p2n/4K2R w - - 0 1");
+            const Move move = Move::make(Square::SQ_H1, Square::SQ_H2);
+            const RevMove reverse = checkReverseRoundTrip(board, move);
+            CHECK(reverse.captured == Piece::BLACKKNIGHT);
+
+            Board after = board;
+            after.makeMove(move);
+            std::vector<RevMove> candidates;
+            RevMoveGen::genMoves(candidates, Board(after.getFen(false)));
+            constexpr PieceType types[] = {PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP,
+                                           PieceType::ROOK, PieceType::QUEEN};
+            for (PieceType type : types) {
+                const Piece captured(type, Color::BLACK);
+                CHECK(std::find_if(candidates.begin(), candidates.end(), [&](const RevMove& candidate) {
+                          return candidate.move == move && candidate.captured == captured;
+                      }) != candidates.end());
+            }
+        }
+
+        SUBCASE("quiet and capturing promotions reverse to pawns") {
+            Board white_quiet("4k3/P7/8/8/8/8/8/4K3 w - - 7 1");
+            for (PieceType promotion : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN})
+                checkReverseRoundTrip(white_quiet,
+                                      Move::make<Move::PROMOTION>(Square::SQ_A7, Square::SQ_A8, promotion));
+
+            Board white_capture("4kr2/6P1/8/8/8/8/8/4K3 w - - 0 1");
+            for (PieceType promotion : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN}) {
+                const RevMove reverse = checkReverseRoundTrip(
+                    white_capture, Move::make<Move::PROMOTION>(Square::SQ_G7, Square::SQ_F8, promotion));
+                CHECK(reverse.captured == Piece::BLACKROOK);
+            }
+
+            Board black_quiet("4k3/8/8/8/8/8/p7/4K3 b - - 0 1");
+            for (PieceType promotion : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN})
+                checkReverseRoundTrip(black_quiet,
+                                      Move::make<Move::PROMOTION>(Square::SQ_A2, Square::SQ_A1, promotion));
+
+            Board black_capture("4k3/8/8/8/8/8/p7/1R2K3 b - - 0 1");
+            for (PieceType promotion : {PieceType::KNIGHT, PieceType::BISHOP, PieceType::ROOK, PieceType::QUEEN}) {
+                const RevMove reverse = checkReverseRoundTrip(
+                    black_capture, Move::make<Move::PROMOTION>(Square::SQ_A2, Square::SQ_B1, promotion));
+                CHECK(reverse.captured == Piece::WHITEROOK);
+            }
+        }
+
+        SUBCASE("en passant restores the captured pawn and target square") {
+            Board board("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1");
+            const Move move = Move::make<Move::ENPASSANT>(Square::SQ_E5, Square::SQ_D6);
+            const RevMove reverse = checkReverseRoundTrip(board, move);
+            CHECK(reverse.captured == Piece::BLACKPAWN);
+        }
+
+        SUBCASE("orthodox castling can be reversed without history") {
+            Board board("4k3/8/8/8/8/8/8/4K2R w K - 0 1");
+            const Move move = Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_H1);
+            const RevMove reverse = checkReverseRoundTrip(board, move);
+            CHECK(reverse.captured == Piece::NONE);
+            Board target = board;
+            target.makeMove(move);
+            target = Board(target.getFen(false));
+            target.unmakeMove(reverse);
+            CHECK(target.castlingRights().has(Color::WHITE, Board::CastlingRights::Side::KING_SIDE));
+        }
+
+        SUBCASE("black orthodox castling can be reversed") {
+            Board board("r3k3/8/8/8/8/8/8/4K3 b q - 0 1");
+            const Move move = Move::make<Move::CASTLING>(Square::SQ_E8, Square::SQ_A8);
+            const RevMove reverse = checkReverseRoundTrip(board, move);
+            CHECK(reverse.captured == Piece::NONE);
+        }
+
+        SUBCASE("Chess960 castling can be reversed from its final placement") {
+            Board board = Board::fromXfen("4k3/8/8/8/8/8/8/2K4R w H - 0 1");
+            const Move move = Move::make<Move::CASTLING>(Square::SQ_C1, Square::SQ_H1);
+            const RevMove reverse = checkReverseRoundTrip(board, move);
+            CHECK(reverse.captured == Piece::NONE);
+            Board target = board;
+            target.makeMove(move);
+            target = Board(target.getFen(false), true);
+            target.unmakeMove(reverse);
+            CHECK(target.castlingRights().getRookFile(Color::WHITE, Board::CastlingRights::Side::KING_SIDE) ==
+                  File::FILE_H);
+        }
+
+        SUBCASE("Chess960 castling supports non-orthodox source files") {
+            Board board = Board::fromXfen("1r3k2/8/8/8/8/8/8/4K3 b B - 0 1");
+            const Move move = Move::make<Move::CASTLING>(Square::SQ_F8, Square::SQ_B8);
+            const RevMove reverse = checkReverseRoundTrip(board, move);
+            CHECK(reverse.captured == Piece::NONE);
+
+            Board target = board;
+            target.makeMove(move);
+            target = Board(target.getFen(false), true);
+            target.unmakeMove(reverse);
+            CHECK(target.castlingRights().getRookFile(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE) ==
+                  File::FILE_B);
         }
     }
 
