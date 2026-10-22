@@ -4856,6 +4856,10 @@ class RevMoveGen {
 
 #include <istream>
 
+#if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
+#    include <emmintrin.h>
+#endif
+
 namespace chess::pgn {
 
 namespace detail {
@@ -4970,6 +4974,20 @@ class StreamBuffer {
         while (true) {
             if (buffer_index_ >= bytes_read_ && !fill()) return;
             const auto begin = buffer_index_;
+#if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
+            const auto close = _mm_set1_epi8('}');
+            const auto cr = _mm_set1_epi8('\r');
+            while (bytes_read_ - buffer_index_ >= 16) {
+                const auto bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer_.data() + buffer_index_));
+                const auto delimiters = _mm_or_si128(_mm_cmpeq_epi8(bytes, close), _mm_cmpeq_epi8(bytes, cr));
+                const auto mask = static_cast<unsigned>(_mm_movemask_epi8(delimiters));
+                if (mask != 0) {
+                    buffer_index_ += __builtin_ctz(mask);
+                    break;
+                }
+                buffer_index_ += 16;
+            }
+#endif
             while (buffer_index_ < bytes_read_ && buffer_[buffer_index_] != '}' &&
                    buffer_[buffer_index_] != '\r') {
                 ++buffer_index_;

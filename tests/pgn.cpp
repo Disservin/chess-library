@@ -777,3 +777,23 @@ TEST_CASE("Buffered move tokens preserve boundaries and length limits") {
         }
     }
 }
+
+TEST_CASE("Comment delimiters and bytes survive buffered scanning") {
+    for (std::size_t padding = 0; padding < 32; ++padding) {
+        for (std::size_t length : {0, 1, 15, 16, 17, 31, 32, 33, 255, 1024}) {
+            const std::string body = std::string(length, 'x') + std::string("\0\x80\xff", 3) + "\r\nz";
+            const std::string expected = std::string(length, 'x') + std::string("\0\x80\xff", 3) + "\nz";
+            const std::string text = "[Event \"scan\"]\n\n" + std::string(padding, ' ') +
+                                     "1. e4 {" + body + "} {} {tail} e5 {black} *";
+            std::istringstream input(text);
+            pgn::GameRange<4> range(input);
+            auto game = range.begin();
+            REQUIRE(game != range.end());
+            REQUIRE(game->events.size() == 2);
+            CHECK(game->events[0].san == "e4");
+            CHECK(game->events[0].comment == expected + "tail");
+            CHECK(game->events[1].san == "e5");
+            CHECK(game->events[1].comment == "black");
+        }
+    }
+}
