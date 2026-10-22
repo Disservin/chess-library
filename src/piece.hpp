@@ -119,6 +119,13 @@ class Piece {
         return pieceStr[static_cast<int>(piece)];
     }
 
+    explicit operator std::string_view() const {
+        constexpr static const char* pieceStr[] = {"P", "N", "B", "R", "Q", "K",  //
+                                                   "p", "n", "b", "r", "q", "k"};
+        if (piece == NONE) return ".";
+        return std::string_view(pieceStr[static_cast<int>(piece)], 1);
+    }
+
     constexpr operator int() const noexcept { return static_cast<int>(piece); }
 
     [[nodiscard]] constexpr PieceType type() const noexcept {

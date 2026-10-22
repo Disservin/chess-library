@@ -36,6 +36,17 @@ TEST_SUITE("PieceType") {
 }
 
 TEST_SUITE("Piece") {
+    TEST_CASE("operator std::string_view") {
+        constexpr std::string_view symbols = "PNBRQKpnbrqk.";
+        for (int value = 0; value <= static_cast<int>(Piece::NONE); ++value) {
+            CAPTURE(value);
+            const auto view = static_cast<std::string_view>(Piece(static_cast<Piece::underlying>(value)));
+            CHECK(view == symbols.substr(value, 1));
+            CHECK(view.size() == 1);
+        }
+        CHECK(static_cast<std::string_view>(Piece()) == ".");
+    }
+
     TEST_CASE("operator==") {
         CHECK(Piece(PieceType::PAWN, Color::WHITE) == Piece(PieceType::PAWN, Color::WHITE));
         CHECK(Piece(PieceType::KNIGHT, Color::WHITE) == Piece(PieceType::KNIGHT, Color::WHITE));
