@@ -187,6 +187,14 @@ class Bitboard {
         return index;
     }
 
+    [[nodiscard]]
+#if __cpp_lib_bitops >= 201907L
+    constexpr
+#endif
+        bool hasSingleBit() const noexcept {
+        return count() == 1;
+    }
+
     [[nodiscard]] constexpr std::uint64_t getBits() const noexcept { return bits; }
 
     friend std::ostream& operator<<(std::ostream& os, const Bitboard& bb);
