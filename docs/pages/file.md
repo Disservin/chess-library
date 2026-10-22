@@ -2,10 +2,12 @@
 
 ## Description
 
-The `File` class is a class that represents a chess file. It is a simple class that contains an enum class that represents the underlying type of the file. The class also contains a few static members that represent the underlying type of the file.
+Files run from `a` to `h`, with integer values 0–7. The default is
+`File::NO_FILE` (8). Construct from a valid one-character string such as `"e"`,
+or use `File::FILE_E`. String conversion returns the lowercase file letter.
 
 ::: tip
-Also checkout the [Rank](/pages/rank) class.
+Also see the [Rank](/pages/rank) class.
 :::
 
 ## API
@@ -28,6 +30,8 @@ class File {
     constexpr File();
     constexpr File(underlying file);
     constexpr File(int file);
+    constexpr File(std::string_view str);
+    constexpr File& operator+=(int rhs);
     constexpr underlying internal() const;
     constexpr bool operator==(const File& rhs) const;
     constexpr bool operator!=(const File& rhs) const;

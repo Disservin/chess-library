@@ -29,9 +29,26 @@ Bitboard all_pawns = white_pawns | black_pawns;  // Union of both
 
 - `count()` - Returns the number of 1 bits in the bitboard. For example, if you have a bitboard representing all pawns, count() would tell you how many pawns are on the board.
 
-- `pop()` - Returns and clears the least significant bit. This is particularly useful when you need to process each piece on a bitboard one at a time. Each call to pop() gives you the next piece position and removes it from the bitboard. This approach is much faster than any for loop.
+- `pop()` - Returns and clears the least significant bit. This is particularly useful when you need to process each piece on a bitboard one at a time. Each call to pop() gives you the next piece position and removes it from the bitboard. This avoids checking every square individually.
 
-- `getBits()` - Returns the raw 64-bit integer underlying the bitboard. This gives you direct access to the underyling 64-bit integer when you need it.
+- `getBits()` - Returns the raw 64-bit integer underlying the bitboard. This gives you direct access to the underlying 64-bit integer when you need it.
+
+`lsb()`, `msb()`, and `pop()` require a nonempty bitboard. Check before calling:
+
+```cpp
+chess::Board board;
+auto pawns = board.pieces(chess::PieceType::PAWN, chess::Color::WHITE);
+while (pawns) {
+    chess::Square square = pawns.pop();
+    // Process square; only the local bitboard changes.
+}
+```
+
+`hasSingleBit()` tests whether exactly one square is set. Indices passed to
+`set`, `check`, `clear`, and `fromSquare` must be in 0–63. Raw shift operators
+shift integer bits and can wrap across files; use `attacks::shift` for board
+movement that masks those edges. The bit-scan and population-count helpers are
+`constexpr` only when the implementation has C++20 bit operations available.
 
 ## API
 
@@ -78,10 +95,11 @@ class Bitboard {
 
     constexpr bool empty() const;
     
-    constexpr int lsb() const;
-    constexpr int msb() const;
-    constexpr int count() const;
-    constexpr std::uint8_t pop();
+    int lsb() const;
+    int msb() const;
+    int count() const;
+    std::uint8_t pop();
+    bool hasSingleBit() const;
 
     constexpr std::uint64_t getBits() const;
 

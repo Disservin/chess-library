@@ -2,10 +2,13 @@
 
 ## Description
 
-The `Rank` class is a class that represents a chess rank. It is a simple class that contains an enum class that represents the underlying type of the rank. The class also contains a few static members that represent the underlying type of the rank.
+Ranks run from `1` to `8`, with integer values 0–7. The default is
+`Rank::NO_RANK` (8). Construct from a valid one-character string such as `"2"`,
+or use `Rank::RANK_2`. `bb()` returns the rank’s 64-bit mask.
+`Rank::rank(rank, color)` reflects the rank for Black and preserves it for White.
 
 ::: tip
-Also checkout the [File](/pages/file) class.
+Also see the [File](/pages/file) class.
 :::
 
 ## API
@@ -14,21 +17,23 @@ Also checkout the [File](/pages/file) class.
 
 class Rank {
    public:
-    enum class underlying { 
-        RANK_1, 
-        RANK_2, 
-        RANK_3, 
-        RANK_4, 
-        RANK_5, 
-        RANK_6, 
-        RANK_7, 
-        RANK_8, 
-        NO_RANK 
+    enum class underlying {
+        RANK_1,
+        RANK_2,
+        RANK_3,
+        RANK_4,
+        RANK_5,
+        RANK_6,
+        RANK_7,
+        RANK_8,
+        NO_RANK
     };
 
     constexpr Rank();
     constexpr Rank(underlying rank);
     constexpr Rank(int rank);
+    constexpr Rank(std::string_view str);
+    constexpr Rank& operator+=(int rhs);
 
     constexpr underlying internal() const;
 
@@ -43,6 +48,9 @@ class Rank {
     operator std::string() const;
 
     constexpr operator int() const;
+
+    constexpr std::uint64_t bb() const;
+    static constexpr Rank rank(Rank rank, Color color);
 
     static constexpr bool back_rank(Rank r, Color color);
 

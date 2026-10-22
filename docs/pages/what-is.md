@@ -17,7 +17,7 @@ chess-library is a single header library that provides a simple and easy to use 
 - **Namespace**:  
     Everything is in the `chess::` namespace, so it won't pollute your namespace.
 - **Compact Board Representation in 24 bytes**:  
-    The board state can be compressed into 24 bytes, using `PackedBoard` and `Board::Compact::encode`/`Board::Compact::decode`.
+    The position, excluding move counters and history, can be compressed into 24 bytes using `PackedBoard` and `Board::Compact::encode`/`Board::Compact::decode`.
 
 ### Repositories using this library
 
@@ -32,46 +32,12 @@ chess-library is a single header library that provides a simple and easy to use 
 - Texel tuner for HCE engines
   <https://github.com/GediminasMasaitis/texel-tuner>
 
-### Comparison to other chess libraries
+### Comparing performance
 
-The 3 other big chess libraries in C++ are:
-
-- [surge](https://github.com/nkarve/surge)
-
-  **Pros**:
-
-  - relatively fast, see [PERFT Comparison](#perft-comparison)
-
-  **Cons**:
-
-  - lacks documentation and utility functionality, also no support for Chess960.
-  - not activly maintained anymore
-
-- [THC](https://github.com/billforsternz/thc-chess-library)
-
-  **Pros**:
-
-  - Header and source file split, leading to faster compilation times (TBD).
-  - Position compression
-
-  **Cons**:
-
-  - Rather slow, see [PERFT Comparison](#perft-comparison)
-  - Lacks documentation
-  - No support for Chess960
-
-- [chessgen](https://github.com/markhc/chessgen)
-
-  **Pros**:
-
-  - Modern C++
-  - Header Only
-
-  **Cons**:
-
-  - No documentation
-  - Early Version (after 4 years)
-  - No support for Chess960
+The benchmarks below record measurements on the stated hardware. Results depend
+on compiler options, positions, storage, and library revisions. See the
+[benchmark implementation](https://github.com/Disservin/chess-library/blob/master/comparison/benchmark.cpp)
+to reproduce or adapt the comparison for your workload.
 
 ### Exceptions
 

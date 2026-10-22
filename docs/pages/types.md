@@ -19,7 +19,7 @@ enum class Direction : int8_t {
 
 ## GameResult
 
-Results are from the current players perspective.
+Results are from the current player’s perspective.
 
 ```cpp
 enum class GameResult { WIN, LOSE, DRAW, NONE };
@@ -44,5 +44,17 @@ enum class GameResultReason {
 ## CheckType
 
 ```cpp
-enum class CheckType { NO_CHECK, DIRECT_CHECK, DISCOVERY_CHECK };
+enum class CheckType {
+    NO_CHECK,
+    CHECK,
+    DIRECT_CHECK = CHECK,
+    DIRECT_DISCOVERY_CHECK,
+    SINGLE_DISCOVERY_CHECK,
+    DOUBLE_DISCOVERY_CHECK
+};
 ```
+
+`board.givesCheck(move)` returns `NO_CHECK` or `CHECK`. Use
+`board.givesCheck<true>(move)` when you need the more expensive classification
+into direct and discovered checks. `DIRECT_CHECK` and `CHECK` have the same value.
+Call either overload before making the legal move.

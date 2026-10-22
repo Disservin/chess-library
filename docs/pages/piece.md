@@ -2,10 +2,15 @@
 
 ## Description
 
-The `Piece` class is a class that represents a chess piece. It is a simple class that contains the type of the piece and the color of the piece. The class also contains an enum class that represents the underlying type of the piece. The class also contains a few static members that represent the underlying type of the piece.
+`Piece` combines a piece type and color. A default piece is `Piece::NONE`,
+representing an empty square. `Piece("P")` is a white pawn; `Piece("p")` is a black
+pawn. String construction reads the first character, so supply a nonempty string.
+Use `type()` and `color()` to inspect it, and check for `NONE` before using the
+color as an index or taking its opposite. String conversion returns the FEN letter
+(or `"."` for an empty square).
 
 ::: tip
-Also checkout the [PieceType](/pages/piece-type) class.
+Also see the [PieceType](/pages/piece-type) class.
 :::
 
 ## API
@@ -45,7 +50,8 @@ class Piece {
     constexpr bool operator==(const PieceType& rhs) const;
     constexpr bool operator!=(const PieceType& rhs) const;
     explicit operator std::string() const;
-    operator int() const;
+    explicit operator std::string_view() const;
+    constexpr operator int() const;
 
     constexpr PieceType type() const;
 

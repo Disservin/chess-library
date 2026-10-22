@@ -1,75 +1,61 @@
 # Extending the library
 
-## Board
+`Board` exposes protected virtual `placePiece` and `removePiece` hooks, plus
+virtual `setFen`, for applications that maintain extra state. Override the hooks
+and call the base implementation to preserve the board’s own updates.
 
-Sometimes you have to modify the library a bit to allow new features to be added, which only apply
-to your use case.
+## Incremental piece count
 
-The first step thing that you should consider when extending a library, is to not modify the original sources, unless you
-absolutely have to.  
-This is so that a) you dont break stuff by accident and b) you can better update the dependency.
-
-### Incremental Updates
-
-Often when working with chess engines you have to keep track of information incrementally between moves to keep good
-performance.
-
-Internally the `makeMove` and `unmakeMove` functions make use of `placePiece` and `removePiece` to update pieces
-on the board.
-
-Normally your new logic would go into these functions but since you shouldnt modify these, you can simply create a wrapper class (here called `W_Board`) which inherits from `Board` and extends
-the `placePiece` and `removePiece` functions with the desired logic.
-
-You will still need to call the original function to not break the library!
-
-Also keep in mind that you probably have to reset your data in `setFen` again, because this
-internally will use of the `placePiece` function.
-
-Finally you will end up with something like this:
+This example tracks the total number of pieces. Construction of the base `Board`
+does not invoke derived hooks, so the constructor initializes the count from the
+finished board. A later `setFen` resets the count **before** loading, because
+loading calls `placePiece` for each piece without removing the old pieces through
+`removePiece`.
 
 ```cpp
 #include <iostream>
-
+#include <string_view>
 #include "chess.hpp"
 
-using namespace chess;
+class CountingBoard : public chess::Board {
+public:
+    explicit CountingBoard(std::string_view fen = chess::constants::STARTPOS)
+        : chess::Board(fen), pieceCount_(occ().count()) {}
 
-class W_Board : public Board {
-   public:
-    W_Board() : Board() {}
-    W_Board(std::string_view fen) : Board(fen) {}
-
-    virtual bool setFen(std::string_view fen) {
-        auto ret = Board::setFen(fen);
-        inc = 0;
-        return ret;
+    bool setFen(std::string_view fen) override {
+        pieceCount_ = 0;
+        return chess::Board::setFen(fen);
     }
 
-    int inc = 0;
+    int pieceCount() const { return pieceCount_; }
 
-   protected:
-    void placePiece(Piece piece, Square sq) {
-        Board::placePiece(piece, sq);
-        inc++;
+protected:
+    void placePiece(chess::Piece piece, chess::Square square) override {
+        chess::Board::placePiece(piece, square);
+        ++pieceCount_;
     }
 
-    void removePiece(Piece piece, Square sq) {
-        Board::removePiece(piece, sq);
-        inc--;
+    void removePiece(chess::Piece piece, chess::Square square) override {
+        chess::Board::removePiece(piece, square);
+        --pieceCount_;
     }
+
+private:
+    int pieceCount_ = 0;
 };
 
 int main() {
-    W_Board board = W_Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-
-    std::cout << "board: " << board << std::endl;
-
-    return 0;
+    CountingBoard board;
+    std::cout << board.pieceCount() << '\n'; // 32
 }
 ```
 
-> [!IMPORTANT]
-> If you do this you must call setFen after creating the board, otherwise the board won't use the overriden placePiece function.
+These are piece-placement hooks, not notifications for every state change. Null
+moves do not place or remove pieces. Operations that directly replace board state,
+such as `backtrackTo`, do not replay the hooks. `setXfen` also needs explicit
+handling of the counter reset; `setEpd` delegates to virtual `setFen`. Rebuild or
+restore your extra state when using such operations, and account for constructor
+and copy behavior in your own wrapper.
 
-If this was still not enough for you, think about adding the desired functionality back to master, in case
-they are universal enough.
+`Board` has no virtual destructor. Keep ownership in the concrete derived type;
+do not delete a derived instance through a `Board*`.

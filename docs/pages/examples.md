@@ -1,9 +1,10 @@
-# Example
+# Examples
 
 Below you find an example program which generates all legal moves  
 for the current position and outputs them to the console.
 
 ```cpp
+#include <iostream>
 #include "chess.hpp"
 
 using namespace chess;
@@ -23,7 +24,8 @@ int main () {
 
 ```
 
-Then just compile the program using clang or gcc and run it.
+Save this as `example.cpp` with `chess.hpp` on your include path, then compile
+and run it with a C++17 compiler:
 
 ```bash
 g++ -std=c++17 -O3 -march=native -o example example.cpp
@@ -32,8 +34,16 @@ g++ -std=c++17 -O3 -march=native -o example example.cpp
 
 ## Perft
 
+Perft counts legal move sequences of a fixed length, without draw adjudication.
+The function below assumes `chess.hpp` and `using namespace chess;` as above.
+For the standard starting position, depths 0–3 give 1, 20, 400, and 8,902 nodes.
+
+
 ```cpp
+// depth must be nonnegative; depth 0 counts the current position.
 uint64_t perft(Board& board, int depth) {
+    if (depth == 0) return 1;
+
     Movelist moves;
     movegen::legalmoves(moves, board);
 
@@ -54,37 +64,9 @@ uint64_t perft(Board& board, int depth) {
 }
 ```
 
-## PGN Parser
+## PGN parser
 
-```cpp
-#include <fstream>
-#include <memory>
-#include <string>
-
-#include "chess.hpp"
-
-using namespace chess;
-
-class MyVisitor : public pgn::Visitor {
-   public:
-    void header(std::string_view key, std::string_view value) {}
-
-    void move(std::string_view move, std::string_view comment) {}
-
-    void startPgn() {}
-    void startMoves() {}
-    void endPgn() {}
-};
-
-int main(int argc, char const *argv[]) {
-    const auto file  = "games.pgn";
-    auto file_stream = std::ifstream(file);
-
-    auto vis = std::make_unique<MyVisitor>();
-
-    pgn::StreamParser parser(file_stream);
-    parser.readGames(*vis);
-
-    return 0;
-}
-```
+The [PGN parsing guide](/pages/pgn-parsing#process-games-with-a-visitor) includes
+a complete visitor example with file-open and parser error handling, plus a
+single-pass game range example. It also explains which annotations are retained
+and how to replay variations.

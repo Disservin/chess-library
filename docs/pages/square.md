@@ -4,8 +4,18 @@
 
 The `Square` class is a simple class that represents a square on the board. It is a thin wrapper around an enum class that represents the squares of the board. It has a few utility functions to help with square manipulation.
 
+Squares use rank-major indices: `a1 = 0`, `h1 = 7`, and `h8 = 63`.
+`Square::NO_SQ` is the sentinel value 64 and is also the default value.
+Validate external text with `Square::is_valid_string_sq(text)` before constructing
+a `Square` from it; the constructor assumes a two-character coordinate.
+
+`flip()` mutates the square by reflecting its rank (`a1` becomes `a8`).
+`relative_square(color)` returns a reflected copy for Black, leaving the original
+unchanged. `distance(a, b)` is king-move (Chebyshev) distance; `value_distance`
+is the absolute difference between their numeric indices.
+
 ::: tip
-Also checkout the [File](/pages/file) and [Rank](/pages/rank) classes.
+Also see the [File](/pages/file) and [Rank](/pages/rank) classes.
 :::
 
 ## API
@@ -40,13 +50,12 @@ class Square {
     constexpr bool operator<=(const Square& rhs) const;
     constexpr Square operator+(const Square& rhs) const;
     constexpr Square operator-(const Square& rhs) const;
-    constexpr Square operator++();
+    constexpr Square& operator++();
     constexpr Square operator++(int);
-    constexpr Square operator--();
+    constexpr Square& operator--();
     constexpr Square operator--(int);
 
     operator std::string() const;
-    constexpr underlying internal() const;
     constexpr int index() const;
     constexpr File file() const;
     constexpr Rank rank() const;
@@ -54,23 +63,25 @@ class Square {
     constexpr bool is_dark() const;
     constexpr bool is_valid() const;
     constexpr static bool is_valid(Rank r, File f);
-    static constexpr int distance(Square sq, Square sq2);
-    static constexpr int value_distance(Square sq, Square sq2);
+    static int distance(Square sq, Square sq2);
+    static int value_distance(Square sq, Square sq2);
     static constexpr bool same_color(Square sq, Square sq2);
     static constexpr bool back_rank(Square sq, Color color);
 
     /// @brief Flips the square vertically.
-    constexpr Square flip();
+    constexpr Square& flip();
 
     /// @brief Conditionally flips the square vertically.
-    constexpr Square relative_square(Color c);
+    constexpr Square relative_square(Color c) const;
 
-    constexpr int diagonal_of();
-    constexpr int antidiagonal_of();
+    constexpr int diagonal_of() const;
+    constexpr int antidiagonal_of() const;
 
-    constexpr Square ep_square();
+    constexpr Square ep_square() const;
     static constexpr Square castling_king_square(bool is_king_side, Color c);
     static constexpr Square castling_rook_square(bool is_king_side, Color c);
     static constexpr int max();
+    static bool is_valid_string_sq(std::string_view str);
+    static constexpr bool is_valid_sq(int sq);
 };
 ```

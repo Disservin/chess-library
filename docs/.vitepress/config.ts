@@ -28,6 +28,7 @@ export default defineConfig({
           { text: "Getting Started", link: "/pages/getting-started" },
           { text: "PGN parsing", link: "/pages/pgn-parsing" },
           { text: "Examples", link: "/pages/examples" },
+          { text: "Extending the library", link: "/pages/extending-the-library" },
         ],
       },
       {
@@ -37,6 +38,7 @@ export default defineConfig({
           { text: "Bitboard", link: "/pages/bitboard" },
           { text: "Board", link: "/pages/board" },
           { text: "Constants", link: "/pages/constants" },
+          { text: "Color", link: "/pages/color" },
           { text: "Move", link: "/pages/move" },
           { text: "Move Generation", link: "/pages/move-generation" },
           { text: "Movelist", link: "/pages/movelist" },

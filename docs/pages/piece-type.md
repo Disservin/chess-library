@@ -2,10 +2,14 @@
 
 ## Description
 
-The `PieceType` class is a class that represents a chess piece type. It is a simple class that contains an enum class that represents the underlying type of the piece. The class also contains a few static members that represent the underlying type of the piece.
+`PieceType` represents a pawn, knight, bishop, rook, queen, or king without a
+color. The values are 0–5; `NONE` is 6 and is the default. Construct it from a
+piece-type letter such as `"n"` (case-insensitive), or use `PieceType::KNIGHT`.
+String construction requires a nonempty string. String conversion returns a
+lowercase letter, or a space for `NONE`.
 
 ::: tip
-Also checkout the [Piece](/pages/piece) class.
+Also see the [Piece](/pages/piece) class.
 :::
 
 ## API

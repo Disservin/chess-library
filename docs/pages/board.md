@@ -6,9 +6,77 @@ The Board class represents the state of a chess game. It provides functionalitie
 
 Moves can be made using the `makeMove` function, which takes a `Move` object as an argument and also taken back using the `unmakeMove` function. The `makeNullMove` and `unmakeNullMove` functions are used to make and unmake null moves, respectively.
 
+## Loading positions and Chess960
+
+A default `Board` uses the standard starting position. `setFen`, `setXfen`, and
+`setEpd` return a success flag; parsing success does not prove the position is
+legal or reachable. A failed setter can leave a partially changed board. Parse
+into a temporary board if you need to preserve the original on failure.
+Factory methods return a board without exposing a success flag.
+
+`Board(fen, true)` interprets castling rights for Chess960. `setXfen` also enables
+Chess960: `KQkq` selects the outermost rook on the corresponding side of the king,
+while file letters select specific rook files. `getXfen` writes that convention.
+Castling-type prefixes such as `s` and `m` are not supported.
+
+`set960(bool)` reparses the last loaded FEN, resetting the position and history;
+it is not a switch to toggle in the middle of play. Configure the mode when
+loading a position. It does not choose or generate a Chess960 starting array.
+
+## History, draws, and checks
+
+Undo normal moves in reverse order using the same moves passed to `makeMove`.
+This relies on the board’s saved history; loading a FEN starts a new history and
+cannot reconstruct earlier moves or repetitions. Null moves are search operations,
+not legal chess moves, and have their own paired make/unmake functions.
+
+`isRepetition(2)` (the default) looks for two earlier occurrences of the current
+position, giving three occurrences in total. `isRepetition(1)` checks for one
+earlier occurrence, which can be useful in engine search. Only recorded history
+is available. `isHalfMoveDraw()` tests for at least 100 half-moves (50 moves by
+each side) without a pawn move or capture. Call `getHalfMoveDrawType()` only when
+that test is true, since checkmate takes priority.
+
+`isGameOver()` combines the library’s material, repetition, fifty-move, and legal
+move checks. Its result is from the side-to-move perspective. It does not manage
+draw claims, agreements, clocks, resignation, or a complete tournament ruleset.
+`isInsufficientMaterial()` is a basic material test, not a general dead-position
+solver. Engines that already generated legal moves can inspect that list and
+`inCheck()` instead of repeating the game-over move query.
+
+`checkers()` returns the enemy pieces checking the side-to-move king;
+`inDoubleCheck()` tests whether there are two. `givesCheck(move)` tests a legal
+move without playing it. See [CheckType](/pages/types#checktype) for detailed mode.
+
+`hash()` reads the maintained position hash; `zobrist()` recomputes it.
+`zobristAfter(move)` predicts a legal move’s hash without changing the board.
+Its `EXACT = false` specialization skips en-passant and castling updates and is
+not a complete resulting position key. `operator==` compares board state but not
+saved history; `fullyEquals()` also compares history.
+
+## Occupancy, captures, and castling rights
+
+`us(color)` returns that color’s occupied squares and `them(color)` returns the
+opposite color’s squares; neither implicitly selects the side to move.
+`pieces(type)` includes both colors. Combine piece types with
+`pieces(PieceType::BISHOP, PieceType::QUEEN)`, or select one color with
+`pieces(type, color)`. `at(square)` returns a `Piece`; `at<PieceType>(square)`
+returns only its type. Empty squares return the corresponding `NONE` value.
+
+Query `isCapture(move)` and `getCapturing(move)` before making the move. They
+handle en passant, where the captured pawn is not on the destination, and exclude
+castling despite its internal king-to-rook encoding.
+
+`castlingRights()` returns a copy of `Board::CastlingRights`. Use
+`has(color, Side::KING_SIDE)` or `has(color, Side::QUEEN_SIDE)` to test a right,
+`getRookFile(color, side)` to locate its rook, and `isEmpty()` to test whether no
+rights remain. `Side` is nested in `Board::CastlingRights`. Having a right does
+not mean castling is legal now; check the legal move list for that. Modifying the
+returned copy does not modify the board.
+
 ## PackedBoard
 
-Commonly a chess board is represented by a FEN string, but it can also be represented by a PackedBoard. A PackedBoard only uses 24 bytes to represent the board, which is more memory-efficient than a FEN string. The `Compact` class provides functions to convert a Board object to a PackedBoard and vice versa.
+Commonly a chess board is represented by a FEN string, but it can also be represented by a PackedBoard. A PackedBoard uses 24 bytes to represent piece placement, side to move, en passant, and castling rights, which is more memory-efficient than a FEN string. The `Compact` class provides functions to convert a Board object to a PackedBoard and vice versa.
 
 ::: info
 The PackedBoard is not human-readable, and it is recommended to use the FEN string for debugging purposes.
@@ -21,6 +89,11 @@ Also checkout [GameResultReason](/pages/types), [GameResult](/pages/types) and [
 ::: warning
 If you need to undo a move you must pass the same move object that was used to make the move.
 :::
+
+Packed boards omit half-move and full-move counters and repetition history.
+Decoding resets the counters to half-move 0 and full-move 1. Pass the correct
+Chess960 flag when decoding; the format does not retain that mode for you.
+Use a full `Board` copy when you need to preserve game history and counters.
 
 ## API
 
@@ -41,7 +114,7 @@ class Board {
          * @param fen
          * @return
          */
-        bool setFen(std::string_view fen);
+        virtual bool setFen(std::string_view fen);
 
         /**
          * @brief Returns true if the given xFEN was successfully parsed and set
@@ -89,21 +162,20 @@ class Board {
         * @brief Backtrack the board state to a previous state. Assumes that the current
         * state was reached from previous by a series, S, of makeMove() calls. Otherwise
         * the behavior is undefined. Equivalent to calling unmakeMove() for every move of
-        * S. Ad-hoc testing shows that backtrackTo() is roughly 20% faster than a single
-        * unmakeMove() call. This method can be useful in tree-searching algorithms that
+        * S. This method can be useful in tree-searching algorithms that
         * repeatedly backtrack from leaf nodes to the root node, like MCTS.
         * @param previous
         */
-        void backtrackTo(const Board& previous)
+        void backtrackTo(const Board& previous);
 
         Bitboard us(Color color) const;
         Bitboard them(Color color) const;
 
-        /// @brief recalculate all bitboards
+        /// @brief Occupancy of both colors.
         /// @return
         Bitboard all() const;
 
-        /// @brief more efficient version of all(), which is incremental
+        /// @brief Occupancy of both colors; equivalent to all().
         /// @return
         Bitboard occ() const;
 
@@ -121,7 +193,7 @@ class Board {
         /// @return
         bool isCapture(const Move move) const;
 
-        /// @brief Returns the capturing piece or piece type of a move
+        /// @brief Returns the captured piece or piece type of a move
         /// @tparam T
         /// @param move
         /// @return
@@ -157,7 +229,7 @@ class Board {
 
         /**
          * @brief Checks if the current position is a draw by 50 move rule.
-         * Keep in mind that by the rules of chess, if the position has 50 half
+         * Keep in mind that by the rules of chess, if the position has 100 half
          * moves it's not necessarily a draw, since checkmate has higher priority,
          * call getHalfMoveDrawType,
          * to determine whether the position is a draw or checkmate.
@@ -191,7 +263,11 @@ class Board {
         /// @brief Check if the current position is in check.
         bool inCheck() const;
 
-        CheckType givesCheck(const Move &m) const;
+        bool inDoubleCheck() const;
+        Bitboard checkers() const;
+
+        template <bool Detail = false>
+        CheckType givesCheck(Move move) const;
 
         /// @brief Check if the color has any non pawn material left.
         bool hasNonPawnMaterial(Color color) const;
@@ -199,6 +275,12 @@ class Board {
         /// @brief Recalculates the zobrist hash and return it.
         /// If you want get the zobrist hash use hash().
         U64 zobrist() const;
+
+        template <bool EXACT = true>
+        U64 zobristAfter(const Move& move) const;
+
+        bool operator==(const Board& other) const;
+        bool fullyEquals(const Board& other) const;
 
         Bitboard getCastlingPath(Color c, bool isKingSide) const;
 
@@ -216,7 +298,7 @@ class Board {
                 /// @param compressed
                 /// @param chess960 If the board is a chess960 position, set this to true
                 static Board decode(const PackedBoard &compressed, bool chess960 = false);
-        }
+        };
 };
 ```
 

@@ -5,7 +5,7 @@ before checking for captures.
 
 ## Creation
 
-Incase you want to manually create a move you can do it like so.
+If you want to manually create a move you can do it like so.
 
 ```cpp
 Move m = Move::make<Move::NORMAL>(Square::SQ_E2, Square::SQ_E4);
@@ -13,18 +13,42 @@ Move m = Move::make<Move::NORMAL>(Square::SQ_E2, Square::SQ_E4);
 
 ## Other formats
 
-Sometimes you want to convert an internal move object into something else which, like a uci move string or into san notation.
-You can easily do this by using the static functions on the `uci` class.
+Use the static functions on `chess::uci` to convert between internal moves,
+UCI coordinate notation (`e2e4`, `e7e8q`), SAN (`e4`, `Nf3`, `O-O`), and LAN.
+SAN/LAN output and SAN parsing need the board **before** the move.
 
-::: warning
-The `moveToSan`, `moveToLan` and `parseSan` functions are relatively new and might produce incorrect results.
-Please open an issue for such cases.
-:::
+```cpp
+chess::Board board;
+const auto move = chess::uci::parseSan(board, "e4");
+const auto san = chess::uci::moveToSan(board, move);
+const auto uci = chess::uci::moveToUci(move, board.chess960());
+board.makeMove(move);
+```
+
+`uciToMove` decodes a move using the board to identify castling, promotions, and
+en passant. It returns `Move::NO_MOVE` for some malformed inputs, but does not
+check legality. For external UCI input, check `uci::isUciMove(text)` first, decode
+it, then reject `Move::NO_MOVE` or a move that fails `board.isLegal(move)`.
+`isUciMove` only checks coordinate syntax, not the board position.
+
+`parseSan` matches against generated legal moves. With exceptions enabled,
+unmatched SAN throws `chess::uci::SanParseError` and ambiguous SAN throws
+`chess::uci::AmbiguousMoveError`; an empty string returns
+`Move::NO_MOVE`. With `CHESS_NO_EXCEPTIONS`, unmatched SAN returns `Move::NO_MOVE`, but
+ambiguous SAN can return a matching move without reporting the ambiguity.
+It accepts some relaxed notation and is not a strict SAN syntax validator.
+The overload `parseSan(board, san, scratchMoves)` lets you reuse a `Movelist`;
+it replaces that list’s contents during parsing of nonempty SAN.
+
+For standard castling, UCI output uses the king’s destination (`e1g1`). Passing
+`true` to `moveToUci` uses the internal king-to-rook convention required by
+Chess960. Decode Chess960 UCI input with a board configured for Chess960.
 
 ## API
 
 ```cpp
 class uci {
+public:
 
 /**
  * @brief Converts a move to a UCI string.
@@ -32,15 +56,15 @@ class uci {
  * @param chess960
  * @return
  */
-std::string moveToUci(const Move& move, bool chess960 = false);
+static std::string moveToUci(const Move& move, bool chess960 = false);
 
 /**
  * @brief Converts a UCI string to an internal move.
  * @param board
  * @param uci
- * @return NO_MOVE if the move is invalid.
+ * @return NO_MOVE for some malformed inputs; legality must be checked separately.
  */
-Move uciToMove(const Board& board, std::string_view uci);
+static Move uciToMove(const Board& board, std::string_view uci);
 
 /**
  * @brief Converts a move to a SAN string
@@ -48,7 +72,7 @@ Move uciToMove(const Board& board, std::string_view uci);
  * @param move
  * @return
  */
-std::string moveToSan(const Board& board, const Move& move);
+static std::string moveToSan(const Board& board, const Move& move);
 
 /**
  * @brief Converts a move to a LAN string
@@ -56,7 +80,7 @@ std::string moveToSan(const Board& board, const Move& move);
  * @param move
  * @return
  */
-std::string moveToLan(const Board& board, const Move& move);
+static std::string moveToLan(const Board& board, const Move& move);
 
 /**
  * @brief Parse a san string and return the move.
@@ -65,7 +89,7 @@ std::string moveToLan(const Board& board, const Move& move);
  * @param san
  * @return
  */
-Move parseSan(const Board& board, std::string_view san);
+static Move parseSan(const Board& board, std::string_view san);
 
 /**
  * @brief Check if a string is a valid UCI move. Must also have the correct length.
@@ -110,3 +134,19 @@ class Move {
     static constexpr std::uint16_t CASTLING  = 3 << 14;
 };
 ```
+
+## Move values and scores
+
+`Move::make` encodes a move; it does not check the board. Select the correct
+`NORMAL`, `PROMOTION`, `ENPASSANT`, or `CASTLING` type. Only call `promotionType()`
+for a promotion. `Move::make<Move::PROMOTION>(from, to, PieceType::QUEEN)` encodes
+a queen promotion.
+
+Use `board.isCapture(move)` and `board.getCapturing(move)` before making a move
+to handle en passant and castling correctly. Despite its name, `getCapturing`
+returns the **captured** piece (or `Piece::NONE`), not the moving piece.
+
+`setScore()` stores a signed 16-bit ordering score. Move equality compares only
+the encoded move, ignoring its score. A default-constructed `Move` is uninitialized;
+use `Move move = Move::NO_MOVE` when you need a sentinel. Null moves use
+`board.makeNullMove()` and `board.unmakeNullMove()`, not `makeMove(NULL_MOVE)`.
