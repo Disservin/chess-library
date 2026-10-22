@@ -881,3 +881,20 @@ TEST_CASE("Buffered headers preserve escapes and string limits") {
         }
     }
 }
+
+TEST_CASE("Spaces before comments preserve whitespace and refill handling") {
+    for (std::size_t padding = 0; padding < 17; ++padding) {
+        for (const std::string space : {" ", "  ", " \t ", " \n ", " \r\n "}) {
+            std::istringstream input("[Event \"space\"]\n\n" + std::string(padding, ' ') +
+                                     "1. e4" + space + "{white}" + space + "e5" + space + "{black}" + space + "*");
+            pgn::GameRange<4> range(input);
+            auto game = range.begin();
+            REQUIRE(game != range.end());
+            REQUIRE(game->events.size() == 2);
+            CHECK(game->events[0].san == "e4");
+            CHECK(game->events[0].comment == "white");
+            CHECK(game->events[1].san == "e5");
+            CHECK(game->events[1].comment == "black");
+        }
+    }
+}

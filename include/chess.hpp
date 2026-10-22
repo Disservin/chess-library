@@ -5025,7 +5025,22 @@ class StreamBuffer {
     }
 
     bool readMoveToken(StringBuffer& token) {
-        return readTokenUntil<TokenKind::Move>(token);
+        if (!readTokenUntil<TokenKind::Move>(token)) return false;
+        skipFollowingSpace();
+        return true;
+    }
+
+    void skipFollowingSpace() {
+        if (buffer_index_ >= bytes_read_ || buffer_[buffer_index_] != ' ') return;
+        ++buffer_index_;
+        while (true) {
+            while (buffer_index_ < bytes_read_) {
+                const auto c = buffer_[buffer_index_];
+                if (c != ' ' && c != '\t' && c != '\n' && c != '\r') break;
+                ++buffer_index_;
+            }
+            if (buffer_index_ < bytes_read_ || !fill()) return;
+        }
     }
 
     bool fill() {
@@ -5664,6 +5679,7 @@ class StreamParser {
                     stream_buffer.advance();
 
                     stream_buffer.readComment();
+                    stream_buffer.skipFollowingSpace();
 
                     break;
                 }
@@ -5699,13 +5715,7 @@ class StreamParser {
                     break;
                 }
                 case ' ': {
-                    while (auto c = stream_buffer.some()) {
-                        if (!is_space(*c)) {
-                            break;
-                        }
-
-                        stream_buffer.advance();
-                    }
+                    stream_buffer.skipFollowingSpace();
 
                     break;
                 }
