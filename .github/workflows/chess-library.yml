@@ -33,19 +33,19 @@ jobs:
       - name: Normal Tests
         if: matrix.name == 'Normal'
         run: |
-          meson compile -C build
-          ./build/tests/tests
+          meson compile -C build --jobs 4
+          meson test -C build --num-processes 4
 
       - name: ASAN Tests
         if: matrix.name == 'ASAN'
         run: |
           meson configure build -Db_sanitize=address
-          meson compile -C build
-          ./build/tests/tests
+          meson compile -C build --jobs 4
+          meson test -C build --num-processes 4
 
       - name: Undefined Tests
         if: matrix.name == 'Undefined'
         run: |
           meson configure build -Db_sanitize=undefined
-          meson compile -C build
-          ./build/tests/tests
+          meson compile -C build --jobs 4
+          meson test -C build --num-processes 4
