@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <fstream>
 #include <memory>
@@ -727,5 +728,25 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->endCount() == 0);
         CHECK(vis->moveStartCount() == 0);
         CHECK(vis->headers().size() == 0);
+    }
+}
+
+TEST_CASE("Buffered comments preserve bytes across refills") {
+    for (std::size_t padding = 0; padding < 20; ++padding) {
+        const std::string text = std::string(padding, 'x') + "\r\n" +
+                                 std::string(300, 'y') + "\r\nz";
+        std::string expected = text;
+        expected.erase(std::remove(expected.begin(), expected.end(), '\r'), expected.end());
+        for (bool closed : {false, true}) {
+            std::istringstream input("[Event \"comments\"]\n\n1. e4 {" + text +
+                                     (closed ? "} e5 *" : ""));
+            pgn::GameRange<4> range(input);
+            auto it = range.begin();
+            REQUIRE(it != range.end());
+            REQUIRE(!it->events.empty());
+            CHECK(it->events.front().san == "e4");
+            CHECK(it->events.front().comment == expected);
+            CHECK(range.error() == pgn::StreamParserError::None);
+        }
     }
 }
