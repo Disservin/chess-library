@@ -14,6 +14,8 @@
 
 #if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
 #    include <emmintrin.h>
+#elif defined(__ARM_NEON) && (defined(__GNUC__) || defined(__clang__))
+#    include <arm_neon.h>
 #endif
 
 namespace chess::pgn {
@@ -237,26 +239,46 @@ class StreamBuffer {
     template <TokenKind kind>
     std::streamsize delimiterIndex() const {
         auto index = buffer_index_;
-#if defined(__SSE2__) && (defined(__GNUC__) || defined(__clang__))
+#if (defined(__SSE2__) || defined(__ARM_NEON)) && (defined(__GNUC__) || defined(__clang__))
+#    if defined(__SSE2__)
+        const auto equal = [](__m128i bytes, char c) { return _mm_cmpeq_epi8(bytes, _mm_set1_epi8(c)); };
+        const auto either = [](__m128i a, __m128i b) { return _mm_or_si128(a, b); };
+#    else
+        const auto equal = [](uint8x16_t bytes, char c) { return vceqq_u8(bytes, vdupq_n_u8(c)); };
+        const auto either = [](uint8x16_t a, uint8x16_t b) { return vorrq_u8(a, b); };
+#    endif
         if constexpr (kind == TokenKind::Comment || kind == TokenKind::HeaderValue || kind == TokenKind::Move) {
             while (bytes_read_ - index >= 16) {
+#    if defined(__SSE2__)
                 const auto bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(buffer_.data() + index));
-                auto delimiters = _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\r'));
+#    else
+                const auto bytes = vld1q_u8(reinterpret_cast<const unsigned char*>(buffer_.data() + index));
+#    endif
+                auto delimiters = equal(bytes, '\r');
                 if constexpr (kind == TokenKind::Comment) {
-                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('}')));
+                    delimiters = either(delimiters, equal(bytes, '}'));
                 } else {
-                    delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\n')));
+                    delimiters = either(delimiters, equal(bytes, '\n'));
                     if constexpr (kind == TokenKind::HeaderValue) {
-                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('"')));
-                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\\')));
+                        delimiters = either(delimiters, equal(bytes, '"'));
+                        delimiters = either(delimiters, equal(bytes, '\\'));
                     } else {
-                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8(' ')));
-                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('\t')));
-                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8('(')));
-                        delimiters = _mm_or_si128(delimiters, _mm_cmpeq_epi8(bytes, _mm_set1_epi8(')')));
+                        delimiters = either(delimiters, equal(bytes, ' '));
+                        delimiters = either(delimiters, equal(bytes, '\t'));
+                        delimiters = either(delimiters, equal(bytes, '('));
+                        delimiters = either(delimiters, equal(bytes, ')'));
                     }
                 }
+#    if defined(__SSE2__)
                 const auto mask = static_cast<unsigned>(_mm_movemask_epi8(delimiters));
+#    else
+                // Sum distinct bit weights to form an endian-independent 16-bit mask.
+                const uint8x16_t weights = {1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128};
+                const auto bits = vandq_u8(delimiters, weights);
+                const auto sums = vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(bits)));
+                const auto mask = static_cast<unsigned>(vgetq_lane_u64(sums, 0)) |
+                                  (static_cast<unsigned>(vgetq_lane_u64(sums, 1)) << 8);
+#    endif
                 if (mask != 0) return index + __builtin_ctz(mask);
                 index += 16;
             }
