@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cctype>
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -150,18 +151,21 @@ class Board {
         Square enpassant;
         std::uint8_t half_moves;
         Piece captured_piece;
+        // the move played from this state, used to rebuild earlier positions when verifying repetitions
+        Move move;
 
         State(const U64& hash, const CastlingRights& castling, const Square& enpassant, const std::uint8_t& half_moves,
-              const Piece& captured_piece)
+              const Piece& captured_piece, const Move& move)
             : hash(hash),
               castling(castling),
               enpassant(enpassant),
               half_moves(half_moves),
-              captured_piece(captured_piece) {}
+              captured_piece(captured_piece),
+              move(move) {}
 
         bool operator==(const State& other) const noexcept {
             return hash == other.hash && castling == other.castling && enpassant == other.enpassant &&
-                   half_moves == other.half_moves && captured_piece == other.captured_piece;
+                   half_moves == other.half_moves && captured_piece == other.captured_piece && move == other.move;
         }
     };
 
@@ -323,7 +327,7 @@ class Board {
         // Validate side to move
         assert((at(move.from()) < Piece::BLACKPAWN) == (stm_ == Color::WHITE));
 
-        prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, captured);
+        prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, captured, move);
 
         hfm_++;
         plies_++;
@@ -587,7 +591,7 @@ class Board {
                 old_castling.setCastlingRight(captured_color, side, move.to().file());
             }
         }
-        prev_states_.emplace_back(key_, old_castling, old_ep, old_hfm, reverse.captured);
+        prev_states_.emplace_back(key_, old_castling, old_ep, old_hfm, reverse.captured, move);
         unmakeMove(move);
         key_ = zobrist();
     }
@@ -596,7 +600,7 @@ class Board {
      * @brief Make a null move. (Switches the side to move)
      */
     void makeNullMove() {
-        prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, Piece::NONE);
+        prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, Piece::NONE, Move(Move::NULL_MOVE));
 
         key_ ^= Zobrist::sideToMove();
         if (ep_sq_ != Square::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
@@ -810,15 +814,37 @@ class Board {
     /**
      * @brief Checks if the current position is a repetition, set this to 1 if
      * you are writing a chess engine.
+     * Candidate positions are found by comparing Zobrist hashes, every hash match is then
+     * verified against the actual piece placement, castling rights and en passant square,
+     * so hash collisions can never produce a false repetition.
      * @param count
      * @return
      */
     [[nodiscard]] bool isRepetition(int count = 2) const noexcept {
-        std::uint8_t c = 0;
-
         // We start the loop from the back and go forward in moves, at most to the
         // last move which reset the half-move counter because repetitions cant
         // be across half-moves.
+        const auto size = static_cast<int>(prev_states_.size());
+
+        // Hot path: identical to the hash-only scan. Hash matches are rare, so the
+        // verification is kept out of line to not slow down the common case.
+        for (int i = size - 2; i >= 0 && i >= size - hfm_ - 1; i -= 2) {
+            if (prev_states_[i].hash == key_) return isRepetitionVerified(count, i);
+        }
+
+        return false;
+    }
+
+    /**
+     * @brief Hash-only version of isRepetition(). Slightly faster since hash matches are not
+     * verified, but it may report a false repetition on a Zobrist hash collision.
+     * Only use this if you can tolerate (very rare) false positives, e.g. in engine search.
+     * @param count
+     * @return
+     */
+    [[nodiscard]] bool isRepetitionFast(int count = 2) const noexcept {
+        int c = 0;
+
         const auto size = static_cast<int>(prev_states_.size());
 
         for (int i = size - 2; i >= 0 && i >= size - hfm_ - 1; i -= 2) {
@@ -1451,6 +1477,90 @@ class Board {
     std::array<std::array<Bitboard, 2>, 2> castling_path = {};
 
    private:
+    /**
+     * @brief Slow path of isRepetition(), called on the first hash match at prev_states_[first].
+     * Rebuilds the piece placement of earlier positions by undoing the recorded moves on a
+     * mailbox copy and compares it against the current position.
+     */
+#if defined(__GNUC__)
+    __attribute__((noinline, cold))
+#elif defined(_MSC_VER)
+    __declspec(noinline)
+#endif
+    bool isRepetitionVerified(int count, int first) const noexcept {
+        const auto size = static_cast<int>(prev_states_.size());
+
+        // piece placement of the position at prev_states_[board_idx]
+        std::array<Piece, 64> board = board_;
+        int board_idx               = size;
+        int c                       = 0;
+
+        for (int i = first; i >= 0 && i >= size - hfm_ - 1; i -= 2) {
+            const auto& state = prev_states_[i];
+
+            if (state.hash != key_) continue;
+
+            // the side to move alternates every ply (null moves included)
+            for (; board_idx > i; --board_idx) {
+                const auto mover = ((size - (board_idx - 1)) & 1) ? ~stm_ : stm_;
+                undoMoveOnMailbox(board, prev_states_[board_idx - 1], mover);
+            }
+
+            // Equal hash + equal placement + equal side to move implies equal castling rights and
+            // en passant square, see Zobrist::castlingEpKeysDistinct. (Rook files of the castling
+            // rights are not hashed, but within one history rights are only ever removed, so the
+            // set of rights determines them.)
+            if (std::memcmp(board.data(), board_.data(), sizeof(board)) != 0) continue;
+
+            if (++c == count) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @brief Undo the move stored in `state` on a plain mailbox board.
+     * @param board piece placement after the move, becomes the placement before the move
+     * @param state the state recorded before the move was made
+     * @param mover the color which made the move
+     */
+    static void undoMoveOnMailbox(std::array<Piece, 64>& board, const State& state, Color mover) noexcept {
+        const auto move = state.move;
+
+        if (move.move() == Move::NULL_MOVE) return;
+
+        const auto from = move.from().index();
+        const auto to   = move.to().index();
+
+        switch (move.typeOf()) {
+            case Move::CASTLING: {
+                // castling is encoded as king captures own rook
+                const bool king_side   = move.to() > move.from();
+                const auto rook_now_sq = Square(king_side ? File::FILE_F : File::FILE_D, move.from().rank()).index();
+                const auto king_now_sq = Square(king_side ? File::FILE_G : File::FILE_C, move.from().rank()).index();
+
+                board[rook_now_sq] = Piece::NONE;
+                board[king_now_sq] = Piece::NONE;
+                board[from]        = Piece(PieceType::KING, mover);
+                board[to]          = Piece(PieceType::ROOK, mover);
+                break;
+            }
+            case Move::PROMOTION:
+                board[from] = Piece(PieceType::PAWN, mover);
+                board[to]   = state.captured_piece;
+                break;
+            case Move::ENPASSANT:
+                board[from]   = board[to];
+                board[to]     = Piece::NONE;
+                board[to ^ 8] = Piece(PieceType::PAWN, ~mover);
+                break;
+            default:
+                board[from] = board[to];
+                board[to]   = state.captured_piece;
+                break;
+        }
+    }
+
     void appendFenPiecePlacement(std::string& ss) const {
         for (int rank = 7; rank >= 0; --rank) {
             auto rank_bb = (occ() & Rank(rank).bb()) >> (rank * 8);

@@ -190,6 +190,32 @@ class Zobrist {
         return arr;
     }();
 
+    // Board::isRepetitionVerified() only compares the piece placement after a hash match. With equal
+    // placement and side to move, the hashes can only differ by castling ^ en passant keys, so every
+    // combination of castling rights (16) and en passant state (none or one of 8 files) must hash
+    // differently, otherwise differing castling rights / en passant squares would go unnoticed.
+    static constexpr bool castlingEpKeysDistinct = []() constexpr {
+        U64 keys[16 * 9] = {};
+        int n            = 0;
+
+        for (int cr = 0; cr < 16; ++cr) {
+            for (int ep = -1; ep < 8; ++ep) {
+                U64 key = ep < 0 ? 0 : RANDOM_ARRAY[772 + ep];
+                for (int i = 0; i < 4; ++i)
+                    if (cr & (1 << i)) key ^= RANDOM_ARRAY[768 + i];
+                keys[n++] = key;
+            }
+        }
+
+        for (int i = 0; i < n; ++i)
+            for (int j = i + 1; j < n; ++j)
+                if (keys[i] == keys[j]) return false;
+
+        return true;
+    }();
+
+    static_assert(castlingEpKeysDistinct, "castling/en passant Zobrist keys must not cancel each other out");
+
     static constexpr int MAP_HASH_PIECE[12] = {1, 3, 5, 7, 9, 11, 0, 2, 4, 6, 8, 10};
 
     [[nodiscard]] static U64 piece(Piece piece, Square square) noexcept {

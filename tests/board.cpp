@@ -1091,3 +1091,65 @@ TEST_SUITE("Board") {
         }
     }
 }
+
+TEST_SUITE("Board Repetition") {
+    // https://github.com/official-stockfish/Stockfish/issues/7279
+    // The mating position after 6... Qa1 has the same Zobrist hash as two earlier positions.
+    TEST_CASE("Zobrist collision is not a repetition") {
+        Board board("3q4/2q5/4q3/q4k2/8/8/R5q1/2K1B1BQ w - - 0 1");
+
+        for (const auto* san :
+             {"Rc2", "Qcb8", "Ra2", "Qbc7+", "Rc2", "Qgg8", "Bb6", "Qcg3", "Bb4", "Qec8", "Qg2", "Qa1"}) {
+            board.makeMove<true>(uci::parseSan(board, san));
+        }
+
+        CHECK(board.isRepetitionFast(2));
+        CHECK(!board.isRepetition(2));
+        CHECK(!board.isRepetition(1));
+        CHECK(board.isGameOver().first == GameResultReason::CHECKMATE);
+    }
+
+    TEST_CASE("Real repetitions are still detected") {
+        Board board;
+
+        for (int i = 0; i < 2; i++) {
+            for (const auto* uci : {"g1f3", "g8f6", "f3g1", "f6g8"}) board.makeMove(uci::uciToMove(board, uci));
+            CHECK(board.isRepetition(i + 1));
+            CHECK(board.isRepetitionFast(i + 1));
+        }
+
+        CHECK(!board.isRepetition(3));
+        CHECK(board.isGameOver().first == GameResultReason::THREEFOLD_REPETITION);
+    }
+
+    TEST_CASE("Repetition across special moves and null moves") {
+        // castling, en passant and promotion before a repetition sequence
+        Board board("r3k2r/1P6/8/8/3p4/8/4P3/R3K2R w KQkq - 0 1");
+
+        for (const auto* uci : {"e2e4", "d4e3", "e1h1", "e8a8", "b7b8q", "a8b8"}) {
+            board.makeMove(uci::uciToMove(board, uci));
+        }
+
+        for (const auto* uci : {"a1b1", "b8a8", "b1a1", "a8b8", "a1b1", "b8a8", "b1a1", "a8b8"}) {
+            board.makeMove(uci::uciToMove(board, uci));
+        }
+
+        CHECK(board.isRepetition(2));
+
+        board.makeNullMove();
+        board.makeNullMove();
+        CHECK(board.isRepetition(2));
+    }
+
+    TEST_CASE("Different castling rights are not a repetition") {
+        Board board("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+
+        for (const auto* uci : {"h1h2", "h8h7", "h2h1", "h7h8", "h1h2", "h8h7", "h2h1", "h7h8"}) {
+            board.makeMove(uci::uciToMove(board, uci));
+        }
+
+        // the starting position had KQkq, every later occurrence only Qq
+        CHECK(board.isRepetition(1));
+        CHECK(!board.isRepetition(2));
+    }
+}
