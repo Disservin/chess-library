@@ -597,6 +597,20 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(res.second == GameResult::DRAW);
     }
 
+    TEST_CASE("False Threefold Repetition from Zobrist Collision") {
+        const auto file  = "./tests/pgns/false_threefold_repetition.pgn";
+        auto file_stream = std::ifstream(file);
+
+        auto vis = std::make_unique<MockVisitorGameover>();
+        SmallBufferStreamParser parser(file_stream);
+        parser.readGames(*vis);
+
+        auto res = vis->gameResult();
+
+        CHECK(res.first == GameResultReason::CHECKMATE);
+        CHECK(res.second == GameResult::LOSE);
+    }
+
     TEST_CASE("No Result") {
         const auto file  = "./tests/pgns/no_result.pgn";
         auto file_stream = std::ifstream(file);

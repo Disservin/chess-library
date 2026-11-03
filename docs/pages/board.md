@@ -32,8 +32,12 @@ not legal chess moves, and have their own paired make/unmake functions.
 
 `isRepetition(2)` (the default) looks for two earlier occurrences of the current
 position, giving three occurrences in total. `isRepetition(1)` checks for one
-earlier occurrence, which can be useful in engine search. Only recorded history
-is available. `isHalfMoveDraw()` tests for at least 100 half-moves (50 moves by
+earlier occurrence, which can be useful in engine search. Candidates are found by
+Zobrist hash, and every hash match is verified against the actual piece placement,
+castling rights and en passant square, so hash collisions never cause a false
+repetition. `isRepetitionFast()` takes the same argument but trusts the hash alone;
+it is marginally faster and can report a false repetition on a hash collision. Only
+recorded history is available. `isHalfMoveDraw()` tests for at least 100 half-moves (50 moves by
 each side) without a pawn move or capture. Call `getHalfMoveDrawType()` only when
 that test is true, since checkmate takes priority.
 
@@ -226,6 +230,14 @@ class Board {
          * @return
          */
         bool isRepetition(int count = 2) const;
+
+        /**
+         * @brief Hash-only version of isRepetition(). Slightly faster since hash matches are not
+         * verified, but it may report a false repetition on a Zobrist hash collision.
+         * @param count
+         * @return
+         */
+        bool isRepetitionFast(int count = 2) const;
 
         /**
          * @brief Checks if the current position is a draw by 50 move rule.
