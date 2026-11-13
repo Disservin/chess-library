@@ -172,6 +172,20 @@ class VariationTraceVisitor : public pgn::Visitor {
     std::vector<std::string> events;
 };
 
+// The moves of each game, separated by spaces
+template <std::size_t BUFFER_SIZE>
+std::vector<std::string> gameMoves(const std::string& pgn) {
+    std::istringstream input(pgn);
+    pgn::GameRange<BUFFER_SIZE> range(input);
+    std::vector<std::string> games;
+    for (const auto& game : range) {
+        std::string moves;
+        for (const auto& event : game.events) moves += event.san + " ";
+        games.push_back(moves);
+    }
+    return games;
+}
+
 TEST_SUITE("PGN StreamParser") {
     TEST_CASE("Basic PGN") {
         const auto file  = "./tests/pgns/basic.pgn";
@@ -743,6 +757,46 @@ TEST_SUITE("PGN StreamParser") {
         CHECK(vis->moveStartCount() == 0);
         CHECK(vis->headers().size() == 0);
     }
+
+    TEST_CASE("Escape lines are ignored") {
+        const auto file  = "./tests/pgns/escape_lines.pgn";
+        auto file_stream = std::ifstream(file);
+
+        pgn::GameRange<> range(file_stream);
+        std::vector<pgn::Game> games(range.begin(), range.end());
+
+        CHECK(range.error() == pgn::StreamParserError::None);
+        REQUIRE(games.size() == 3);
+
+        REQUIRE(games[1].headers.size() == 2);
+        CHECK(games[1].headers[0].second == "second");
+        CHECK(games[1].headers[1].first == "Result");
+
+        std::vector<std::string> moves;
+        for (const auto& game : games) {
+            std::string line;
+            for (const auto& event : game.events) line += event.san + " ";
+            moves.push_back(line);
+        }
+
+        CHECK(moves == std::vector<std::string>{"e4 e5 Nf3 Nc6 ", "d4 d5 c4 ", "c4 c5 "});
+    }
+}
+
+TEST_CASE("Escape lines are ignored across buffer refills") {
+    const std::string pgn =
+        "% a book [v1]\n%\n[Event \"?\"]\n\n% x\n1. e4 e5 2. Nf3 *\n\n"
+        "[Event \"?\"]\n%% [Round \"9\"]\n\n1. d4\r\n%d5\r\nd5 *\n%%%\n";
+    const std::vector<std::string> expected = {"e4 e5 Nf3 ", "d4 d5 "};
+
+    // small buffers put the refills everywhere, inside the escape lines and around them
+    CHECK(gameMoves<1>(pgn) == expected);
+    CHECK(gameMoves<2>(pgn) == expected);
+    CHECK(gameMoves<3>(pgn) == expected);
+    CHECK(gameMoves<4>(pgn) == expected);
+    CHECK(gameMoves<5>(pgn) == expected);
+    CHECK(gameMoves<7>(pgn) == expected);
+    CHECK(gameMoves<1024>(pgn) == expected);
 }
 
 TEST_CASE("Buffered comments preserve bytes across refills") {
