@@ -1,0 +1,22 @@
+% Escape lines (PGN standard, section 6) [are ignored]
+% wherever they are.
+
+[Event "first"]
+[Result "*"]
+
+% before the moves
+1. e4 e5 2. Nf3 Nc6 *
+
+[Event "second"]
+% inside the headers [Round "9"]
+[Result "*"]
+
+1. d4 d5
+% inside the move text
+2. c4 *
+% between games
+
+[Event "third"]
+[Result "*"]
+
+1. c4 c5 *
