@@ -102,6 +102,54 @@ TEST_SUITE("Board") {
         CHECK(board.getFen() == "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
     }
 
+    TEST_CASE("Set Fen rejects a placement that is not eight ranks of eight squares") {
+        Board board;
+        CHECK(!board.setFen("rnbq/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e4"));
+        CHECK(!board.setFen("2q1rrpn2/1p6/3QP3/1BN1B3/PPP3PP/R4RK1/8/7k w - - 0 1"));
+        CHECK(!board.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR/8 w KQkq - 0 1"));
+        CHECK(!board.setFen("rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+        CHECK(!board.setFen("rnbqkbnr/pppppppp/9/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+        CHECK(!board.setFen("rnbqkbnr/pppppppp/08/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+
+        CHECK(board.setFen("rnbqkbnr/pppppppp/44/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+        CHECK(board.getFen() == constants::STARTPOS);
+    }
+
+    TEST_CASE("Set Fen without a king") {
+        for (const bool chess960 : {false, true}) {
+            CAPTURE(chess960);
+            Board board;
+            board.set960(chess960);
+
+            // no black king, castling rights for both sides
+            CHECK(board.setFen("8/8/8/4P3/8/PPPP1PPP/RNBQKBNR/7R b KQkq - 0 1"));
+            CHECK(!board.castlingRights().has(Color::BLACK));
+
+            // no king at all, with an en passant square
+            CHECK(board.setFen("r6r/8/8/3pP3/8/8/8/R6R w KQkq d6 0 1"));
+            CHECK(board.castlingRights().isEmpty());
+            CHECK(board.enpassantSq() == Square::NO_SQ);
+
+            // the kings off their back rank
+            CHECK(board.setFen("r6r/8/4k3/8/8/4K3/8/R6R w KQkq - 0 1"));
+            CHECK(board.castlingRights().isEmpty());
+        }
+    }
+
+    TEST_CASE("Set Fen Chess960 castling rights only on the files of the rooks") {
+        Board board;
+        board.set960(true);
+
+        CHECK(board.setFen("1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b \xe8- - 0 1"));
+        CHECK(board.castlingRights().isEmpty());
+
+        CHECK(board.setFen("r3k2r/8/8/8/8/8/8/R3K2R w ZzEe - 0 1"));
+        CHECK(board.castlingRights().isEmpty());
+
+        CHECK(board.setFen("bqnnrbkr/pppppppp/8/8/8/8/PPPPPPPP/BBQNNRKR w HFhe - 0 1"));
+        CHECK(board.getFen() == "bqnnrbkr/pppppppp/8/8/8/8/PPPPPPPP/BBQNNRKR w HFhe - 0 1");
+    }
+
     TEST_CASE("Set xFEN") {
         Board board;
         CHECK(board.setXfen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
