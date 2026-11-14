@@ -177,6 +177,10 @@ class uci {
         static constexpr auto pt_to_pgt = [](PieceType pt) { return 1 << (pt); };
         const SanMoveInformation info   = parseSanInfo(san);
 
+        if (!info.castling_short && !info.castling_long && info.to == Square::NO_SQ) {
+            return Move::NO_MOVE;
+        }
+
         // SAN already supplies the destination. When exactly one piece can reach
         // it, validate that candidate instead of generating every move of its type.
         if (!info.castling_short && !info.castling_long) {
@@ -385,7 +389,22 @@ class uci {
         std::size_t index = 1;
 
         if (san[0] == 'O' || san[0] == '0') {
-            parse_castle(san, info, san[0]);
+            // O-O or O-O-O, with the letter O or the digit 0
+            if (san.length() < 3 || san[1] != '-' || (san[2] != 'O' && san[2] != '0')) {
+#ifndef CHESS_NO_EXCEPTIONS
+                throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
+#endif
+                return info;
+            }
+
+            auto castling = san;
+            parse_castle(castling, info, san[0]);
+
+#ifndef CHESS_NO_EXCEPTIONS
+            if (!info.castling_short && !info.castling_long) {
+                throw SanParseError("Failed to parse san. At step 0: " + std::string(san));
+            }
+#endif
             return info;
         } else if (isFile(san[0])) {
             index--;
@@ -433,7 +452,7 @@ class uci {
         // promotion
         if (index < san.size() && san[index] == '=') {
             index++;
-            info.promotion = PieceType(sw(san[index]));
+            if (index < san.size()) info.promotion = PieceType(sw(san[index]));
             if (info.promotion == PieceType::KING || info.promotion == PieceType::PAWN ||
                 info.promotion == PieceType::NONE) {
                 throw_error = true;
