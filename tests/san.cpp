@@ -628,6 +628,20 @@ TEST_CASE("SAN candidates agree with generated legal moves") {
     }
 }
 
+TEST_CASE("SAN with a malformed castling or promotion throws") {
+    Board board("r3k2r/1P6/8/8/8/8/8/R3K2R w KQkq - 0 1");
+
+    for (const auto* san : {"O-", "0-", "01k-", "O-O-", "O-O-0", "Ox", "b8="}) {
+        CAPTURE(san);
+        CHECK_THROWS_AS(static_cast<void>(uci::parseSan(board, san)), uci::SanParseError);
+    }
+
+    CHECK(uci::parseSan(board, "O-O") == Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_H1));
+    CHECK(uci::parseSan(board, "0-0-0+") == Move::make<Move::CASTLING>(Square::SQ_E1, Square::SQ_A1));
+    CHECK(uci::parseSan(board, "b8=Q") ==
+          Move::make<Move::PROMOTION>(Square::SQ_B7, Square::SQ_B8, PieceType::QUEEN));
+}
+
 TEST_CASE("SAN candidates retain legality checks") {
     Board board("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1");
     CHECK_THROWS_AS(uci::parseSan(board, "exd6=Q"), uci::SanParseError);
