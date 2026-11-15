@@ -3638,10 +3638,10 @@ class Board {
         const auto half_move_opt = detail::parseStringViewToInt(half_move).value_or(0);
         hfm_                     = half_move_opt;
 
-        const auto full_move_opt = detail::parseStringViewToInt(full_move).value_or(1);
-        plies_                   = full_move_opt;
-
-        plies_ = plies_ * 2 - 2;
+        // A full move number below 1 (0 is common) counts as 1, and one too large for the ply counter is capped,
+        // so that the ply counter cannot wrap around.
+        const auto full_move_opt = std::clamp(detail::parseStringViewToInt(full_move).value_or(1), 1, 32768);
+        plies_                   = static_cast<std::uint16_t>(full_move_opt * 2 - 2);
 
         if (en_passant != "-") {
             if (!Square::is_valid_string_sq(en_passant)) {
