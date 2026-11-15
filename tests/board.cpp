@@ -552,6 +552,16 @@ TEST_SUITE("Board") {
         }
     }
 
+    TEST_CASE("Set Fen with a full move number out of range") {
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - 0 0").fullMoveNumber() == 1);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 0").fullMoveNumber() == 1);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - 0 -3").fullMoveNumber() == 1);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 40000").fullMoveNumber() == 32768);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 2147483647").fullMoveNumber() == 32768);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 57").fullMoveNumber() == 57);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 0").getFen() == "4k3/8/8/8/8/8/8/4K3 b - - 0 1");
+    }
+
     TEST_CASE("Board Fen/EPD Interface") {
         SUBCASE("Test Fen Get/Set") {
             Board board = Board();
