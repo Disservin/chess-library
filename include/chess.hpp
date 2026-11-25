@@ -5226,8 +5226,11 @@ class StreamBuffer {
         preserveComment();
         buffer_index_ = 0;
 
-        stream_.read(buffer_.data(), N * N);
-        bytes_read_ = stream_.gcount();
+        // a chunk made only of escape lines leaves nothing to parse, read on
+        do {
+            stream_.read(buffer_.data(), N * N);
+            bytes_read_ = dropEscapeLines(stream_.gcount());
+        } while (bytes_read_ == 0 && stream_.gcount() > 0);
 
         return bytes_read_ > 0;
     }
@@ -5257,6 +5260,27 @@ class StreamBuffer {
     }
 
    private:
+    // PGN standard 6: a line whose first character is '%' is an escape line and is ignored.
+    // Removes such lines, with their newline, from the n bytes just read. A line may span several chunks.
+    // Returns the number of bytes kept.
+    std::streamsize dropEscapeLines(std::streamsize n) {
+        if (n <= 0) return n;
+        if (!in_escape_line_ && std::memchr(buffer_.data(), '%', static_cast<std::size_t>(n)) == nullptr) {
+            line_start_ = buffer_[n - 1] == '\n';
+            return n;
+        }
+
+        std::streamsize kept = 0;
+        for (std::streamsize i = 0; i < n; ++i) {
+            const auto c = buffer_[i];
+            in_escape_line_ = in_escape_line_ || (line_start_ && c == '%');
+            line_start_     = c == '\n';
+            if (!in_escape_line_) buffer_[kept++] = c;
+            if (line_start_) in_escape_line_ = false;
+        }
+        return kept;
+    }
+
     template <TokenKind kind>
     std::streamsize delimiterIndex() const {
         auto index = buffer_index_;
@@ -5352,6 +5376,8 @@ class StreamBuffer {
     BufferType buffer_;
     std::streamsize bytes_read_   = 0;
     std::streamsize buffer_index_ = 0;
+    bool line_start_              = true;
+    bool in_escape_line_          = false;
 };
 
 }  // namespace detail
