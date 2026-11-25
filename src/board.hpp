@@ -1701,6 +1701,16 @@ class Board {
         return at<PieceType>(rook_sq) == PieceType::ROOK && at(rook_sq).color() == color;
     }
 
+    // A castling right needs a single king of that color, on its back rank.
+    [[nodiscard]] static bool isFileLetter(char c) noexcept {
+        return (c >= 'a' && c <= 'h') || (c >= 'A' && c <= 'H');
+    }
+
+    [[nodiscard]] bool hasCastlingKing(Color color) const {
+        const auto kings = pieces(PieceType::KING, color);
+        return kings.count() == 1 && Square::back_rank(Square(kings.lsb()), color);
+    }
+
     bool applyCastlingRight(Color color, CastlingRights::Side side, File fallback) {
         File file = fallback;
 
@@ -1732,8 +1742,11 @@ class Board {
         for (char i : castling) {
             if (i == '-') break;
 
+            const auto color      = isupper(static_cast<unsigned char>(i)) ? Color::WHITE : Color::BLACK;
             const auto king_side  = CastlingRights::Side::KING_SIDE;
             const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
+
+            if (!hasCastlingKing(color)) continue;
 
             if (!chess960_) {
                 if (i == 'K') {
@@ -1752,7 +1765,6 @@ class Board {
             }
 
             // chess960 castling detection
-            const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
             const auto king_sq = kingSq(color);
 
             if (i == 'K' || i == 'k') {
@@ -1762,8 +1774,9 @@ class Board {
                 auto file = findRookOnSide(color, queen_side);
                 if (file != File::NO_FILE) cr_.setCastlingRight(color, queen_side, file);
             } else {
+                if (!isFileLetter(i)) continue;
                 const auto file = File(std::string_view(&i, 1));
-                if (file == File::NO_FILE || king_sq == Square::NO_SQ) continue;
+                if (!hasRookOnFile(color, file)) continue;
                 const auto side = CastlingRights::closestSide(file, king_sq.file());
                 cr_.setCastlingRight(color, side, file);
             }
@@ -1774,7 +1787,7 @@ class Board {
         for (char i : castling) {
             if (i == '-') break;
 
-            const auto color      = isupper(i) ? Color::WHITE : Color::BLACK;
+            const auto color      = isupper(static_cast<unsigned char>(i)) ? Color::WHITE : Color::BLACK;
             const auto king_sq    = kingSq(color);
             const auto king_side  = CastlingRights::Side::KING_SIDE;
             const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
@@ -1793,8 +1806,9 @@ class Board {
                 continue;
             }
 
+            if (!isFileLetter(i)) continue;
             const auto file = File(std::string_view(&i, 1));
-            if (file == File::NO_FILE || file == king_sq.file()) continue;
+            if (file == king_sq.file()) continue;
 
             if (!hasRookOnFile(color, file)) continue;
 
@@ -1850,26 +1864,33 @@ class Board {
             key_ ^= Zobrist::sideToMove();
         }
 
-        auto square = 56;
+        // eight ranks of eight squares, from the eighth rank down
+        int rank = 7;
+        int file = 0;
         for (char curr : position) {
-            if (isdigit(curr)) {
-                square += (curr - '0');
+            if (curr >= '1' && curr <= '8') {
+                file += curr - '0';
+                if (file > 8) return false;
             } else if (curr == '/') {
-                square -= 16;
+                if (file != 8 || --rank < 0) return false;
+                file = 0;
             } else {
-                auto p = Piece(std::string_view(&curr, 1));
-                if (p == Piece::NONE || !Square::is_valid_sq(square) || at(square) != Piece::NONE) return false;
+                const auto p = Piece(std::string_view(&curr, 1));
+                if (p == Piece::NONE || file >= 8) return false;
+
+                const auto sq = Square(rank * 8 + file++);
 
                 if constexpr (ctor) {
-                    placePieceInternal(p, Square(square));
+                    placePieceInternal(p, sq);
                 } else {
-                    placePiece(p, square);
+                    placePiece(p, sq);
                 }
 
-                key_ ^= Zobrist::piece(p, Square(square));
-                ++square;
+                key_ ^= Zobrist::piece(p, sq);
             }
         }
+
+        if (rank != 0 || file != 8) return false;
 
         if (require_kings &&
             (pieces(PieceType::KING, Color::WHITE) == 0ull || pieces(PieceType::KING, Color::BLACK) == 0ull)) {
@@ -1878,9 +1899,12 @@ class Board {
 
         parse_castling(castling);
 
-        if (ep_sq_ != Square::NO_SQ && !((ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
-                                         (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE))) {
-            ep_sq_ = Square::NO_SQ;
+        if (ep_sq_ != Square::NO_SQ) {
+            const bool ep_rank_ok = (ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
+                                    (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE);
+
+            // the en passant check needs a king of the side to move
+            if (!ep_rank_ok || pieces(PieceType::KING, stm_).empty()) ep_sq_ = Square::NO_SQ;
         }
 
         if (ep_sq_ != Square::NO_SQ) {
@@ -1906,6 +1930,8 @@ class Board {
         castling_path = {};
 
         for (Color c : {Color::WHITE, Color::BLACK}) {
+            if (!cr_.has(c)) continue;
+
             const auto king_from = kingSq(c);
 
             for (const auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE}) {
