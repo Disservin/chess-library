@@ -150,6 +150,15 @@ TEST_SUITE("Board") {
         CHECK(board.getFen() == "bqnnrbkr/pppppppp/8/8/8/8/PPPPPPPP/BBQNNRKR w HFhe - 0 1");
     }
 
+    TEST_CASE("Set xFEN castling rights only for file letters A-H") {
+        Board board;
+        CHECK(board.setXfen("r3k2r/8/8/8/1R6/8/8/R3K2R w ZzEe - 0 1"));
+        CHECK(board.castlingRights().isEmpty());
+
+        CHECK(board.setXfen("r3k2r/8/8/8/8/8/8/R3K2R w \xe8- - 0 1"));
+        CHECK(board.castlingRights().isEmpty());
+    }
+
     TEST_CASE("Set xFEN") {
         Board board;
         CHECK(board.setXfen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
