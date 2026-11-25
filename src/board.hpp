@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cctype>
@@ -1839,13 +1840,29 @@ class Board {
 
         if (move_right != "w" && move_right != "b") return false;
 
-        const auto half_move_opt = detail::parseStringViewToInt(half_move).value_or(0);
-        hfm_                     = half_move_opt;
+        // Parses a move counter and clamps it to [lo, hi]. A number too large for an int still clamps
+        // (to lo if negative, hi otherwise); anything that is not a number gives the fallback.
+        const auto parse_counter = [](std::string_view sv, int fallback, int lo, int hi) {
+            if (const auto parsed = detail::parseStringViewToInt(sv)) return std::clamp(*parsed, lo, hi);
 
-        const auto full_move_opt = detail::parseStringViewToInt(full_move).value_or(1);
-        plies_                   = full_move_opt;
+            const bool negative = !sv.empty() && sv.front() == '-';
+            if (!sv.empty() && (sv.front() == '-' || sv.front() == '+')) sv.remove_prefix(1);
 
-        plies_ = plies_ * 2 - 2;
+            const bool all_digits = !sv.empty() && std::all_of(sv.begin(), sv.end(), [](char c) {
+                return std::isdigit(static_cast<unsigned char>(c));
+            });
+
+            if (!all_digits) return fallback;
+            return negative ? lo : hi;
+        };
+
+        // The half move clock is stored in 8 bits.
+        hfm_ = static_cast<std::uint8_t>(parse_counter(half_move, 0, 0, 255));
+
+        // A full move number below 1 (0 is common) counts as 1. The cap keeps the ply counter (16 bits) below
+        // 32768, which leaves room for more than 32000 further plies before it would wrap.
+        const auto full_move_number = parse_counter(full_move, 1, 1, 16384);
+        plies_                      = static_cast<std::uint16_t>(full_move_number * 2 - 2);
 
         if (en_passant != "-") {
             if (!Square::is_valid_string_sq(en_passant)) {
