@@ -5273,19 +5273,10 @@ class StreamBuffer {
         std::streamsize kept = 0;
         for (std::streamsize i = 0; i < n; ++i) {
             const auto c = buffer_[i];
-            if (in_escape_line_) {
-                if (c == '\n') {
-                    in_escape_line_ = false;
-                    line_start_     = true;
-                }
-                continue;
-            }
-            if (line_start_ && c == '%') {
-                in_escape_line_ = true;
-                continue;
-            }
+            in_escape_line_ = in_escape_line_ || (line_start_ && c == '%');
             line_start_     = c == '\n';
-            buffer_[kept++] = c;
+            if (!in_escape_line_) buffer_[kept++] = c;
+            if (line_start_) in_escape_line_ = false;
         }
         return kept;
     }
