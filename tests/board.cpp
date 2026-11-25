@@ -556,10 +556,32 @@ TEST_SUITE("Board") {
         CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - 0 0").fullMoveNumber() == 1);
         CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 0").fullMoveNumber() == 1);
         CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - 0 -3").fullMoveNumber() == 1);
-        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 40000").fullMoveNumber() == 32768);
-        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 2147483647").fullMoveNumber() == 32768);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 40000").fullMoveNumber() == 16384);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 2147483647").fullMoveNumber() == 16384);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 99999999999").fullMoveNumber() == 16384);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 -99999999999").fullMoveNumber() == 1);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 abc").fullMoveNumber() == 1);
         CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 57").fullMoveNumber() == 57);
         CHECK(Board("4k3/8/8/8/8/8/8/4K3 b - - 0 0").getFen() == "4k3/8/8/8/8/8/8/4K3 b - - 0 1");
+    }
+
+    TEST_CASE("Set Fen with a large full move number does not wrap the ply counter") {
+        Board board("4k3/8/8/8/8/8/8/4K3 b - - 0 40000");
+        board.makeMove(uci::uciToMove(board, "e8d8"));
+        CHECK(board.fullMoveNumber() == 16385);
+        board.makeMove(uci::uciToMove(board, "e1d1"));
+        CHECK(board.fullMoveNumber() == 16385);
+        board.makeNullMove();
+        CHECK(board.fullMoveNumber() == 16386);
+    }
+
+    TEST_CASE("Set Fen with a half move clock out of range") {
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - 300 1").halfMoveClock() == 255);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - 300 1").isHalfMoveDraw());
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - -1 1").halfMoveClock() == 0);
+        CHECK_FALSE(Board("4k3/8/8/8/8/8/8/4K3 w - - -1 1").isHalfMoveDraw());
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - 99999999999 1").halfMoveClock() == 255);
+        CHECK(Board("4k3/8/8/8/8/8/8/4K3 w - - 42 1").halfMoveClock() == 42);
     }
 
     TEST_CASE("Board Fen/EPD Interface") {
